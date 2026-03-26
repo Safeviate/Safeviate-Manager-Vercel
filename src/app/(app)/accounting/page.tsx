@@ -9,24 +9,33 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileSpreadsheet, Calculator, Receipt } from 'lucide-react';
+import { FileSpreadsheet, Calculator, Receipt, ListFilter } from 'lucide-react';
 import { BillingTable } from './billing-table';
 import { format } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import type { Personnel, PilotProfile } from '../users/personnel/page';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AccountingPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
 
-  // --- Data Fetching: SIMPLE QUERIES ONLY to avoid security/index errors ---
+  // --- Data Fetching ---
   const bookingsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
   const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+  const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
 
   const { data: bookings, isLoading: loadingB } = useCollection<Booking>(bookingsQuery);
   const { data: aircrafts, isLoading: loadingA } = useCollection<Aircraft>(aircraftQuery);
@@ -44,14 +53,11 @@ export default function AccountingPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('unbilled');
 
-  // --- Client-Side Processing: Avoids Firestore 'where' and 'orderBy' complexities ---
+  // --- Client-Side Processing ---
   const enrichedData = useMemo(() => {
     if (!bookings) return { unbilled: [], exported: [] };
 
-    // 1. Filter for completed flights with tech logs
     const completed = bookings.filter(b => b.status === 'Completed' && b.postFlightData && b.preFlightData);
-
-    // 2. Sort by date (latest first)
     const sorted = [...completed].sort((a, b) => b.date.localeCompare(a.date));
 
     return {
@@ -80,7 +86,6 @@ export default function AccountingPage() {
       const aircraftMap = new Map(aircrafts?.map(a => [a.id, a]));
       const userMap = new Map(allUsers.map(u => [u.id, `${u.firstName} ${u.lastName}`]));
 
-      // 1. Prepare Sage CSV Data
       const headers = ["Reference", "Date", "Customer", "Description", "Duration", "Rate", "Total", "Nominal Code"];
       const rows = selectedBookings.map(b => {
         const ac = aircraftMap.get(b.aircraftId);
@@ -94,7 +99,7 @@ export default function AccountingPage() {
           duration.toFixed(1),
           rate.toFixed(2),
           (duration * rate).toFixed(2),
-          "4000" // Default Sales nominal code
+          "4000"
         ].join(",");
       });
 
@@ -109,7 +114,6 @@ export default function AccountingPage() {
       link.click();
       document.body.removeChild(link);
 
-      // 2. Update Firestore Status
       const batch = writeBatch(firestore);
       selectedBookings.forEach(b => {
         const ref = doc(firestore, `tenants/${tenantId}/bookings`, b.id);
@@ -137,7 +141,7 @@ export default function AccountingPage() {
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
-        <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
           <MainPageHeader 
             title="Flight Billing"
             actions={
@@ -147,7 +151,7 @@ export default function AccountingPage() {
                 onClick={handleSageExport} 
                 disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
               >
-                <FileSpreadsheet className="h-4 w-4" /> Export to Sage ({selectedIds.size})
+                <FileSpreadsheet className="h-4 w-4" /> {isMobile ? `Export (${selectedIds.size})` : `Export to Sage (${selectedIds.size})`}
               </Button>
             }
           />
@@ -180,17 +184,39 @@ export default function AccountingPage() {
             </div>
           </div>
 
-          <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar shrink-0">
-            <div className="flex w-max gap-2 pr-6 flex-nowrap">
-              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                <TabsTrigger value="unbilled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
-                  Unbilled Flights ({enrichedData.unbilled.length})
-                </TabsTrigger>
-                <TabsTrigger value="exported" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
-                  Export History ({enrichedData.exported.length})
-                </TabsTrigger>
-              </TabsList>
-            </div>
+          <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
+            {isMobile ? (
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                  <SelectValue placeholder="Filter View" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unbilled" className="text-[10px] font-bold uppercase">
+                    <div className="flex items-center gap-2">
+                      <ListFilter className="h-3.5 w-3.5" />
+                      Unbilled Flights ({enrichedData.unbilled.length})
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="exported" className="text-[10px] font-bold uppercase">
+                    <div className="flex items-center gap-2">
+                      <ListFilter className="h-3.5 w-3.5" />
+                      Export History ({enrichedData.exported.length})
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex w-max gap-2 pr-6 flex-nowrap">
+                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+                  <TabsTrigger value="unbilled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
+                    Unbilled Flights ({enrichedData.unbilled.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="exported" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
+                    Export History ({enrichedData.exported.length})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            )}
           </div>
 
           <CardContent className="flex-1 p-0 overflow-hidden">

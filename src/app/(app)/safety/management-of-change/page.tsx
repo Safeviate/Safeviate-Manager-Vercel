@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, FileEdit } from 'lucide-react';
+import { PlusCircle, FileEdit, Building } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -18,12 +18,24 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { MocActions } from './moc-actions';
 import { MainPageHeader } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils'; // Added import for cn
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState } from 'react';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
     const { hasPermission } = usePermissions();
     const { tenantId } = useUserProfile();
     const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'moc-manage' });
+    const isMobile = useIsMobile();
+    const [activeOrgTab, setActiveOrgTab] = useState('internal');
 
     const canViewAll = hasPermission('moc-manage');
 
@@ -57,7 +69,7 @@ export default function ManagementOfChangePage() {
                             <Button asChild size="sm" className="w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                                 <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
                                     <PlusCircle className="h-4 w-4" />
-                                    Propose Change
+                                    {isMobile ? "Propose" : "Propose Change"}
                                 </Link>
                             </Button>
                         )
@@ -65,24 +77,48 @@ export default function ManagementOfChangePage() {
                 />
 
                 {shouldShowOrganizationTabs && (
-                    <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                            <TabsTrigger 
-                                value="internal" 
-                                className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                            >
-                                Internal
-                            </TabsTrigger>
-                            {(organizations || []).map((organization) => (
-                                <TabsTrigger
-                                    key={organization.id}
-                                    value={organization.id}
+                    <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
+                        {isMobile ? (
+                            <Select value={activeOrgTab} onValueChange={setActiveOrgTab}>
+                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                                    <SelectValue placeholder="Select Organization" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="internal" className="text-[10px] font-bold uppercase">
+                                        <div className="flex items-center gap-2">
+                                            <Building className="h-3.5 w-3.5" />
+                                            Internal
+                                        </div>
+                                    </SelectItem>
+                                    {(organizations || []).map((organization) => (
+                                        <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
+                                            <div className="flex items-center gap-2">
+                                                <Building className="h-3.5 w-3.5" />
+                                                {organization.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                                <TabsTrigger 
+                                    value="internal" 
                                     className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
                                 >
-                                    {organization.name}
+                                    Internal
                                 </TabsTrigger>
-                            ))}
-                        </TabsList>
+                                {(organizations || []).map((organization) => (
+                                    <TabsTrigger
+                                        key={organization.id}
+                                        value={organization.id}
+                                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                                    >
+                                        {organization.name}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        )}
                     </div>
                 )}
                 
@@ -93,7 +129,7 @@ export default function ManagementOfChangePage() {
                                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">MOC #</TableHead>
                                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">Title</TableHead>
                                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
-                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Proposed</TableHead>
+                                <TableHead className={cn("text-[10px] uppercase font-bold tracking-wider", isMobile && "hidden")}>Proposed</TableHead>
                                 <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -104,7 +140,7 @@ export default function ManagementOfChangePage() {
                                         <TableCell className="font-bold text-sm text-primary">{moc.mocNumber}</TableCell>
                                         <TableCell className="text-sm font-medium">{moc.title}</TableCell>
                                         <TableCell><Badge variant="outline" className="text-[10px] font-bold uppercase border-primary/20 bg-primary/5 text-primary">{moc.status}</Badge></TableCell>
-                                        <TableCell className="text-sm font-medium whitespace-nowrap">{format(new Date(moc.proposalDate), 'dd MMM yy')}</TableCell>
+                                        <TableCell className={cn("text-sm font-medium whitespace-nowrap", isMobile && "hidden")}>{format(new Date(moc.proposalDate), 'dd MMM yy')}</TableCell>
                                         <TableCell className="text-right">
                                             <MocActions moc={moc} tenantId={tenantId || 'safeviate'} />
                                         </TableCell>
@@ -112,7 +148,7 @@ export default function ManagementOfChangePage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic text-sm">
+                                    <TableCell colSpan={isMobile ? 4 : 5} className="h-48 text-center text-muted-foreground italic text-sm">
                                         No MOC records found for this company.
                                     </TableCell>
                                 </TableRow>
@@ -148,7 +184,7 @@ export default function ManagementOfChangePage() {
             {!showTabs ? (
                 renderOrgCard(scopedOrganizationId)
             ) : (
-                <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
+                <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden">
                     <div className="flex-1 min-h-0 overflow-hidden">
                         <TabsContent value="internal" className="m-0 p-0 h-full">
                             {renderOrgCard('internal')}

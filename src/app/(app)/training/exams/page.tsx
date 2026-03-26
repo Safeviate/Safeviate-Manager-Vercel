@@ -5,7 +5,7 @@ import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
-import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,18 +23,28 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 export default function ExamsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [takingExam, setTakingExam] = useState<{ template: ExamTemplate; isMock: boolean } | null>(null);
 
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<string>('10');
+  const [activeTab, setActiveTab] = useState('internal');
 
   const canManage = hasPermission('training-exams-manage');
 
@@ -115,12 +125,10 @@ export default function ExamsPage() {
         return;
     }
 
-    // Shuffle and pick
     const shuffled = [...availableQuestions].sort(() => 0.5 - Math.random());
     const count = Math.min(Number(questionCount), shuffled.length);
     const selectedQuestions = shuffled.slice(0, count);
 
-    // Create transient template
     const transientTemplate: ExamTemplate = {
         id: `transient-${Date.now()}`,
         title: `Random Practice: ${selectedTopic}`,
@@ -134,30 +142,64 @@ export default function ExamsPage() {
     setTakingExam({ template: transientTemplate, isMock: true });
   };
 
+  const examTabs = [
+    { value: 'internal', label: 'Internal Exams', icon: ShieldCheck },
+    { value: 'mock', label: 'Mock Exams', icon: Microscope },
+  ];
+
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col shadow-none border overflow-hidden">
-        <Tabs defaultValue="internal" className="flex-1 flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <MainPageHeader 
             title="Examinations"
             actions={
-              <>
-                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex min-w-max flex-nowrap">
-                  <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
-                    <ShieldCheck className="h-4 w-4" /> Internal Exams (Official)
-                  </TabsTrigger>
-                  <TabsTrigger value="mock" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
-                    <Microscope className="h-4 w-4" /> Mock Exams (Practice)
-                  </TabsTrigger>
-                </TabsList>
-                {canManage && (
-                  <Button asChild size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0">
-                    <Link href="/training/exams/new">
-                      <PlusCircle className="h-4 w-4" /> Create Exam Template
-                    </Link>
-                  </Button>
-                )}
-              </>
+              isMobile ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="compact" variant="outline" className="gap-2">
+                      <MoreHorizontal className="h-4 w-4" />
+                      Actions
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => setActiveTab('internal')}>
+                      <ShieldCheck className="mr-2 h-4 w-4" /> View Internal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setActiveTab('mock')}>
+                      <Microscope className="mr-2 h-4 w-4" /> View Mocks
+                    </DropdownMenuItem>
+                    {canManage && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/training/exams/new">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Create Template
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex min-w-max flex-nowrap">
+                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
+                      <ShieldCheck className="h-4 w-4" /> Internal Exams (Official)
+                    </TabsTrigger>
+                    <TabsTrigger value="mock" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
+                      <Microscope className="h-4 w-4" /> Mock Exams (Practice)
+                    </TabsTrigger>
+                  </TabsList>
+                  {canManage && (
+                    <Button asChild size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0">
+                      <Link href="/training/exams/new">
+                        <PlusCircle className="h-4 w-4" /> Create Exam Template
+                      </Link>
+                    </Button>
+                  )}
+                </>
+              )
             }
           />
 
@@ -206,8 +248,7 @@ export default function ExamsPage() {
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="default"
-                                    size="sm"
-                                    className="h-8 px-3 text-[10px] font-black uppercase tracking-tight"
+                                    size="compact"
                                     onClick={() => setTakingExam({ template, isMock: false })}
                                   >
                                     <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
@@ -251,8 +292,7 @@ export default function ExamsPage() {
                                     <div className="flex justify-end gap-2">
                                       <Button 
                                         variant="default" 
-                                        size="sm" 
-                                        className="h-8 text-[10px] gap-1.5 font-black uppercase"
+                                        size="compact" 
                                         onClick={() => setTakingExam({ template, isMock: false })}
                                       >
                                         <PlayCircle className="h-3.5 w-3.5" /> Start Official Exam
@@ -429,8 +469,8 @@ export default function ExamsPage() {
                                     </div>
                                     <Button
                                       variant="outline"
-                                      size="sm"
-                                      className="mt-3 h-9 w-full text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-black uppercase"
+                                      size="compact"
+                                      className="mt-3 w-full bg-primary/5 hover:bg-primary/10 border-primary/20"
                                       onClick={() => setTakingExam({ template, isMock: true })}
                                     >
                                       <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
@@ -461,8 +501,8 @@ export default function ExamsPage() {
                                         <TableCell className="text-right whitespace-nowrap">
                                             <Button 
                                                 variant="outline" 
-                                                size="sm" 
-                                                className="h-8 text-[10px] gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/20 font-black uppercase"
+                                                size="compact" 
+                                                className="bg-primary/5 hover:bg-primary/10 border-primary/20"
                                                 onClick={() => setTakingExam({ template, isMock: true })}
                                             >
                                                 <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run

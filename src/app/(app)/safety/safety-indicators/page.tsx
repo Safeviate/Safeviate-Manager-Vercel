@@ -10,7 +10,7 @@ import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 import { SPICard } from './spi-card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Building } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { SpiConfig, SpiConfigurations } from '@/types/spi';
@@ -19,8 +19,46 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { MainPageHeader } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        return (
+            <div className="border-b bg-muted/5 px-4 py-3">
+                <Select value={activeTab} onValueChange={onTabChange}>
+                    <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                        <SelectValue placeholder="Select Organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="internal" className="text-[10px] font-bold uppercase">
+                            <div className="flex items-center gap-2">
+                                <Building className="h-3.5 w-3.5" />
+                                Internal
+                            </div>
+                        </SelectItem>
+                        {organizations.map((organization) => (
+                            <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
+                                <div className="flex items-center gap-2">
+                                    <Building className="h-3.5 w-3.5" />
+                                    {organization.name}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        );
+    }
+
     return (
         <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
@@ -117,6 +155,8 @@ export default function SafetyIndicatorsPage() {
   const [spiConfig, setSpiConfig] = useState<SpiConfig[]>(initialSpiConfig);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSpi, setSelectedSpi] = useState<SpiConfig | null>(null);
+  const [activeOrgTab, setActiveOrgTab] = useState('internal');
+  const isMobile = useIsMobile();
 
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
@@ -220,11 +260,12 @@ export default function SafetyIndicatorsPage() {
                             });
                             setIsEditDialogOpen(true);
                         }}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add New SPI
+                            <PlusCircle className="mr-2 h-4 w-4" /> 
+                            {isMobile ? "Add" : "Add New SPI"}
                         </Button>
                     }
                 />
-                {showTabs && <CompanyTabsRow organizations={organizations || []} />}
+                {showTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
             </div>
             
             <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
@@ -268,7 +309,7 @@ export default function SafetyIndicatorsPage() {
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (
-            <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
+            <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                     <TabsContent value="internal" className="mt-0 h-full flex flex-col flex-1 overflow-hidden">
                         {renderOrgCard('internal')}

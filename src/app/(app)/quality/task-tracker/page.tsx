@@ -8,7 +8,7 @@ import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, ListTodo } from 'lucide-react';
+import { Eye, ListTodo, Building } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -16,6 +16,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
@@ -35,7 +43,37 @@ type UnifiedTask = {
   organizationId?: string | null;
 };
 
-function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="border-b bg-muted/5 px-4 py-3">
+        <Select value={activeTab} onValueChange={onTabChange}>
+          <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+            <SelectValue placeholder="Select Organization" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="internal" className="text-[10px] font-bold uppercase">
+              <div className="flex items-center gap-2">
+                <Building className="h-3.5 w-3.5" />
+                Internal
+              </div>
+            </SelectItem>
+            {organizations.map((organization) => (
+              <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
+                <div className="flex items-center gap-2">
+                  <Building className="h-3.5 w-3.5" />
+                  {organization.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
   return (
     <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
       <div className="flex w-max gap-2 pr-6 flex-nowrap">
@@ -63,6 +101,7 @@ export default function TaskTrackerPage() {
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-tasks-view' });
+  const [activeOrgTab, setActiveOrgTab] = useState('internal');
 
   const canViewAll = hasPermission('quality-tasks-view');
 
@@ -227,7 +266,7 @@ export default function TaskTrackerPage() {
     return (
       <Card className="min-h-[400px] flex flex-col shadow-none border">
         <MainPageHeader title="Task Tracker" description="Centralized oversight of all corrective actions and mitigation tasks across the organization." />
-        {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
+        {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
         <CardContent className="p-0 overflow-auto">
           {renderTasksTable(filteredTasks)}
         </CardContent>
@@ -251,7 +290,7 @@ export default function TaskTrackerPage() {
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (
-            <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
+            <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 min-h-0 overflow-hidden">
                     <TabsContent value="internal" className="m-0 p-0 h-full">
                         {renderOrgCard('internal')}

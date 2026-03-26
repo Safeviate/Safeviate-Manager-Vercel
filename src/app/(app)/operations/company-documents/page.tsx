@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CompanyDocument {
   id: string;
@@ -36,6 +37,7 @@ export default function CompanyDocumentsPage() {
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
+  const isMobile = useIsMobile();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingDoc, setViewingDoc] = useState<CompanyDocument | null>(null);
@@ -59,7 +61,6 @@ export default function CompanyDocumentsPage() {
   const handleDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
     if (!firestore || !tenantId) return;
     
-    // Determine if it's likely an image (from camera or image file)
     const isImage = docDetails.url.startsWith('data:image/');
     
     const newDoc = {
@@ -99,8 +100,11 @@ export default function CompanyDocumentsPage() {
                 <DocumentUploader
                   onDocumentUploaded={handleDocumentUploaded}
                   trigger={(open) => (
-                    <Button onClick={() => open()} className="gap-2 sm:self-start">
-                      <PlusCircle className="h-4 w-4" /> Add Document
+                    <Button 
+                      onClick={() => open()} 
+                      size={isMobile ? "compact" : "default"} 
+                    >
+                      <PlusCircle className="h-4 w-4" /> {isMobile ? "Add" : "Add Document"}
                     </Button>
                   )}
                 />

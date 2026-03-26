@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,19 +18,26 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
     AlertDialogTrigger,
-  } from '@/components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, FilePlus, Clock, ShieldAlert } from 'lucide-react';
+import { Eye, Trash2, FilePlus, Clock, ShieldAlert, ListFilter } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
@@ -187,6 +194,7 @@ export default function BookingsHistoryPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
   const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState('all');
 
   const bookingsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
@@ -231,20 +239,46 @@ export default function BookingsHistoryPage() {
   const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
   const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
 
+  const tabs = [
+    { value: 'all', label: 'All' },
+    { value: 'training', label: 'Training' },
+    { value: 'private', label: 'Private' },
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ];
+
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full min-h-0">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
-        <Tabs defaultValue="all" className="flex h-full min-h-0 flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
           <MainPageHeader 
             title="Bookings History"
             actions={
-              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
-                <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">All</TabsTrigger>
-                <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Training</TabsTrigger>
-                <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Private</TabsTrigger>
-                <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Maintenance</TabsTrigger>
-                <TabsTrigger value="cancelled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">Cancelled</TabsTrigger>
-              </TabsList>
+              isMobile ? (
+                <Select value={activeTab} onValueChange={setActiveTab}>
+                  <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                    <SelectValue placeholder="Filter by Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tabs.map((tab) => (
+                      <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
+                        <div className="flex items-center gap-2">
+                          <ListFilter className="h-3.5 w-3.5" />
+                          {tab.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
+                  {tabs.map((tab) => (
+                    <TabsTrigger key={tab.value} value={tab.value} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              )
             }
           />
           <CardContent className='p-0 flex-1 min-h-0'>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
@@ -25,11 +25,19 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, FilePlus, Clock, User, Plane, ArrowRight } from 'lucide-react';
+import { Eye, Trash2, FilePlus, Clock, User, Plane, ArrowRight, ListFilter } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // A consolidated type for display
 type EnrichedBooking = Booking & {
@@ -70,8 +78,8 @@ function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, 
 
     const handleDelete = () => {
         if (!firestore) return;
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
-        deleteDocumentNonBlocking(bookingRef);
+        const reportRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
+        deleteDocumentNonBlocking(reportRef);
         toast({
             title: 'Booking Deleted',
             description: `Booking #${bookingNumber} is being deleted.`,
@@ -214,7 +222,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                                 <p className="text-[10px] uppercase font-bold text-muted-foreground">{b.type}</p>
                             </CardContent>
                             <CardFooter className="p-2 border-t bg-muted/5 flex gap-2">
-                                <Button asChild variant="ghost" size="sm" className="flex-1 justify-between text-xs font-bold h-8 px-4">
+                                <Button asChild variant="ghost" size="sm" className="flex-1 justify-between text-[10px] font-black uppercase h-8 px-4">
                                     <Link href={`/operations/booking-history/${b.id}`}>
                                         View Flight Details
                                         <ArrowRight className="h-3.5 w-3.5 ml-2" />
@@ -242,6 +250,8 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
 export default function BookingsHistoryPage() {
   const firestore = useFirestore();
   const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState('all');
 
   const bookingsQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
@@ -267,7 +277,6 @@ export default function BookingsHistoryPage() {
     const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
     const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
     
-    // Add Special lookup for developer mode
     userMap.set('DEVELOPER_MODE', 'System (Developer)');
 
     return bookings.map(b => {
@@ -289,6 +298,14 @@ export default function BookingsHistoryPage() {
   const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
   const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
 
+  const tabs = [
+    { value: 'all', label: 'All' },
+    { value: 'training', label: 'Training' },
+    { value: 'private', label: 'Private' },
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ];
+
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
        <div className="flex justify-between items-center px-1 shrink-0">
@@ -298,15 +315,39 @@ export default function BookingsHistoryPage() {
             </div>
         </div>
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
-        <Tabs defaultValue="all" className="flex flex-col h-full overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full overflow-hidden">
             <div className='px-6 pt-4 shrink-0'>
-                <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
-                    <TabsTrigger value="all" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">All</TabsTrigger>
-                    <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Training</TabsTrigger>
-                    <TabsTrigger value="private" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Private</TabsTrigger>
-                    <TabsTrigger value="maintenance" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Maintenance</TabsTrigger>
-                    <TabsTrigger value="cancelled" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">Cancelled</TabsTrigger>
-                </TabsList>
+                {isMobile ? (
+                    <div className="mb-4">
+                        <Select value={activeTab} onValueChange={setActiveTab}>
+                            <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                                <SelectValue placeholder="Filter by Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {tabs.map((tab) => (
+                                    <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
+                                        <div className="flex items-center gap-2">
+                                            <ListFilter className="h-3.5 w-3.5" />
+                                            {tab.label}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ) : (
+                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
+                        {tabs.map((tab) => (
+                            <TabsTrigger 
+                                key={tab.value} 
+                                value={tab.value} 
+                                className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase"
+                            >
+                                {tab.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                )}
             </div>
             <CardContent className='p-0 flex-1 overflow-hidden'>
                 <ScrollArea className="h-full">

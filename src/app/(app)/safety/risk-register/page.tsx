@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Edit, ShieldAlert, Settings2, Trash2, Plus, ShieldCheck } from 'lucide-react';
+import { PlusCircle, Edit, ShieldAlert, Settings2, Trash2, Plus, ShieldCheck, Building, LayoutGrid } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Risk, Mitigation, RiskRegisterSettings } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -26,8 +26,46 @@ import type { TabVisibilitySettings } from '../../admin/external/page';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { MainPageHeader } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        return (
+            <div className="border-b bg-muted/5 px-4 py-3">
+                <Select value={activeTab} onValueChange={onTabChange}>
+                    <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                        <SelectValue placeholder="Select Organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="internal" className="text-[10px] font-bold uppercase">
+                            <div className="flex items-center gap-2">
+                                <Building className="h-3.5 w-3.5" />
+                                Internal
+                            </div>
+                        </SelectItem>
+                        {organizations.map((organization) => (
+                            <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
+                                <div className="flex items-center gap-2">
+                                    <Building className="h-3.5 w-3.5" />
+                                    {organization.name}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        );
+    }
+
     return (
         <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
@@ -98,7 +136,7 @@ function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings:
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
                     <Settings2 className="h-4 w-4" />
-                    Manage Areas
+                    <span className="hidden sm:inline">Manage Areas</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
@@ -108,7 +146,8 @@ function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings:
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="flex gap-2">
-                        <Input 
+                        <input 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="New area name..." 
                             value={newArea} 
                             onChange={(e) => setNewArea(e.target.value)}
@@ -142,7 +181,10 @@ export default function RiskRegisterPage() {
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'risk-register-view' });
+  const isMobile = useIsMobile();
 
+  const [activeOrgTab, setActiveOrgTab] = React.useState('internal');
+  const [activeAreaTab, setActiveAreaTab] = React.useState('');
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
 
@@ -184,6 +226,12 @@ export default function RiskRegisterPage() {
       return registerSettings?.hazardAreas || DEFAULT_HAZARD_AREAS;
   }, [registerSettings]);
 
+  React.useEffect(() => {
+    if (hazardAreas.length > 0 && !activeAreaTab) {
+        setActiveAreaTab(hazardAreas[0]);
+    }
+  }, [hazardAreas, activeAreaTab]);
+
   const personnelMap = React.useMemo(() => {
     if (!personnel) return new Map<string, string>();
     return new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
@@ -216,29 +264,47 @@ export default function RiskRegisterPage() {
                             <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                                 <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
                                     <PlusCircle className="h-4 w-4" />
-                                    Add Hazard
+                                    {isMobile ? "Add" : "Add Hazard"}
                                 </Link>
                             </Button>
                         </div>
                     }
                 />
-                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
+                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
             </div>
 
             <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-                <Tabs defaultValue={displayAreas[0]} className="h-full flex flex-col">
-                    <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                            {displayAreas.map(area => (
-                                <TabsTrigger 
-                                    key={area} 
-                                    value={area} 
-                                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                                >
-                                    {area}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
+                <Tabs value={activeAreaTab} onValueChange={setActiveAreaTab} className="h-full flex flex-col">
+                    <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
+                        {isMobile ? (
+                            <Select value={activeAreaTab} onValueChange={setActiveAreaTab}>
+                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                                    <SelectValue placeholder="Select Area" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {displayAreas.map(area => (
+                                        <SelectItem key={area} value={area} className="text-[10px] font-bold uppercase">
+                                            <div className="flex items-center gap-2">
+                                                <LayoutGrid className="h-3.5 w-3.5" />
+                                                {area}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                                {displayAreas.map(area => (
+                                    <TabsTrigger 
+                                        key={area} 
+                                        value={area} 
+                                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                                    >
+                                        {area}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        )}
                     </div>
                     
                     <div className="flex-1 overflow-auto">
@@ -249,35 +315,37 @@ export default function RiskRegisterPage() {
                                 
                             return (
                                 <TabsContent key={area} value={area} className="mt-0 h-full">
-                                    <Table>
-                                        <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                                            <TableRow>
-                                                <TableHead className="w-[15%] text-[10px] uppercase font-bold tracking-wider">Hazard</TableHead>
-                                                <TableHead className="w-[15%] text-[10px] uppercase font-bold tracking-wider">Risk</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Initial</TableHead>
-                                                <TableHead className="w-[20%] text-[10px] uppercase font-bold tracking-wider">Mitigation</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Residual</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Responsible</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Review</TableHead>
-                                                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        {areaRisks.length > 0 ? (
-                                            areaRisks.map(hazard => (
-                                                <tbody key={hazard.id} className='border-b'>
-                                                    <RiskGroup hazard={hazard} personnelMap={personnelMap} onEditClick={handleEditClick} />
-                                                </tbody>
-                                            ))
-                                        ) : (
-                                            <tbody>
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
                                                 <TableRow>
-                                                    <TableCell colSpan={8} className="h-48 text-center text-muted-foreground italic text-sm">
-                                                        No open risks in this area.
-                                                    </TableCell>
+                                                    <TableHead className="w-[15%] text-[10px] uppercase font-bold tracking-wider">Hazard</TableHead>
+                                                    <TableHead className="w-[15%] text-[10px] uppercase font-bold tracking-wider">Risk</TableHead>
+                                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider">Initial</TableHead>
+                                                    <TableHead className="w-[20%] text-[10px] uppercase font-bold tracking-wider">Mitigation</TableHead>
+                                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider">Residual</TableHead>
+                                                    <TableHead className={cn("text-[10px] uppercase font-bold tracking-wider", isMobile && "hidden")}>Responsible</TableHead>
+                                                    <TableHead className={cn("text-[10px] uppercase font-bold tracking-wider", isMobile && "hidden")}>Review</TableHead>
+                                                    <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
                                                 </TableRow>
-                                            </tbody>
-                                        )}
-                                    </Table>
+                                            </TableHeader>
+                                            {areaRisks.length > 0 ? (
+                                                areaRisks.map(hazard => (
+                                                    <tbody key={hazard.id} className='border-b'>
+                                                        <RiskGroup hazard={hazard} personnelMap={personnelMap} onEditClick={handleEditClick} isMobile={isMobile} />
+                                                    </tbody>
+                                                ))
+                                            ) : (
+                                                <tbody>
+                                                    <TableRow>
+                                                        <TableCell colSpan={isMobile ? 6 : 8} className="h-48 text-center text-muted-foreground italic text-sm">
+                                                            No open risks in this area.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                </tbody>
+                                            )}
+                                        </Table>
+                                    </div>
                                 </TabsContent>
                             );
                         })}
@@ -305,7 +373,7 @@ export default function RiskRegisterPage() {
       {!showTabs ? (
           renderOrgCard(scopedOrganizationId)
       ) : (
-          <Tabs defaultValue="internal" className="w-full flex-1 flex flex-col overflow-hidden">
+          <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 min-h-0 overflow-hidden">
                 <TabsContent value="internal" className="mt-0 h-full">
                     {renderOrgCard('internal')}
@@ -342,7 +410,7 @@ export default function RiskRegisterPage() {
   );
 }
 
-function RiskGroup({ hazard, personnelMap, onEditClick }: { hazard: Risk; personnelMap: Map<string, string>; onEditClick: (risk: Risk) => void; }) {
+function RiskGroup({ hazard, personnelMap, onEditClick, isMobile }: { hazard: Risk; personnelMap: Map<string, string>; onEditClick: (risk: Risk) => void; isMobile?: boolean }) {
   const hazardRisks = hazard.risks || [];
   const totalRowsForHazard = hazardRisks.reduce((acc, r) => acc + Math.max(1, (r.mitigations || []).length), 0);
 
@@ -350,7 +418,7 @@ function RiskGroup({ hazard, personnelMap, onEditClick }: { hazard: Risk; person
     return (
       <TableRow>
         <TableCell className="font-bold text-sm text-primary whitespace-normal align-top">{hazard.hazard}</TableCell>
-        <TableCell colSpan={6} className="text-center text-muted-foreground text-xs italic">No risks defined.</TableCell>
+        <TableCell colSpan={isMobile ? 4 : 6} className="text-center text-muted-foreground text-xs italic">No risks defined.</TableCell>
         <TableCell className="text-right align-top">
           <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => onEditClick(hazard)}>
             <Edit className="h-3.5 w-3.5" />
@@ -393,8 +461,8 @@ function RiskGroup({ hazard, personnelMap, onEditClick }: { hazard: Risk; person
               </Badge>
             ) : <Badge variant="outline" className="text-[10px] h-5 opacity-50 font-black">N/A</Badge>}
           </TableCell>
-          <TableCell className="text-xs font-bold whitespace-nowrap py-4">{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
-          <TableCell className="text-xs font-bold whitespace-nowrap py-4">{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'dd MMM yy') : 'N/A'}</TableCell>
+          <TableCell className={cn("text-xs font-bold whitespace-nowrap py-4", isMobile && "hidden")}>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
+          <TableCell className={cn("text-xs font-bold whitespace-nowrap py-4", isMobile && "hidden")}>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'dd MMM yy') : 'N/A'}</TableCell>
           {showHazardCell && (
             <TableCell rowSpan={totalRowsForHazard} className="text-right align-top pt-4">
               <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => onEditClick(hazard)}>

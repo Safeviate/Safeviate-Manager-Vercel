@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Eye, Trash2, ShieldAlert, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, FileWarning } from 'lucide-react';
+import { PlusCircle, Eye, Trash2, ShieldAlert, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, FileWarning, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,8 +45,46 @@ import {
 } from '@/components/ui/dialog';
 import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/generate-safety-protocol-recommendations';
 import { MainPageHeader } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-function CompanyTabsRow({ organizations }: { organizations: ExternalOrganization[] }) {
+function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        return (
+            <div className="border-b bg-muted/5 px-4 py-3">
+                <Select value={activeTab} onValueChange={onTabChange}>
+                    <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                        <SelectValue placeholder="Select Organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="internal" className="text-[10px] font-bold uppercase">
+                            <div className="flex items-center gap-2">
+                                <Building className="h-3.5 w-3.5" />
+                                Internal
+                            </div>
+                        </SelectItem>
+                        {organizations.map((organization) => (
+                            <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
+                                <div className="flex items-center gap-2">
+                                    <Building className="h-3.5 w-3.5" />
+                                    {organization.name}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        );
+    }
+
     return (
         <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
@@ -310,6 +348,8 @@ export default function SafetyReportsPage() {
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'safety-reports-manage' });
+  const isMobile = useIsMobile();
+  const [activeOrgTab, setActiveOrgTab] = useState('internal');
 
   const canManageAll = hasPermission('safety-reports-manage');
 
@@ -346,13 +386,13 @@ export default function SafetyReportsPage() {
                         <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                             <Link href={`/safety/new-report?orgId=${orgId}`}>
                                 <PlusCircle className="h-4 w-4" />
-                                File New Report
+                                {isMobile ? "File" : "File New Report"}
                             </Link>
                         </Button>
                     </div>
                 }
             />
-            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} />}
+            {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
             <CardContent className="flex-1 p-0 overflow-hidden bg-background">
                 <ReportsTable reports={filteredReports} tenantId={tenantId || 'safeviate'} canManage={canManageAll} />
             </CardContent>
@@ -362,7 +402,7 @@ export default function SafetyReportsPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4">
+        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-[500px] w-full" />
         </div>
@@ -372,11 +412,11 @@ export default function SafetyReportsPage() {
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (
-            <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
+            <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex flex-col h-full overflow-hidden">
                 <div className="flex-1 min-h-0 overflow-hidden">
                     <TabsContent value="internal" className="mt-0 h-full">
                         {renderOrgCard('internal')}

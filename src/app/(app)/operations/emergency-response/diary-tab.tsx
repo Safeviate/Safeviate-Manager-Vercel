@@ -47,7 +47,6 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize logic for the diary entry textarea (starts at 1 line)
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -55,7 +54,6 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
     }
   }, [newLogEntry]);
 
-  // --- Data Fetching ---
   const triggersQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-triggers`)) : null),
     [firestore, tenantId]
@@ -280,58 +278,61 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
   return (
     <div className="flex flex-col h-full gap-6">
-      <div className="flex justify-between items-center px-1">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold flex items-center gap-2 font-headline">
-            {activeEvent ? (
-              <span className="flex items-center gap-2 text-red-600 animate-pulse">
-                <ShieldAlert className="h-5 w-5" /> Active Session
-              </span>
-            ) : viewingEvent ? (
-              <span className="flex items-center gap-2">
-                <History className="h-5 w-5 text-muted-foreground" /> Session Archive
-              </span>
-            ) : null}
-          </h2>
-          {viewingEvent && (
-            <Button variant="ghost" size="sm" onClick={() => setSelectedEventId(null)} className="h-8 gap-2">
-              <ArrowLeft className="h-4 w-4" /> Return to History
-            </Button>
-          )}
-        </div>
+      {/* Conditionally render header row only if active/viewing session */}
+      {currentActiveOrViewing && (
+        <div className="flex justify-between items-center px-1">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold flex items-center gap-2 font-headline">
+              {activeEvent ? (
+                <span className="flex items-center gap-2 text-red-600 animate-pulse">
+                  <ShieldAlert className="h-5 w-5" /> Active Session
+                </span>
+              ) : viewingEvent ? (
+                <span className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-muted-foreground" /> Session Archive
+                </span>
+              ) : null}
+            </h2>
+            {viewingEvent && (
+              <Button variant="ghost" size="sm" onClick={() => setSelectedEventId(null)} className="h-8 gap-2">
+                <ArrowLeft className="h-4 w-4" /> Return to History
+              </Button>
+            )}
+          </div>
 
-        <div className="flex items-center gap-2">
-          {activeEvent && canManage && (
-            <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm"><StopCircle className="mr-2 h-4 w-4" /> Close Session</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Finalize ERP Session</DialogTitle>
-                  <DialogDescription>Provide a summary of the response outcomes and any critical observations before closing the diary.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="close-summary">Response Summary / Closing Notes</Label>
-                    <Textarea 
-                      id="close-summary"
-                      placeholder="e.g., Aircraft located safely. All personnel accounted for. Coordination with RCC was successful."
-                      value={closingSummary}
-                      onChange={(e) => setClosingSummary(e.target.value)}
-                      className="min-h-[150px]"
-                    />
+          <div className="flex items-center gap-2">
+            {activeEvent && canManage && (
+              <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm"><StopCircle className="mr-2 h-4 w-4" /> Close Session</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Finalize ERP Session</DialogTitle>
+                    <DialogDescription>Provide a summary of the response outcomes and any critical observations before closing the diary.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="close-summary">Response Summary / Closing Notes</Label>
+                      <Textarea 
+                        id="close-summary"
+                        placeholder="e.g., Aircraft located safely. All personnel accounted for. Coordination with RCC was successful."
+                        value={closingSummary}
+                        onChange={(e) => setClosingSummary(e.target.value)}
+                        className="min-h-[150px]"
+                      />
+                    </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                  <Button variant="destructive" onClick={handleCloseERP}>Close & Save Session</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+                  <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button variant="destructive" onClick={handleCloseERP}>Close & Save Session</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {currentActiveOrViewing ? (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 flex-1 min-h-0">
@@ -463,7 +464,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         </div>
       ) : (
         <div className="h-full min-h-0 overflow-y-auto no-scrollbar">
-          <div className="border-b px-6 py-6">
+          <div className="border-b px-4 py-3"> {/* Reduced padding from px-6 py-4 to px-4 py-3 */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
                 <h3 className="font-headline text-2xl font-semibold">Response History</h3>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -18,6 +17,8 @@ import type { AlertType } from '@/types/alert';
 import { collection } from 'firebase/firestore';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Switch } from '@/components/ui/switch';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 const alertTypes: AlertType[] = ['Red Tag', 'Yellow Tag', 'Company Notice'];
 
@@ -40,6 +41,7 @@ export function AlertForm({ tenantId }: AlertFormProps) {
     const { user } = useUser();
     const { toast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
+    const isMobile = useIsMobile();
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -78,15 +80,18 @@ export function AlertForm({ tenantId }: AlertFormProps) {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Alert
+                <Button 
+                    size={isMobile ? "compact" : "default"} // Standardized
+                    className="shadow-sm"
+                >
+                    <PlusCircle className="h-4 w-4" />
+                    {isMobile ? "Create" : "Create Alert"}
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className={isMobile ? "max-w-[95vw] w-full p-4" : "sm:max-w-md"}>
                 <DialogHeader>
-                    <DialogTitle>Create New Alert</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className={isMobile ? "text-lg font-bold" : ""}>Create New Alert</DialogTitle>
+                    <DialogDescription className={isMobile ? "text-xs" : ""}>
                         Post a new tag or notice for all relevant personnel to see.
                     </DialogDescription>
                 </DialogHeader>
@@ -94,13 +99,13 @@ export function AlertForm({ tenantId }: AlertFormProps) {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                         <FormField control={form.control} name="type" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Alert Type</FormLabel>
+                                <FormLabel className={isMobile ? "text-xs font-bold" : ""}>Alert Type</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Select an alert type" /></SelectTrigger>
+                                        <SelectTrigger className={isMobile ? "h-9 text-xs" : ""}><SelectValue placeholder="Select an alert type" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {alertTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                        {alertTypes.map(type => <SelectItem key={type} value={type} className={isMobile ? "text-xs" : ""}>{type}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -108,15 +113,15 @@ export function AlertForm({ tenantId }: AlertFormProps) {
                         )} />
                         <FormField control={form.control} name="title" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Title</FormLabel>
-                                <FormControl><Input placeholder="e.g., Runway 32L Closed" {...field} /></FormControl>
+                                <FormLabel className={isMobile ? "text-xs font-bold" : ""}>Title</FormLabel>
+                                <FormControl><Input placeholder="e.g., Runway 32L Closed" {...field} className={isMobile ? "h-9 text-xs" : ""} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
                         <FormField control={form.control} name="content" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Content</FormLabel>
-                                <FormControl><Textarea placeholder="Provide full details of the alert..." {...field} /></FormControl>
+                                <FormLabel className={isMobile ? "text-xs font-bold" : ""}>Content</FormLabel>
+                                <FormControl><Textarea placeholder="Provide full details of the alert..." {...field} className={isMobile ? "min-h-[100px] text-xs" : ""} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
@@ -126,15 +131,16 @@ export function AlertForm({ tenantId }: AlertFormProps) {
                             render={({ field }) => (
                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                                     <div className="space-y-0.5">
-                                        <FormLabel>Must Read</FormLabel>
-                                        <FormDescription>
-                                            If enabled, users must acknowledge this alert upon login.
+                                        <FormLabel className={isMobile ? "text-xs font-bold" : ""}>Must Read</FormLabel>
+                                        <FormDescription className={isMobile ? "text-[10px]" : "text-xs"}>
+                                            Users must acknowledge upon login.
                                         </FormDescription>
                                     </div>
                                     <FormControl>
                                         <Switch
                                             checked={field.value}
                                             onCheckedChange={field.onChange}
+                                            className={isMobile ? "scale-75" : ""}
                                         />
                                     </FormControl>
                                 </FormItem>
@@ -145,17 +151,19 @@ export function AlertForm({ tenantId }: AlertFormProps) {
                             name="signatureUrl"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Signature</FormLabel>
+                                    <FormLabel className={isMobile ? "text-xs font-bold" : ""}>Signature</FormLabel>
                                     <FormControl>
-                                        <SignaturePad onSignatureEnd={field.onChange} />
+                                        <div className={isMobile ? "h-[120px]" : ""}>
+                                            <SignaturePad onSignatureEnd={field.onChange} />
+                                        </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                            <Button type="submit">Post Alert</Button>
+                        <DialogFooter className="flex-col sm:flex-row gap-2">
+                            <DialogClose asChild><Button type="button" variant="outline" size="compact" className="w-full sm:w-auto">Cancel</Button></DialogClose>
+                            <Button type="submit" size="compact" className="w-full sm:w-auto">Post Alert</Button>
                         </DialogFooter>
                     </form>
                 </Form>

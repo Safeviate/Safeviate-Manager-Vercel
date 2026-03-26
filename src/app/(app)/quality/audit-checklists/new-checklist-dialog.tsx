@@ -262,7 +262,7 @@ export function NewChecklistDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="w-full sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{existingTemplate ? 'Edit' : 'New'} Checklist Template</DialogTitle>
           <DialogDescription>
@@ -281,9 +281,9 @@ export function NewChecklistDialog({
                 <Separator />
                 
                 <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium">Sections</h3>
-                        <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4"> {/* Updated responsive classes */}
+                        <h3 className="text-lg font-medium mb-2 sm:mb-0">Sections</h3> {/* Added responsive margin */}
+                        <div className="flex flex-wrap gap-2 justify-end sm:justify-start"> {/* Added flex-wrap and justify-end */}
                             <ImportFromMatrixDialog 
                                 complianceItems={complianceItems || []}
                                 onImport={handleImportFromMatrix}
@@ -293,6 +293,7 @@ export function NewChecklistDialog({
                                 type="button" 
                                 variant="outline" 
                                 onClick={() => appendSection({ id: uuidv4(), title: '', items: [] })}
+                                className="w-full sm:w-auto"
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Section
                             </Button>

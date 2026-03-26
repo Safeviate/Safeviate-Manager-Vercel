@@ -42,6 +42,7 @@ import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { usePermissions } from '@/hooks/use-permissions';
+import { firebaseConfig } from '@/firebase/config';
 
 const SidebarItems = () => {
     const pathname = usePathname();
@@ -173,15 +174,20 @@ const SidebarFooterContent = () => {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     tooltip={displayName}
-                    className="w-full justify-start"
+                    className="w-full h-auto py-2 justify-start items-center gap-3"
                   >
-                    <Avatar className="h-6 w-6">
+                    <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={`https://picsum.photos/seed/${displayName}/100/100`} />
                       <AvatarFallback>{fallback}</AvatarFallback>
                     </Avatar>
-                    <span className="group-data-[collapsible=icon]:hidden truncate">
-                      {displayName}
-                    </span>
+                    <div className="flex flex-col gap-0.5 items-start overflow-hidden group-data-[collapsible=icon]:hidden">
+                      <span className="text-sm font-bold truncate w-full">
+                        {displayName}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono truncate w-full opacity-60">
+                        {firebaseConfig.projectId}
+                      </span>
+                    </div>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -195,6 +201,10 @@ const SidebarFooterContent = () => {
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[9px] font-mono opacity-50 uppercase tracking-tighter">
+                    Project: {firebaseConfig.projectId}
+                  </DropdownMenuLabel>
                 </DropdownMenuContent>
               </DropdownMenu>
           </SidebarMenu>

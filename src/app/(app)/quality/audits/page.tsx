@@ -20,7 +20,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Eye, Trash2, Calendar, ClipboardCheck, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Eye, Trash2, Calendar, ClipboardCheck, ArrowRight, ShieldCheck, Building, ListFilter } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +30,14 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useTabVisibility } from '@/hooks/use-tab-visibility';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -68,16 +76,16 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
     
     return (
         <div className="flex items-center justify-end gap-2">
-            <Button asChild variant="outline" size="sm" className="h-8 gap-2 text-[10px] font-black uppercase border-slate-300">
+            <Button asChild variant="outline" size="compact" className="border-slate-300">
                 <Link href={`/quality/audits/${audit.id}`}>
                     <Eye className="h-4 w-4" />
-                    View
+                    <span className="hidden sm:inline">View</span>
                 </Link>
             </Button>
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" className="h-8 px-3 text-xs">
+                    <Button variant="destructive" size="icon" className="h-8 w-8">
                         <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                 </AlertDialogTrigger>
@@ -113,15 +121,14 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
 
     return (
         <div className="flex flex-col gap-4">
-            {/* --- DESKTOP VIEW --- */}
-            <div className="hidden lg:block">
+            <div className="overflow-x-auto">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/30">
                         <TableRow>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Audit ID</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">ID</TableHead>
                             <TableHead className="text-[10px] uppercase font-bold tracking-wider">Date</TableHead>
                             <TableHead className="text-[10px] uppercase font-bold tracking-wider">Title</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Auditee</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-wider hidden sm:table-cell">Auditee</TableHead>
                             <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">Score</TableHead>
                             <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
                             <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
@@ -130,16 +137,16 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                     <TableBody>
                         {audits.map(audit => (
                             <TableRow key={audit.id} className="hover:bg-muted/5 transition-colors">
-                                <TableCell className="font-bold text-sm text-primary">
+                                <TableCell className="font-bold text-xs text-primary">
                                     <Link href={`/quality/audits/${audit.id}`} className="hover:underline">{audit.auditNumber}</Link>
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap text-sm font-medium">{format(new Date(audit.auditDate), 'dd MMM yy')}</TableCell>
-                                <TableCell className="text-sm font-bold max-w-[200px] truncate">{audit.title}</TableCell>
-                                <TableCell className="text-sm font-medium">{audit.auditeeName || audit.auditeeId}</TableCell>
+                                <TableCell className="whitespace-nowrap text-xs font-medium">{format(new Date(audit.auditDate), 'dd MMM yy')}</TableCell>
+                                <TableCell className="text-xs font-bold max-w-[150px] truncate">{audit.title}</TableCell>
+                                <TableCell className="text-xs font-medium hidden sm:table-cell">{audit.auditeeName || audit.auditeeId}</TableCell>
                                 <TableCell className="text-center">
                                     {audit.complianceScore !== undefined ? (
                                         <Badge variant="outline" className={cn(
-                                            "font-black text-[10px] uppercase py-0.5 px-2",
+                                            "font-black text-[9px] uppercase py-0.5 px-2",
                                             audit.complianceScore >= 80 ? "text-green-600 border-green-600 bg-green-50" : 
                                             audit.complianceScore >= 60 ? "text-yellow-600 border-yellow-600 bg-yellow-50" : 
                                             "text-red-600 border-red-600 bg-red-50"
@@ -148,63 +155,14 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                                         </Badge>
                                     ) : '-'}
                                 </TableCell>
-                                <TableCell><Badge variant={getStatusBadgeVariant(audit.status)} className="text-[10px] font-black uppercase py-0.5 px-3">{audit.status}</Badge></TableCell>
+                                <TableCell><Badge variant={getStatusBadgeVariant(audit.status)} className="text-[9px] font-black uppercase py-0.5 px-2">{audit.status}</Badge></TableCell>
                                 <TableCell className="text-right">
-                                <AuditActions audit={audit} tenantId={tenantId} />
+                                    <AuditActions audit={audit} tenantId={tenantId} />
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
-            </div>
-
-            {/* --- MOBILE CARD VIEW --- */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
-                {audits.map(audit => (
-                    <Card key={audit.id} className="shadow-none border-slate-200 overflow-hidden">
-                        <div className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{audit.auditNumber}</span>
-                                <span className="text-sm font-black mt-1 line-clamp-1">{audit.title}</span>
-                            </div>
-                            <Badge variant={getStatusBadgeVariant(audit.status)} className="h-5 text-[9px] font-black uppercase">
-                                {audit.status}
-                            </Badge>
-                        </div>
-                        <CardContent className="p-4 py-3 space-y-3">
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground font-bold uppercase">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    {format(new Date(audit.auditDate), 'dd MMM yyyy')}
-                                </div>
-                                {audit.complianceScore !== undefined && (
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-[10px] font-black text-muted-foreground uppercase">Score:</span>
-                                        <span className={cn(
-                                            "font-black text-sm",
-                                            audit.complianceScore >= 80 ? "text-green-600" : 
-                                            audit.complianceScore >= 60 ? "text-yellow-600" : 
-                                            "text-red-600"
-                                        )}>{audit.complianceScore}%</span>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs font-bold uppercase">
-                                <ClipboardCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                                Auditee: <span className="font-medium text-foreground">{audit.auditeeName || audit.auditeeId}</span>
-                            </div>
-                            <p className="text-[10px] uppercase font-black text-muted-foreground">Scope: <span className="text-foreground normal-case font-medium">{audit.scope}</span></p>
-                        </CardContent>
-                        <CardFooter className="p-2 border-t bg-muted/5">
-                            <Button asChild variant="ghost" size="sm" className="w-full justify-between text-[10px] font-black uppercase h-8 px-4">
-                                <Link href={`/quality/audits/${audit.id}`}>
-                                    Review Findings & CAPs
-                                    <ArrowRight className="h-3.5 w-3.5 ml-2" />
-                                </Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                ))}
             </div>
         </div>
     );
@@ -215,6 +173,9 @@ export default function AuditsPage() {
     const { tenantId } = useUserProfile();
     const { hasPermission } = usePermissions();
     const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-audits-view-all' });
+    const isMobile = useIsMobile();
+    const [activeOrgTab, setActiveOrgTab] = useState('internal');
+    const [activeStatusTab, setActiveStatusTab] = useState('active');
 
     const auditsQuery = useMemoFirebase(
         () => {
@@ -272,41 +233,90 @@ export default function AuditsPage() {
                 <MainPageHeader 
                     title="Audits"
                     actions={
-                        <Button asChild variant="outline" size="sm" className="h-9 px-4 text-[10px] font-black uppercase gap-2 border-slate-300">
+                        <Button asChild variant="outline" size={isMobile ? "compact" : "sm"} className="border-slate-300">
                             <Link href="/quality/audit-checklists">
-                                <ShieldCheck className="h-4 w-4" /> Audit Templates
+                                < ShieldCheck className="h-4 w-4" /> 
+                                {isMobile ? "Templates" : "Audit Templates"}
                             </Link>
                         </Button>
                     }
                 />
 
                 {shouldShowOrganizationTabs && (
-                    <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
-                        <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                                <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
-                                    Internal
-                                </TabsTrigger>
-                                {organizations?.map((organization) => (
-                                    <TabsTrigger
-                                        key={organization.id}
-                                        value={organization.id}
-                                        className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all"
-                                    >
-                                        {organization.name}
+                    <div className="border-b bg-muted/5 px-4 py-3 shrink-0">
+                        {isMobile ? (
+                            <Select value={activeOrgTab} onValueChange={setActiveOrgTab}>
+                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                                    <SelectValue placeholder="Select Organization" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="internal" className="text-[10px] font-bold uppercase">
+                                        <div className="flex items-center gap-2">
+                                            <Building className="h-3.5 w-3.5" />
+                                            Internal
+                                        </div>
+                                    </SelectItem>
+                                    {organizations?.map((organization) => (
+                                        <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
+                                            <div className="flex items-center gap-2">
+                                                <Building className="h-3.5 w-3.5" />
+                                                {organization.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <div className="flex w-max gap-2 pr-6 flex-nowrap">
+                                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+                                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
+                                        Internal
                                     </TabsTrigger>
-                                ))}
-                            </TabsList>
-                        </div>
+                                    {organizations?.map((organization) => (
+                                        <TabsTrigger
+                                            key={organization.id}
+                                            value={organization.id}
+                                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all"
+                                        >
+                                            {organization.name}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                <Tabs defaultValue="active" className="flex-1 flex flex-col">
-                    <div className='px-6 py-3 border-b bg-muted/5 overflow-x-auto no-scrollbar'>
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                            <TabsTrigger value="active" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-[10px] font-black uppercase shrink-0 transition-all">Active ({activeAudits.length})</TabsTrigger>
-                            <TabsTrigger value="archived" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-[10px] font-black uppercase shrink-0 transition-all">Archived ({archivedAudits.length})</TabsTrigger>
-                        </TabsList>
+                <Tabs value={activeStatusTab} onValueChange={setActiveStatusTab} className="flex-1 flex flex-col">
+                    <div className='px-4 py-3 border-b bg-muted/5 shrink-0'>
+                        {isMobile ? (
+                            <Select value={activeStatusTab} onValueChange={setActiveStatusTab}>
+                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                                    <SelectValue placeholder="Filter Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active" className="text-[10px] font-bold uppercase">
+                                        <div className="flex items-center gap-2">
+                                            <ListFilter className="h-3.5 w-3.5" />
+                                            Active ({activeAudits.length})
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="archived" className="text-[10px] font-bold uppercase">
+                                        <div className="flex items-center gap-2">
+                                            <ListFilter className="h-3.5 w-3.5" />
+                                            Archived ({archivedAudits.length})
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <div className="flex w-max gap-2 pr-6 flex-nowrap">
+                                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+                                    <TabsTrigger value="active" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-[10px] font-black uppercase shrink-0 transition-all">Active ({activeAudits.length})</TabsTrigger>
+                                    <TabsTrigger value="archived" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-[10px] font-black uppercase shrink-0 transition-all">Archived ({archivedAudits.length})</TabsTrigger>
+                                </TabsList>
+                            </div>
+                        )}
                     </div>
                     <CardContent className="p-0 flex-1">
                         <TabsContent value="active" className="m-0 p-4 lg:p-6">
@@ -341,14 +351,14 @@ export default function AuditsPage() {
             {!showTabs ? (
                 renderOrgCard(scopedOrganizationId)
             ) : (
-                <Tabs defaultValue="internal" className="w-full flex flex-col h-full overflow-hidden">
-                    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-                        <TabsContent value="internal" className="m-0 p-0">
+                <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex flex-col h-full overflow-hidden">
+                    <div className="flex-1 min-h-0">
+                        <TabsContent value="internal" className="m-0 p-0 h-full">
                             {renderOrgCard('internal')}
                         </TabsContent>
                         
                         {(organizations || []).map(org => (
-                            <TabsContent key={org.id} value={org.id} className="m-0 p-0">
+                            <TabsContent key={org.id} value={org.id} className="m-0 p-0 h-full">
                                 {renderOrgCard(org.id)}
                             </TabsContent>
                         ))}

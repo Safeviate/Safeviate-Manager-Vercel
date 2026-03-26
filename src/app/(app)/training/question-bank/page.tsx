@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, MoreHorizontal, WandSparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -34,11 +34,19 @@ import type { QuestionBankItem } from '@/types/training';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { AiExamGenerator } from '../exams/ai-exam-generator';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function QuestionBankPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
+  const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('');
@@ -110,12 +118,36 @@ export default function QuestionBankPage() {
         <MainPageHeader 
           title="Question Bank Manager"
           actions={
-            <div className="flex gap-2 w-full sm:w-auto">
-                <AiExamGenerator onGenerated={handleAiGenerated} />
-                <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
-                    <PlusCircle className="h-4 w-4" /> Add Question
-                </Button>
-            </div>
+            isMobile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="compact" variant="outline" className="gap-2">
+                    <MoreHorizontal className="h-4 w-4" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <AiExamGenerator 
+                    onGenerated={handleAiGenerated} 
+                    trigger={
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
+                        <WandSparkles className="mr-2 h-4 w-4" /> AI Generate
+                      </DropdownMenuItem>
+                    }
+                  />
+                  <DropdownMenuItem onClick={() => setIsAddOpen(true)} disabled={!selectedTopic} className="cursor-pointer">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Question
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex gap-2 w-full sm:w-auto">
+                  <AiExamGenerator onGenerated={handleAiGenerated} />
+                  <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
+                      <PlusCircle className="h-4 w-4" /> Add Question
+                  </Button>
+              </div>
+            )
           }
         />
 
@@ -206,7 +238,7 @@ export default function QuestionBankPage() {
                                 <p className="text-sm font-bold text-foreground line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
                             </CardContent>
                             <CardFooter className="p-2 border-t bg-muted/5 flex gap-2">
-                                <Button variant="outline" size="sm" className="flex-1 text-[10px] font-black uppercase h-8 border-slate-300" onClick={() => setEditingItem(item)}>
+                                <Button variant="outline" size="compact" className="flex-1 border-slate-300" onClick={() => setEditingItem(item)}>
                                     <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
                                 </Button>
                                 <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
@@ -304,6 +336,7 @@ interface UpsertQuestionDialogProps {
 function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingItem }: UpsertQuestionDialogProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const isMobile = useIsMobile();
     
     const [text, setText] = useState('');
     const [options, setOptions] = useState<{ id: string; text: string }[]>([]);
@@ -372,7 +405,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className={isMobile ? "max-w-[95vw] w-full p-4" : "sm:max-w-2xl"}>
                 <DialogHeader>
                     <DialogTitle className="text-xl font-black uppercase tracking-tight">{editingItem ? 'Edit Question' : 'Add Question'}</DialogTitle>
                     <DialogDescription className="text-sm font-medium">
@@ -382,7 +415,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                 <ScrollArea className="max-h-[70vh] pr-4">
                     <div className="space-y-6 py-4">
                         <div className="space-y-2">
-                            <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Question Text</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Question Text</Label>
                             <Textarea 
                                 value={text} 
                                 onChange={(e) => setText(e.target.value)} 
@@ -393,7 +426,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                         
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Options (Select One Correct Answer)</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Options (Select One Correct Answer)</Label>
                                 {!correctId && <Badge variant="destructive" className="h-5 text-[8px] font-black uppercase animate-pulse">SELECTION REQUIRED</Badge>}
                             </div>
                             
@@ -420,7 +453,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                                                 </Label>
                                                 {correctId === opt.id && (
                                                     <Badge className="h-4 text-[8px] font-black uppercase bg-green-600 text-white border-none gap-1">
-                                                        <CheckCircle2 className="h-2 w-2" /> CORRECT ANSWER
+                                                        <CheckCircle2 className="h-2 w-2" /> CORRECT
                                                     </Badge>
                                                 )}
                                             </div>
@@ -453,24 +486,26 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                             
                             <Button 
                                 variant="outline" 
-                                size="sm" 
+                                size="compact" 
                                 onClick={() => setOptions([...options, { id: uuidv4(), text: '' }])} 
-                                className="w-full h-10 border-dashed border-2 hover:bg-muted/10 text-[10px] font-black uppercase border-slate-300"
+                                className="w-full h-10 border-dashed border-2 hover:bg-muted/10 border-slate-300"
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Another Option
                             </Button>
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="border-t pt-4 bg-muted/5 -mx-6 px-6">
-                    <div className="flex items-center gap-2 mr-auto text-muted-foreground">
+                <DialogFooter className="border-t pt-4 bg-muted/5 -mx-6 px-6 flex-col sm:flex-row gap-2">
+                    <div className={cn("flex items-center gap-2 mr-auto text-muted-foreground", isMobile && "mb-2")}>
                         <AlertCircle className="h-4 w-4" />
-                        <span className="text-[10px] font-bold uppercase tracking-tight">At least two options and one correct answer required.</span>
+                        <span className="text-[10px] font-bold uppercase tracking-tight">2+ opts & 1 correct required.</span>
                     </div>
-                    <DialogClose asChild><Button variant="outline" className="text-[10px] font-black uppercase border-slate-300">Cancel</Button></DialogClose>
-                    <Button onClick={handleSave} disabled={isSaving} className="text-[10px] font-black uppercase">
-                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : (editingItem ? 'Update Question' : 'Save to Database')}
-                    </Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <DialogClose asChild><Button variant="outline" size="compact" className="flex-1 sm:flex-none border-slate-300">Cancel</Button></DialogClose>
+                        <Button onClick={handleSave} size="compact" disabled={isSaving} className="flex-1 sm:flex-none">
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : (editingItem ? 'Update' : 'Save')}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
