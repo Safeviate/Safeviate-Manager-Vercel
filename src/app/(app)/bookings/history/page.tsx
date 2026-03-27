@@ -119,7 +119,7 @@ function DeleteBookingButton({ booking }: { booking: EnrichedBooking }) {
 const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
     if (bookings.length === 0) {
         return (
-            <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-xs uppercase font-bold tracking-widest bg-muted/5">
+            <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">
               No bookings found for this category.
             </div>
         );
@@ -128,7 +128,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
     return (
          <div className="w-full overflow-x-auto">
             <Table className="min-w-[760px]">
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">#</TableHead>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">Aircraft</TableHead>
@@ -164,7 +164,7 @@ const BookingsTable = ({ bookings }: { bookings: EnrichedBooking[] }) => {
                                 </TableCell>
                                 <TableCell className='text-right whitespace-nowrap'>
                                     <div className="flex justify-end gap-2">
-                                        <Button asChild variant="outline" size="sm" className="h-8 gap-2 text-[10px] font-black uppercase">
+                                        <Button asChild variant="outline" size="compact" className="border-slate-300">
                                             <Link href={`/bookings/history/${b.id}`}>
                                                 <Eye className="h-4 w-4" />
                                                 View
@@ -248,7 +248,7 @@ export default function BookingsHistoryPage() {
   ];
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full min-h-0">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full min-h-0 px-1">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
           <MainPageHeader 
@@ -273,7 +273,7 @@ export default function BookingsHistoryPage() {
               ) : (
                 <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
                   {tabs.map((tab) => (
-                    <TabsTrigger key={tab.value} value={tab.value} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase">
+                    <TabsTrigger key={tab.value} value={tab.value} className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white shrink-0 text-[10px] font-black uppercase transition-all">
                       {tab.label}
                     </TabsTrigger>
                   ))}

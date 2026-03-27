@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -9,6 +8,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 type UserProfile = PilotProfile | Personnel;
 type UserLink = { profilePath: string };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
+const MASTER_ADMIN_EMAIL = 'barry@safeviate.com'; // Master Admin Bypass
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -43,22 +43,18 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
     const { user: authUser, isUserLoading: isAuthLoading } = useUser();
 
-    // 1. Create a reactive reference to the user link document
     const userLinkRef = useMemoFirebase(
         () => (firestore && authUser && !authUser.isAnonymous ? doc(firestore, 'users', authUser.uid) : null),
         [firestore, authUser]
     );
 
-    // 2. Use `useDoc` to listen for the user link data
     const { data: userLink, isLoading: isUserLinkLoading, error: userLinkError } = useDoc<UserLink>(userLinkRef);
 
-    // 3. Based on the user link, create a reactive reference to the actual profile document
     const userProfileRef = useMemoFirebase(
         () => (firestore && userLink?.profilePath ? doc(firestore, userLink.profilePath) : null),
         [firestore, userLink]
     );
 
-    // 4. Use `useDoc` again to listen for the final profile data
     const { data: userProfileData, isLoading: isProfileDocLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
 
     const [finalUserProfile, setFinalUserProfile] = useState<UserProfile | null>(null);
@@ -67,11 +63,9 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const [error, setError] = useState<Error | null>(null);
     
     useEffect(() => {
-        // Overall loading state
         const loading = isAuthLoading || isUserLinkLoading || isProfileDocLoading;
         setIsLoading(loading);
 
-        // Overall error state
         const combinedError = userLinkError || profileError;
         setError(combinedError);
 
@@ -84,6 +78,22 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         if (!authUser) {
             setFinalUserProfile(null);
             setTenantId(null);
+            return;
+        }
+
+        // --- Master Admin Bypass ---
+        if (authUser.email === MASTER_ADMIN_EMAIL) {
+            const adminProfile: Personnel = {
+                id: authUser.uid,
+                userType: 'Personnel',
+                firstName: 'Barry',
+                lastName: 'Admin',
+                email: authUser.email!,
+                role: 'dev', // Grants all permissions
+                permissions: [],
+            };
+            setFinalUserProfile(adminProfile);
+            setTenantId(getTenantOverride() || 'safeviate');
             return;
         }
 
@@ -104,7 +114,6 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
         if (userProfileData && userLink?.profilePath) {
             setFinalUserProfile(userProfileData);
-            // Extract tenant ID from path: tenants/{tenantId}/...
             const pathParts = userLink.profilePath.split('/');
             const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
             const overrideTenantId = canOverrideTenant(userProfileData, false) ? getTenantOverride() : null;
@@ -122,7 +131,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         const syncTenantOverride = () => {
             const overrideTenantId = getTenantOverride();
 
-            if (authUser?.isAnonymous) {
+            if (authUser?.isAnonymous || authUser?.email === MASTER_ADMIN_EMAIL) {
                 setTenantId(overrideTenantId || 'safeviate');
                 return;
             }

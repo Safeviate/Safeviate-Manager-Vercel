@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRef } from 'react';
@@ -49,20 +48,17 @@ export function AlertCard({ alert, tenantId, canManage, showReadReceipts = true 
         if (printWindow) {
             printWindow.document.write('<html><head><title>Print Alert</title>');
 
-            // Copy styles from the main document
             const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
             styles.forEach(style => {
                 printWindow.document.head.appendChild(style.cloneNode(true));
             });
             
-            // Add a basic print style to hide the footer actions
             printWindow.document.head.innerHTML += '<style>@media print { .no-print { display: none !important; } body { padding: 1rem; } }</style>';
 
             printWindow.document.write('</head><body>');
             printWindow.document.write(cardRef.current.outerHTML);
             printWindow.document.write('</body></html>');
 
-            // Timeout to allow styles to load before printing
             setTimeout(() => {
                 printWindow.document.close();
                 printWindow.print();
@@ -74,59 +70,59 @@ export function AlertCard({ alert, tenantId, canManage, showReadReceipts = true 
 
     return (
         <Card className={cn(getCardClass())} ref={cardRef}>
-            <CardHeader>
-                <CardTitle>{alert.title}</CardTitle>
+            <CardHeader className="py-4">
+                <CardTitle className="text-sm font-black uppercase tracking-tight">{alert.title}</CardTitle>
             </CardHeader>
-            <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{alert.content}</p>
+            <CardContent className="pb-4">
+                <p className="text-sm font-medium leading-relaxed">&quot;{alert.content}&quot;</p>
                  {alert.signatureUrl && (
-                    <div className="mt-4 pt-4 border-t">
-                        <p className="text-xs text-muted-foreground mb-1">Signed:</p>
+                    <div className="mt-4 pt-4 border-t border-dashed">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Authenticated Signature:</p>
                         <Image
                             src={alert.signatureUrl}
                             alt="Signature"
-                            width={200}
-                            height={100}
-                            className="bg-white border rounded-md p-1"
+                            width={160}
+                            height={80}
+                            className="bg-white border rounded-md p-1 shadow-sm"
                         />
                     </div>
                 )}
             </CardContent>
-            <CardFooter className="flex flex-col items-start gap-4 text-xs text-muted-foreground">
-                <div className="flex justify-between w-full">
-                    <span>Posted on {format(new Date(alert.createdAt), 'PPP')}</span>
-                    <div className="flex items-center gap-2 no-print">
-                        <Button variant="ghost" size="sm" onClick={handlePrint}>
-                            <Printer className="mr-2 h-4 w-4" /> Print
+            <CardFooter className="flex flex-col items-start gap-4 text-xs">
+                <div className="flex justify-between items-center w-full border-t pt-4">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Posted on {format(new Date(alert.createdAt), 'dd MMM yyyy')}</span>
+                    <div className="flex items-center gap-1.5 no-print">
+                        <Button variant="outline" size="compact" onClick={handlePrint} className="border-slate-300">
+                            <Printer className="h-3.5 w-3.5" /> Print
                         </Button>
                         {canManage && (
-                            <Button variant="ghost" size="sm" onClick={handleArchive}>
-                                <Archive className="mr-2 h-4 w-4" /> Archive
+                            <Button variant="outline" size="compact" onClick={handleArchive} className="border-slate-300 text-red-600 hover:text-red-700">
+                                <Archive className="h-3.5 w-3.5" /> Archive
                             </Button>
                         )}
                     </div>
                 </div>
                  {showReadReceipts && (
                     <Accordion type="single" collapsible className="w-full no-print">
-                        <AccordionItem value="item-1" className="border-t">
-                            <AccordionTrigger>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Users className="h-4 w-4" />
+                        <AccordionItem value="item-1" className="border-none">
+                            <AccordionTrigger className="py-2 hover:no-underline">
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-60">
+                                    <Users className="h-3.5 w-3.5" />
                                     <span>Read by {alert.readBy?.length || 0} users</span>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent>
                                 {alert.readBy && alert.readBy.length > 0 ? (
-                                    <div className="max-h-32 overflow-y-auto text-xs space-y-2">
+                                    <div className="max-h-32 overflow-y-auto text-[10px] font-medium space-y-2 border rounded-lg p-3 bg-muted/5">
                                         {alert.readBy.map(receipt => (
                                             <div key={receipt.userId} className="flex justify-between">
-                                                <span>{receipt.userName}</span>
-                                                <span className="text-muted-foreground">{format(new Date(receipt.readAt), 'PPP p')}</span>
+                                                <span className="font-bold">{receipt.userName}</span>
+                                                <span className="text-muted-foreground">{format(new Date(receipt.readAt), 'dd MMM yy HH:mm')}</span>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-muted-foreground text-center py-2">No one has read this alert yet.</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground italic text-center py-2 uppercase opacity-40">No acknowledgements yet.</p>
                                 )}
                             </AccordionContent>
                         </AccordionItem>

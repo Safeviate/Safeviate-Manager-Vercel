@@ -61,7 +61,7 @@ export default function MyDashboardPage() {
     );
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col h-full overflow-hidden">
                 {isMobile ? (
                     <div className="mb-6">
@@ -87,7 +87,7 @@ export default function MyDashboardPage() {
                 ) : (
                     <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
                         {availableTabs.map(tab => (
-                            <TabsTrigger key={tab.id} value={tab.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">
+                            <TabsTrigger key={tab.id} value={tab.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all">
                                 {tab.label}
                                 {tab.id === 'messages' && myMessages.length > 0 && (
                                     <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px] bg-primary text-primary-foreground">{myMessages.length}</Badge>
@@ -188,7 +188,7 @@ export default function MyDashboardPage() {
                         <CardContent>
                             <div className="text-center py-10">
                                 <p className="text-muted-foreground mb-4">The logbook feature is currently disabled.</p>
-                                <Button asChild className="text-[10px] font-bold uppercase bg-button-primary text-button-primary-foreground">
+                                <Button asChild className="text-[10px] font-bold uppercase bg-emerald-700 hover:bg-emerald-800 text-white">
                                     <Link href="/development/table-builder">Go to Table Builder</Link>
                                 </Button>
                             </div>

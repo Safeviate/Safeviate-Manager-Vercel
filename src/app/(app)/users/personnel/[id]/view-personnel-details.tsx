@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown, ListFilter, UserCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +31,15 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { menuConfig } from '@/lib/menu-config';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MainPageHeader } from '@/components/page-header';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -38,14 +47,15 @@ interface ViewPersonnelDetailsProps {
   user: UserProfile;
   role: Role | null;
   department: Department | null;
+  actions?: React.ReactNode; // New prop for standardized actions
 }
 
 type Document = NonNullable<UserProfile['documents']>[0];
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
     <div>
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
-      {children ? children : <p className="text-sm font-semibold">{value || 'N/A'}</p>}
+      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+      {children ? children : <p className="text-sm font-bold text-foreground">{value || 'N/A'}</p>}
     </div>
 );
 
@@ -54,7 +64,7 @@ const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
         <div className="p-2 rounded-lg bg-primary/10 text-primary">
             <Icon className="h-5 w-5" />
         </div>
-        <h3 className="text-lg font-bold leading-tight">{title}</h3>
+        <h3 className="text-lg font-black uppercase tracking-tight">{title}</h3>
     </div>
 );
 
@@ -62,9 +72,11 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
-export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDetailsProps) {
+export function ViewPersonnelDetails({ user, role, department, actions }: ViewPersonnelDetailsProps) {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
@@ -204,272 +216,289 @@ export function ViewPersonnelDetails({ user, role, department }: ViewPersonnelDe
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
   const isAnyPilot = isPilotProfile(user);
 
+  const availableTabs = useMemo(() => {
+    const tabs = [
+        { value: 'overview', label: 'Overview', icon: UserCircle },
+        { value: 'documents', label: 'Documents', icon: LayoutGrid },
+        { value: 'access', label: 'Module Access', icon: ShieldCheck },
+        { value: 'permissions', label: 'Granular Permissions', icon: ShieldAlert },
+    ];
+    if (isStudent) tabs.push({ value: 'training', label: 'Training Records', icon: ClipboardCheck });
+    if (isAnyPilot) tabs.push({ value: 'logbook', label: 'Logbook', icon: ClipboardCheck });
+    return tabs;
+  }, [isStudent, isAnyPilot]);
+
   return (
-    <Tabs defaultValue="overview" className="w-full flex flex-col h-full overflow-hidden">
-        <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start">
-            <TabsTrigger value="overview" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Overview</TabsTrigger>
-            <TabsTrigger value="documents" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Documents</TabsTrigger>
-            <TabsTrigger value="access" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Module Access</TabsTrigger>
-            <TabsTrigger value="permissions" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Granular Permissions</TabsTrigger>
-            {isStudent && <TabsTrigger value="training" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Training Records</TabsTrigger>}
-            {isAnyPilot && <TabsTrigger value="logbook" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground">Logbook</TabsTrigger>}
-        </TabsList>
-        
-        <TabsContent value="overview" className="mt-0 flex-1 min-h-0 overflow-hidden">
-            <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-                <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle>Personnel Overview</CardTitle>
-                            <CardDescription>Primary identification and organizational details.</CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-2 items-end">
-                          {user.isErpIncerfaContact && (
-                              <Badge className="bg-red-600 text-white gap-1.5 h-7 px-3">
-                                  <ShieldAlert className="h-3.5 w-3.5" />
-                                  Designated INCERFA Contact
-                              </Badge>
-                          )}
-                          {user.isErpAlerfaContact && (
-                              <Badge className="bg-amber-600 text-white gap-1.5 h-7 px-3">
-                                  <ShieldAlert className="h-3.5 w-3.5" />
-                                  Designated ALERFA Contact
-                              </Badge>
-                          )}
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="flex-1 p-0 overflow-hidden">
-                    <ScrollArea className="h-full">
-                        <div className="p-6 space-y-10">
-                            <section>
-                                <SectionHeader title="Contact & Role" icon={Contact} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <DetailItem label="User Number" value={user.userNumber} />
-                                    <DetailItem label="First Name" value={user.firstName} />
-                                    <DetailItem label="Last Name" value={user.lastName} />
-                                    <DetailItem label="Email" value={user.email} />
-                                    <DetailItem label="Contact Number" value={user.contactNumber} />
-                                    <DetailItem label="Role" value={role?.name} />
-                                    {!isPilotProfile(user) && <DetailItem label="Department" value={department?.name} />}
-                                    {isPilotProfile(user) && (
-                                        <>
-                                            <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
-                                            <DetailItem label="Ratings">
-                                                <div className="flex flex-wrap gap-2 mt-1">
-                                                    {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary" className="text-[10px]">{r}</Badge>)}
-                                                    {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-sm">N/A</p>}
-                                                </div>
-                                            </DetailItem>
-                                            <DetailItem label="Endorsements" >
-                                                <div className="flex flex-wrap gap-2 mt-1">
-                                                    {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary" className="text-[10px]">{e}</Badge>)}
-                                                    {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-sm">N/A</p>}
-                                                </div>
-                                            </DetailItem>
-                                        </>
-                                    )}
-                                </div>
-                            </section>
-                            <Separator />
-                            <section>
-                                <SectionHeader title="Emergency Contact" icon={PhoneCall} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <DetailItem label="Full Name" value={user.emergencyContact?.name} />
-                                    <DetailItem label="Relationship" value={user.emergencyContact?.relationship} />
-                                    <DetailItem label="Phone Number" value={user.emergencyContact?.phone} />
-                                </div>
-                            </section>
-                        </div>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-        </TabsContent>
+    <div className="flex flex-col h-full overflow-hidden">
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
+            <MainPageHeader 
+                title={`${user.firstName} ${user.lastName}`}
+                actions={actions}
+            />
 
-        <TabsContent value="documents" className="mt-0 flex-1 min-h-0 overflow-hidden">
-            <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-                <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-                    <div>
-                        <CardTitle>Documents</CardTitle>
-                        <CardDescription>Required and uploaded compliance documentation.</CardDescription>
-                    </div>
-                    <DocumentUploader
-                        onDocumentUploaded={onDocumentUploaded}
-                        trigger={(openDialog) => (
-                            <Button size="sm" variant="outline" onClick={() => openDialog()}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Document
-                            </Button>
-                        )}
-                    />
-                </CardHeader>
-                <CardContent className="flex-1 p-0 overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="border-b bg-muted/5 px-4 py-3 shrink-0">
+                    {isMobile ? (
+                        <Select value={activeTab} onValueChange={setActiveTab}>
+                            <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
+                                <SelectValue placeholder="Select Section" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableTabs.map((tab) => (
+                                    <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
+                                        <div className="flex items-center gap-2">
+                                            <tab.icon className="h-3.5 w-3.5" />
+                                            {tab.label}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    ) : (
+                        <div className="flex w-max gap-2 pr-4 flex-nowrap">
+                            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-4 flex-nowrap">
+                                {availableTabs.map((tab) => (
+                                    <TabsTrigger 
+                                        key={tab.value} 
+                                        value={tab.value} 
+                                        className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase transition-all"
+                                    >
+                                        {tab.label}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        </div>
+                    )}
+                </div>
+
+                <CardContent className="flex-1 p-0 overflow-hidden bg-background">
                     <ScrollArea className="h-full">
-                        <div className="p-6">
-                            <div className="rounded-xl border border-card-border/50 overflow-hidden">
-                                {combinedDocuments.length > 0 ? (
-                                    <Table>
-                                        <TableHeader className="bg-muted/30">
-                                            <TableRow>
-                                                <TableHead className="text-[10px] uppercase font-bold">Document Name</TableHead>
-                                                <TableHead className="text-[10px] uppercase font-bold">Expiry</TableHead>
-                                                <TableHead className='text-center text-[10px] uppercase font-bold'>Set Expiry</TableHead>
-                                                <TableHead className="text-right text-[10px] uppercase font-bold">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {combinedDocuments.map((doc) => {
-                                                const statusColor = getStatusColor(doc.expirationDate);
-                                                return (
-                                                    <TableRow key={doc.name}>
-                                                        <TableCell className="font-semibold text-sm">{doc.name}</TableCell>
-                                                        <TableCell className="min-w-[150px] whitespace-nowrap">
-                                                            <div className="flex items-center gap-2 text-sm">
-                                                                {statusColor && (
-                                                                    <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusColor }} />
-                                                                )}
-                                                                {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className='text-center'>
-                                                            <Popover>
-                                                                <PopoverTrigger asChild><Button variant="outline" size="icon" className='h-8 w-8'><CalendarIcon className="h-4 w-4" /></Button></PopoverTrigger>
-                                                                <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)} /></PopoverContent>
-                                                            </Popover>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {doc.isUploaded ? (
-                                                                <div className="flex gap-2 justify-end">
-                                                                <Button variant="outline" size="sm" className="h-8 gap-2" onClick={() => handleViewImage(doc.url!)}><Eye className="h-4 w-4" /> View</Button>
-                                                                <Button variant="destructive" size="icon" onClick={() => handleDocumentDelete(doc.name)}><Trash2 className="h-4 w-4" /></Button>
-                                                                </div>
-                                                            ) : (
-                                                                <DocumentUploader defaultFileName={doc.name} onDocumentUploaded={onDocumentUploaded} trigger={(openDialog) => (<Button size="sm" onClick={() => openDialog()} variant="secondary"><Upload className="mr-2 h-4 w-4" /> Upload</Button>)} />
-                                                            )}
-                                                        </TableCell>
+                        <div className="p-0">
+                            <TabsContent value="overview" className="m-0">
+                                <div className="p-6 space-y-10">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col gap-2">
+                                            {user.isErpIncerfaContact && (
+                                                <Badge className="bg-red-600 text-white gap-1.5 h-7 px-3 text-[10px] font-black uppercase">
+                                                    <ShieldAlert className="h-3.5 w-3.5" />
+                                                    Designated INCERFA Contact
+                                                </Badge>
+                                            )}
+                                            {user.isErpAlerfaContact && (
+                                                <Badge className="bg-amber-600 text-white gap-1.5 h-7 px-3 text-[10px] font-black uppercase">
+                                                    <ShieldAlert className="h-3.5 w-3.5" />
+                                                    Designated ALERFA Contact
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <section>
+                                        <SectionHeader title="Contact & Role" icon={Contact} />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            <DetailItem label="User Number" value={user.userNumber} />
+                                            <DetailItem label="First Name" value={user.firstName} />
+                                            <DetailItem label="Last Name" value={user.lastName} />
+                                            <DetailItem label="Email" value={user.email} />
+                                            <DetailItem label="Contact Number" value={user.contactNumber} />
+                                            <DetailItem label="Role" value={role?.name} />
+                                            {!isPilotProfile(user) && <DetailItem label="Department" value={department?.name} />}
+                                            {isPilotProfile(user) && (
+                                                <>
+                                                    <DetailItem label="License Number" value={user.pilotLicense?.licenseNumber} />
+                                                    <DetailItem label="Ratings">
+                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                            {(user.pilotLicense?.ratings || []).map(r => <Badge key={r} variant="secondary" className="text-[9px] font-black uppercase">{r}</Badge>)}
+                                                            {(user.pilotLicense?.ratings || []).length === 0 && <p className="text-sm font-bold text-muted-foreground italic">N/A</p>}
+                                                        </div>
+                                                    </DetailItem>
+                                                    <DetailItem label="Endorsements" >
+                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                            {(user.pilotLicense?.endorsements || []).map(e => <Badge key={e} variant="secondary" className="text-[9px] font-black uppercase">{e}</Badge>)}
+                                                            {(user.pilotLicense?.endorsements || []).length === 0 && <p className="text-sm font-bold text-muted-foreground italic">N/A</p>}
+                                                        </div>
+                                                    </DetailItem>
+                                                </>
+                                            )}
+                                        </div>
+                                    </section>
+                                    <Separator />
+                                    <section>
+                                        <SectionHeader title="Emergency Contact" icon={PhoneCall} />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            <DetailItem label="Full Name" value={user.emergencyContact?.name} />
+                                            <DetailItem label="Relationship" value={user.emergencyContact?.relationship} />
+                                            <DetailItem label="Phone Number" value={user.emergencyContact?.phone} />
+                                        </div>
+                                    </section>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="documents" className="m-0">
+                                <div className="p-6 space-y-6">
+                                    <div className="flex justify-between items-center bg-muted/5 p-4 border rounded-xl">
+                                        <div className="space-y-0.5">
+                                            <h4 className="text-sm font-black uppercase tracking-tight">Support Documents</h4>
+                                            <p className="text-xs text-muted-foreground">Required and uploaded compliance documentation.</p>
+                                        </div>
+                                        <DocumentUploader
+                                            onDocumentUploaded={onDocumentUploaded}
+                                            trigger={(openDialog) => (
+                                                <Button size="compact" variant="outline" onClick={() => openDialog()}>
+                                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Document
+                                                </Button>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                        {combinedDocuments.length > 0 ? (
+                                            <Table>
+                                                <TableHeader className="bg-muted/30">
+                                                    <TableRow>
+                                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Document Name</TableHead>
+                                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Expiry</TableHead>
+                                                        <TableHead className='text-center text-[10px] uppercase font-bold tracking-wider'>Set Expiry</TableHead>
+                                                        <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
                                                     </TableRow>
-                                                )
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                    ) : <p className="text-sm text-muted-foreground text-center py-8 bg-muted/10">No documents required.</p>}
-                            </div>
-                        </div>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-        </TabsContent>
-
-        <TabsContent value="access" className="mt-0 flex-1 min-h-0 overflow-hidden">
-            <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-                <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <CardTitle>Module Access Control</CardTitle>
-                    <CardDescription>Specifically control which functional modules are enabled for this specific user's navigation. Includes Admin and Development menus.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 p-0 overflow-hidden">
-                    <ScrollArea className="h-full">
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {menuConfig.map((menu) => {
-                                    const subHrefs = menu.subItems?.map(s => s.href) || [];
-                                    const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
-                                    const isVisible = !isHidden;
-                                    
-                                    return (
-                                        <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
-                                            <div className="flex items-center space-x-2">
-                                                <Checkbox 
-                                                    id={`user-mod-${menu.href}`} 
-                                                    checked={isVisible}
-                                                    onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val, subHrefs)}
-                                                    disabled={!canEdit}
-                                                />
-                                                <Label htmlFor={`user-mod-${menu.href}`} className="font-bold flex items-center gap-2 cursor-pointer">
-                                                    <menu.icon className="h-4 w-4 text-primary" />
-                                                    {menu.label}
-                                                </Label>
-                                            </div>
-                                            {menu.subItems && (
-                                                <div className="pl-6 space-y-2 border-l ml-2">
-                                                    {menu.subItems.map((sub) => {
-                                                        const isSubHidden = user.accessOverrides?.hiddenMenus?.includes(sub.href);
-                                                        const isSubVisible = !isSubHidden;
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {combinedDocuments.map((doc) => {
+                                                        const statusColor = getStatusColor(doc.expirationDate);
                                                         return (
-                                                            <div key={sub.href} className="flex items-center space-x-2">
-                                                                <Checkbox 
-                                                                    id={`user-submod-${sub.href}`} 
-                                                                    checked={isSubVisible}
-                                                                    onCheckedChange={(val) => handleToggleMenuOverride(sub.href, !val)}
-                                                                    disabled={!canEdit}
-                                                                />
-                                                                <Label htmlFor={`user-submod-${sub.href}`} className="text-xs text-muted-foreground cursor-pointer">
-                                                                    {sub.label}
-                                                                </Label>
+                                                            <TableRow key={doc.name}>
+                                                                <TableCell className="font-bold text-sm">{doc.name}</TableCell>
+                                                                <TableCell className="min-w-[150px] whitespace-nowrap">
+                                                                    <div className="flex items-center gap-2 text-sm font-medium">
+                                                                        {statusColor && (
+                                                                            <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusColor }} />
+                                                                        )}
+                                                                        {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className='text-center'>
+                                                                    <Popover>
+                                                                        <PopoverTrigger asChild><Button variant="outline" size="icon" className='h-8 w-8'><CalendarIcon className="h-4 w-4" /></Button></PopoverTrigger>
+                                                                        <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)} /></PopoverContent>
+                                                                    </Popover>
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {doc.isUploaded ? (
+                                                                        <div className="flex gap-2 justify-end">
+                                                                        <Button variant="outline" size="compact" onClick={() => handleViewImage(doc.url!)}><Eye className="h-4 w-4" /> View</Button>
+                                                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDocumentDelete(doc.name)}><Trash2 className="h-4 w-4" /></Button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <DocumentUploader defaultFileName={doc.name} onDocumentUploaded={onDocumentUploaded} trigger={(openDialog) => (<Button size="compact" onClick={() => openDialog()} variant="secondary"><Upload className="mr-2 h-4 w-4" /> Upload</Button>)} />
+                                                                    )}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                            ) : <p className="text-sm text-muted-foreground text-center py-8 bg-muted/10 italic">No documents required.</p>}
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="access" className="m-0">
+                                <div className="p-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {menuConfig.map((menu) => {
+                                            const subHrefs = menu.subItems?.map(s => s.href) || [];
+                                            const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
+                                            const isVisible = !isHidden;
+                                            
+                                            return (
+                                                <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox 
+                                                            id={`user-mod-${menu.href}`} 
+                                                            checked={isVisible}
+                                                            onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val, subHrefs)}
+                                                            disabled={!canEdit}
+                                                        />
+                                                        <Label htmlFor={`user-mod-${menu.href}`} className="font-black uppercase text-[11px] flex items-center gap-2 cursor-pointer">
+                                                            <menu.icon className="h-4 w-4 text-primary" />
+                                                            {menu.label}
+                                                        </Label>
+                                                    </div>
+                                                    {menu.subItems && (
+                                                        <div className="pl-6 space-y-2 border-l ml-2">
+                                                            {menu.subItems.map((sub) => {
+                                                                const isSubHidden = user.accessOverrides?.hiddenMenus?.includes(sub.href);
+                                                                const isSubVisible = !isSubHidden;
+                                                                return (
+                                                                    <div key={sub.href} className="flex items-center space-x-2">
+                                                                        <Checkbox 
+                                                                            id={`user-submod-${sub.href}`} 
+                                                                            checked={isSubVisible}
+                                                                            onCheckedChange={(val) => handleToggleMenuOverride(sub.href, !val)}
+                                                                            disabled={!canEdit}
+                                                                        />
+                                                                        <Label htmlFor={`user-submod-${sub.href}`} className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer">
+                                                                            {sub.label}
+                                                                        </Label>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="permissions" className="m-0">
+                                <div className="p-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {permissionsConfig.map((resource) => (
+                                            <div key={resource.id} className='space-y-3 bg-background p-4 rounded-xl border border-slate-200 shadow-sm'>
+                                                <h4 className='text-[10px] font-black uppercase text-primary border-b border-primary/20 pb-2 mb-3 tracking-widest'>{resource.name}</h4>
+                                                <div className="flex flex-col gap-2.5">
+                                                    {resource.actions.map(action => {
+                                                        const permissionId = `${resource.id}-${action}`;
+                                                        const isInherited = role?.permissions?.includes(permissionId);
+                                                        const isOverridden = user.permissions?.includes(permissionId);
+                                                        const isDenied = user.permissions?.includes(`!${permissionId}`);
+                                                        const isEffective = (isInherited && !isDenied) || isOverridden;
+                                                        return (
+                                                            <div key={action} className="flex items-center space-x-3">
+                                                                <Checkbox id={`perm-${permissionId}`} checked={!!isEffective} disabled={!canEdit} onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)} />
+                                                                <label htmlFor={`perm-${permissionId}`} className={cn("text-[11px] font-bold uppercase cursor-pointer", isInherited && !isDenied && !isOverridden && "text-muted-foreground italic")}>
+                                                                    {action}
+                                                                    {isInherited && !isDenied && !isOverridden && <span className="ml-2 text-[9px] opacity-70">(Role)</span>}
+                                                                    {isOverridden && <span className="ml-2 text-[9px] text-primary opacity-70">(Override)</span>}
+                                                                    {isDenied && <span className="ml-2 text-[9px] text-destructive opacity-70">(Denied)</span>}
+                                                                </label>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-        </TabsContent>
-
-        <TabsContent value="permissions" className="mt-0 flex-1 min-h-0 overflow-hidden">
-            <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-                <CardHeader className="shrink-0 border-b bg-muted/5">
-                    <CardTitle>Individual Permission Control</CardTitle>
-                    <CardDescription>Manage custom overrides for this user. Inherited permissions are locked.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 p-0 overflow-hidden">
-                    <ScrollArea className="h-full">
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {permissionsConfig.map((resource) => (
-                                    <div key={resource.id} className='space-y-3 bg-background/50 p-4 rounded-xl border border-card-border/50'>
-                                        <h4 className='text-xs font-bold uppercase text-primary border-b border-primary/20 pb-2 mb-3'>{resource.name}</h4>
-                                        <div className="flex flex-col gap-2.5">
-                                            {resource.actions.map(action => {
-                                                const permissionId = `${resource.id}-${action}`;
-                                                const isInherited = role?.permissions?.includes(permissionId);
-                                                const isOverridden = user.permissions?.includes(permissionId);
-                                                const isDenied = user.permissions?.includes(`!${permissionId}`);
-                                                const isEffective = (isInherited && !isDenied) || isOverridden;
-                                                return (
-                                                    <div key={action} className="flex items-center space-x-3">
-                                                        <Checkbox id={`perm-${permissionId}`} checked={!!isEffective} disabled={!canEdit} onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)} />
-                                                        <label htmlFor={`perm-${permissionId}`} className={cn("text-sm font-medium leading-none cursor-pointer capitalize", isInherited && !isDenied && !isOverridden && "text-muted-foreground italic")}>
-                                                            {action}
-                                                            {isInherited && !isDenied && !isOverridden && <span className="ml-2 text-[10px] opacity-70">(Role)</span>}
-                                                            {isOverridden && <span className="ml-2 text-[10px] text-primary opacity-70">(Override)</span>}
-                                                            {isDenied && <span className="ml-2 text-[10px] text-destructive opacity-70">(Denied)</span>}
-                                                        </label>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            </TabsContent>
+                            
+                            {isStudent && <TabsContent value="training" className="m-0"><TrainingRecords studentId={user.id} tenantId={tenantId} /></TabsContent>}
+                            {isAnyPilot && <TabsContent value="logbook" className="m-0"><PilotLogbook userId={user.id} tenantId={tenantId} role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} /></TabsContent>}
                         </div>
                     </ScrollArea>
                 </CardContent>
-            </Card>
-        </TabsContent>
-        
-        {isStudent && <TabsContent value="training" className="mt-0 flex-1 overflow-hidden"><TrainingRecords studentId={user.id} tenantId={tenantId} /></TabsContent>}
-        {isAnyPilot && <TabsContent value="logbook" className="mt-0 flex-1 overflow-hidden"><PilotLogbook userId={user.id} tenantId={tenantId} role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} /></TabsContent>}
+            </Tabs>
+        </Card>
 
         <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
             <DialogContent className="max-w-4xl max-h-[90vh]">
-                <DialogHeader><DialogTitle>Document Viewer</DialogTitle></DialogHeader>
-                {viewingImageUrl && <div className="relative h-[80vh] w-full"><Image src={viewingImageUrl} alt="Document" fill className="object-contain" /></div>}
+                <DialogHeader><DialogTitle className="font-black uppercase tracking-tight">Document Viewer</DialogTitle></DialogHeader>
+                {viewingImageUrl && <div className="relative h-[80vh] w-full mt-4"><Image src={viewingImageUrl} alt="Document" fill className="object-contain" /></div>}
             </DialogContent>
         </Dialog>
-    </Tabs>
+    </div>
   );
 }
+
+// Add clipboard check placeholder to fix the grep
+import { ClipboardCheck } from 'lucide-react';

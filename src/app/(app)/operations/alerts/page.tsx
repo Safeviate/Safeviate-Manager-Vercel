@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Alert } from '@/types/alert';
@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ListFilter } from 'lucide-react';
+import { ListFilter, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AlertsPage() {
   const firestore = useFirestore();
@@ -64,12 +65,20 @@ export default function AlertsPage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col h-full overflow-hidden px-1">
         <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-            <MainPageHeader 
-              title="Operations Alerts"
-              actions={canCreateAlerts && <AlertForm tenantId={tenantId} />}
-            />
+            {/* Standardized Header Layout matching Document Control */}
+            <CardHeader className="shrink-0 border-b bg-muted/5 space-y-3 p-4 md:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="text-[12px] uppercase font-black tracking-wider text-muted-foreground whitespace-nowrap">Operations Alerts</h2>
+                    {canCreateAlerts && (
+                        <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
+                            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Alert Control</p>
+                            <AlertForm tenantId={tenantId} />
+                        </div>
+                    )}
+                </div>
+            </CardHeader>
             
-            <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
+            <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
                 {isMobile ? (
                     <Select value={activeTab} onValueChange={setActiveTab}>
                         <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
@@ -88,12 +97,12 @@ export default function AlertsPage() {
                     </Select>
                 ) : (
                     <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
                             {tabs.map((tab) => (
                                 <TabsTrigger 
                                     key={tab.value} 
                                     value={tab.value} 
-                                    className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all"
+                                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
                                 >
                                     {tab.label} ({tab.count})
                                 </TabsTrigger>

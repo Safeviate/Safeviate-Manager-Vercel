@@ -78,8 +78,8 @@ function DeleteBookingButton({ bookingId, bookingNumber }: { bookingId: string, 
 
     const handleDelete = () => {
         if (!firestore) return;
-        const reportRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
-        deleteDocumentNonBlocking(reportRef);
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, bookingId);
+        deleteDocumentNonBlocking(bookingRef);
         toast({
             title: 'Booking Deleted',
             description: `Booking #${bookingNumber} is being deleted.`,
@@ -126,13 +126,13 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                 <Table>
                     <TableHeader className="bg-muted/30">
                     <TableRow>
-                        <TableHead className="text-[10px] uppercase font-bold">#</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold">Aircraft</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold">Creator</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold">Start Time</TableHead>
-                        <TableHead className="text-right text-[10px] uppercase font-bold">Flight Time</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold">Status</TableHead>
-                        <TableHead className='text-right text-[10px] uppercase font-bold'>Actions</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">#</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Aircraft</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Creator</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Start Time</TableHead>
+                        <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Flight Time</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
+                        <TableHead className='text-right text-[10px] uppercase font-bold tracking-wider'>Actions</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -143,24 +143,24 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
 
                             return (
                                 <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
-                                    <TableCell className="font-medium text-xs">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
-                                    <TableCell className="font-bold text-xs">{b.aircraftTailNumber}</TableCell>
-                                    <TableCell className="text-xs">{b.creatorName}</TableCell>
-                                    <TableCell className="text-xs">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
-                                    <TableCell className="text-right font-mono font-bold">
+                                    <TableCell className="font-bold text-sm text-foreground whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
+                                    <TableCell className="font-black text-sm uppercase text-foreground">{b.aircraftTailNumber}</TableCell>
+                                    <TableCell className="font-bold text-sm text-foreground">{b.creatorName}</TableCell>
+                                    <TableCell className="font-medium text-sm text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'dd MMM yy HH:mm') : 'Invalid Date'}</TableCell>
+                                    <TableCell className="text-right font-black text-sm text-foreground whitespace-nowrap">
                                         {flightHours !== null ? (
-                                            <div className="flex items-center justify-end gap-1 text-primary">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <Clock className="h-3 w-3" />
                                                 {flightHours}h
                                             </div>
                                         ) : '-'}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={getStatusBadgeVariant(b.status)} className="text-[9px] h-5 py-0">{b.status}</Badge>
+                                        <Badge variant={getStatusBadgeVariant(b.status)} className="text-[10px] font-black uppercase py-0.5">{b.status}</Badge>
                                     </TableCell>
-                                    <TableCell className='text-right'>
+                                    <TableCell className='text-right whitespace-nowrap'>
                                         <div className="flex justify-end gap-2">
-                                            <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+                                            <Button asChild variant="outline" size="sm" className="h-8 gap-2 text-[10px] font-black uppercase">
                                                 <Link href={`/operations/booking-history/${b.id}`}>
                                                     <Eye className="h-4 w-4" />
                                                     View
@@ -307,16 +307,16 @@ export default function BookingsHistoryPage() {
   ];
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-       <div className="flex justify-between items-center px-1 shrink-0">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+       <div className="flex justify-between items-center shrink-0">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Bookings History</h1>
-                <p className="text-muted-foreground">A complete log of all past and present bookings.</p>
+                <h1 className="text-3xl font-black uppercase tracking-tighter">Bookings History</h1>
+                <p className="text-[11px] font-bold uppercase text-muted-foreground">Complete flight log archive.</p>
             </div>
         </div>
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full overflow-hidden">
-            <div className='px-6 pt-4 shrink-0'>
+            <div className='px-6 pt-4 shrink-0 border-b bg-muted/5'>
                 {isMobile ? (
                     <div className="mb-4">
                         <Select value={activeTab} onValueChange={setActiveTab}>
@@ -336,12 +336,12 @@ export default function BookingsHistoryPage() {
                         </Select>
                     </div>
                 ) : (
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
+                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-4 border-b-0 justify-start w-full flex">
                         {tabs.map((tab) => (
                             <TabsTrigger 
                                 key={tab.value} 
                                 value={tab.value} 
-                                className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-bold uppercase"
+                                className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white shrink-0 text-[10px] font-black uppercase transition-all"
                             >
                                 {tab.label}
                             </TabsTrigger>
@@ -351,7 +351,7 @@ export default function BookingsHistoryPage() {
             </div>
             <CardContent className='p-0 flex-1 overflow-hidden'>
                 <ScrollArea className="h-full">
-                    <div className="p-6 pt-0">
+                    <div className="p-0">
                         <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} tenantId={tenantId} /></TabsContent>
                         <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} tenantId={tenantId} /></TabsContent>
                         <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} tenantId={tenantId} /></TabsContent>

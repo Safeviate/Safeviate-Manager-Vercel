@@ -78,14 +78,14 @@ function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizatio
     <div className="border-b bg-muted/5 px-6 py-3 overflow-x-auto no-scrollbar">
       <div className="flex w-max gap-2 pr-6 flex-nowrap">
         <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-          <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase">
+          <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white shrink-0 text-[10px] font-black uppercase transition-all">
             Internal
           </TabsTrigger>
           {organizations.map((organization) => (
             <TabsTrigger
               key={organization.id}
               value={organization.id}
-              className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase"
+              className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white shrink-0 text-[10px] font-black uppercase transition-all"
             >
               {organization.name}
             </TabsTrigger>

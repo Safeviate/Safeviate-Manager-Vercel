@@ -4,6 +4,7 @@ import { useUserProfile } from './use-user-profile';
 import { useTenantConfig } from './use-tenant-config';
 import { usePathname } from 'next/navigation';
 import { menuConfig } from '@/lib/menu-config';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 /**
  * A custom hook to manage and check user permissions.
@@ -18,8 +19,11 @@ export const usePermissions = () => {
   const hasPermission = (permissionId: string) => {
     if (isLoading || !userProfile) return false;
 
-    // Developer bypass to ensure administrative access during setup
-    if (userProfile.id === 'DEVELOPER_MODE') return true;
+    // --- Standard Super-Admin / Developer Bypass ---
+    const role = (userProfile as Personnel).role?.toLowerCase();
+    if (userProfile.id === 'DEVELOPER_MODE' || role === 'dev' || role === 'developer') {
+        return true;
+    }
 
     // RESTORED: Module Access Control Logic
     // Find the menu item associated with this permission if possible

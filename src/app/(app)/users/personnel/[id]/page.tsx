@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, use, Suspense } from 'react';
@@ -15,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UserProfilePageProps {
     params: Promise<{ id: string }>;
@@ -28,6 +28,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     const searchParams = useSearchParams();
     const userType = searchParams.get('type') || 'Personnel';
     const { hasPermission } = usePermissions();
+    const isMobile = useIsMobile();
 
     const tenantId = 'safeviate';
     const userId = resolvedParams.id;
@@ -103,22 +104,23 @@ function UserProfileContent({ params }: UserProfilePageProps) {
                     onCancel={() => setIsEditing(false)}
                 />
             ) : (
-                <>
-                    <div className="flex justify-end shrink-0">
-                        {canEditUsers && (
-                            <Button onClick={() => setIsEditing(true)}>
-                                <Pencil className='mr-2 h-4 w-4' /> Edit Profile
-                            </Button>
-                        )}
-                    </div>
-                    <div className="flex-1 min-h-0 overflow-hidden">
-                        <ViewPersonnelDetails 
-                            user={user} 
-                            role={currentRole} 
-                            department={currentDepartment}
-                        />
-                    </div>
-                </>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    <ViewPersonnelDetails 
+                        user={user} 
+                        role={currentRole} 
+                        department={currentDepartment}
+                        actions={
+                            canEditUsers && (
+                                <Button 
+                                    onClick={() => setIsEditing(true)}
+                                    size={isMobile ? "compact" : "default"}
+                                >
+                                    <Pencil className='mr-2 h-4 w-4' /> {isMobile ? "Edit" : "Edit Profile"}
+                                </Button>
+                            )
+                        }
+                    />
+                </div>
             )}
         </div>
     );
