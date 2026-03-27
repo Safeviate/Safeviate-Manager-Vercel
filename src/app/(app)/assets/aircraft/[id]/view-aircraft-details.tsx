@@ -10,7 +10,7 @@ import { View, Upload, Trash2, CalendarIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
@@ -19,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { DocumentUploader } from '../document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { getDocumentExpiryColor } from '@/lib/document-expiry';
 
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
@@ -40,59 +42,15 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const { toast } = useToast();
 
   const expirySettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
   
-  const inspectionSettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
-    [firestore, tenantId]
-  );
-  const { data: inspectionSettings } = useDoc<any>(inspectionSettingsRef);
-
-  const getStatusColor = (expirationDate: string | null | undefined): string | null => {
-    if (!expirationDate || !expirySettings) return null;
-
-    const today = new Date();
-    const expiry = new Date(expirationDate);
-    const daysUntilExpiry = differenceInDays(expiry, today);
-
-    if (daysUntilExpiry < 0) {
-      return expirySettings.expiredColor || '#ef4444'; // Expired
-    }
-
-    const sortedPeriods = expirySettings.warningPeriods.sort((a, b) => a.period - b.period);
-    for (const warning of sortedPeriods) {
-      if (daysUntilExpiry <= warning.period) {
-        return warning.color;
-      }
-    }
-
-    return expirySettings.defaultColor || null;
-  };
-  
-  const getHoursBadgeStyle = (remainingHours: number, type: '50' | '100') => {
-      if (!inspectionSettings || remainingHours < 0) return { backgroundColor: '#ef4444', color: '#ffffff' };
-
-      const warnings = type === '50' ? inspectionSettings.fiftyHourWarnings : inspectionSettings.oneHundredHourWarnings;
-      if (!warnings) return {};
-
-      const sortedWarnings = [...warnings].sort((a, b) => a.hours - b.hours);
-      
-      for (const warning of sortedWarnings) {
-        if (remainingHours <= warning.hours) {
-            return { backgroundColor: warning.color, color: warning.foregroundColor };
-        }
-      }
-
-      return {}; // Default style if no warning threshold is met
-  };
-
   const handleViewImage = (url: string) => {
     setViewingImageUrl(url);
     setIsImageViewerOpen(true);
@@ -185,7 +143,7 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
                     </TableHeader>
                     <TableBody>
                         {aircraft.documents.map((doc, index) => {
-                             const statusColor = getStatusColor(doc.expirationDate);
+                             const statusColor = getDocumentExpiryColor(doc.expirationDate, expirySettings);
                             return (
                                 <TableRow key={index}>
                                     <TableCell className="font-medium">{doc.name}</TableCell>

@@ -15,9 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle } from 'lucide-react';
+import { ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DepartmentFormProps {
     tenantId: string;
@@ -26,6 +27,7 @@ interface DepartmentFormProps {
 export function DepartmentForm({ tenantId }: DepartmentFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [departmentName, setDepartmentName] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -72,9 +74,16 @@ export function DepartmentForm({ tenantId }: DepartmentFormProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Department
+        <Button
+          variant={isMobile ? 'outline' : 'default'}
+          size={isMobile ? 'sm' : 'default'}
+          className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : undefined}
+        >
+          <span className="flex items-center gap-2">
+            <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
+            Add Department
+          </span>
+          {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

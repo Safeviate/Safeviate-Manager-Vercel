@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ChevronsUpDown, ListFilter, UserCircle } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ListFilter, UserCircle, ClipboardCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,7 +15,7 @@ import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { format, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 import { DocumentUploader } from '@/components/document-uploader';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -28,18 +28,14 @@ import { permissionsConfig } from '@/lib/permissions-config';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { menuConfig } from '@/lib/menu-config';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { getDocumentExpiryColor } from '@/lib/document-expiry';
+import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 import { MainPageHeader } from '@/components/page-header';
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -47,7 +43,7 @@ interface ViewPersonnelDetailsProps {
   user: UserProfile;
   role: Role | null;
   department: Department | null;
-  actions?: React.ReactNode; // New prop for standardized actions
+  actions?: React.ReactNode;
 }
 
 type Document = NonNullable<UserProfile['documents']>[0];
@@ -76,40 +72,19 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const isMobile = useIsMobile();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const canEdit = hasPermission('users-edit');
 
   const expirySettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
-
-  const getStatusColor = (expirationDate: string | null | undefined): string | null => {
-    if (!expirationDate || !expirySettings) return null;
-
-    const today = new Date();
-    const expiry = new Date(expirationDate);
-    const daysUntilExpiry = differenceInDays(expiry, today);
-
-    if (daysUntilExpiry < 0) {
-      return expirySettings.expiredColor || '#ef4444'; 
-    }
-
-    const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
-    for (const warning of sortedPeriods) {
-      if (daysUntilExpiry <= warning.period) {
-        return warning.color;
-      }
-    }
-
-    return expirySettings.defaultColor || null; 
-  };
 
   const handleViewImage = (url: string) => {
     setViewingImageUrl(url);
@@ -237,39 +212,13 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
             />
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div className="border-b bg-muted/5 px-4 py-3 shrink-0">
-                    {isMobile ? (
-                        <Select value={activeTab} onValueChange={setActiveTab}>
-                            <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                                <SelectValue placeholder="Select Section" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableTabs.map((tab) => (
-                                    <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
-                                        <div className="flex items-center gap-2">
-                                            <tab.icon className="h-3.5 w-3.5" />
-                                            {tab.label}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                        <div className="flex w-max gap-2 pr-4 flex-nowrap">
-                            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-4 flex-nowrap">
-                                {availableTabs.map((tab) => (
-                                    <TabsTrigger 
-                                        key={tab.value} 
-                                        value={tab.value} 
-                                        className="rounded-full px-5 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase transition-all"
-                                    >
-                                        {tab.label}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
-                        </div>
-                    )}
-                </div>
+                <ResponsiveTabRow
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    placeholder="Select Section"
+                    className="border-b bg-muted/5 px-4 py-3 shrink-0"
+                    options={availableTabs}
+                />
 
                 <CardContent className="flex-1 p-0 overflow-hidden bg-background">
                     <ScrollArea className="h-full">
@@ -362,7 +311,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                 </TableHeader>
                                                 <TableBody>
                                                     {combinedDocuments.map((doc) => {
-                                                        const statusColor = getStatusColor(doc.expirationDate);
+                                                        const statusColor = getDocumentExpiryColor(doc.expirationDate, expirySettings);
                                                         return (
                                                             <TableRow key={doc.name}>
                                                                 <TableCell className="font-bold text-sm">{doc.name}</TableCell>
@@ -383,8 +332,12 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                                 <TableCell className="text-right">
                                                                     {doc.isUploaded ? (
                                                                         <div className="flex gap-2 justify-end">
-                                                                        <Button variant="outline" size="compact" onClick={() => handleViewImage(doc.url!)}><Eye className="h-4 w-4" /> View</Button>
-                                                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDocumentDelete(doc.name)}><Trash2 className="h-4 w-4" /></Button>
+                                                                            <ViewActionButton onClick={() => handleViewImage(doc.url!)} />
+                                                                            <DeleteActionButton
+                                                                                description={`This will permanently delete "${doc.name}".`}
+                                                                                onDelete={() => handleDocumentDelete(doc.name)}
+                                                                                srLabel="Delete document"
+                                                                            />
                                                                         </div>
                                                                     ) : (
                                                                         <DocumentUploader defaultFileName={doc.name} onDocumentUploaded={onDocumentUploaded} trigger={(openDialog) => (<Button size="compact" onClick={() => openDialog()} variant="secondary"><Upload className="mr-2 h-4 w-4" /> Upload</Button>)} />
@@ -482,8 +435,8 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                 </div>
                             </TabsContent>
                             
-                            {isStudent && <TabsContent value="training" className="m-0"><TrainingRecords studentId={user.id} tenantId={tenantId} /></TabsContent>}
-                            {isAnyPilot && <TabsContent value="logbook" className="m-0"><PilotLogbook userId={user.id} tenantId={tenantId} role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} /></TabsContent>}
+                            {isStudent && <TabsContent value="training" className="m-0"><TrainingRecords studentId={user.id} tenantId={tenantId!} /></TabsContent>}
+                            {isAnyPilot && <TabsContent value="logbook" className="m-0"><PilotLogbook userId={user.id} tenantId={tenantId!} role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} /></TabsContent>}
                         </div>
                     </ScrollArea>
                 </CardContent>
@@ -499,6 +452,3 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     </div>
   );
 }
-
-// Add clipboard check placeholder to fix the grep
-import { ClipboardCheck } from 'lucide-react';

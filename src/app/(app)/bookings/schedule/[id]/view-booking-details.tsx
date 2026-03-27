@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import type { Booking } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
@@ -11,7 +11,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, FileText, Map as NavIcon } from 'lucide-react';
+import { Save, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -20,9 +20,11 @@ import { Label as UILabel } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { BookingDetailHeader } from '@/components/booking-detail-header';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
 
@@ -75,12 +77,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
     const isMobile = useIsMobile();
     const { toast } = useToast();
-    const tenantId = 'safeviate';
+    const { tenantId } = useUserProfile();
+    const [activeTab, setActiveTab] = useState('flight-details');
 
-    const aircraftQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-    const instructorsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-    const studentsQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-    const personnelQuery = useMemoFirebase(() => (firestore ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
+    const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
+    const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
+    const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+    const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
 
     const { data: aircrafts, isLoading: loadingAc } = useCollection<Aircraft>(aircraftQuery);
     const { data: instructors, isLoading: loadingIns } = useCollection<PilotProfile>(instructorsQuery);
@@ -132,7 +135,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleSaveToBooking = () => {
-        if (!firestore) return;
+        if (!firestore || !tenantId) return;
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         updateDocumentNonBlocking(bookingRef, { massAndBalance: { takeoffWeight: results.weight, takeoffCg: results.cg, isWithinLimits: results.isSafe, stations } });
         toast({ title: 'M&B Saved' });
@@ -151,21 +154,18 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const fYMax = Math.max(...allY) + padY;
 
     return (
-        <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-            <Tabs defaultValue="flight-details" className="flex w-full min-h-0 flex-1 flex-col">
-                <div className="shrink-0 px-1">
-                    <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
-                        <TabsTrigger value="flight-details" className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary sm:px-6"><FileText className="h-4 w-4" /> Flight Details</TabsTrigger>
-                        <TabsTrigger value="navlog" className="gap-2 rounded-full border px-4 py-2 text-xs data-[state=active]:bg-button-primary sm:px-6"><NavIcon className="h-4 w-4" /> Navlog</TabsTrigger>
-                    </TabsList>
-                </div>
+        <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full min-h-0 flex-1 flex-col">
+                <BookingDetailHeader
+                    title={booking.type}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId}`}
+                    status={booking.status}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                />
                 <div className="flex min-h-0 flex-1 flex-col">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
-                            <CardHeader className="border-b bg-muted/20 shrink-0">
-                                <CardTitle>{booking.type}</CardTitle>
-                                <CardDescription>{booking.bookingNumber} • {aircraft ? aircraft.tailNumber : booking.aircraftId}</CardDescription>
-                            </CardHeader>
+                        <Card className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none", isMobile && "min-h-[calc(100dvh-13rem)]")}>
                             <ScrollArea className="min-h-0 flex-1">
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                                     <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
@@ -176,24 +176,68 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </CardContent>
                                 <Separator />
                                 <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance</CardTitle></CardHeader>
-                                <CardContent className="pb-20">
+                                <CardContent className="min-h-full pb-20">
                                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-                                        <div className="flex flex-col h-full min-h-[500px]">
-                                            <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x bg-background rounded-xl border p-4">
-                                                <div className="min-w-[800px] h-full relative">
+                                        <div className="flex flex-col">
+                                            <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile && "mx-auto w-full max-w-[430px]")}>
+                                                <div className="mb-3 flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading Envelope</p>
+                                                        <p className="text-xs font-semibold text-muted-foreground">Current position against approved limits</p>
+                                                    </div>
+                                                    <Badge variant={results.isSafe ? 'default' : 'destructive'} className="text-[10px] font-black uppercase">
+                                                        {results.isSafe ? 'Within Limits' : 'Out Of Limits'}
+                                                    </Badge>
+                                                </div>
+                                                <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[420px]")}>
                                                     <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" />
-                                                            <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow><Label value="CG (in)" offset={-20} position="insideBottom" /></XAxis>
-                                                            <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow><Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} /></YAxis>
+                                                        <ScatterChart margin={isMobile ? { top: 12, right: 16, bottom: 16, left: 4 } : { top: 20, right: 28, bottom: 32, left: 20 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                                            <XAxis
+                                                                type="number"
+                                                                dataKey="x"
+                                                                name="CG"
+                                                                domain={[fXMin, fXMax]}
+                                                                ticks={generateNiceTicks(fXMin, fXMax, isMobile ? 5 : 8)}
+                                                                allowDataOverflow
+                                                                tick={{ fontSize: isMobile ? 10 : 11 }}
+                                                                tickMargin={6}
+                                                            >
+                                                                {!isMobile ? <Label value="CG (in)" offset={-10} position="insideBottom" /> : null}
+                                                            </XAxis>
+                                                            <YAxis
+                                                                type="number"
+                                                                dataKey="y"
+                                                                name="Weight"
+                                                                domain={[fYMin, fYMax]}
+                                                                ticks={generateNiceTicks(fYMin, fYMax, isMobile ? 5 : 8)}
+                                                                allowDataOverflow
+                                                                width={isMobile ? 38 : 52}
+                                                                tick={{ fontSize: isMobile ? 10 : 11 }}
+                                                                tickMargin={4}
+                                                            >
+                                                                {!isMobile ? <Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-8} /> : null}
+                                                            </YAxis>
                                                             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                                                             <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
                                                             <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
+                                                                <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 7 : 10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
                                                             </Scatter>
                                                         </ScatterChart>
                                                     </ResponsiveContainer>
                                                 </div>
+                                                {isMobile ? (
+                                                    <div className="mt-3 grid grid-cols-2 gap-3 text-center">
+                                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG</p>
+                                                            <p className="text-sm font-black">{results.cg} in</p>
+                                                        </div>
+                                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Weight</p>
+                                                            <p className="text-sm font-black">{results.weight} lbs</p>
+                                                        </div>
+                                                    </div>
+                                                ) : null}
                                             </div>
                                         </div>
                                         <div className="space-y-6">
@@ -221,9 +265,18 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </ScrollArea>
                         </Card>
                     </TabsContent>
-                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col"><NavlogBuilder booking={booking} tenantId={tenantId!} /></TabsContent>
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col">
+                        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
+                            <div className="min-h-0 flex-1 overflow-hidden">
+                                <NavlogBuilder booking={booking} tenantId={tenantId!} />
+                            </div>
+                        </Card>
+                    </TabsContent>
                 </div>
             </Tabs>
         </div>
     );
 }
+
+
+

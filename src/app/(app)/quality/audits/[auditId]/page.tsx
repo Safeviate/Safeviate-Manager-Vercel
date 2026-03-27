@@ -4,11 +4,9 @@ import { use, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { QualityAudit, QualityAuditChecklistTemplate, CorrectiveActionPlan } from '@/types/quality';
 import { AuditChecklist } from './audit-checklist';
@@ -18,6 +16,7 @@ import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Badge } from '@/components/ui/badge';
+import { BackNavButton } from '@/components/back-nav-button';
 
 interface AuditDetailPageProps {
   params: Promise<{ auditId: string }>;
@@ -94,11 +93,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     return (
       <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground mb-4">{auditError ? `Error: ${auditError.message}` : "Audit record not found."}</p>
-        <Button asChild variant="outline">
-          <Link href="/quality/audits">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Return to list
-          </Link>
-        </Button>
+        <BackNavButton href="/quality/audits" text="Back to Audits" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
       </div>
     );
   }

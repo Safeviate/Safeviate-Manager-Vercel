@@ -31,6 +31,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const componentFormSchema = z.object({
   name: z.string().min(1, 'Component name is required.'),
@@ -53,7 +54,7 @@ interface AddComponentDialogProps {
 export function AddComponentDialog({ aircraftId, isOpen, setIsOpen }: AddComponentDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const form = useForm<ComponentFormValues>({
     resolver: zodResolver(componentFormSchema),
@@ -69,7 +70,7 @@ export function AddComponentDialog({ aircraftId, isOpen, setIsOpen }: AddCompone
   });
 
   const onSubmit = async (values: ComponentFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     const componentsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
     addDocumentNonBlocking(componentsRef, {
       ...values,

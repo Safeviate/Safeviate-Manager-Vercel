@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Edit, ShieldAlert, Settings2, Trash2, Plus, ShieldCheck, Building, LayoutGrid } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { PlusCircle, Edit, ShieldAlert, Settings2, Trash2, Plus, ShieldCheck, LayoutGrid, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Risk, Mitigation, RiskRegisterSettings } from '@/types/risk';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -27,67 +28,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-function CompanyTabsRow({ organizations, activeTab, onTabChange }: { organizations: ExternalOrganization[], activeTab: string, onTabChange: (value: string) => void }) {
-    const isMobile = useIsMobile();
-
-    if (isMobile) {
-        return (
-            <div className="border-b bg-muted/5 px-4 py-3">
-                <Select value={activeTab} onValueChange={onTabChange}>
-                    <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                        <SelectValue placeholder="Select Organization" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="internal" className="text-[10px] font-bold uppercase">
-                            <div className="flex items-center gap-2">
-                                <Building className="h-3.5 w-3.5" />
-                                Internal
-                            </div>
-                        </SelectItem>
-                        {organizations.map((organization) => (
-                            <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
-                                <div className="flex items-center gap-2">
-                                    <Building className="h-3.5 w-3.5" />
-                                    {organization.name}
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        );
-    }
-
-    return (
-        <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                <TabsTrigger 
-                    value="internal" 
-                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                    Internal
-                </TabsTrigger>
-                {organizations.map((organization) => (
-                    <TabsTrigger
-                        key={organization.id}
-                        value={organization.id}
-                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                    >
-                        {organization.name}
-                    </TabsTrigger>
-                ))}
-            </TabsList>
-        </div>
-    );
-}
+import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const DEFAULT_HAZARD_AREAS = [
     'Flight Operations', 
@@ -99,7 +41,7 @@ const DEFAULT_HAZARD_AREAS = [
     'Administration & Management'
 ];
 
-function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings: RiskRegisterSettings | null }) {
+function ManageAreasDialog({ tenantId, settings, trigger }: { tenantId: string, settings: RiskRegisterSettings | null, trigger?: ReactNode }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [newArea, setNewArea] = React.useState('');
@@ -134,10 +76,12 @@ function ManageAreasDialog({ tenantId, settings }: { tenantId: string, settings:
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
-                    <Settings2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Manage Areas</span>
-                </Button>
+                {trigger || (
+                    <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+                        <Settings2 className="h-4 w-4" />
+                        <span className="hidden sm:inline">Manage Areas</span>
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="max-w-md">
                 <DialogHeader>
@@ -188,7 +132,7 @@ export default function RiskRegisterPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingRisk, setEditingRisk] = React.useState<Risk | null>(null);
 
-  const canManageAll = hasPermission('risk-register-view');
+  const canManageAll = hasPermission('risk-register-manage-definitions');
   const canManageAreas = hasPermission('risk-register-manage-definitions');
 
   const risksQuery = useMemoFirebase(
@@ -259,53 +203,67 @@ export default function RiskRegisterPage() {
                     title="Risk Register"
                     description="Central log for identifying, assessing, and mitigating operational hazards."
                     actions={
-                        <div className="flex items-center gap-3">
-                            {canManageAreas && <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />}
-                            <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
-                                <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
-                                    <PlusCircle className="h-4 w-4" />
-                                    {isMobile ? "Add" : "Add Hazard"}
-                                </Link>
-                            </Button>
-                        </div>
+                        isMobile ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 w-full justify-between bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <MoreHorizontal className="h-3.5 w-3.5" />
+                                            Actions
+                                        </span>
+                                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                                    {canManageAreas && (
+                                        <ManageAreasDialog
+                                            tenantId={tenantId!}
+                                            settings={registerSettings}
+                                            trigger={
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Settings2 className="mr-2 h-4 w-4" />
+                                                    Manage Areas
+                                                </DropdownMenuItem>
+                                            }
+                                        />
+                                    )}
+                                    <DropdownMenuItem asChild>
+                                        <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Add Hazard
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <div className="flex w-full items-center gap-3 sm:w-auto">
+                                {canManageAreas && <ManageAreasDialog tenantId={tenantId!} settings={registerSettings} />}
+                                <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                                    <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
+                                        <PlusCircle className="h-4 w-4" />
+                                        Add Hazard
+                                    </Link>
+                                </Button>
+                            </div>
+                        )
                     }
                 />
-                {shouldShowOrganizationTabs && <CompanyTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+                {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
             </div>
 
             <CardContent className="flex-1 p-0 overflow-hidden bg-background">
                 <Tabs value={activeAreaTab} onValueChange={setActiveAreaTab} className="h-full flex flex-col">
-                    <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
-                        {isMobile ? (
-                            <Select value={activeAreaTab} onValueChange={setActiveAreaTab}>
-                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                                    <SelectValue placeholder="Select Area" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {displayAreas.map(area => (
-                                        <SelectItem key={area} value={area} className="text-[10px] font-bold uppercase">
-                                            <div className="flex items-center gap-2">
-                                                <LayoutGrid className="h-3.5 w-3.5" />
-                                                {area}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        ) : (
-                            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                                {displayAreas.map(area => (
-                                    <TabsTrigger 
-                                        key={area} 
-                                        value={area} 
-                                        className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                                    >
-                                        {area}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
-                        )}
-                    </div>
+                    <ResponsiveTabRow
+                        value={activeAreaTab}
+                        onValueChange={setActiveAreaTab}
+                        placeholder="Select Area"
+                        className="border-b bg-muted/5 px-4 py-3 shrink-0"
+                        options={displayAreas.map((area) => ({ value: area, label: area, icon: LayoutGrid }))}
+                    />
                     
                     <div className="flex-1 overflow-auto">
                         {displayAreas.map(area => {

@@ -42,12 +42,14 @@ import {
   PlusCircle,
   Trash2,
   Settings2,
+  ChevronDown,
 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, writeBatch, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import type { AuditScheduleItem, AuditScheduleStatus } from '@/types/quality';
 
 const INITIAL_AUDIT_AREAS = [
@@ -196,7 +198,7 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
 export default function AuditSchedulePage() {
   const firestore = useFirestore();
   const isMobile = useIsMobile();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
 
@@ -207,7 +209,7 @@ export default function AuditSchedulePage() {
 
   const scheduleQuery = useMemoFirebase(
     () =>
-      firestore
+      firestore && tenantId
         ? query(collection(firestore, `tenants/${tenantId}/audit-schedule-items`), where('year', '==', currentYear))
         : null,
     [firestore, tenantId, currentYear]
@@ -216,7 +218,7 @@ export default function AuditSchedulePage() {
   const { data: schedule, isLoading } = useCollection<AuditScheduleItem>(scheduleQuery);
 
   const handleStatusChange = (area: string, month: string, status: AuditScheduleStatus) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     setOpenPopoverId(null);
     const itemsCollection = collection(firestore, `tenants/${tenantId}/audit-schedule-items`);
     const existingItem = schedule?.find(item => item.area === area && item.month === month);
@@ -245,7 +247,7 @@ export default function AuditSchedulePage() {
   const handleEditArea = async (oldName: string, newName: string) => {
     setAuditAreas(prev => prev.map(area => area === oldName ? newName : area));
     
-    if (!firestore || !schedule) return;
+    if (!firestore || !tenantId || !schedule) return;
     const itemsToUpdate = schedule.filter(item => item.area === oldName);
     if (itemsToUpdate.length === 0) return;
 
@@ -293,9 +295,22 @@ export default function AuditSchedulePage() {
             <MainPageHeader 
                 title="Annual Audit Schedule"
                 actions={
-                    <Button size="sm" onClick={() => setIsAddAreaOpen(true)} className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Area
+                    <Button
+                        variant={isMobile ? 'outline' : 'default'}
+                        size="sm"
+                        onClick={() => setIsAddAreaOpen(true)}
+                        className={cn(
+                            'h-9 text-[10px] font-black uppercase tracking-tight gap-2',
+                            isMobile
+                                ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100'
+                                : 'px-6 bg-emerald-700 hover:bg-emerald-800 text-white shadow-md'
+                        )}
+                    >
+                        <span className="flex items-center gap-2">
+                            <PlusCircle className="h-4 w-4" />
+                            Add Area
+                        </span>
+                        {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                     </Button>
                 }
             />

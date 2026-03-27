@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export type Department = {
   id: string;
@@ -25,15 +27,17 @@ export type Department = {
 export default function DepartmentPage() {
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate'; // Hardcoded for now
+  const isMobile = useIsMobile();
+  const { tenantId } = useUserProfile();
   const canManage = hasPermission('admin-departments-manage');
 
   const departmentsQuery = useMemoFirebase(
     () =>
       firestore
+        && tenantId
         ? query(collection(firestore, 'tenants', tenantId, 'departments'))
         : null,
-    [firestore]
+    [firestore, tenantId]
   );
 
   const {
@@ -47,54 +51,85 @@ export default function DepartmentPage() {
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
         <MainPageHeader 
           title="Departments"
-          actions={canManage && <DepartmentForm tenantId={tenantId} />}
+          actions={canManage && <DepartmentForm tenantId={tenantId || ''} />}
         />
 
         <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="p-0">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    <TableHead className="text-[10px] uppercase font-bold tracking-wider px-6">Department Name</TableHead>
-                    <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider px-6">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading && (
+            {isMobile ? (
+              <div className="p-0">
+                {isLoading ? (
+                  <div className="text-center p-8 uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">
+                    Loading departments...
+                  </div>
+                ) : error ? (
+                  <div className="text-center p-8 text-destructive text-xs font-bold uppercase">
+                    Error: {error.message}
+                  </div>
+                ) : departments && departments.length > 0 ? (
+                  departments.map((dept) => (
+                    <div key={dept.id} className="border-b px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words text-sm font-bold leading-snug text-foreground">{dept.name}</p>
+                        </div>
+                        <div className="shrink-0 overflow-hidden">
+                          <DepartmentActions tenantId={tenantId || ''} department={dept} />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center h-48 p-8 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-muted/5">
+                    No departments found.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-0">
+                <Table>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center p-8 uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">
-                        Loading departments...
-                      </TableCell>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider px-6">Department Name</TableHead>
+                      <TableHead className="w-[140px] text-right text-[10px] uppercase font-bold tracking-wider px-4">Actions</TableHead>
                     </TableRow>
-                  )}
-                  {!isLoading && error && (
-                    <TableRow>
-                      <TableCell colSpan={2} className="text-center p-8 text-destructive text-xs font-bold uppercase">
-                        Error: {error.message}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {!isLoading && !error && departments && departments.length > 0 && (
-                    departments.map((dept) => (
-                      <TableRow key={dept.id} className="hover:bg-muted/5 transition-colors">
-                        <TableCell className="font-bold text-sm text-foreground px-6 py-4">{dept.name}</TableCell>
-                        <TableCell className="text-right px-6">
-                           <DepartmentActions tenantId={tenantId} department={dept} />
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center p-8 uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">
+                          Loading departments...
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                  {!isLoading && !error && (!departments || departments.length === 0) && (
-                     <TableRow>
-                        <TableCell colSpan={2} className="text-center h-48 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-muted/5">
-                            No departments found.
+                    )}
+                    {!isLoading && error && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center p-8 text-destructive text-xs font-bold uppercase">
+                          Error: {error.message}
                         </TableCell>
-                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                      </TableRow>
+                    )}
+                    {!isLoading && !error && departments && departments.length > 0 && (
+                      departments.map((dept) => (
+                        <TableRow key={dept.id} className="hover:bg-muted/5 transition-colors">
+                          <TableCell className="font-bold text-sm text-foreground px-6 py-4">{dept.name}</TableCell>
+                          <TableCell className="w-[140px] text-right px-4">
+                             <DepartmentActions tenantId={tenantId || ''} department={dept} />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                    {!isLoading && !error && (!departments || departments.length === 0) && (
+                       <TableRow>
+                          <TableCell colSpan={2} className="text-center h-48 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-muted/5">
+                              No departments found.
+                          </TableCell>
+                       </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </ScrollArea>
         </CardContent>
       </Card>

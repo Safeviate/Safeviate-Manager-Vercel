@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils';
 import { AiChecklistGenerator } from './ai-checklist-generator';
 import { ImportFromMatrixDialog } from './import-from-matrix-dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const checklistItemSchema = z.object({
@@ -79,6 +80,7 @@ export function NewChecklistDialog({
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Drag-and-drop state for sections
   const dragSectionNode = useRef<HTMLDivElement | null>(null);
@@ -256,9 +258,19 @@ export function NewChecklistDialog({
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
         <DialogTrigger asChild>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Checklist Template
+          <Button
+            variant={isMobile ? 'outline' : 'default'}
+            className={cn(
+              isMobile
+                ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100'
+                : ''
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <PlusCircle className="h-4 w-4" />
+              New Checklist Template
+            </span>
+            {isMobile ? <Library className="h-3.5 w-3.5 text-muted-foreground" /> : null}
           </Button>
         </DialogTrigger>
       )}

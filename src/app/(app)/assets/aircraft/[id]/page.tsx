@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { 
   Plane, 
   History, 
@@ -49,6 +51,10 @@ import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
+import type { AircraftInspectionWarningSettings } from '@/types/inspection';
+import { getDocumentExpiryBadgeStyle, getInspectionWarningStyle } from '@/lib/document-expiry';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
@@ -57,21 +63,28 @@ interface AircraftDetailPageProps {
 export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
+  const { tenantId } = useUserProfile();
+  const [activeTab, setActiveTab] = useState('overview');
   const aircraftId = resolvedParams.id;
 
   const aircraftRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
     [firestore, tenantId, aircraftId]
   );
 
   const logsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')) : null),
     [firestore, tenantId, aircraftId]
+  );
+  const inspectionSettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
+    [firestore, tenantId]
   );
 
   const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
   const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
+  const { data: inspectionSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
 
   if (isLoadingAircraft) {
     return (
@@ -97,13 +110,13 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const timeTo100 = (aircraft.tachoAtNext100Inspection || 0) - (aircraft.currentTacho || 0);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-2">
-      <Tabs defaultValue="overview" className="w-full flex-1 flex flex-col overflow-hidden">
+    <div className={cn("max-w-[1400px] mx-auto w-full flex flex-col pt-2", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className={cn("w-full flex-1 flex flex-col", isMobile ? "overflow-visible" : "overflow-hidden")}>
         
         {/* --- RETURN BUTTON --- */}
 
         {/* --- MAIN CONTENT AREA --- */}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-1 pb-10">
+        <div className={cn("flex-1 px-1 pb-10", isMobile ? "overflow-visible" : "overflow-y-auto no-scrollbar")}>
           <Card className="shadow-none border rounded-xl overflow-hidden flex flex-col">
             <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 shrink-0">
               <div>
@@ -113,41 +126,56 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                 </CardTitle>
                 <CardDescription className="text-sm font-medium">{aircraft.make} {aircraft.model}</CardDescription>
               </div>
-              <EditAircraftDialog aircraft={aircraft} tenantId={tenantId} />
+              <EditAircraftDialog aircraft={aircraft} tenantId={tenantId || ''} />
             </CardHeader>
 
             {/* --- TAB BAR INSIDE CARD WITH HORIZONTAL SCROLL --- */}
             <div className="border-b bg-muted/5 px-6 py-2 shrink-0 overflow-hidden">
-              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                <TabsTrigger 
-                  value="overview" 
-                  className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="maintenance" 
-                  className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                  Maintenance
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="components" 
-                  className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                  Components
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="documents" 
-                  className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                >
-                  Documents
-                </TabsTrigger>
-              </TabsList>
+              {isMobile ? (
+                <ResponsiveTabRow
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  placeholder="Select Section"
+                  className="shrink-0"
+                  options={[
+                    { value: 'overview', label: 'Overview' },
+                    { value: 'maintenance', label: 'Maintenance' },
+                    { value: 'components', label: 'Components' },
+                    { value: 'documents', label: 'Documents' },
+                  ]}
+                />
+              ) : (
+                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                  <TabsTrigger 
+                    value="overview" 
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="maintenance" 
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                  >
+                    Maintenance
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="components" 
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                  >
+                    Components
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="documents" 
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                  >
+                    Documents
+                  </TabsTrigger>
+                </TabsList>
+              )}
             </div>
 
             <div className="flex-1 min-h-0">
-              <TabsContent value="overview" className="mt-0 outline-none h-full overflow-y-auto no-scrollbar">
+              <TabsContent value="overview" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
                 <CardContent className="p-8 space-y-10">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                     <div className="space-y-6">
@@ -183,27 +211,39 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                       <DetailItem label="Next 100h Tacho" value={(aircraft.tachoAtNext100Inspection || 0).toFixed(1)} />
                       <div className="pt-2">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">To 50h</p>
-                        <Badge variant={timeTo50 < 5 ? "destructive" : "outline"} className="font-mono font-black text-xs h-8 px-4">{timeTo50.toFixed(1)}h</Badge>
+                        <Badge
+                          variant="outline"
+                          style={getInspectionWarningStyle(timeTo50, '50', inspectionSettings) || undefined}
+                          className="font-mono font-black text-xs h-8 px-4"
+                        >
+                          {timeTo50.toFixed(1)}h
+                        </Badge>
                       </div>
                       <div className="pt-2">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">To 100h</p>
-                        <Badge variant={timeTo100 < 10 ? "destructive" : "outline"} className="font-mono font-black text-xs h-8 px-4">{timeTo100.toFixed(1)}h</Badge>
+                        <Badge
+                          variant="outline"
+                          style={getInspectionWarningStyle(timeTo100, '100', inspectionSettings) || undefined}
+                          className="font-mono font-black text-xs h-8 px-4"
+                        >
+                          {timeTo100.toFixed(1)}h
+                        </Badge>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </TabsContent>
 
-              <TabsContent value="maintenance" className="mt-0 outline-none h-full overflow-y-auto no-scrollbar">
-                <MaintenanceTab aircraftId={aircraftId} tenantId={tenantId} logs={logs || []} isLoading={isLoadingLogs} />
+              <TabsContent value="maintenance" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
+                <MaintenanceTab aircraftId={aircraftId} tenantId={tenantId || ''} logs={logs || []} isLoading={isLoadingLogs} />
               </TabsContent>
 
-              <TabsContent value="components" className="mt-0 outline-none h-full overflow-y-auto no-scrollbar">
-                <ComponentsTab aircraft={aircraft} tenantId={tenantId} />
+              <TabsContent value="components" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
+                <ComponentsTab aircraft={aircraft} tenantId={tenantId || ''} />
               </TabsContent>
 
-              <TabsContent value="documents" className="mt-0 outline-none h-full overflow-y-auto no-scrollbar">
-                <DocumentsTab aircraft={aircraft} tenantId={tenantId} />
+              <TabsContent value="documents" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
+                <DocumentsTab aircraft={aircraft} tenantId={tenantId || ''} />
               </TabsContent>
             </div>
           </Card>
@@ -330,6 +370,11 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
   const firestore = useFirestore();
   const { toast } = useToast();
   const [viewingDoc, setViewingDoc] = useState<{ name: string; url: string } | null>(null);
+  const expirySettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    [firestore, tenantId]
+  );
+  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
 
   const handleDocUpload = (newDoc: any) => {
     const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
@@ -374,13 +419,15 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
           </TableHeader>
           <TableBody>
             {aircraft.documents && aircraft.documents.length > 0 ? (
-              aircraft.documents.map((doc) => (
+              aircraft.documents.map((doc) => {
+                const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
+                return (
                 <TableRow key={doc.name}>
                   <TableCell className="font-bold text-sm">{doc.name}</TableCell>
                   <TableCell className="text-xs font-medium">{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
                   <TableCell className="text-xs">
                     {doc.expirationDate ? (
-                      <Badge variant="outline" className={cn("font-bold", new Date(doc.expirationDate) < new Date() ? "text-destructive border-destructive bg-destructive/5" : "text-emerald-700 border-emerald-200 bg-emerald-50")}>
+                      <Badge variant="outline" className="font-bold" style={expiryStyle || undefined}>
                         {format(new Date(doc.expirationDate), 'dd MMM yyyy')}
                       </Badge>
                     ) : (
@@ -398,7 +445,7 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+              )})
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic">

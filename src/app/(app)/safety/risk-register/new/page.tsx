@@ -7,13 +7,14 @@ import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { RiskForm } from '../risk-form';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function NewRiskPage() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
     [firestore, tenantId]
   );
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);

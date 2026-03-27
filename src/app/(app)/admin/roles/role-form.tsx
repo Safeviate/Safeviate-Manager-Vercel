@@ -27,6 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { RoleCategory } from './page';
 
 interface RoleFormProps {
@@ -47,6 +48,7 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
+  const isMobile = useIsMobile();
   const [roleName, setRoleName] = useState(existingRole?.name || '');
   const [roleCategory, setRoleCategory] = useState<RoleCategory>(existingRole?.category || 'Personnel');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(existingRole?.permissions || []);
@@ -175,9 +177,16 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
         </DialogTrigger>
       ) : (
         <DialogTrigger asChild>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Role
+          <Button
+            variant={isMobile ? 'outline' : 'default'}
+            size={isMobile ? 'sm' : 'default'}
+            className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : undefined}
+          >
+            <span className="flex items-center gap-2">
+              <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
+              Add Role
+            </span>
+            {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
           </Button>
         </DialogTrigger>
       )}

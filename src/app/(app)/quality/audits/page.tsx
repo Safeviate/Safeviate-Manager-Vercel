@@ -3,41 +3,24 @@
 import { useMemo, useState } from 'react';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Eye, Trash2, Calendar, ClipboardCheck, ArrowRight, ShieldCheck, Building, ListFilter } from 'lucide-react';
+import { ShieldCheck, ListFilter, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useTabVisibility } from '@/hooks/use-tab-visibility';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -64,46 +47,22 @@ interface AuditActionsProps {
 function AuditActions({ audit, tenantId }: AuditActionsProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const handleDelete = () => {
         if (!firestore) return;
         const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
         deleteDocumentNonBlocking(auditRef);
         toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} has been removed.`});
-        setIsDeleteDialogOpen(false);
     }
     
     return (
         <div className="flex items-center justify-end gap-2">
-            <Button asChild variant="outline" size="compact" className="border-slate-300">
-                <Link href={`/quality/audits/${audit.id}`}>
-                    <Eye className="h-4 w-4" />
-                    <span className="hidden sm:inline">View</span>
-                </Link>
-            </Button>
-
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" className="h-8 w-8">
-                        <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently delete audit #{audit.auditNumber}.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ViewActionButton href={`/quality/audits/${audit.id}`} />
+            <DeleteActionButton
+                description={`This will permanently delete audit #${audit.auditNumber}.`}
+                onDelete={handleDelete}
+                srLabel="Delete audit"
+            />
         </div>
     )
 }
@@ -171,7 +130,6 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
 export default function AuditsPage() {
     const firestore = useFirestore();
     const { tenantId } = useUserProfile();
-    const { hasPermission } = usePermissions();
     const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-audits-view-all' });
     const isMobile = useIsMobile();
     const [activeOrgTab, setActiveOrgTab] = useState('internal');
@@ -229,101 +187,58 @@ export default function AuditsPage() {
         const archivedAudits = filteredByOrg.filter(a => a.status === 'Archived');
 
         return (
-            <Card className="min-h-[calc(100vh-15rem)] flex flex-col shadow-none border">
+            <Card className="h-full min-h-0 flex flex-col overflow-hidden shadow-none border">
                 <MainPageHeader 
                     title="Audits"
                     actions={
-                        <Button asChild variant="outline" size={isMobile ? "compact" : "sm"} className="border-slate-300">
+                        <Button
+                            asChild
+                            variant="outline"
+                            size={isMobile ? "compact" : "sm"}
+                            className={cn(
+                                'border-slate-300',
+                                isMobile
+                                    ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100'
+                                    : ''
+                            )}
+                        >
                             <Link href="/quality/audit-checklists">
-                                < ShieldCheck className="h-4 w-4" /> 
-                                {isMobile ? "Templates" : "Audit Templates"}
+                                <span className="flex items-center gap-2">
+                                    <ShieldCheck className="h-4 w-4" /> 
+                                    {isMobile ? "Templates" : "Audit Templates"}
+                                </span>
+                                {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                             </Link>
                         </Button>
                     }
                 />
 
                 {shouldShowOrganizationTabs && (
-                    <div className="border-b bg-muted/5 px-4 py-3 shrink-0">
-                        {isMobile ? (
-                            <Select value={activeOrgTab} onValueChange={setActiveOrgTab}>
-                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                                    <SelectValue placeholder="Select Organization" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="internal" className="text-[10px] font-bold uppercase">
-                                        <div className="flex items-center gap-2">
-                                            <Building className="h-3.5 w-3.5" />
-                                            Internal
-                                        </div>
-                                    </SelectItem>
-                                    {organizations?.map((organization) => (
-                                        <SelectItem key={organization.id} value={organization.id} className="text-[10px] font-bold uppercase">
-                                            <div className="flex items-center gap-2">
-                                                <Building className="h-3.5 w-3.5" />
-                                                {organization.name}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        ) : (
-                            <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                                    <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all">
-                                        Internal
-                                    </TabsTrigger>
-                                    {organizations?.map((organization) => (
-                                        <TabsTrigger
-                                            key={organization.id}
-                                            value={organization.id}
-                                            className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 text-[10px] font-black uppercase transition-all"
-                                        >
-                                            {organization.name}
-                                        </TabsTrigger>
-                                    ))}
-                                </TabsList>
-                            </div>
-                        )}
-                    </div>
+                    <OrganizationTabsRow
+                        organizations={organizations || []}
+                        activeTab={activeOrgTab}
+                        onTabChange={setActiveOrgTab}
+                        className="px-4 py-3 border-b bg-muted/5 shrink-0 md:px-6"
+                    />
                 )}
 
-                <Tabs value={activeStatusTab} onValueChange={setActiveStatusTab} className="flex-1 flex flex-col">
-                    <div className='px-4 py-3 border-b bg-muted/5 shrink-0'>
-                        {isMobile ? (
-                            <Select value={activeStatusTab} onValueChange={setActiveStatusTab}>
-                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                                    <SelectValue placeholder="Filter Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="active" className="text-[10px] font-bold uppercase">
-                                        <div className="flex items-center gap-2">
-                                            <ListFilter className="h-3.5 w-3.5" />
-                                            Active ({activeAudits.length})
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="archived" className="text-[10px] font-bold uppercase">
-                                        <div className="flex items-center gap-2">
-                                            <ListFilter className="h-3.5 w-3.5" />
-                                            Archived ({archivedAudits.length})
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        ) : (
-                            <div className="flex w-max gap-2 pr-6 flex-nowrap">
-                                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex w-max pr-6 flex-nowrap">
-                                    <TabsTrigger value="active" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-[10px] font-black uppercase shrink-0 transition-all">Active ({activeAudits.length})</TabsTrigger>
-                                    <TabsTrigger value="archived" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground text-[10px] font-black uppercase shrink-0 transition-all">Archived ({archivedAudits.length})</TabsTrigger>
-                                </TabsList>
-                            </div>
-                        )}
-                    </div>
-                    <CardContent className="p-0 flex-1">
+                <Tabs value={activeStatusTab} onValueChange={setActiveStatusTab} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                    <ResponsiveTabRow
+                        value={activeStatusTab}
+                        onValueChange={setActiveStatusTab}
+                        placeholder="Filter Status"
+                        className="px-4 py-3 border-b bg-muted/5 shrink-0 md:px-6"
+                        options={[
+                            { value: 'active', label: `Active (${activeAudits.length})`, icon: ListFilter },
+                            { value: 'archived', label: `Archived (${archivedAudits.length})`, icon: ListFilter },
+                        ]}
+                    />
+                    <CardContent className="p-0 flex-1 min-h-0 overflow-y-auto">
                         <TabsContent value="active" className="m-0 p-4 lg:p-6">
-                            <AuditsTable audits={activeAudits} tenantId={tenantId || 'safeviate'} />
+                            <AuditsTable audits={activeAudits} tenantId={tenantId || ''} />
                         </TabsContent>
                         <TabsContent value="archived" className="m-0 p-4 lg:p-6">
-                            <AuditsTable audits={archivedAudits} tenantId={tenantId || 'safeviate'} />
+                            <AuditsTable audits={archivedAudits} tenantId={tenantId || ''} />
                         </TabsContent>
                     </CardContent>
                 </Tabs>
@@ -347,12 +262,12 @@ export default function AuditsPage() {
     }
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
+        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
             {!showTabs ? (
                 renderOrgCard(scopedOrganizationId)
             ) : (
                 <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex flex-col h-full overflow-hidden">
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 min-h-0 overflow-hidden">
                         <TabsContent value="internal" className="m-0 p-0 h-full">
                             {renderOrgCard('internal')}
                         </TabsContent>

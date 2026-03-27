@@ -5,7 +5,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import { doc, setDoc, collection } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload, Library } from 'lucide-react';
+import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload, Library, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, poundsToKilograms, type FuelType } from '@/lib/fuel';
 import type { Aircraft, AircraftModelProfile } from '@/types/aircraft';
 import { MainPageHeader } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
@@ -107,16 +110,17 @@ const OffScreenWarning = ({ direction, value, label }: { direction: string, valu
 const WBCalculator = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
+  const isMobile = useIsMobile();
+  const { tenantId } = useUserProfile();
 
   const aircraftsQuery = useMemoFirebase(
-      () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
+      () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
       [firestore, tenantId]
   );
   const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
 
   const templatesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/massAndBalance`) : null),
+    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/massAndBalance`) : null),
     [firestore, tenantId]
   );
   const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<AircraftModelProfile>(templatesQuery);
@@ -152,6 +156,7 @@ const WBCalculator = () => {
   ]);
 
   const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
+  const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false);
   const [isSaveAircraftDialogOpen, setIsSaveAircraftDialogOpen] = useState(false);
   const [isLoadAircraftDialogOpen, setIsLoadAircraftDialogOpen] = useState(false);
   const [isLoadTemplateDialogOpen, setIsLoadTemplateDialogOpen] = useState(false);
@@ -306,7 +311,7 @@ const WBCalculator = () => {
   };
 
   const saveAsTemplate = async () => {
-    if (!firestore) {
+    if (!firestore || !tenantId) {
         alert("Firestore not initialized.");
         return;
     }
@@ -329,7 +334,7 @@ const WBCalculator = () => {
             stations: stations.map(serializeStation)
         };
 
-        await setDoc(doc(firestore, "tenants/safeviate/massAndBalance", templateId), dataToSave);
+        await setDoc(doc(firestore, "tenants", tenantId, "massAndBalance", templateId), dataToSave);
 
         toast({ title: 'Template Saved', description: `M&B Template "${templateName.trim()}" has been saved.` });
         setTemplateName('');
@@ -340,7 +345,7 @@ const WBCalculator = () => {
   };
   
   const handleSaveToAircraft = (aircraftId: string) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     
     const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId);
     
@@ -456,10 +461,49 @@ const WBCalculator = () => {
         <MainPageHeader 
           title="Mass & Balance Configuration"
           actions={
+            isMobile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                  >
+                    <span className="flex items-center gap-2">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                      Actions
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                  <DropdownMenuItem onClick={handleReset}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reset
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsSaveTemplateDialogOpen(true)}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Template
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsLoadTemplateDialogOpen(true)}>
+                    <Library className="mr-2 h-4 w-4" />
+                    Load Template
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsLoadAircraftDialogOpen(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Load from Aircraft
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsSaveAircraftDialogOpen(true)}>
+                    <Plane className="mr-2 h-4 w-4" />
+                    Save to Aircraft
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
             <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
               <Button onClick={handleReset} variant="destructive" size="sm" className="h-9 px-4 text-[10px] font-black uppercase"><RotateCcw size={14} className="mr-2" /> Reset</Button>
               
-              <Dialog>
+              <Dialog open={isSaveTemplateDialogOpen} onOpenChange={setIsSaveTemplateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 px-4 text-[10px] font-black uppercase border-slate-300"><Save size={14} className="mr-2" /> Save Template</Button>
                   </DialogTrigger>
@@ -563,7 +607,7 @@ const WBCalculator = () => {
 
                <Dialog open={isSaveAircraftDialogOpen} onOpenChange={setIsSaveAircraftDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase bg-emerald-700 hover:bg-emerald-800 text-white shadow-md"><Plane size={14} className="mr-2" /> Save to Aircraft</Button>
+                    <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase bg-emerald-700 text-white shadow-md hover:bg-emerald-800"><Plane size={14} className="mr-2" /> Save to Aircraft</Button>
                   </DialogTrigger>
                   <DialogContent>
                       <DialogHeader>
@@ -599,6 +643,7 @@ const WBCalculator = () => {
                   </DialogContent>
               </Dialog>
             </div>
+            )
           }
         />
         

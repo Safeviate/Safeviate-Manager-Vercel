@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { DeleteActionButton } from '@/components/record-action-buttons';
 
 export interface ExamTopicsSettings {
     id: string;
@@ -72,8 +73,6 @@ export default function ExamTopicsPage() {
   };
 
   const handleDeleteTopic = async (topicToDelete: string) => {
-    if (!window.confirm(`Are you sure? This will remove "${topicToDelete}" from the available topics. Questions already in this bank will remain but will be uncategorized.`)) return;
-
     const updatedTopics = (settings?.topics || []).filter(t => t !== topicToDelete);
     if (settingsRef) {
         setDocumentNonBlocking(settingsRef, { topics: updatedTopics }, { merge: true });
@@ -149,15 +148,15 @@ export default function ExamTopicsPage() {
 
             <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Add New Subject</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                     <Input 
                         placeholder="e.g., Radio Telephony, Human Factors..." 
                         value={newTopic}
                         onChange={(e) => setNewTopic(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
-                        className="bg-background h-10 font-bold"
+                        className="h-10 bg-background font-bold"
                     />
-                    <Button onClick={handleAddTopic} disabled={!newTopic.trim()} className="shrink-0 h-10 px-6 text-[10px] font-black uppercase">
+                    <Button onClick={handleAddTopic} disabled={!newTopic.trim()} className="h-10 w-full px-6 text-[10px] font-black uppercase sm:w-auto sm:shrink-0">
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Topic
                     </Button>
                 </div>
@@ -206,9 +205,11 @@ export default function ExamTopicsPage() {
                         <Button variant="ghost" size="icon" className="h-9 w-9 border border-transparent hover:border-slate-200" onClick={() => handleStartEdit(idx, topic)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive border border-transparent hover:border-destructive/20 hover:bg-destructive/5" onClick={() => handleDeleteTopic(topic)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DeleteActionButton
+                          description={`This will remove "${topic}" from the available topics. Questions already in this bank will remain but will be uncategorized.`}
+                          onDelete={() => handleDeleteTopic(topic)}
+                          srLabel="Delete topic"
+                        />
                       </div>
                     </>
                   )}

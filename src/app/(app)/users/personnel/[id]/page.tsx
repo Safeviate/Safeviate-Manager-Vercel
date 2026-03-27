@@ -10,11 +10,12 @@ import type { Department } from '../../../admin/department/page';
 import { EditPersonnelForm } from './edit-personnel-form';
 import { ViewPersonnelDetails } from './view-personnel-details';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
 
 interface UserProfilePageProps {
     params: Promise<{ id: string }>;
@@ -29,8 +30,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     const userType = searchParams.get('type') || 'Personnel';
     const { hasPermission } = usePermissions();
     const isMobile = useIsMobile();
-
-    const tenantId = 'safeviate';
+    const { tenantId } = useUserProfile();
     const userId = resolvedParams.id;
     const [isEditing, setIsEditing] = useState(false);
     const canEditUsers = hasPermission('users-edit');
@@ -46,22 +46,22 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     }, [userType]);
 
     const userDocRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, collectionName, userId) : null),
+        () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, collectionName, userId) : null),
         [firestore, tenantId, collectionName, userId]
     );
 
     const rolesQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'tenants', tenantId, 'roles') : null),
+        () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'roles') : null),
         [firestore, tenantId]
     );
 
     const departmentsQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'tenants', tenantId, 'departments') : null),
+        () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'departments') : null),
         [firestore, tenantId]
     );
     
     const logbookTemplatesQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'tenants', tenantId, 'logbook-templates') : null),
+        () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'logbook-templates') : null),
         [firestore, tenantId]
     );
 
@@ -96,7 +96,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
         <div className='flex flex-col h-full overflow-hidden gap-4'>
             {isEditing ? (
                  <EditPersonnelForm
-                    tenantId={tenantId}
+                    tenantId={tenantId || ''}
                     user={user}
                     roles={roles || []}
                     departments={departments || []}

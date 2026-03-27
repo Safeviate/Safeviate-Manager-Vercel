@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { FileText, Search, Trash2, CalendarIcon, Eye, PlusCircle, FileType, ImageIcon } from 'lucide-react';
+import { FileText, Search, CalendarIcon, PlusCircle, FileType, ImageIcon, ChevronsUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
+import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
+import { getDocumentExpiryBadgeStyle } from '@/lib/document-expiry';
 
 interface CompanyDocument {
   id: string;
@@ -48,8 +51,13 @@ export default function CompanyDocumentsPage() {
     () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/company-documents`), orderBy('uploadDate', 'desc')) : null),
     [firestore, tenantId]
   );
+  const expirySettingsRef = useMemoFirebase(
+    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
+    [firestore, tenantId]
+  );
 
   const { data: documents, isLoading } = useCollection<CompanyDocument>(docsQuery);
+  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
 
   const filteredDocs = useMemo(() => {
     if (!documents) return [];
@@ -82,10 +90,9 @@ export default function CompanyDocumentsPage() {
     toast({ title: 'Expiry Updated' });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!firestore || !tenantId) return;
-    if (!window.confirm('Are you sure you want to delete this document?')) return;
-    await deleteDoc(doc(firestore, `tenants/${tenantId}/company-documents`, id));
+    deleteDocumentNonBlocking(doc(firestore, `tenants/${tenantId}/company-documents`, id));
     toast({ title: 'Document Deleted' });
   };
 
@@ -102,9 +109,15 @@ export default function CompanyDocumentsPage() {
                   trigger={(open) => (
                     <Button 
                       onClick={() => open()} 
-                      size={isMobile ? "compact" : "default"} 
+                      variant={isMobile ? "outline" : "default"}
+                      size={isMobile ? "sm" : "default"} 
+                      className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : undefined}
                     >
-                      <PlusCircle className="h-4 w-4" /> {isMobile ? "Add" : "Add Document"}
+                      <span className="flex items-center gap-2">
+                        <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                        {isMobile ? "Add" : "Add Document"}
+                      </span>
+                      {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                     </Button>
                   )}
                 />
@@ -146,7 +159,9 @@ export default function CompanyDocumentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDocs.map((doc) => (
+                  {filteredDocs.map((doc) => {
+                    const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
+                    return (
                     <TableRow key={doc.id} className="group">
                       <TableCell className="text-center">
                         {doc.type === 'image' ? (
@@ -170,6 +185,7 @@ export default function CompanyDocumentsPage() {
                                   "h-8 text-xs gap-2 font-medium px-3",
                                   !doc.expirationDate && "text-muted-foreground italic border-dashed"
                                 )}
+                                style={doc.expirationDate && expiryStyle ? expiryStyle : undefined}
                               >
                                 <CalendarIcon className="h-3.5 w-3.5" />
                                 {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry'}
@@ -186,18 +202,20 @@ export default function CompanyDocumentsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingDoc(doc)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <ViewActionButton onClick={() => setViewingDoc(doc)} />
                           {canManage && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDelete(doc.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                              <DeleteActionButton
+                                description={`This will permanently delete "${doc.name}".`}
+                                onDelete={() => handleDelete(doc.id)}
+                                srLabel="Delete document"
+                              />
+                            </div>
                           )}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
             ) : (

@@ -8,17 +8,12 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Eye, LayoutDashboard } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { cn } from '@/lib/utils';
 
 export default function MyDashboardPage() {
     const { myTasks, myMessages, isLoading, userProfile, tenant } = useDashboardData();
@@ -63,39 +58,17 @@ export default function MyDashboardPage() {
     return (
         <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col h-full overflow-hidden">
-                {isMobile ? (
-                    <div className="mb-6">
-                        <Select value={activeTab} onValueChange={setActiveTab}>
-                            <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                                <SelectValue placeholder="Select Module" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableTabs.map((tab) => (
-                                    <SelectItem key={tab.id} value={tab.id} className="text-[10px] font-bold uppercase">
-                                        <div className="flex items-center gap-2">
-                                            <LayoutDashboard className="h-3.5 w-3.5" />
-                                            {tab.label}
-                                            {tab.id === 'messages' && myMessages.length > 0 && (
-                                                <Badge className="ml-auto h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px] bg-primary text-primary-foreground">{myMessages.length}</Badge>
-                                            )}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                ) : (
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 mb-6 shrink-0 border-b-0 overflow-x-auto no-scrollbar justify-start w-full flex">
-                        {availableTabs.map(tab => (
-                            <TabsTrigger key={tab.id} value={tab.id} className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all">
-                                {tab.label}
-                                {tab.id === 'messages' && myMessages.length > 0 && (
-                                    <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px] bg-primary text-primary-foreground">{myMessages.length}</Badge>
-                                )}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                )}
+                <ResponsiveTabRow
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    placeholder="Select Module"
+                    className="mb-6"
+                    options={availableTabs.map((tab) => ({
+                        value: tab.id,
+                        label: tab.id === 'messages' && myMessages.length > 0 ? `${tab.label} (${myMessages.length})` : tab.label,
+                        icon: LayoutDashboard,
+                    }))}
+                />
 
                 <TabsContent value="tasks" className="mt-0">
                     <Card className="shadow-none border">

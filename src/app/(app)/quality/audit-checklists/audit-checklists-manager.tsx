@@ -10,26 +10,30 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MainPageHeader } from "@/components/page-header";
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
 
 export default function AuditChecklistsManager() {
   const firestore = useFirestore();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
+  const isMobile = useIsMobile();
 
   const templatesQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/quality-audit-templates`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audit-templates`)) : null),
     [firestore, tenantId]
   );
   
   const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
     [firestore, tenantId]
   );
 
   const departmentsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/departments`)) : null),
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/departments`)) : null),
     [firestore, tenantId]
   );
 
@@ -61,20 +65,20 @@ export default function AuditChecklistsManager() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 px-1">
-      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
+    <div className={cn("max-w-[1200px] mx-auto w-full flex flex-col gap-4 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+      <Card className={cn("flex flex-col shadow-none border", isMobile ? "min-h-0 overflow-visible" : "h-full overflow-hidden")}>
         <MainPageHeader 
           title="Audit Checklists"
           actions={
             <NewChecklistDialog
-                tenantId={tenantId}
+                tenantId={tenantId || ''}
                 departments={departments || []}
             />
           }
         />
         
-        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
-          <ScrollArea className="h-full">
+        <CardContent className={cn("flex-1 p-0 bg-muted/5", isMobile ? "overflow-y-auto" : "overflow-hidden")}>
+          <ScrollArea className={cn(isMobile ? "h-auto" : "h-full")}>
             <div className="p-4 md:p-6 pb-20">
               {Object.keys(groupedTemplates).length > 0 ? (
                   <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-6">
@@ -83,7 +87,7 @@ export default function AuditChecklistsManager() {
                             key={category}
                             category={category}
                             templates={categoryTemplates}
-                            tenantId={tenantId}
+                            tenantId={tenantId || ''}
                             personnel={personnel || []}
                             departments={departments || []}
                         />

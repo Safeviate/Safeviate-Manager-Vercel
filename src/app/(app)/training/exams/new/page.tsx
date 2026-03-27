@@ -7,18 +7,18 @@ import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ExamForm, type ExamFormValues } from '../exam-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { BackNavButton } from '@/components/back-nav-button';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function NewExamPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
 
   const handleCreate = async (values: ExamFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) return;
     setIsSubmitting(true);
 
     try {
@@ -40,9 +40,7 @@ export default function NewExamPage() {
   return (
     <div className="max-w-5xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <div className="shrink-0 px-1">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="mb-2">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Exams
-        </Button>
+        <BackNavButton href="/training/exams" text="Back to Exams" className="mb-2 border-slate-300 bg-background text-foreground hover:bg-muted" />
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight font-headline">New Exam Template</h1>
           <p className="text-muted-foreground">Define questions and subject matter for official or mock assessments.</p>

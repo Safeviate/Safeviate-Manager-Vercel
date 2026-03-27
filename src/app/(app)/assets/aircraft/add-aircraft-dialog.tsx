@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle } from 'lucide-react';
+import { ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const formSchema = z.object({
   tailNumber: z.string().min(1, 'Tail number is required.'),
@@ -29,6 +30,7 @@ export function AddAircraftDialog({ tenantId }: { tenantId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -61,8 +63,15 @@ export function AddAircraftDialog({ tenantId }: { tenantId: string }) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase">
-          <PlusCircle className="h-4 w-4" /> Add Aircraft
+        <Button
+          variant={isMobile ? "outline" : "default"}
+          size={isMobile ? "sm" : "default"}
+          className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase"}
+        >
+          <span className="flex items-center gap-2">
+            <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} /> Add Aircraft
+          </span>
+          {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">

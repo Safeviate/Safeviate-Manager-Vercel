@@ -12,6 +12,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ExamTemplate } from '@/types/training';
 import { MainPageHeader } from '@/components/page-header';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 interface EditExamPageProps {
   params: Promise<{ examId: string }>;
@@ -23,18 +24,18 @@ export default function EditExamPage({ params }: EditExamPageProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const examId = resolvedParams.examId;
 
   const examRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/exam-templates`, examId) : null),
+    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/exam-templates`, examId) : null),
     [firestore, tenantId, examId]
   );
 
   const { data: exam, isLoading, error } = useDoc<ExamTemplate>(examRef);
 
   const handleUpdate = async (values: ExamFormValues) => {
-    if (!firestore || !exam) return;
+    if (!firestore || !tenantId || !exam) return;
     setIsSubmitting(true);
 
     try {

@@ -11,11 +11,13 @@ import { doc } from 'firebase/firestore';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pencil, Check, ShieldCheck, Printer, AlertTriangle } from 'lucide-react';
+import { Pencil, Check, ShieldCheck, Printer, AlertTriangle, ChevronsUpDown } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { MainPageHeader } from '@/components/page-header';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const defaultLikelihoods = [
     { name: 'Frequent', description: 'Likely to occur many times.', value: 5 },
@@ -42,9 +44,10 @@ const defaultColors: Record<string, string> = {
 };
 
 export default function RiskMatrixPage() {
+  const isMobile = useIsMobile();
   const firestore = useFirestore();
   const { hasPermission } = usePermissions();
-  const tenantId = 'safeviate';
+  const { tenantId } = useUserProfile();
   const settingsId = 'risk-matrix-config';
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -52,7 +55,7 @@ export default function RiskMatrixPage() {
   const canEditColors = hasPermission('risk-matrix-edit-colors');
 
   const settingsRef = useMemoFirebase(() => (
-    firestore ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null
+    firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', settingsId) : null
   ), [firestore, tenantId]);
 
   const { data: riskMatrixSettings, isLoading } = useDoc<RiskMatrixSettings>(settingsRef);
@@ -134,9 +137,22 @@ export default function RiskMatrixPage() {
         <MainPageHeader 
           title="Risk Matrix"
           actions={
-            <Button variant="outline" size="sm" onClick={() => window.print()} className="h-9 px-6 text-[10px] font-black uppercase gap-2 border-slate-300 no-print">
-                <Printer className="h-4 w-4" />
-                Export PDF
+            <Button
+              variant="outline"
+              size={isMobile ? "sm" : "sm"}
+              onClick={() => window.print()}
+              className={cn(
+                "no-print gap-2 border-slate-300 text-[10px] font-black uppercase",
+                isMobile
+                  ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                  : "h-9 px-6"
+              )}
+            >
+                <span className="flex items-center gap-2">
+                  <Printer className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                  Export PDF
+                </span>
+                {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
             </Button>
           }
         />

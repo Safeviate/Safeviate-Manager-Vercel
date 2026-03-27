@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon, Trash2, Upload, View, PlusCircle } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -18,6 +18,7 @@ import type { Aircraft } from '@/types/aircraft';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { getDocumentExpiryColor } from '@/lib/document-expiry';
 
 interface AircraftDocumentsProps {
   aircraft: Aircraft;
@@ -34,19 +35,6 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
     [firestore, tenantId]
   );
   const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
-
-  const getStatusColor = (expirationDate: string | null | undefined): string | null => {
-    if (!expirationDate || !expirySettings) return null;
-    const today = new Date();
-    const expiry = new Date(expirationDate);
-    const daysUntilExpiry = differenceInDays(expiry, today);
-    if (daysUntilExpiry < 0) return expirySettings.expiredColor || '#ef4444';
-    const sortedPeriods = (expirySettings.warningPeriods || []).sort((a, b) => a.period - b.period);
-    for (const warning of sortedPeriods) {
-      if (daysUntilExpiry <= warning.period) return warning.color;
-    }
-    return expirySettings.defaultColor || null;
-  };
 
   const handleDocumentUpdate = (updatedDocuments: any[]) => {
     if (!firestore) return;
@@ -103,7 +91,7 @@ export function AircraftDocuments({ aircraft, tenantId }: AircraftDocumentsProps
             </TableHeader>
             <TableBody>
               {aircraft.documents.map((doc) => {
-                const statusColor = getStatusColor(doc.expirationDate);
+                const statusColor = getDocumentExpiryColor(doc.expirationDate, expirySettings);
                 return (
                   <TableRow key={doc.name}>
                     <TableCell className="font-medium">{doc.name}</TableCell>
