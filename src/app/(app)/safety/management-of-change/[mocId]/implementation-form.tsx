@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from '@/components/page-header';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
 
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
@@ -213,13 +214,13 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     {likelihood}{severityLabels[severity]?.letter} — {riskLevel}
                 </Badge>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                 <Controller 
                     control={control} 
                     name={`${path}.likelihood`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
@@ -250,7 +251,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     name={`${path}.severity`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
@@ -609,7 +610,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                                                         </FormControl>
                                                                     </FormItem>
                                                                 )}
-                                                            )}
+                                                            />
                                                         </div>
                                                     </CompactRow>
                                                 </div>

@@ -107,7 +107,7 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
   const onSubmit = (values: FormValues) => {
     if (!firestore) return;
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
-    updateDocumentNonBlocking(reportRef, { hazards: values.hazards });
+    updateDocumentNonBlocking(reportRef, { initialHazards: values.hazards });
     toast({ title: 'Final Review Saved' });
   };
 
