@@ -9,11 +9,10 @@ import { Input } from '@/components/ui/input';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk, MocMitigation } from '@/types/moc';
+import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, WandSparkles, Loader2, AlertTriangle, ShieldCheck, Zap, ShieldAlert, ChevronDown } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, AlertTriangle, Zap, ChevronDown } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -24,9 +23,8 @@ import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react
 import { callAiFlow } from '@/lib/ai-client';
 import type { AnalyzeMocInput, AnalyzeMocOutput } from '@/ai/flows/analyze-moc-flow';
 import type { RiskMatrixSettings } from '@/types/risk';
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from '@/components/page-header';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -208,7 +206,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-3.5 w-3.5 opacity-70" />
+                    <AlertTriangle className="h-3.5 w-3.5 opacity-70" />
                     <h5 className="text-[10px] font-black uppercase tracking-widest opacity-70">{label}</h5>
                 </div>
                 <Badge variant="outline" className="h-6 font-black text-[10px] border-white/20 bg-white/10 text-inherit">
@@ -221,7 +219,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     name={`${path}.likelihood`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
@@ -252,7 +250,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     name={`${path}.severity`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
@@ -393,7 +391,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: { 
     });
 
     return (
-        <div className="space-y-6 mt-4 pl-4 border-l-2 ml-4">
+        <div className="space-y-6 mt-4">
             {(fields || []).map((field, hazardIndex) => (
                 <div key={field.id} className="p-4 border rounded-xl bg-white shadow-sm">
                     <div className="flex items-center justify-between mb-2">
@@ -466,7 +464,7 @@ const StepsArray = ({ phaseIndex, personnel, riskMatrixColors }: { phaseIndex: n
                         </div>
                         
                         <CollapsibleContent>
-                            <div className="px-4 pb-4">
+                            <div className="p-4">
                                 <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                             </div>
                         </CollapsibleContent>
@@ -583,36 +581,38 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                             {phaseFields.map((field, index) => (
                                 <Collapsible key={field.id} defaultOpen>
                                     <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <CompactRow 
-                                                    label="CORE PHASE"
-                                                    actions={
-                                                        <div className="flex items-center gap-1">
-                                                            <CollapsibleTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"><ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" /></Button>
-                                                            </CollapsibleTrigger>
-                                                            <Button type="button" variant="outline" size="sm" onClick={() => removePhase(index)} className="text-destructive h-8 border-slate-200 text-[9px] font-black uppercase">Remove Phase</Button>
-                                                        </div>
-                                                    }
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 rounded-lg bg-emerald-700 flex items-center justify-center text-white shadow-sm shrink-0">
-                                                            <Zap className="h-4 w-4" />
-                                                        </div>
-                                                        <FormField
-                                                            control={form.control}
-                                                            name={`phases.${index}.title`}
-                                                            render={({ field }) => (
-                                                                <FormItem className="flex-1">
-                                                                    <FormControl>
-                                                                        <Input className="text-xl font-black border-none shadow-none p-0 focus-visible:ring-0 uppercase tracking-tighter h-auto" placeholder="Phase Title..." {...field} />
-                                                                    </FormControl>
-                                                                </FormItem>
+                                        <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex-1">
+                                                    <CompactRow 
+                                                        label="CORE PHASE"
+                                                        actions={
+                                                            <div className="flex items-center gap-1">
+                                                                <CollapsibleTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"><ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" /></Button>
+                                                                </CollapsibleTrigger>
+                                                                <Button type="button" variant="outline" size="sm" onClick={() => removePhase(index)} className="text-destructive h-8 border-slate-200 text-[9px] font-black uppercase">Remove Phase</Button>
+                                                            </div>
+                                                        }
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-8 w-8 rounded-lg bg-emerald-700 flex items-center justify-center text-white shadow-sm shrink-0">
+                                                                <Zap className="h-4 w-4" />
+                                                            </div>
+                                                            <FormField
+                                                                control={form.control}
+                                                                name={`phases.${index}.title`}
+                                                                render={({ field }) => (
+                                                                    <FormItem className="flex-1">
+                                                                        <FormControl>
+                                                                            <Input className="text-xl font-black border-none shadow-none p-0 focus-visible:ring-0 uppercase tracking-tighter h-auto" placeholder="Phase Title..." {...field} />
+                                                                        </FormControl>
+                                                                    </FormItem>
+                                                                )}
                                                             )}
-                                                        />
-                                                    </div>
-                                                </CompactRow>
+                                                        </div>
+                                                    </CompactRow>
+                                                </div>
                                             </div>
                                         </div>
 

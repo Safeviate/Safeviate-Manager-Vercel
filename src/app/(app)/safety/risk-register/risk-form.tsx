@@ -15,7 +15,7 @@ import type { Risk, RiskItem, Mitigation, RiskMatrixSettings, RiskRegisterSettin
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon, PlusCircle, Trash2, ChevronDown, ShieldAlert } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash2, ChevronDown, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
@@ -156,7 +156,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-3.5 w-3.5 opacity-70" />
+                    <AlertTriangle className="h-3.5 w-3.5 opacity-70" />
                     <h5 className="text-[10px] font-black uppercase tracking-widest opacity-70">{label}</h5>
                 </div>
                 <Badge variant="outline" className="h-6 font-black text-[10px] border-white/20 bg-white/10 text-inherit">
@@ -169,7 +169,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     name={`${path}.likelihood` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
@@ -200,7 +200,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     name={`${path}.severity` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>

@@ -15,10 +15,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { SafetyReport } from '@/types/safety-report';
+import type { SafetyReport, ReportHazard, ReportRisk } from '@/types/safety-report';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { PlusCircle, Trash2, Save, ShieldAlert, ChevronDown } from 'lucide-react';
+import { PlusCircle, Trash2, Save, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -119,7 +119,7 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-3.5 w-3.5 opacity-70" />
+                    <AlertTriangle className="h-3.5 w-3.5 opacity-70" />
                     <h5 className="text-[10px] font-black uppercase tracking-widest opacity-70">{label}</h5>
                 </div>
                 <Badge variant="outline" className="h-6 font-black text-[10px] border-white/20 bg-white/10 text-inherit">
@@ -132,7 +132,7 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                     name={`${path}.likelihood` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
@@ -163,7 +163,7 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                     name={`${path}.severity` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
+                            <div className="flex items-baseline gap-1.5 min-w-[160px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
@@ -350,7 +350,7 @@ function HazardFields({ hazardFields, form, riskMatrixColors, removeHazard }: { 
       ))}
       {hazardFields.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-              <ShieldAlert className="h-12 w-12 mb-4" />
+              <AlertTriangle className="h-12 w-12 mb-4" />
               <p className="text-sm font-black uppercase tracking-widest">No hazards identified yet.</p>
               <p className="text-xs font-medium">Start by identifying the primary hazards associated with this report.</p>
           </div>
