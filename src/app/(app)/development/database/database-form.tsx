@@ -21,8 +21,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save } from 'lucide-react';
-import type { Tenant } from '@/types/quality';
+import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save, Briefcase } from 'lucide-react';
+import type { Tenant, IndustryType } from '@/types/quality';
 
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
 const DEFAULT_BUTTON = { 'button-primary-background': '#7cc4f7', 'button-primary-foreground': '#1e293b', 'button-primary-accent': '#63b2a7', 'button-primary-accent-foreground': '#ffffff' };
@@ -32,6 +32,13 @@ const DEFAULT_SIDEBAR = { 'sidebar-background': '#dbeafb', 'sidebar-foreground':
 const DEFAULT_HEADER = { 'header-background': '#ebf5fb', 'header-foreground': '#1e293b', 'header-border': '#e2e8f0' };
 const DEFAULT_SWIMLANE = { 'swimlane-header-background': '#f1f5f9', 'swimlane-header-foreground': '#475569' };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
+
+const INDUSTRY_TYPES: IndustryType[] = [
+  'Aviation: Flight Training (ATO)',
+  'Aviation: Charter / Ops (AOC)',
+  'Aviation: Maintenance (AMO)',
+  'General: Occupational Health & Safety (OHS)'
+];
 
 export function DatabaseForm() {
   const firestore = useFirestore();
@@ -46,6 +53,7 @@ export function DatabaseForm() {
 
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState('');
+  const [industry, setIndustry] = useState<IndustryType>('Aviation: Flight Training (ATO)');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   
   // Comprehensive Theme State
@@ -67,6 +75,7 @@ export function DatabaseForm() {
 
     setSelectedTenantId(t.id);
     setTenantName(t.name);
+    setIndustry(t.industry || 'Aviation: Flight Training (ATO)');
     setLogoPreview(t.logoUrl || null);
     
     // Load complex theme or fallback to defaults/basic colors
@@ -88,6 +97,31 @@ export function DatabaseForm() {
     toast({ title: 'Tenant Loaded', description: `Configuration for "${t.name}" is ready for editing.` });
   };
 
+  const handleIndustryChange = (newIndustry: IndustryType) => {
+    setIndustry(newIndustry);
+    
+    // Auto-pre-configure menus based on industry logic
+    const newEnabled = new Set<string>();
+    const walk = (items: any[]) => {
+        items.forEach(i => {
+            const isAviationOnly = i.href.includes('/bookings') || i.href.includes('/assets/aircraft') || i.href.includes('/admin/mb-config');
+            const isATOOnly = i.href.includes('/training/student-progress');
+            
+            let shouldAdd = true;
+            if (newIndustry === 'General: Occupational Health & Safety (OHS)' && isAviationOnly) shouldAdd = false;
+            if (newIndustry !== 'Aviation: Flight Training (ATO)' && isATOOnly) shouldAdd = false;
+
+            if (shouldAdd) {
+                newEnabled.add(i.href);
+                if (i.subItems) walk(i.subItems);
+            }
+        });
+    };
+    walk(menuConfig);
+    setEnabledHrefs(newEnabled);
+    toast({ title: 'Industry Presets Applied', description: `Authorized modules have been adjusted for ${newIndustry}.` });
+  };
+
   const handleSwitchTenant = (tenant: Tenant) => {
     if (typeof window === 'undefined') return;
 
@@ -103,6 +137,7 @@ export function DatabaseForm() {
   const handleClearForm = () => {
     setSelectedTenantId(null);
     setTenantName('');
+    setIndustry('Aviation: Flight Training (ATO)');
     setLogoPreview(null);
     setMainTheme(DEFAULT_MAIN);
     setButtonTheme(DEFAULT_BUTTON);
@@ -164,6 +199,7 @@ export function DatabaseForm() {
         {
           id: tenantId,
           name: tenantName,
+          industry: industry,
           logoUrl: logoPreview || '',
           theme: {
             primaryColour: mainTheme.primary,
@@ -244,6 +280,20 @@ export function DatabaseForm() {
                   <Label htmlFor="tenant-name">Tenant Name</Label>
                   <Input id="tenant-name" placeholder="e.g., Safeviate Inc." value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
               </div>
+              <div className="space-y-2 flex-[1.5]">
+                  <Label className="flex items-center gap-2">
+                    <Briefcase className="h-3.5 w-3.5 text-primary" />
+                    Industry Profile
+                  </Label>
+                  <Select onValueChange={(v) => handleIndustryChange(v as IndustryType)} value={industry}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+              </div>
           </div>
 
           <div className="mb-6 space-y-3 rounded-lg border bg-background p-4">
@@ -280,7 +330,7 @@ export function DatabaseForm() {
                                           <span className="font-semibold">{tenant.name}</span>
                                           {isActiveTenant && <Badge className="bg-green-600 hover:bg-green-600">Active</Badge>}
                                       </div>
-                                      <p className="text-xs text-muted-foreground">Tenant ID: {tenant.id}</p>
+                                      <p className="text-xs text-muted-foreground">Tenant ID: {tenant.id} • {tenant.industry || 'Legacy Profile'}</p>
                                   </div>
                                   <div className="flex flex-wrap gap-2">
                                       <Button type="button" variant="outline" size="sm" onClick={() => handleLoadTenant(tenant.id)}>

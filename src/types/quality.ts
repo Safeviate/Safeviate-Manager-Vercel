@@ -6,6 +6,12 @@ export type AuditStatus = 'Scheduled' | 'In Progress' | 'Finalized' | 'Closed' |
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type AuditScheduleStatus = 'Scheduled' | 'Completed' | 'Pending' | 'Not Scheduled';
 
+export type IndustryType = 
+  | 'Aviation: Flight Training (ATO)' 
+  | 'Aviation: Charter / Ops (AOC)' 
+  | 'Aviation: Maintenance (AMO)' 
+  | 'General: Occupational Health & Safety (OHS)';
+
 export interface AuditScheduleItem {
     id: string;
     area: string;
@@ -117,6 +123,7 @@ export interface TabVisibilitySettings {
 export interface Tenant {
     id: string;
     name: string;
+    industry?: IndustryType;
     logoUrl?: string;
     theme?: {
         primaryColour?: string;

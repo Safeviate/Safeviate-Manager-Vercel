@@ -18,6 +18,7 @@ import type { ExternalOrganization, TabVisibilitySettings } from '@/types/qualit
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
@@ -102,6 +103,9 @@ export default function SafetyIndicatorsPage() {
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'safety-indicators-view' });
+  const { tenant } = useTenantConfig();
+
+  const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
 
   const canViewAll = hasPermission('safety-indicators-view');
 
@@ -183,8 +187,11 @@ export default function SafetyIndicatorsPage() {
         <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl h-full">
             <div className="sticky top-0 z-30 bg-card">
                 <MainPageHeader 
-                    title="Safety Performance Indicators"
-                    description="Track and monitor key safety metrics against organizational targets."
+                    title={isAviation ? "Safety Performance Indicators" : "Health & Safety Indicators"}
+                    description={isAviation 
+                        ? "Track and monitor key safety metrics against organizational targets."
+                        : "Monitor critical occupational safety KPIs and target levels."
+                    }
                     actions={
                         <Button
                             size="sm"
@@ -207,7 +214,7 @@ export default function SafetyIndicatorsPage() {
                         >
                             <span className="flex items-center gap-2">
                                 <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "mr-2 h-4 w-4"} /> 
-                                {isMobile ? "Add" : "Add New SPI"}
+                                {isMobile ? "Add" : "Add New Indicator"}
                             </span>
                             {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                         </Button>
@@ -218,23 +225,29 @@ export default function SafetyIndicatorsPage() {
             
             <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
                 <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
-                    {spiConfig.map(spi => (
-                        <SPICard 
-                            key={spi.id} 
-                            spi={spi} 
-                            onEdit={handleEdit}
-                            onDelete={(id) => {
-                                if(window.confirm('Delete this SPI?')) {
-                                    const nc = spiConfig.filter(s => s.id !== id);
-                                    setSpiConfig(nc);
-                                    saveConfigToFirestore(nc);
-                                }
-                            }}
-                            reports={reports?.filter(r => r.organizationId === contextOrgId) || []} 
-                            bookings={bookings?.filter(b => b.organizationId === contextOrgId) || []}
-                            onMonthDataSave={handleMonthDataSave}
-                        />
-                    ))}
+                    {spiConfig.map(spi => {
+                        // Skip aviation specific KPIs for General industry
+                        const isAviationOnly = spi.id === 'unstable-approach' || spi.id === 'tech-defect';
+                        if (!isAviation && isAviationOnly) return null;
+
+                        return (
+                            <SPICard 
+                                key={spi.id} 
+                                spi={spi} 
+                                onEdit={handleEdit}
+                                onDelete={(id) => {
+                                    if(window.confirm('Delete this indicator?')) {
+                                        const nc = spiConfig.filter(s => s.id !== id);
+                                        setSpiConfig(nc);
+                                        saveConfigToFirestore(nc);
+                                    }
+                                }}
+                                reports={reports?.filter(r => r.organizationId === contextOrgId) || []} 
+                                bookings={bookings?.filter(b => b.organizationId === contextOrgId) || []}
+                                onMonthDataSave={handleMonthDataSave}
+                            />
+                        )
+                    })}
                 </div>
             </CardContent>
         </Card>
@@ -275,7 +288,7 @@ export default function SafetyIndicatorsPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-xl">
               <DialogHeader>
-                  <DialogTitle>{selectedSpi?.id === 'new-spi' ? 'Create New SPI' : `Edit SPI: ${selectedSpi?.name}`}</DialogTitle>
+                  <DialogTitle>{selectedSpi?.id === 'new-spi' ? 'Create New Indicator' : `Edit Indicator: ${selectedSpi?.name}`}</DialogTitle>
                   <DialogDescription>Define targets and alert thresholds for this performance indicator.</DialogDescription>
               </DialogHeader>
               {selectedSpi && (

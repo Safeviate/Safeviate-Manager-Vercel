@@ -25,6 +25,7 @@ import Link from 'next/link';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +40,10 @@ export default function ExamsPage() {
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const { tenantId } = useUserProfile();
+  const { tenant } = useTenantConfig();
   const isMobile = useIsMobile();
+
+  const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [takingExam, setTakingExam] = useState<{ template: ExamTemplate; isMock: boolean } | null>(null);
@@ -117,7 +121,7 @@ export default function ExamsPage() {
 
   const handleStartTopicExam = () => {
     if (!selectedTopic) {
-        toast({ variant: 'destructive', title: 'Selection Required', description: 'Please select an aviation topic.' });
+        toast({ variant: 'destructive', title: 'Selection Required', description: `Please select a ${isAviation ? 'aviation topic' : 'safety category'}.` });
         return;
     }
 
@@ -154,7 +158,7 @@ export default function ExamsPage() {
       <Card className="flex-1 flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <MainPageHeader 
-            title="Examinations"
+            title={isAviation ? "Examinations" : "Knowledge Assessments"}
             actions={
               isMobile ? (
                 <DropdownMenu>
@@ -194,7 +198,7 @@ export default function ExamsPage() {
                 <>
                   <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start flex min-w-max flex-nowrap">
                     <TabsTrigger value="internal" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
-                      <ShieldCheck className="h-4 w-4" /> Internal Exams (Official)
+                      <ShieldCheck className="h-4 w-4" /> {isAviation ? 'Internal Exams (Official)' : 'Internal Assessments'}
                     </TabsTrigger>
                     <TabsTrigger value="mock" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase">
                       <Microscope className="h-4 w-4" /> Mock Exams (Practice)
@@ -203,7 +207,7 @@ export default function ExamsPage() {
                   {canManage && (
                     <Button asChild size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0">
                       <Link href="/training/exams/new">
-                        <PlusCircle className="h-4 w-4" /> Create Exam Template
+                        <PlusCircle className="h-4 w-4" /> Create Template
                       </Link>
                     </Button>
                   )}
@@ -221,9 +225,9 @@ export default function ExamsPage() {
                     <div>
                       <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                         <ClipboardCheck className="h-4 w-4" />
-                        Available Exam Templates
+                        Available {isAviation ? 'Exam' : 'Assessment'} Templates
                       </h3>
-                      <p className="text-xs text-muted-foreground italic">Conduct a certified examination. Results are permanently recorded.</p>
+                      <p className="text-xs text-muted-foreground italic">Conduct a certified assessment. Results are permanently recorded.</p>
                     </div>
                     <div className="relative w-full sm:w-72">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -271,9 +275,9 @@ export default function ExamsPage() {
                                         </Link>
                                       </Button>
                                       <DeleteActionButton
-                                        description={`This will permanently delete the exam template "${template.title}".`}
+                                        description={`This will permanently delete the template "${template.title}".`}
                                         onDelete={() => handleDelete(template.id)}
-                                        srLabel="Delete exam template"
+                                        srLabel="Delete template"
                                       />
                                     </>
                                   )}
@@ -287,7 +291,7 @@ export default function ExamsPage() {
                           <Table>
                             <TableHeader className="bg-muted/30">
                               <TableRow>
-                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Exam Title</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Title</TableHead>
                                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">Subject</TableHead>
                                 <TableHead className="text-center text-[10px] uppercase font-bold tracking-wider">Pass Mark</TableHead>
                                 <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
@@ -306,7 +310,7 @@ export default function ExamsPage() {
                                         size="compact" 
                                         onClick={() => setTakingExam({ template, isMock: false })}
                                       >
-                                        <PlayCircle className="h-3.5 w-3.5" /> Start Official Exam
+                                        <PlayCircle className="h-3.5 w-3.5" /> Start Assessment
                                       </Button>
                                       {canManage && (
                                         <>
@@ -317,9 +321,9 @@ export default function ExamsPage() {
                                           </Button>
                                           <div className="opacity-0 transition-opacity group-hover:opacity-100">
                                             <DeleteActionButton
-                                              description={`This will permanently delete the exam template "${template.title}".`}
+                                              description={`This will permanently delete the template "${template.title}".`}
                                               onDelete={() => handleDelete(template.id)}
-                                              srLabel="Delete exam template"
+                                              srLabel="Delete template"
                                             />
                                           </div>
                                         </>
@@ -346,9 +350,9 @@ export default function ExamsPage() {
                   <div className="space-y-1">
                     <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-green-600" />
-                      Official Records
+                      Assessment History
                     </h3>
-                    <p className="text-xs text-muted-foreground italic">Certified results for non-mock examinations.</p>
+                    <p className="text-xs text-muted-foreground italic">Certified results for non-mock assessments.</p>
                   </div>
 
                   <div className="rounded-xl border overflow-hidden">
@@ -384,8 +388,8 @@ export default function ExamsPage() {
                             <TableHeader className="bg-muted/30">
                               <TableRow>
                                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">Date</TableHead>
-                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Student</TableHead>
-                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Exam</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Personnel</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Assessment</TableHead>
                                 <TableHead className="text-center text-[10px] uppercase font-bold tracking-wider">Score</TableHead>
                                 <TableHead className="text-center text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
                               </TableRow>
@@ -410,7 +414,7 @@ export default function ExamsPage() {
                       </>
                     ) : (
                       <div className="text-center py-12 bg-muted/5">
-                        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground opacity-40">No official records found.</p>
+                        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground opacity-40">No records found.</p>
                       </div>
                     )}
                   </div>
@@ -425,16 +429,16 @@ export default function ExamsPage() {
                     <div className="mx-auto w-full max-w-2xl space-y-6 rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
                         <div className="space-y-2 text-center">
                             <h3 className="text-lg font-black uppercase tracking-tight text-primary">Dynamic Practice Run</h3>
-                            <p className="text-xs text-muted-foreground italic">Select a topic to generate a randomized mock exam from the database.</p>
+                            <p className="text-xs text-muted-foreground italic">Select a topic to generate a randomized mock assessment from the database.</p>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                             <div className="space-y-2">
-                                <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Aviation Topic</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{isAviation ? 'Aviation Topic' : 'Safety Category'}</Label>
                                 <Select onValueChange={setSelectedTopic} value={selectedTopic}>
                                     <SelectTrigger className="h-12 font-bold">
                                         <Database className="h-4 w-4 mr-2 text-primary" />
-                                        <SelectValue placeholder="Select Topic..." />
+                                        <SelectValue placeholder="Select Category..." />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {(topicsData?.topics || []).map(t => <SelectItem key={t} value={t} className="font-medium">{t}</SelectItem>)}
@@ -442,7 +446,7 @@ export default function ExamsPage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Quantity</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Quantity</Label>
                                 <Select onValueChange={setQuestionCount} value={questionCount}>
                                     <SelectTrigger className="h-12 font-bold">
                                         <SelectValue />
@@ -471,7 +475,7 @@ export default function ExamsPage() {
                     <div className="space-y-4">
                         <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             <ClipboardCheck className="h-4 w-4" />
-                            Fixed Exam Templates (Practice)
+                            Fixed {isAviation ? 'Exam' : 'Assessment'} Templates (Practice)
                         </h3>
                         <div className="rounded-xl border overflow-hidden bg-card">
                             <>
@@ -503,7 +507,7 @@ export default function ExamsPage() {
                                 <Table>
                                     <TableHeader className="bg-muted/30">
                                     <TableRow>
-                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Exam Title</TableHead>
+                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Title</TableHead>
                                         <TableHead className="text-[10px] uppercase font-bold tracking-wider">Subject</TableHead>
                                         <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
                                     </TableRow>

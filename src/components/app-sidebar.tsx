@@ -19,7 +19,7 @@ import {
   SidebarMobile,
   SidebarMobileContent,
 } from '@/components/ui/sidebar';
-import { Plane, LogOut, ChevronDown } from 'lucide-react';
+import { Plane, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,23 +50,29 @@ const SidebarItems = () => {
     const { tenant } = useTenantConfig();
     const { userProfile } = useUserProfile();
     const { hasPermission } = usePermissions();
+
+    const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
   
     const filteredItems = useMemo(() => {
       return menuConfig.filter(item => {
-        // 1. Check Tenant-level module enablement
+        // 1. Check Industry modularity constraints
+        const isAviationOnly = item.href.includes('/bookings') || item.href.includes('/assets') || item.href.includes('/admin/mb-config');
+        if (!isAviation && isAviationOnly) return false;
+
+        // 2. Check Tenant-level module enablement
         const isEnabledByTenant = !tenant?.enabledMenus || tenant.enabledMenus.includes(item.href);
         if (!isEnabledByTenant) return false;
 
-        // 2. Check User-level override (hidden menus)
+        // 3. Check User-level override (hidden menus)
         const isHiddenByUser = userProfile?.accessOverrides?.hiddenMenus?.includes(item.href);
         if (isHiddenByUser) return false;
 
-        // 3. Check Role-level permissions
+        // 4. Check Role-level permissions
         if (item.permissionId && !hasPermission(item.permissionId)) return false;
 
         return true;
       });
-    }, [tenant, userProfile, hasPermission]);
+    }, [tenant, userProfile, hasPermission, isAviation]);
 
     return (
         <SidebarMenu>
@@ -75,6 +81,10 @@ const SidebarItems = () => {
                 const isParentActive = pathname.startsWith(item.href);
 
                 const subItems = (item.subItems || []).filter(sub => {
+                    // Check industry modularity for subitems
+                    const isAviationOnlySub = sub.href.includes('/training/student-progress');
+                    if (!isAviation && isAviationOnlySub) return false;
+
                     const isSubHidden = userProfile?.accessOverrides?.hiddenMenus?.includes(sub.href);
                     if (isSubHidden) return false;
                     
@@ -215,8 +225,11 @@ const SidebarFooterContent = () => {
 export function AppSidebarMobile() {
     const { openMobile, setOpenMobile } = useSidebar();
     const isMobile = useIsMobile();
+    const { tenant } = useTenantConfig();
   
     if (!isMobile) return null;
+
+    const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
   
     return (
       <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
@@ -227,7 +240,11 @@ export function AppSidebarMobile() {
           <SidebarHeader>
             <div className="flex items-center gap-2">
               <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-                <Plane className="size-5 text-primary-foreground" />
+                {isAviation ? (
+                  <Plane className="size-5 text-primary-foreground" />
+                ) : (
+                  <ShieldCheck className="size-5 text-primary-foreground" />
+                )}
               </div>
               <span className="font-headline text-lg">Safeviate</span>
             </div>
@@ -245,12 +262,19 @@ export function AppSidebarMobile() {
 }
 
 export function AppSidebar() {
+  const { tenant } = useTenantConfig();
+  const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
+
   return (
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-            <Plane className="size-5 text-primary-foreground" />
+            {isAviation ? (
+              <Plane className="size-5 text-primary-foreground" />
+            ) : (
+              <ShieldCheck className="size-5 text-primary-foreground" />
+            )}
           </div>
           <span className="font-headline text-lg">Safeviate</span>
         </div>
