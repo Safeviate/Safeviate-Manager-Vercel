@@ -131,8 +131,8 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                     control={control} 
                     name={`${path}.likelihood` as any} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 min-w-[180px]">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
@@ -162,8 +162,8 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                     control={control} 
                     name={`${path}.severity` as any} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 min-w-[180px]">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>

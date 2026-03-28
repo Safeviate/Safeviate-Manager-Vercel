@@ -168,8 +168,8 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     control={control} 
                     name={`${path}.likelihood` as any} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 min-w-[180px]">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
@@ -199,8 +199,8 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     control={control} 
                     name={`${path}.severity` as any} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 min-w-[180px]">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-baseline gap-1.5 min-w-[140px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
@@ -244,7 +244,7 @@ const MitigationsArray = ({ riskIndex, personnel, riskMatrixColors }: { riskInde
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                       <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel>Mitigation Action</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} /></FormControl><FormMessage /></FormItem> )} />
                       <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.reviewDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Review Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-10 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.reviewDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Review Date</Label><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-10 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                       <div className="flex items-center gap-2">
                         <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
