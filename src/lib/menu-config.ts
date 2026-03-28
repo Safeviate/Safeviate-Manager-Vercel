@@ -105,6 +105,12 @@ export const menuConfig: MenuItem[] = [
         description: 'Book company vehicles out and back in with live availability tracking.',
         permissionId: 'operations-view',
       },
+      {
+        href: '/operations/weather',
+        label: 'Weather',
+        description: 'View aviation weather reports and forecasts.',
+        permissionId: 'operations-view',
+      },
     ],
   },
   {
