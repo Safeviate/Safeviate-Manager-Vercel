@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Printer } from 'lucide-react';
+import { Printer, Pencil, ShieldAlert } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -17,9 +17,11 @@ import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { Department } from '@/app/(app)/admin/department/page';
 import type { RiskMatrixSettings } from '@/types/risk';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Badge } from '@/components/ui/badge';
+import { EditReportDialog } from '@/app/(app)/safety/safety-reports/edit-report-dialog';
+import { cn } from '@/lib/utils';
 
 interface MocDetailPageProps {
   params: Promise<{ mocId: string }>;
@@ -36,6 +38,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   const resolvedParams = use(params);
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
+  const isMobile = useIsMobile();
   const mocId = resolvedParams.mocId;
 
   const mocRef = useMemoFirebase(
@@ -99,79 +102,73 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
-      <Tabs defaultValue="implementation" className="w-full flex-1 flex flex-col overflow-hidden">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col pt-0 px-1 pb-20">
+      <Tabs defaultValue="implementation" className="w-full flex flex-col">
         
-        {/* --- MAIN CONTENT CARD --- */}
-        <div className="flex-1 overflow-hidden pb-10 no-print pt-0">
-          <div className="rounded-xl border overflow-hidden flex flex-col bg-card shadow-none h-full">
-            <div className="sticky top-0 z-30 bg-card">
-              <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 shrink-0">
+        {/* --- MAIN HEADER --- */}
+        <div className="rounded-xl border overflow-hidden flex flex-col bg-card shadow-none mb-6 no-print">
+            <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6">
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
-                    {moc.mocNumber}: {moc.title}
-                  </CardTitle>
-                  <CardDescription className="text-sm font-medium mt-0.5">
-                    Proposed on {format(new Date(moc.proposalDate), 'PPP')}
-                  </CardDescription>
+                    <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
+                        {moc.mocNumber}: {moc.title}
+                    </CardTitle>
+                    <CardDescription className="text-sm font-medium mt-0.5">
+                        Proposed on {format(new Date(moc.proposalDate), 'PPP')}
+                    </CardDescription>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
-                      <Printer className="h-4 w-4" />
-                      Print MOC
-                  </Button>
+                    <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+                        <Printer className="h-4 w-4" />
+                        Print
+                    </Button>
                 </div>
-              </CardHeader>
+            </CardHeader>
 
-              {/* --- TAB BAR INSIDE CARD WITH HORIZONTAL SCROLL --- */}
-              <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
+            <div className="border-b bg-muted/5 px-6 py-2">
                 <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center w-full">
-                  <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
-                    Implementation & Analysis
-                  </TabsTrigger>
-                  <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
-                    Approval & Sign-off
-                  </TabsTrigger>
+                    <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                        Implementation & Strategy
+                    </TabsTrigger>
+                    <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                        Approval & Sign-off
+                    </TabsTrigger>
                 </TabsList>
-              </div>
             </div>
+        </div>
 
-            <div className="flex-1 min-h-0">
-              <TabsContent value="implementation" className="m-0 h-full outline-none overflow-y-auto no-scrollbar">
-                <div className="p-8 pt-6 space-y-6">
-                    {/* --- CORE MOC INFO --- */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-6 border-b pb-6">
-                        <DetailItem label="Proposing Department" value={departmentMap.get(moc.proposingDepartmentId)} />
-                        <DetailItem label="Responsible Person" value={personnelMap.get(moc.responsiblePersonId)} />
-                        <DetailItem label="Proposal Date" value={format(new Date(moc.proposalDate), 'PPP')} />
-                    </div>
+        {/* --- CONTENT --- */}
+        <div className="flex-1 no-print">
+            <TabsContent value="implementation" className="m-0 outline-none">
+                <div className="flex flex-col gap-6">
+                    {/* --- SUMMARY TOP CARD --- */}
+                    <Card className="shadow-none border rounded-xl overflow-hidden">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-6 p-6 border-b bg-muted/5">
+                            <DetailItem label="Proposing Department" value={departmentMap.get(moc.proposingDepartmentId)} />
+                            <DetailItem label="Responsible Person" value={personnelMap.get(moc.responsiblePersonId)} />
+                            <DetailItem label="Proposal Date" value={format(new Date(moc.proposalDate), 'PPP')} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 p-6 border-b">
+                            <DetailItem label="Detailed Description" value={moc.description} />
+                            <DetailItem label="Reason for Change" value={moc.reason} />
+                        </div>
+                        <div className="p-6">
+                            <DetailItem label="Scope of Change" value={moc.scope} />
+                        </div>
+                    </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 border-b pb-6">
-                        <DetailItem label="Detailed Description" value={moc.description} />
-                        <DetailItem label="Reason for Change" value={moc.reason} />
-                    </div>
-                    
-                    <div className="border-b pb-6">
-                        <DetailItem label="Scope of Change" value={moc.scope} />
-                    </div>
-
-                    <div className="pt-4">
-                        <ImplementationForm
-                            key={moc.id}
-                            moc={moc}
-                            tenantId={tenantId || ''}
-                            personnel={personnel || []}
-                        />
-                    </div>
+                    {/* --- STRATEGY WORKSPACE --- */}
+                    <ImplementationForm
+                        key={moc.id}
+                        moc={moc}
+                        tenantId={tenantId || ''}
+                        personnel={personnel || []}
+                    />
                 </div>
-              </TabsContent>
-              <TabsContent value="approval" className="m-0 h-full outline-none overflow-y-auto no-scrollbar">
-                  <div className="p-8 pt-6">
-                    <ApprovalForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
-                  </div>
-              </TabsContent>
-            </div>
-          </div>
+            </TabsContent>
+            
+            <TabsContent value="approval" className="m-0 outline-none">
+                <ApprovalForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
+            </TabsContent>
         </div>
       </Tabs>
 
@@ -191,9 +188,9 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
               <DetailItem label="Responsible" value={personnelMap.get(moc.responsiblePersonId)} />
             </div>
         </div>
-        <Separator />
-        <ImplementationForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
-        <ApprovalForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
+        <Separator className="my-10" />
+        <ImplementationForm moc={moc} tenantId={tenantId!} personnel={personnel || []} />
+        <ApprovalForm moc={moc} tenantId={tenantId!} personnel={personnel || []} />
       </div>
     </div>
   );
