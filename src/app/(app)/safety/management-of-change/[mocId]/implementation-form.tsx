@@ -24,7 +24,7 @@ import { callAiFlow } from '@/lib/ai-client';
 import type { AnalyzeMocInput, AnalyzeMocOutput } from '@/ai/flows/analyze-moc-flow';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { MainPageHeader } from '@/components/page-header';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
@@ -557,12 +557,12 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
   return (
     <FormProvider {...form}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10" key={formKey}>
-           <Card className="shadow-none border rounded-xl overflow-hidden">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10 h-full flex flex-col" key={formKey}>
+           <Card className="shadow-none border rounded-xl overflow-hidden flex flex-col flex-1">
                 <MainPageHeader 
                     title="Implementation Strategy"
                 />
-                <CardContent className="p-0 bg-background">
+                <CardContent className="p-0 bg-background flex-1 overflow-y-auto no-scrollbar">
                     {/* --- CONSOLIDATED METADATA ROWS --- */}
                     <div className="bg-muted/10 border-b">
                         <CompactRow label="DETAILED DESCRIPTION">
