@@ -20,7 +20,6 @@ import type { RiskMatrixSettings } from '@/types/risk';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
-import { EditReportDialog } from '@/app/(app)/safety/safety-reports/edit-report-dialog';
 import { cn } from '@/lib/utils';
 
 interface MocDetailPageProps {
@@ -112,9 +111,15 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                     <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
                         {moc.mocNumber}: {moc.title}
                     </CardTitle>
-                    <CardDescription className="text-sm font-medium mt-0.5">
-                        Proposed on {format(new Date(moc.proposalDate), 'PPP')}
-                    </CardDescription>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3">
+                        <DetailItem label="Status" value={moc.status} />
+                        <Separator orientation="vertical" className="h-8 hidden md:block" />
+                        <DetailItem label="Department" value={departmentMap.get(moc.proposingDepartmentId)} />
+                        <Separator orientation="vertical" className="h-8 hidden md:block" />
+                        <DetailItem label="Responsible" value={personnelMap.get(moc.responsiblePersonId)} />
+                        <Separator orientation="vertical" className="h-8 hidden md:block" />
+                        <DetailItem label="Proposed" value={format(new Date(moc.proposalDate), 'dd MMM yyyy')} />
+                    </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                     <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
@@ -140,23 +145,6 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         <div className="flex-1 no-print">
             <TabsContent value="implementation" className="m-0 outline-none">
                 <div className="flex flex-col gap-6">
-                    {/* --- SUMMARY TOP CARD --- */}
-                    <Card className="shadow-none border rounded-xl overflow-hidden">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-6 p-6 border-b bg-muted/5">
-                            <DetailItem label="Proposing Department" value={departmentMap.get(moc.proposingDepartmentId)} />
-                            <DetailItem label="Responsible Person" value={personnelMap.get(moc.responsiblePersonId)} />
-                            <DetailItem label="Proposal Date" value={format(new Date(moc.proposalDate), 'PPP')} />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 p-6 border-b">
-                            <DetailItem label="Detailed Description" value={moc.description} />
-                            <DetailItem label="Reason for Change" value={moc.reason} />
-                        </div>
-                        <div className="p-6">
-                            <DetailItem label="Scope of Change" value={moc.scope} />
-                        </div>
-                    </Card>
-
-                    {/* --- STRATEGY WORKSPACE --- */}
                     <ImplementationForm
                         key={moc.id}
                         moc={moc}

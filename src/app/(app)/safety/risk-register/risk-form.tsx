@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
@@ -134,7 +133,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
     const riskColors = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
     const likelihoodLabels: Record<number, string> = {
-        5: 'Frequent', 4: 'Occasional', 3: 'Remote', 2: 'Improbable', 1: 'Extremely Improbable',
+        5: 'Frequent', 4: 'Occasional', 3: 'Remote', 2: 'Improbable', 1: 'Ext. Improbable',
     };
     
     const severityLabels: Record<number, { letter: string; name: string }> = {
@@ -164,27 +163,27 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     {likelihood}{severityLabels[severity]?.letter} — {riskLevel}
                 </Badge>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 <Controller 
                     control={control} 
                     name={`${path}.likelihood` as any} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <Label className="text-[10px] uppercase font-bold opacity-70">Likelihood: {value}</Label>
-                                <span className="text-[10px] italic opacity-60">({likelihoodLabels[value]})</span>
+                        <div className="flex items-center gap-4">
+                            <div className="flex flex-col min-w-[120px]">
+                                <Label className="text-[10px] uppercase font-bold opacity-70">Likelihood</Label>
+                                <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex gap-1">
                                 {[1, 2, 3, 4, 5].map((num) => (
                                     <Button
                                         key={num}
                                         type="button"
                                         variant={value === num ? "default" : "outline"}
-                                        size="sm"
+                                        size="icon"
                                         className={cn(
-                                            "h-8 w-8 p-0 text-xs font-bold transition-all",
+                                            "h-8 w-8 text-xs font-bold transition-all",
                                             value === num 
-                                                ? "bg-white text-black shadow-md scale-110 border-white" 
+                                                ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
                                         )}
                                         onClick={() => onChange(num)}
@@ -200,22 +199,22 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     control={control} 
                     name={`${path}.severity` as any} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <Label className="text-[10px] uppercase font-bold opacity-70">Severity: {severityLabels[value]?.letter}</Label>
-                                <span className="text-[10px] italic opacity-60">({severityLabels[value]?.name})</span>
+                        <div className="flex items-center gap-4">
+                            <div className="flex flex-col min-w-[120px]">
+                                <Label className="text-[10px] uppercase font-bold opacity-70">Severity</Label>
+                                <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex gap-1">
                                 {[5, 4, 3, 2, 1].map((num) => (
                                     <Button
                                         key={num}
                                         type="button"
                                         variant={value === num ? "default" : "outline"}
-                                        size="sm"
+                                        size="icon"
                                         className={cn(
-                                            "h-8 w-8 p-0 text-xs font-bold transition-all",
+                                            "h-8 w-8 text-xs font-bold transition-all",
                                             value === num 
-                                                ? "bg-white text-black shadow-md scale-110 border-white" 
+                                                ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
                                         )}
                                         onClick={() => onChange(num)}
