@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -76,8 +77,8 @@ interface ViewBookingDetailsProps {
 
 const DetailItem = ({ label, value, children }: { label: string, value?: string | number | undefined | null, children?: React.ReactNode }) => (
     <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
-        {children ? children : <p className="text-sm font-semibold">{value ?? 'N/A'}</p>}
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+        {children ? children : <p className="text-sm font-bold text-foreground">{value ?? 'N/A'}</p>}
     </div>
 );
 
@@ -183,17 +184,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
-    const handleFuelGallonsChange = (id: number, gallons: string) => {
-        const val = parseFloat(gallons) || 0;
-        setStations(prev => prev.map(s => s.id === id ? (() => {
-            const f = normalizeFuelStation(s);
-            const den = f.densityLbPerGallon || 6.0;
-            const max = f.maxGallons || 50;
-            const gal = clamp(val, 0, max);
-            return { ...f, gallons: parseFloat(gal.toFixed(1)), weight: parseFloat((gal * den).toFixed(1)) };
-        })() : s));
-    };
-
     const handleSaveToBooking = () => {
         if (!firestore || !tenantId) return;
         const ref = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
@@ -213,12 +203,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const fYMin = Math.min(...allY) - padY;
     const fYMax = Math.max(...allY) + padY;
 
-    const canApprove = hasPermission('bookings-approve');
-    const canOverride = hasPermission('bookings-approve-override');
     const canLogPre = hasPermission('bookings-preflight-manage');
     const canLogPost = hasPermission('bookings-postflight-manage');
-    const canOverrideTechLog = hasPermission('bookings-techlog-override');
-    const isApprovable = booking.status !== 'Approved' && !isCompleted && !booking.status.startsWith('Cancelled');
 
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -244,11 +230,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <DetailItem label="Approved By" value={booking.approvedByName || 'Pending'} />
                                 </CardContent>
                                 <Separator />
-                                <CardHeader><CardTitle className="text-xl flex items-center gap-2"><History className="h-5 w-5 text-primary" /> Technical Log</CardTitle></CardHeader>
+                                <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Technical Log</CardTitle></CardHeader>
                                 <CardContent className="space-y-8 pb-10">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className={cn("p-4 rounded-xl border bg-muted/10", isPreFlightBlocked && !booking.preFlight && "opacity-50")}>
-                                            <h3 className="font-bold text-sm uppercase flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-green-600" /> Pre-Flight</h3>
+                                            <h3 className="font-bold text-xs uppercase flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-green-600" /> Pre-Flight</h3>
                                             {activeEditView === 'pre-flight' ? (
                                                 <PreFlightLogForm booking={booking} aircraft={aircraft!} tenantId={tenantId!} onCancel={() => setActiveEditView('none')} onSuccess={() => setActiveEditView('none')} />
                                             ) : booking.preFlightData ? (
@@ -262,7 +248,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             )}
                                         </div>
                                         <div className={cn("p-4 rounded-xl border bg-muted/10", !booking.preFlight && "opacity-50")}>
-                                            <h3 className="font-bold text-sm uppercase flex items-center gap-2"><FileClock className="h-4 w-4 text-blue-600" /> Post-Flight</h3>
+                                            <h3 className="font-bold text-xs uppercase flex items-center gap-2"><FileClock className="h-4 w-4 text-blue-600" /> Post-Flight</h3>
                                             {activeEditView === 'post-flight' ? (
                                                 <PostFlightLogForm booking={booking} aircraft={aircraft!} tenantId={tenantId!} onCancel={() => setActiveEditView('none')} onSuccess={() => setActiveEditView('none')} />
                                             ) : booking.postFlightData ? (
@@ -278,81 +264,44 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </div>
                                 </CardContent>
                                 <Separator />
-                                <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance</CardTitle></CardHeader>
-                                <CardContent className="min-h-full pb-20">
+                                <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance</CardTitle></CardHeader>
+                                <CardContent className="min-h-full pb-32">
                                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
                                         <div className="flex flex-col">
-                                            <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile && "mx-auto w-full max-w-[430px]")}>
-                                                <div className="mb-3 flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading Envelope</p>
-                                                        <p className="text-xs font-semibold text-muted-foreground">Current position against approved limits</p>
-                                                    </div>
-                                                    <Badge variant={results.isSafe ? 'default' : 'destructive'} className="text-[10px] font-black uppercase">
-                                                        {results.isSafe ? 'Within Limits' : 'Out Of Limits'}
-                                                    </Badge>
-                                                </div>
-                                                <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[420px]")}>
+                                            <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
+                                                <div className="min-w-[800px] h-[450px] relative">
                                                     <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={isMobile ? { top: 12, right: 16, bottom: 16, left: 4 } : { top: 20, right: 28, bottom: 32, left: 20 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                                            <XAxis
-                                                                type="number"
-                                                                dataKey="x"
-                                                                name="CG"
-                                                                domain={[fXMin, fXMax]}
-                                                                ticks={generateNiceTicks(fXMin, fXMax, isMobile ? 5 : 8)}
-                                                                allowDataOverflow
-                                                                tick={{ fontSize: isMobile ? 10 : 11 }}
-                                                                tickMargin={6}
-                                                            >
-                                                                {!isMobile ? <Label value="CG (in)" offset={-10} position="insideBottom" /> : null}
+                                                        <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" />
+                                                            <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow>
+                                                                <Label value="CG (in)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" />
                                                             </XAxis>
-                                                            <YAxis
-                                                                type="number"
-                                                                dataKey="y"
-                                                                name="Weight"
-                                                                domain={[fYMin, fYMax]}
-                                                                ticks={generateNiceTicks(fYMin, fYMax, isMobile ? 5 : 8)}
-                                                                allowDataOverflow
-                                                                width={isMobile ? 38 : 52}
-                                                                tick={{ fontSize: isMobile ? 10 : 11 }}
-                                                                tickMargin={4}
-                                                            >
-                                                                {!isMobile ? <Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-8} /> : null}
+                                                            <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow>
+                                                                <Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" />
                                                             </YAxis>
                                                             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                                                             <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
                                                             <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 7 : 10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
+                                                                <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
                                                             </Scatter>
                                                         </ScatterChart>
                                                     </ResponsiveContainer>
                                                 </div>
-                                                {isMobile ? (
-                                                    <div className="mt-3 grid grid-cols-2 gap-3 text-center">
-                                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG</p>
-                                                            <p className="text-sm font-black">{results.cg} in</p>
-                                                        </div>
-                                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Weight</p>
-                                                            <p className="text-sm font-black">{results.weight} lbs</p>
-                                                        </div>
-                                                    </div>
-                                                ) : null}
                                             </div>
                                         </div>
                                         <div className="space-y-6">
-                                            <div className="p-4 bg-muted/30 rounded-xl space-y-4">
+                                            <div className="p-4 bg-muted/30 rounded-xl space-y-4 border">
                                                 <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
                                                 <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
+                                                <div className={cn("p-2 rounded text-center text-[10px] font-black uppercase", results.isSafe ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
+                                                    {results.isSafe ? "Safe Loading" : "Outside Envelope"}
+                                                </div>
                                                 <Button size="sm" onClick={handleSaveToBooking} disabled={isCompleted} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Load config</Button>
                                             </div>
                                             <ScrollArea className="h-[400px] pr-4">
                                                 <div className="space-y-4">
                                                     {stations.map(s => (
-                                                        <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background">
+                                                        <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm">
                                                             <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
                                                             <div className="flex items-center gap-2">
                                                                 <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} disabled={isCompleted} className="h-8 text-xs font-bold" />
@@ -384,12 +333,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }: any) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { userProfile } = useUserProfile();
+    const { userProfile, hasPermission } = useUserProfile();
     const form = useForm({ defaultValues: booking.preFlightData || { hobbs: aircraft.currentHobbs || 0, tacho: aircraft.currentTacho || 0, fuelUpliftGallons: 0, fuelUpliftLitres: 0, oilUplift: 0, documentsChecked: false } });
+    
     const onSubmit = async (data: any) => {
         if (!firestore) return;
         const ref = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        const log: OverrideLog = { userId: userProfile?.id || 'sys', userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Sys', permissionId: 'bookings-preflight-manage', action: 'Recorded pre-flight', reason: 'Normal operations', timestamp: new Date().toISOString() };
+        const log: OverrideLog = { 
+            userId: userProfile?.id || 'sys', 
+            userName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Sys', 
+            permissionId: 'bookings-preflight-manage', 
+            action: 'Recorded pre-flight', 
+            reason: 'Normal operations', 
+            timestamp: new Date().toISOString() 
+        };
         updateDocumentNonBlocking(ref, { preFlight: true, preFlightData: data, overrides: arrayUnion(log) });
         toast({ title: 'Pre-Flight Recorded' });
         onSuccess();
@@ -400,8 +357,8 @@ function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }: 
                 <Input type="number" step="0.1" {...form.register('hobbs')} placeholder="Start Hobbs" className="h-9" />
                 <Input type="number" step="0.1" {...form.register('tacho')} placeholder="Start Tacho" className="h-9" />
             </div>
-            <div className="flex items-center gap-2"><Switch checked={form.watch('documentsChecked')} onCheckedChange={(v) => form.setValue('documentsChecked', v)} /><Label>Documents Checked</Label></div>
-            <div className="flex gap-2 justify-end"><Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button><Button size="sm" type="submit">Save</Button></div>
+            <div className="flex items-center gap-2"><Switch checked={form.watch('documentsChecked')} onCheckedChange={(v) => form.setValue('documentsChecked', v)} /><UILabel className="text-xs">Documents Checked</UILabel></div>
+            <div className="flex gap-2 justify-end"><Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button><Button size="sm" type="submit" className="bg-emerald-700">Save</Button></div>
         </form>
     );
 }
@@ -427,9 +384,8 @@ function PostFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }:
                 <Input type="number" step="0.1" {...form.register('hobbs')} placeholder="End Hobbs" className="h-9" />
                 <Input type="number" step="0.1" {...form.register('tacho')} placeholder="End Tacho" className="h-9" />
             </div>
-            <Textarea {...form.register('defects')} placeholder="Defects / Notes" />
-            <div className="flex gap-2 justify-end"><Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button><Button size="sm" type="submit">Complete</Button></div>
+            <Textarea {...form.register('defects')} placeholder="Defects / Notes" className="text-sm min-h-[80px]" />
+            <div className="flex gap-2 justify-end"><Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button><Button size="sm" type="submit" className="bg-emerald-700">Complete</Button></div>
         </form>
     );
 }
-

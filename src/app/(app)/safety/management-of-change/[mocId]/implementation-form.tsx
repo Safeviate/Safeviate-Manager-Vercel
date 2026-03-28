@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
@@ -248,9 +249,31 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                 <div key={field.id} className="p-6 border rounded-2xl bg-white border-slate-200">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel className="text-[10px] font-black uppercase">Action / Control</FormLabel><FormControl><Textarea placeholder='Describe mitigation...' {...field} className="min-h-[80px]" /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase">Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</Select><FormMessage /></FormItem> )}/>
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( 
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase">Assignee</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem> 
+                      )}/>
                       <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.completionDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="text-[10px] font-black uppercase">Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-10 pl-3 font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
-                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</Select><FormMessage /></FormItem> )}/>
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( 
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase">Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem> 
+                      )}/>
                       <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                    <div className="mt-6 border-t pt-4">
