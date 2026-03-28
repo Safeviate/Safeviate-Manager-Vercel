@@ -20,13 +20,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import React, { useState, useEffect, useMemo } from 'react';
 import { callAiFlow } from '@/lib/ai-client';
 import type { AnalyzeMocInput, AnalyzeMocOutput } from '@/ai/flows/analyze-moc-flow';
 import type { RiskMatrixSettings } from '@/types/risk';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
@@ -126,31 +126,6 @@ const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => 
     return 'Critical';
 }
 
-const getRiskScoreColor = (
-    likelihood: number,
-    severity: number,
-    colors?: Record<string, string>
-  ): { backgroundColor: string; color: string } => {
-    const severityToLetter: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
-    const severityLetter = severityToLetter[severity] || 'E';
-    const cellId = `${likelihood}${severityLetter}`;
-    
-    if (colors && colors[cellId]) {
-        const hex = colors[cellId].replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        const textColor = (yiq >= 128) ? 'black' : 'white';
-        return { backgroundColor: colors[cellId], color: textColor };
-    }
-    
-    const score = likelihood * severity;
-    if (score > 9) return { backgroundColor: '#ef4444', color: 'white' };
-    if (score > 4) return { backgroundColor: '#f59e0b', color: 'black' };
-    return { backgroundColor: '#10b981', color: 'white' };
-  };
-
 interface RiskAssessmentEditorProps {
     path: string;
     label: string;
@@ -165,7 +140,6 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     
     const riskScore = (likelihood || 1) * (severity || 1);
     const riskLevel = getRiskLevel(riskScore);
-    const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
     const likelihoodLabels: Record<number, string> = {
         5: 'Frequent',
@@ -183,49 +157,76 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
         1: { name: 'Negligible', letter: 'E' },
     };
 
-    const severityLetter = severityLabels[severity]?.letter || 'E';
-    const displayValue = `${likelihood || 1}${severityLetter}`;
-
     React.useEffect(() => {
         setValue(`${path}.riskScore`, riskScore, { shouldDirty: true });
         setValue(`${path}.riskLevel`, riskLevel, { shouldDirty: true });
     }, [riskScore, riskLevel, path, setValue]);
 
     return (
-        <div className="bg-muted/10 border border-slate-200 rounded-2xl p-6 mb-4">
-            <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6 flex items-center gap-2">
-                <ShieldAlert className="h-3 w-3" />
-                {label}
-            </h5>
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-10 items-center">
-                <div className="space-y-8">
-                    <Controller control={control} name={`${path}.likelihood`} render={({ field: { onChange, value } }) => ( 
-                        <FormItem>
-                            <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex justify-between mb-2">
-                                <span>Likelihood: {value}</span>
-                                <span className="font-normal italic">({likelihoodLabels[value]})</span>
-                            </FormLabel>
-                            <FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl>
-                        </FormItem> 
-                    )} />
-                    <Controller control={control} name={`${path}.severity`} render={({ field: { onChange, value } }) => ( 
-                        <FormItem>
-                            <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex justify-between mb-2">
-                                <span>Severity: {severityLabels[value]?.letter}</span>
-                                <span className="font-normal italic">({severityLabels[value]?.name})</span>
-                            </FormLabel>
-                            <FormControl><Slider value={[value]} onValueChange={(vals) => onChange(vals[0])} min={1} max={5} step={1} /></FormControl>
-                        </FormItem> 
-                    )}/>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                    <div
-                        className="flex items-center justify-center h-20 w-20 rounded-full text-xl font-black shadow-xl border-4 border-white/30"
-                        style={{ backgroundColor, color }}
-                    >
-                        {displayValue}
-                    </div>
-                </div>
+        <div className="bg-muted/10 border border-slate-200 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+                <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground" />
+                <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</h5>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Controller 
+                    control={control} 
+                    name={`${path}.likelihood`} 
+                    render={({ field: { onChange, value } }) => ( 
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Likelihood: {value}</Label>
+                                <span className="text-[10px] italic text-muted-foreground">({likelihoodLabels[value]})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {[1, 2, 3, 4, 5].map((num) => (
+                                    <Button
+                                        key={num}
+                                        type="button"
+                                        variant={value === num ? "default" : "outline"}
+                                        size="sm"
+                                        className={cn(
+                                            "h-8 w-8 p-0 text-xs font-bold transition-all",
+                                            value === num ? "bg-primary text-primary-foreground shadow-md scale-110" : "bg-background hover:bg-muted"
+                                        )}
+                                        onClick={() => onChange(num)}
+                                    >
+                                        {num}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div> 
+                    )} 
+                />
+                <Controller 
+                    control={control} 
+                    name={`${path}.severity`} 
+                    render={({ field: { onChange, value } }) => ( 
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Severity: {severityLabels[value]?.letter}</Label>
+                                <span className="text-[10px] italic text-muted-foreground">({severityLabels[value]?.name})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {[5, 4, 3, 2, 1].map((num) => (
+                                    <Button
+                                        key={num}
+                                        type="button"
+                                        variant={value === num ? "default" : "outline"}
+                                        size="sm"
+                                        className={cn(
+                                            "h-8 w-8 p-0 text-xs font-bold transition-all",
+                                            value === num ? "bg-primary text-primary-foreground shadow-md scale-110" : "bg-background hover:bg-muted"
+                                        )}
+                                        onClick={() => onChange(num)}
+                                    >
+                                        {severityLabels[num]?.letter}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div> 
+                    )}
+                />
             </div>
         </div>
     );

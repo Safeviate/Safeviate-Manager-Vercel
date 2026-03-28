@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -22,8 +23,8 @@ import { PlusCircle, Trash2, Save, ShieldAlert, ChevronDown } from 'lucide-react
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Slider } from '@/components/ui/slider';
 import type { RiskMatrixSettings } from '@/types/risk';
+import { Label } from '@/components/ui/label';
 
 // --- Helper Functions ---
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
@@ -92,14 +93,9 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
     
     const riskScore = likelihood * severity;
     const riskLevel = getRiskLevel(riskScore);
-    const { backgroundColor, color } = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
     const likelihoodLabels: Record<number, string> = {
-        5: 'Frequent',
-        4: 'Occasional',
-        3: 'Remote',
-        2: 'Improbable',
-        1: 'Extremely Improbable',
+        5: 'Frequent', 4: 'Occasional', 3: 'Remote', 2: 'Improbable', 1: 'Extremely Improbable',
     };
     
     const severityLabels: Record<number, { letter: string; name: string }> = {
@@ -110,60 +106,76 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
         1: { letter: 'E', name: 'Negligible' },
     };
 
-    const severityLetter = severityLabels[severity]?.letter || 'E';
-    const displayValue = `${likelihood}${severityLetter}`;
-
     React.useEffect(() => {
         setValue(`${path}.riskScore` as any, riskScore);
         setValue(`${path}.riskLevel` as any, riskLevel);
     }, [riskScore, riskLevel, path, setValue]);
 
     return (
-        <div className="flex items-center gap-4 p-3 bg-background border rounded-lg shadow-sm">
-            <div className="flex-1 space-y-4">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{label}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <Controller
-                        control={control}
-                        name={`${path}.likelihood` as any}
-                        render={({ field }) => (
-                            <div className="space-y-1">
-                                <label className="text-[9px] uppercase font-bold flex justify-between">
-                                    <span>Likelihood: {field.value}</span>
-                                    <span className="font-normal italic">({likelihoodLabels[field.value]})</span>
-                                </label>
-                                <Slider 
-                                    value={[field.value || 1]} 
-                                    onValueChange={(val) => field.onChange(val[0])} 
-                                    min={1} max={5} step={1} 
-                                />
-                            </div>
-                        )}
-                    />
-                    <Controller
-                        control={control}
-                        name={`${path}.severity` as any}
-                        render={({ field }) => (
-                            <div className="space-y-1">
-                                <label className="text-[9px] uppercase font-bold flex justify-between">
-                                    <span>Severity: {severityLabels[field.value]?.letter}</span>
-                                    <span className="font-normal italic">({severityLabels[field.value]?.name})</span>
-                                </label>
-                                <Slider 
-                                    value={[field.value || 1]} 
-                                    onValueChange={(val) => field.onChange(val[0])} 
-                                    min={1} max={5} step={1} 
-                                />
-                            </div>
-                        )}
-                    />
-                </div>
+        <div className="bg-muted/10 border border-slate-200 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+                <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground" />
+                <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</h5>
             </div>
-            <div 
-                className="h-12 w-12 rounded-full flex items-center justify-center font-black text-sm shadow-md border-4 border-white/20"
-                style={{ backgroundColor, color }}
-            >
-                {displayValue}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Controller 
+                    control={control} 
+                    name={`${path}.likelihood` as any} 
+                    render={({ field: { onChange, value } }) => ( 
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Likelihood: {value}</Label>
+                                <span className="text-[10px] italic text-muted-foreground">({likelihoodLabels[value]})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {[1, 2, 3, 4, 5].map((num) => (
+                                    <Button
+                                        key={num}
+                                        type="button"
+                                        variant={value === num ? "default" : "outline"}
+                                        size="sm"
+                                        className={cn(
+                                            "h-8 w-8 p-0 text-xs font-bold transition-all",
+                                            value === num ? "bg-primary text-primary-foreground shadow-md scale-110" : "bg-background hover:bg-muted"
+                                        )}
+                                        onClick={() => onChange(num)}
+                                    >
+                                        {num}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div> 
+                    )} 
+                />
+                <Controller 
+                    control={control} 
+                    name={`${path}.severity` as any} 
+                    render={({ field: { onChange, value } }) => ( 
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Severity: {severityLabels[value]?.letter}</Label>
+                                <span className="text-[10px] italic text-muted-foreground">({severityLabels[value]?.name})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {[5, 4, 3, 2, 1].map((num) => (
+                                    <Button
+                                        key={num}
+                                        type="button"
+                                        variant={value === num ? "default" : "outline"}
+                                        size="sm"
+                                        className={cn(
+                                            "h-8 w-8 p-0 text-xs font-bold transition-all",
+                                            value === num ? "bg-primary text-primary-foreground shadow-md scale-110" : "bg-background hover:bg-muted"
+                                        )}
+                                        onClick={() => onChange(num)}
+                                    >
+                                        {severityLabels[num]?.letter}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div> 
+                    )}
+                />
             </div>
         </div>
     );
