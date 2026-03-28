@@ -106,9 +106,9 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                                     {audit.complianceScore !== undefined ? (
                                         <Badge variant="outline" className={cn(
                                             "font-black text-[9px] uppercase py-0.5 px-2",
-                                            audit.complianceScore >= 80 ? "text-green-600 border-green-600 bg-green-50" : 
-                                            audit.complianceScore >= 60 ? "text-yellow-600 border-yellow-600 bg-yellow-50" : 
-                                            "text-red-600 border-red-600 bg-red-50"
+                                            audit.complianceScore >= 80 ? "text-primary border-primary/40 bg-primary/10" : 
+                                            audit.complianceScore >= 60 ? "text-foreground border-border bg-muted" : 
+                                            "text-destructive border-destructive/40 bg-destructive/10"
                                         )}>
                                             {audit.complianceScore}%
                                         </Badge>

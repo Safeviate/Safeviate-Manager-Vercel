@@ -166,7 +166,7 @@ export default function ExamsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                      className="h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40"
                     >
                       <span className="flex items-center gap-2">
                         <MoreHorizontal className="h-3.5 w-3.5" />
@@ -205,7 +205,7 @@ export default function ExamsPage() {
                     </TabsTrigger>
                   </TabsList>
                   {canManage && (
-                    <Button asChild size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0">
+                    <Button asChild size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight shadow-md gap-2 shrink-0">
                       <Link href="/training/exams/new">
                         <PlusCircle className="h-4 w-4" /> Create Template
                       </Link>
@@ -349,7 +349,7 @@ export default function ExamsPage() {
                 <section className="space-y-4">
                   <div className="space-y-1">
                     <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-green-600" />
+                      <ShieldCheck className="h-4 w-4 text-primary" />
                       Assessment History
                     </h3>
                     <p className="text-xs text-muted-foreground italic">Certified results for non-mock assessments.</p>
@@ -554,7 +554,7 @@ export default function ExamsPage() {
             isOpen={!!takingExam}
             onOpenChange={(open) => !open && setTakingExam(null)}
             personnel={allPeople}
-            tenantId={tenantId}
+            tenantId={tenantId || ''}
             isMockOnly={takingExam.isMock}
           />
       )}

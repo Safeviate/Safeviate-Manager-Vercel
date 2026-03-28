@@ -90,7 +90,7 @@ export default function AccessOverviewPage() {
                             return (
                               <TableCell key={role.id} className="text-center">
                                 {isEnabled && hasAccess ? (
-                                  <Check className="h-4 w-4 text-green-600 mx-auto" />
+                                  <Check className="h-4 w-4 text-primary mx-auto" />
                                 ) : (
                                   <X className="h-4 w-4 text-muted-foreground/30 mx-auto" />
                                 )}

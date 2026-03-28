@@ -10,8 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Pencil, CalendarIcon } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { SafetyReport } from '@/types/safety-report';
@@ -63,7 +63,7 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
     }
   }, [isOpen, report, form]);
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     if (!firestore) return;
 
     const reportRef = doc(firestore, `tenants/${tenantId}/safety-reports`, report.id);
@@ -72,9 +72,17 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
       eventDate: format(values.eventDate, 'yyyy-MM-dd'),
     };
 
-    updateDocumentNonBlocking(reportRef, dataToSave);
-    toast({ title: 'Report Updated', description: `Safety Report #${report.reportNumber} has been updated.` });
-    setIsOpen(false);
+    try {
+      await updateDoc(reportRef, dataToSave);
+      toast({ title: 'Report Updated', description: `Safety Report #${report.reportNumber} has been updated.` });
+      setIsOpen(false);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: error instanceof Error ? error.message : 'Unable to update this report right now.',
+      });
+    }
   };
 
   return (

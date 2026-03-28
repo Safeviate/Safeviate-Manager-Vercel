@@ -7,7 +7,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import type { MaintenanceLog } from '@/types/aircraft';
+import type { MaintenanceLog } from '@/types/maintenance';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -37,9 +37,9 @@ function MaintenanceSummaryDialog({ logs }: { logs: MaintenanceLog[] }) {
       const maintenanceLogs = logs
         .map(
           log =>
-            `Date: ${log.date}\nType: ${log.maintenanceType || 'Unknown'}\nProcedure: ${
-              log.procedure || 'N/A'
-            }\nDescription: ${log.description || log.details || 'N/A'}`
+            `Date: ${log.date}\nType: ${log.maintenanceType || 'Unknown'}\nReference: ${
+              log.reference || 'N/A'
+            }\nDescription: ${log.details || 'N/A'}`
         )
         .join('\n\n---\n\n');
 
@@ -122,8 +122,8 @@ export function MaintenanceLogList({ aircraftId, tenantId }: { aircraftId: strin
               logs.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="whitespace-nowrap">{format(new Date(log.date), 'PPP')}</TableCell>
-                  <TableCell className="font-medium">{log.description}</TableCell>
-                  <TableCell>{log.procedure}</TableCell>
+                  <TableCell className="font-medium">{log.details}</TableCell>
+                  <TableCell>{log.reference || 'N/A'}</TableCell>
                 </TableRow>
               ))
             ) : (

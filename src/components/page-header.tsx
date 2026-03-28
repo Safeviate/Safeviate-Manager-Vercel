@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 
 interface MainPageHeaderProps {
   title: string;
+  description?: string;
   actions?: ReactNode; // For action buttons like "New Report" or "Add User"
   className?: string;
 }
@@ -15,6 +16,7 @@ interface MainPageHeaderProps {
  */
 export const MainPageHeader: FC<MainPageHeaderProps> = ({
   title,
+  description,
   actions,
   className
 }) => {
@@ -23,9 +25,14 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
       <CardHeader
         className="flex flex-row items-center justify-between p-4 md:p-6 border-b bg-muted/5"
       >
-        <CardTitle className="text-[12px] uppercase font-black tracking-wider text-muted-foreground whitespace-nowrap">
-          {title}
-        </CardTitle>
+        <div className="flex min-w-0 flex-col gap-1">
+          <CardTitle className="text-[12px] uppercase font-black tracking-wider text-muted-foreground whitespace-nowrap">
+            {title}
+          </CardTitle>
+          {description ? (
+            <p className="text-sm text-muted-foreground/90">{description}</p>
+          ) : null}
+        </div>
       </CardHeader>
 
       {actions && (

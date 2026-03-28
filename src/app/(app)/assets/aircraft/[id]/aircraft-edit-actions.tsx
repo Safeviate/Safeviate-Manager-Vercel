@@ -203,7 +203,28 @@ function EditComponentsDialog({ aircraft, tenantId, children }: { aircraft: Airc
                     </div>
                   </div>
                 ))}
-                <Button type="button" variant="outline" className="w-full" onClick={() => append({ id: uuidv4(), name: '', installDate: new Date() })}><PlusCircle className="mr-2" />Add Component</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() =>
+                    append({
+                      id: uuidv4(),
+                      name: '',
+                      manufacturer: '',
+                      partNumber: '',
+                      serialNumber: '',
+                      installDate: new Date(),
+                      installHours: 0,
+                      maxHours: 0,
+                      notes: '',
+                      tsn: 0,
+                      tso: 0,
+                    })
+                  }
+                >
+                  <PlusCircle className="mr-2" />Add Component
+                </Button>
               </div>
             </ScrollArea>
             <DialogFooter><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit">Save Components</Button></DialogFooter>

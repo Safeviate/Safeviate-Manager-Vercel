@@ -50,8 +50,11 @@ export interface QualityAuditChecklistTemplate {
     id: string;
     title: string;
     departmentId: string;
+    category?: string;
     sections: ChecklistSection[];
 }
+
+export type { CorrectiveAction } from './safety-report';
 
 export interface QualityFinding {
     checklistItemId: string;
@@ -135,6 +138,7 @@ export interface Tenant {
         card?: Record<string, string>;
         popover?: Record<string, string>;
         sidebar?: Record<string, string>;
+        sidebarBackgroundImage?: string;
         header?: Record<string, string>;
         swimlane?: Record<string, string>;
     };

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Clock, Gauge, ArrowRight } from 'lucide-react';
+import { Eye, Clock, Gauge, ArrowRight, Plane } from 'lucide-react';
 import Link from 'next/link';
 import type { Aircraft } from '@/types/aircraft';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';

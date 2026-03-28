@@ -68,3 +68,29 @@ export interface Aircraft {
         cg: number;
     }[];
 }
+
+export interface AircraftModelProfile {
+    id: string;
+    profileName: string;
+    emptyWeight: number;
+    emptyWeightMoment: number;
+    xMin: number;
+    xMax: number;
+    yMin: number;
+    yMax: number;
+    cgEnvelope: {
+        x: number;
+        y: number;
+    }[];
+    stations?: {
+        id: number;
+        name: string;
+        weight: number;
+        arm: number;
+        type: string;
+        gallons?: number;
+        maxGallons?: number;
+        fuelType?: FuelType;
+        densityLbPerGallon?: number;
+    }[];
+}

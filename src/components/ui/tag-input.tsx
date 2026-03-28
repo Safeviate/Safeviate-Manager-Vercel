@@ -2,11 +2,13 @@
 'use client';
 
 import React, { useState, KeyboardEvent } from 'react';
-import { Input, type InputProps } from '@/components/ui/input';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type InputProps = React.ComponentProps<typeof Input>;
 
 interface TagInputProps extends Omit<InputProps, 'value' | 'onChange'> {
   value: string[];

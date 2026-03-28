@@ -85,7 +85,7 @@ export function AppHeader() {
             variant="outline" 
             size="sm" 
             onClick={handleBack}
-            className="h-9 rounded-md border-white/40 bg-white/10 px-4 text-[10px] font-black uppercase tracking-tight text-white shadow-md transition-all hover:bg-white/20 shrink-0 whitespace-nowrap"
+            className="h-9 rounded-md border-[hsl(var(--header-border)/0.8)] bg-[hsl(var(--header-foreground)/0.08)] px-4 text-[10px] font-black uppercase tracking-tight text-header-foreground shadow-md transition-all hover:bg-[hsl(var(--header-foreground)/0.14)] shrink-0 whitespace-nowrap"
           >
             {backConfig.text}
           </Button>

@@ -6,7 +6,7 @@ import { menuConfig } from '@/lib/menu-config';
 import { usePermissions } from '@/hooks/use-permissions';
 
 export default function AdminPage() {
-  const { hasPermission } = usePermissions();
+  const { canAccessMenuItem } = usePermissions();
   const adminMenu = menuConfig.find(item => item.href === '/admin');
 
   if (!adminMenu) {
@@ -18,7 +18,7 @@ export default function AdminPage() {
   }
   
   const visibleSubItems = (adminMenu.subItems || []).filter(
-    item => !item.permissionId || hasPermission(item.permissionId)
+    item => canAccessMenuItem(item, adminMenu)
   );
 
   if (visibleSubItems.length === 0) {

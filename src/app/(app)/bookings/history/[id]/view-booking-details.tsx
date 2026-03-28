@@ -280,7 +280,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                 <Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" />
                                                             </YAxis>
                                                             <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
+                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
                                                             <Scatter data={[{ x: results.cg, y: results.weight }]}>
                                                                 <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
                                                             </Scatter>
@@ -333,7 +333,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 function PreFlightLogForm({ booking, aircraft, tenantId, onCancel, onSuccess }: any) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { userProfile, hasPermission } = useUserProfile();
+    const { userProfile } = useUserProfile();
+    const { hasPermission } = usePermissions();
     const form = useForm({ defaultValues: booking.preFlightData || { hobbs: aircraft.currentHobbs || 0, tacho: aircraft.currentTacho || 0, fuelUpliftGallons: 0, fuelUpliftLitres: 0, oilUplift: 0, documentsChecked: false } });
     
     const onSubmit = async (data: any) => {

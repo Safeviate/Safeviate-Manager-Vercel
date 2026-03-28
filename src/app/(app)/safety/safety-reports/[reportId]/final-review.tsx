@@ -14,8 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { Signature, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -105,16 +105,24 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
     name: "hazards",
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     if (!firestore) return;
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
-    updateDocumentNonBlocking(reportRef, { initialHazards: values.hazards });
-    toast({ title: 'Final Review Saved' });
+    try {
+      await updateDoc(reportRef, { initialHazards: values.hazards });
+      toast({ title: 'Final Review Saved' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Unable to save final review.',
+      });
+    }
   };
 
-  const handleSignReport = () => {
+  const handleSignReport = async () => {
     const currentUser = personnel[0]; // Logic for current user auth needed here
-    if (!currentUser) return;
+    if (!currentUser || !firestore) return;
 
     const newSignature = {
         userId: currentUser.id,
@@ -128,9 +136,16 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
     form.setValue('signatures', [...currentSignatures, newSignature]);
 
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
-    updateDocumentNonBlocking(reportRef, { signatures: [...currentSignatures, newSignature] });
-
-    toast({title: "Report Signed"});
+    try {
+      await updateDoc(reportRef, { signatures: [...currentSignatures, newSignature] });
+      toast({title: "Report Signed"});
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign-off failed',
+        description: error instanceof Error ? error.message : 'Unable to sign this report right now.',
+      });
+    }
   };
 
   return (
@@ -155,7 +170,7 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
               )}
               {!isStacked && (
                   <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                      <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                      <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
                           <Save className="mr-2 h-4 w-4" /> Save Final Review
                       </Button>
                   </div>

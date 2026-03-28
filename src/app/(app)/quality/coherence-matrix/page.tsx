@@ -239,7 +239,7 @@ function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenant
                 </Tabs>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" size="compact" disabled={isProcessing}>Cancel</Button></DialogClose>
-                    <Button onClick={handleProcess} size="compact" disabled={isProcessing || !canProcess} className="bg-emerald-700 hover:bg-emerald-800 text-white">
+                    <Button onClick={handleProcess} size="compact" disabled={isProcessing || !canProcess}>
                         {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Upload and Process'}
                     </Button>
                 </DialogFooter>
@@ -357,7 +357,7 @@ export default function CoherenceMatrixPage() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                                    className="h-9 w-full justify-between border-border bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-muted/40"
                                 >
                                     <span className="flex items-center gap-2">
                                         <MoreHorizontal className="h-3.5 w-3.5" />
@@ -397,7 +397,7 @@ export default function CoherenceMatrixPage() {
                             </Button>
                             <Button 
                                 size="sm"
-                                className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm gap-2" 
+                                className="shadow-sm gap-2" 
                                 onClick={() => handleOpenForm()}
                             >
                                 <PlusCircle className="h-4 w-4" /> 

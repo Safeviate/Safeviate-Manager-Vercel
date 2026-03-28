@@ -57,6 +57,7 @@ export type SavedTheme = {
   buttonColors: ButtonThemeColors;
   cardColors: CardThemeColors;
   sidebarColors: SidebarThemeColors;
+  sidebarBackgroundImage?: string;
   headerColors: HeaderThemeColors;
   popoverColors: PopoverThemeColors;
   swimlaneColors: SwimlaneThemeColors;
@@ -74,6 +75,8 @@ type ThemeContextType = {
   setPopoverThemeValue: (key: keyof PopoverThemeColors, value: string) => void;
   sidebarTheme: SidebarThemeColors;
   setSidebarThemeValue: (key: keyof SidebarThemeColors, value: string) => void;
+  sidebarBackgroundImage: string;
+  setSidebarBackgroundImage: (value: string) => void;
   headerTheme: HeaderThemeColors;
   setHeaderThemeValue: (key: keyof HeaderThemeColors, value: string) => void;
   swimlaneTheme: SwimlaneThemeColors;
@@ -93,6 +96,7 @@ export const BUTTON_THEME_KEY = 'safeviate-button-theme';
 export const CARD_THEME_KEY = 'safeviate-card-theme';
 export const POPOVER_THEME_KEY = 'safeviate-popover-theme';
 export const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
+export const SIDEBAR_BACKGROUND_IMAGE_KEY = 'safeviate-sidebar-background-image';
 export const HEADER_THEME_KEY = 'safeviate-header-theme';
 export const SWIMLANE_THEME_KEY = 'safeviate-swimlane-theme';
 export const SCALE_KEY = 'safeviate-scale';
@@ -129,10 +133,11 @@ const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-accent-foreground': '#1e293b',
   'sidebar-border': '#94a3b8',
 };
+const defaultSidebarBackgroundImage = '/sidebar-background.png';
 const defaultHeaderColors: HeaderThemeColors = {
-  'header-background': '#ebf5fb',
-  'header-foreground': '#1e293b',
-  'header-border': '#e2e8f0',
+  'header-background': '#171514',
+  'header-foreground': '#f3efe8',
+  'header-border': '#3a312b',
 };
 const defaultSwimlaneColors: SwimlaneThemeColors = {
     'swimlane-header-background': '#f1f5f9',
@@ -148,12 +153,20 @@ const applyColorsToDOM = (colors: Record<string, string>) => {
   });
 };
 
+const applySidebarBackgroundImageToDOM = (value: string) => {
+  if (typeof window === 'undefined') return;
+  document.documentElement.style.setProperty(
+    '--sidebar-background-image',
+    value ? `url("${value}")` : 'none'
+  );
+};
+
 const applyScaleToDOM = (scale: number) => {
     if (typeof window === 'undefined') return;
     document.documentElement.style.fontSize = `${scale}%`;
 };
 
-const getInitialState = <T extends object>(key: string, defaultValue: T): T => {
+function getInitialState<T>(key: string, defaultValue: T): T {
     if (typeof window === 'undefined') {
         return defaultValue;
     }
@@ -175,11 +188,36 @@ const getInitialState = <T extends object>(key: string, defaultValue: T): T => {
              return result;
         }
         
-        return stored;
+        return stored as T;
     } catch (error) {
         console.warn(`Error reading localStorage key “${key}”:`, error);
         return defaultValue;
     }
+}
+
+const getScopedStorageKey = (baseKey: string, tenantId: string | null | undefined) =>
+  tenantId ? `${baseKey}:${tenantId}` : baseKey;
+
+function getTenantScopedState<T>(baseKey: string, tenantId: string | null | undefined, defaultValue: T): T {
+  const scopedKey = getScopedStorageKey(baseKey, tenantId);
+  const scopedValue = getInitialState(scopedKey, defaultValue);
+
+  if (typeof window === 'undefined') return scopedValue;
+
+  const hasScopedValue = window.localStorage.getItem(scopedKey) !== null;
+  if (hasScopedValue) return scopedValue;
+
+  return getInitialState(baseKey, defaultValue);
+}
+
+const setTenantScopedState = <T,>(baseKey: string, tenantId: string | null | undefined, value: T) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(getScopedStorageKey(baseKey, tenantId), JSON.stringify(value));
+};
+
+const removeTenantScopedState = (baseKey: string, tenantId: string | null | undefined) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(getScopedStorageKey(baseKey, tenantId));
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -193,51 +231,75 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<ThemeColors>(() => getInitialState(THEME_KEY, defaultColors));
-  const [buttonTheme, setButtonTheme] = useState<ButtonThemeColors>(() => getInitialState(BUTTON_THEME_KEY, defaultButtonColors));
-  const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => getInitialState(CARD_THEME_KEY, defaultCardColors));
-  const [popoverTheme, setPopoverTheme] = useState<PopoverThemeColors>(() => getInitialState(POPOVER_THEME_KEY, defaultPopoverColors));
-  const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => getInitialState(SIDEBAR_THEME_KEY, defaultSidebarColors));
-  const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(() => getInitialState(HEADER_THEME_KEY, defaultHeaderColors));
-  const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(() => getInitialState(SWIMLANE_THEME_KEY, defaultSwimlaneColors));
-  const [scale, setScaleState] = useState<number>(() => getInitialState(SCALE_KEY, defaultScale));
-  const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(() => getInitialState(SAVED_THEMES_KEY, []));
+  const [theme, setTheme] = useState<ThemeColors>(defaultColors);
+  const [buttonTheme, setButtonTheme] = useState<ButtonThemeColors>(defaultButtonColors);
+  const [cardTheme, setCardTheme] = useState<CardThemeColors>(defaultCardColors);
+  const [popoverTheme, setPopoverTheme] = useState<PopoverThemeColors>(defaultPopoverColors);
+  const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(defaultSidebarColors);
+  const [sidebarBackgroundImage, setSidebarBackgroundImageState] = useState<string>(defaultSidebarBackgroundImage);
+  const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(defaultHeaderColors);
+  const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(defaultSwimlaneColors);
+  const [scale, setScaleState] = useState<number>(defaultScale);
+  const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([]);
 
-  const { tenant } = useTenantConfig();
+  const { tenant, tenantId } = useTenantConfig();
 
   // --- Auto-sync with Tenant configuration ---
   useEffect(() => {
-    if (tenant?.theme) {
-      const t = tenant.theme;
-      // Overwrite local state with tenant defaults if available, applying strict keys
-      if (t.main) setTheme(prev => ({ ...prev, ...t.main }));
-      if (t.button) setButtonTheme(prev => ({ ...prev, ...t.button }));
-      if (t.card) setCardTheme(prev => ({ ...prev, ...t.card }));
-      
-      if (t.popover) {
-          setPopoverTheme(prev => {
-              const next = { ...prev };
-              Object.keys(defaultPopoverColors).forEach(k => {
-                  if ((t.popover as any)[k]) (next as any)[k] = (t.popover as any)[k];
-              });
-              return next;
-          });
-      }
+    const nextTheme = {
+      ...defaultColors,
+      ...(tenant?.theme?.main || {}),
+      ...getTenantScopedState(THEME_KEY, tenantId, defaultColors),
+    };
+    const nextButtonTheme = {
+      ...defaultButtonColors,
+      ...(tenant?.theme?.button || {}),
+      ...getTenantScopedState(BUTTON_THEME_KEY, tenantId, defaultButtonColors),
+    };
+    const nextCardTheme = {
+      ...defaultCardColors,
+      ...(tenant?.theme?.card || {}),
+      ...getTenantScopedState(CARD_THEME_KEY, tenantId, defaultCardColors),
+    };
+    const nextPopoverTheme = {
+      ...defaultPopoverColors,
+      ...(tenant?.theme?.popover || {}),
+      ...getTenantScopedState(POPOVER_THEME_KEY, tenantId, defaultPopoverColors),
+    };
+    const nextSidebarTheme = {
+      ...defaultSidebarColors,
+      ...(tenant?.theme?.sidebar || {}),
+      ...getTenantScopedState(SIDEBAR_THEME_KEY, tenantId, defaultSidebarColors),
+    };
+    const nextHeaderTheme = {
+      ...defaultHeaderColors,
+      ...(tenant?.theme?.header || {}),
+      ...getTenantScopedState(HEADER_THEME_KEY, tenantId, defaultHeaderColors),
+    };
+    const nextSwimlaneTheme = {
+      ...defaultSwimlaneColors,
+      ...(tenant?.theme?.swimlane || {}),
+      ...getTenantScopedState(SWIMLANE_THEME_KEY, tenantId, defaultSwimlaneColors),
+    };
+    const nextSidebarBackgroundImage = getTenantScopedState(
+      SIDEBAR_BACKGROUND_IMAGE_KEY,
+      tenantId,
+      tenant?.theme?.sidebarBackgroundImage || defaultSidebarBackgroundImage
+    );
+    const nextScale = getTenantScopedState(SCALE_KEY, tenantId, defaultScale);
+    const nextSavedThemes = getTenantScopedState<SavedTheme[]>(SAVED_THEMES_KEY, tenantId, []);
 
-      if (t.sidebar) {
-          setSidebarTheme(prev => {
-              const next = { ...prev };
-              Object.keys(defaultSidebarColors).forEach(k => {
-                  if ((t.sidebar as any)[k]) (next as any)[k] = (t.sidebar as any)[k];
-              });
-              return next;
-          });
-      }
-
-      if (t.header) setHeaderTheme(prev => ({ ...prev, ...t.header }));
-      if (t.swimlane) setSwimlaneTheme(prev => ({ ...prev, ...t.swimlane }));
-    }
-  }, [tenant?.theme]);
+    setTheme(nextTheme);
+    setButtonTheme(nextButtonTheme);
+    setCardTheme(nextCardTheme);
+    setPopoverTheme(nextPopoverTheme);
+    setSidebarTheme(nextSidebarTheme);
+    setSidebarBackgroundImageState(nextSidebarBackgroundImage);
+    setHeaderTheme(nextHeaderTheme);
+    setSwimlaneTheme(nextSwimlaneTheme);
+    setScaleState(nextScale);
+    setSavedThemes(nextSavedThemes);
+  }, [tenant?.theme, tenantId]);
 
   useEffect(() => {
     applyColorsToDOM(theme);
@@ -245,10 +307,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(cardTheme);
     applyColorsToDOM(popoverTheme);
     applyColorsToDOM(sidebarTheme);
+    applySidebarBackgroundImageToDOM(sidebarBackgroundImage);
     applyColorsToDOM(headerTheme);
     applyColorsToDOM(swimlaneTheme);
     applyScaleToDOM(scale);
-  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, headerTheme, swimlaneTheme, scale]);
+  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, sidebarBackgroundImage, headerTheme, swimlaneTheme, scale]);
   
 
   const updateTheme = <T extends object>(
@@ -260,13 +323,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   ) => {
     const newTheme = { ...state, [prop]: value };
     setter(newTheme);
-    localStorage.setItem(key, JSON.stringify(newTheme));
+    setTenantScopedState(key, tenantId, newTheme);
     document.documentElement.style.setProperty(`--${String(prop)}`, hexToHsl(value));
   };
 
   const setScale = (newScale: number) => {
     setScaleState(newScale);
-    localStorage.setItem(SCALE_KEY, JSON.stringify(newScale));
+    setTenantScopedState(SCALE_KEY, tenantId, newScale);
     applyScaleToDOM(newScale);
   };
   
@@ -275,6 +338,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const setCardThemeValue = (prop: keyof CardThemeColors, value: string) => updateTheme(CARD_THEME_KEY, cardTheme, setCardTheme, prop, value);
   const setPopoverThemeValue = (prop: keyof PopoverThemeColors, value: string) => updateTheme(POPOVER_THEME_KEY, popoverTheme, setPopoverTheme, prop, value);
   const setSidebarThemeValue = (prop: keyof SidebarThemeColors, value: string) => updateTheme(SIDEBAR_THEME_KEY, sidebarTheme, setSidebarTheme, prop, value);
+  const setSidebarBackgroundImage = (value: string) => {
+    setSidebarBackgroundImageState(value);
+    setTenantScopedState(SIDEBAR_BACKGROUND_IMAGE_KEY, tenantId, value);
+    applySidebarBackgroundImageToDOM(value);
+  };
   const setHeaderThemeValue = (prop: keyof HeaderThemeColors, value: string) => updateTheme(HEADER_THEME_KEY, headerTheme, setHeaderTheme, prop, value);
   const setSwimlaneThemeValue = (prop: keyof SwimlaneThemeColors, value: string) => updateTheme(SWIMLANE_THEME_KEY, swimlaneTheme, setSwimlaneTheme, prop, value);
 
@@ -294,6 +362,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     Object.keys(defaultSidebarColors).forEach(k => {
         if ((themeToApply.sidebarColors as any)[k]) (newSidebarTheme as any)[k] = (themeToApply.sidebarColors as any)[k];
     });
+    const newSidebarBackgroundImage = themeToApply.sidebarBackgroundImage || defaultSidebarBackgroundImage;
 
     const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
     const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
@@ -304,6 +373,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setCardTheme(newCardTheme);
     setPopoverTheme(newPopoverTheme);
     setSidebarTheme(newSidebarTheme);
+    setSidebarBackgroundImageState(newSidebarBackgroundImage);
     setHeaderTheme(newHeaderTheme);
     setSwimlaneTheme(newSwimlaneTheme);
     setScaleState(newScale);
@@ -313,18 +383,20 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(newCardTheme);
     applyColorsToDOM(newPopoverTheme);
     applyColorsToDOM(newSidebarTheme);
+    applySidebarBackgroundImageToDOM(newSidebarBackgroundImage);
     applyColorsToDOM(newHeaderTheme);
     applyColorsToDOM(newSwimlaneTheme);
     applyScaleToDOM(newScale);
 
-    localStorage.setItem(THEME_KEY, JSON.stringify(newTheme));
-    localStorage.setItem(BUTTON_THEME_KEY, JSON.stringify(newButtonTheme));
-    localStorage.setItem(CARD_THEME_KEY, JSON.stringify(newCardTheme));
-    localStorage.setItem(POPOVER_THEME_KEY, JSON.stringify(newPopoverTheme));
-    localStorage.setItem(SIDEBAR_THEME_KEY, JSON.stringify(newSidebarTheme));
-    localStorage.setItem(HEADER_THEME_KEY, JSON.stringify(newHeaderTheme));
-    localStorage.setItem(SWIMLANE_THEME_KEY, JSON.stringify(newSwimlaneTheme));
-    localStorage.setItem(SCALE_KEY, JSON.stringify(newScale));
+    setTenantScopedState(THEME_KEY, tenantId, newTheme);
+    setTenantScopedState(BUTTON_THEME_KEY, tenantId, newButtonTheme);
+    setTenantScopedState(CARD_THEME_KEY, tenantId, newCardTheme);
+    setTenantScopedState(POPOVER_THEME_KEY, tenantId, newPopoverTheme);
+    setTenantScopedState(SIDEBAR_THEME_KEY, tenantId, newSidebarTheme);
+    setTenantScopedState(SIDEBAR_BACKGROUND_IMAGE_KEY, tenantId, newSidebarBackgroundImage);
+    setTenantScopedState(HEADER_THEME_KEY, tenantId, newHeaderTheme);
+    setTenantScopedState(SWIMLANE_THEME_KEY, tenantId, newSwimlaneTheme);
+    setTenantScopedState(SCALE_KEY, tenantId, newScale);
   };
 
   const saveCurrentTheme = (name: string) => {
@@ -335,48 +407,32 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       cardColors: cardTheme,
       popoverColors: popoverTheme,
       sidebarColors: sidebarTheme,
+      sidebarBackgroundImage,
       headerColors: headerTheme,
       swimlaneColors: swimlaneTheme,
       scale,
     };
     const updatedSavedThemes = [...savedThemes, newTheme];
     setSavedThemes(updatedSavedThemes);
-    localStorage.setItem(SAVED_THEMES_KEY, JSON.stringify(updatedSavedThemes));
+    setTenantScopedState(SAVED_THEMES_KEY, tenantId, updatedSavedThemes);
   };
   
   const deleteSavedTheme = (name: string) => {
       const updatedSavedThemes = savedThemes.filter(t => t.name !== name);
       setSavedThemes(updatedSavedThemes);
-      localStorage.setItem(SAVED_THEMES_KEY, JSON.stringify(updatedSavedThemes));
+      setTenantScopedState(SAVED_THEMES_KEY, tenantId, updatedSavedThemes);
   }
 
   const resetToDefaults = () => {
-    localStorage.removeItem(THEME_KEY);
-    localStorage.removeItem(BUTTON_THEME_KEY);
-    localStorage.removeItem(CARD_THEME_KEY);
-    localStorage.removeItem(POPOVER_THEME_KEY);
-    localStorage.removeItem(SIDEBAR_THEME_KEY);
-    localStorage.removeItem(HEADER_THEME_KEY);
-    localStorage.removeItem(SWIMLANE_THEME_KEY);
-    localStorage.removeItem(SCALE_KEY);
-    
-    setTheme(defaultColors);
-    setButtonTheme(defaultButtonColors);
-    setCardTheme(defaultCardColors);
-    setPopoverTheme(defaultPopoverColors);
-    setSidebarTheme(defaultSidebarColors);
-    setHeaderTheme(defaultHeaderColors);
-    setSwimlaneTheme(defaultSwimlaneColors);
-    setScaleState(defaultScale);
-
-    applyColorsToDOM(defaultColors);
-    applyColorsToDOM(defaultButtonColors);
-    applyColorsToDOM(defaultCardColors);
-    applyColorsToDOM(defaultPopoverColors);
-    applyColorsToDOM(defaultSidebarColors);
-    applyColorsToDOM(defaultHeaderColors);
-    applyColorsToDOM(defaultSwimlaneColors);
-    applyScaleToDOM(defaultScale);
+    removeTenantScopedState(THEME_KEY, tenantId);
+    removeTenantScopedState(BUTTON_THEME_KEY, tenantId);
+    removeTenantScopedState(CARD_THEME_KEY, tenantId);
+    removeTenantScopedState(POPOVER_THEME_KEY, tenantId);
+    removeTenantScopedState(SIDEBAR_THEME_KEY, tenantId);
+    removeTenantScopedState(SIDEBAR_BACKGROUND_IMAGE_KEY, tenantId);
+    removeTenantScopedState(HEADER_THEME_KEY, tenantId);
+    removeTenantScopedState(SWIMLANE_THEME_KEY, tenantId);
+    removeTenantScopedState(SCALE_KEY, tenantId);
 
     window.location.reload();
   };
@@ -392,6 +448,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setPopoverThemeValue,
     sidebarTheme,
     setSidebarThemeValue,
+    sidebarBackgroundImage,
+    setSidebarBackgroundImage,
     headerTheme,
     setHeaderThemeValue,
     swimlaneTheme,

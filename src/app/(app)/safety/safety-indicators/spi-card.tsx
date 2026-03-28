@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, MoreVertical, Trash2 } from 'lucide-react';
-import { SpiConfig } from './edit-spi-form';
+import type { SpiConfig } from '@/types/spi';
 import { useSpiData } from './use-spi-data';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
@@ -54,32 +54,32 @@ export function SPICard({ spi, onEdit, onDelete, reports, bookings, onMonthDataS
         const { levels, comparison } = spi;
         
         if (comparison === 'greater-is-better') {
-            if (value >= levels.acceptable) return 'text-green-600';
-            if (value >= levels.monitor) return 'text-yellow-600';
-            if (value >= levels.actionRequired) return 'text-orange-600';
-            return 'text-red-600';
+            if (value >= levels.acceptable) return 'text-primary';
+            if (value >= levels.monitor) return 'text-foreground';
+            if (value >= levels.actionRequired) return 'text-muted-foreground';
+            return 'text-destructive';
         } else { // lower-is-better
-            if (value <= levels.acceptable) return 'text-green-600';
-            if (value <= levels.monitor) return 'text-yellow-600';
-            if (value <= levels.actionRequired) return 'text-orange-600';
-            return 'text-red-600';
+            if (value <= levels.acceptable) return 'text-primary';
+            if (value <= levels.monitor) return 'text-foreground';
+            if (value <= levels.actionRequired) return 'text-muted-foreground';
+            return 'text-destructive';
         }
     };
     
     const getMonthStatusClass = (value: number) => {
         const { levels, comparison } = spi;
 
-        if (value === 0 && comparison === 'greater-is-better') return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+        if (value === 0 && comparison === 'greater-is-better') return 'bg-primary/10 text-primary';
         if (comparison === 'greater-is-better') {
-            if (value >= levels.acceptable) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
-            if (value >= levels.monitor) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-            if (value >= levels.actionRequired) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
-            return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+            if (value >= levels.acceptable) return 'bg-primary/10 text-primary';
+            if (value >= levels.monitor) return 'bg-muted text-foreground';
+            if (value >= levels.actionRequired) return 'bg-secondary text-secondary-foreground';
+            return 'bg-destructive/10 text-destructive';
         } else { // lower-is-better
-            if (value <= levels.acceptable) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
-            if (value <= levels.monitor) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-            if (value <= levels.actionRequired) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
-            return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+            if (value <= levels.acceptable) return 'bg-primary/10 text-primary';
+            if (value <= levels.monitor) return 'bg-muted text-foreground';
+            if (value <= levels.actionRequired) return 'bg-secondary text-secondary-foreground';
+            return 'bg-destructive/10 text-destructive';
         }
     };
 

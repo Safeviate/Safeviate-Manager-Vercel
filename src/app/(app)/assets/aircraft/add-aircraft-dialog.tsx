@@ -66,7 +66,7 @@ export function AddAircraftDialog({ tenantId }: { tenantId: string }) {
         <Button
           variant={isMobile ? "outline" : "default"}
           size={isMobile ? "sm" : "default"}
-          className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 h-9 px-6 text-xs font-black uppercase"}
+          className={isMobile ? "h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40" : "w-full sm:w-auto shadow-md gap-2 h-9 px-6 text-xs font-black uppercase"}
         >
           <span className="flex items-center gap-2">
             <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} /> Add Aircraft

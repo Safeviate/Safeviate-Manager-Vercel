@@ -85,7 +85,10 @@ export function NewChecklistDialog({
   // Drag-and-drop state for sections
   const dragSectionNode = useRef<HTMLDivElement | null>(null);
   
-  const complianceQuery = useMemoFirebase(() => (firestore ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
+  const complianceQuery = useMemoFirebase(
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null),
+    [firestore, tenantId]
+  );
   const { data: complianceItems } = useCollection<ComplianceRequirement>(complianceQuery);
 
 
@@ -110,7 +113,14 @@ export function NewChecklistDialog({
   }, [isOpen, existingTemplate, form]);
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore) return;
+    if (!firestore || !tenantId) {
+      toast({
+        variant: 'destructive',
+        title: 'Tenant not ready',
+        description: 'Please wait for tenant context to load, then try again.',
+      });
+      return;
+    }
     
     const dataToSave = {
         ...values,

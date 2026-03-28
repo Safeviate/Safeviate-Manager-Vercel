@@ -6,7 +6,7 @@ import { menuConfig } from '@/lib/menu-config';
 import { usePermissions } from '@/hooks/use-permissions';
 
 export default function BookingsPage() {
-  const { hasPermission } = usePermissions();
+  const { canAccessMenuItem } = usePermissions();
   const bookingsMenu = menuConfig.find(item => item.href === '/bookings');
 
   if (!bookingsMenu || !bookingsMenu.subItems) {
@@ -18,7 +18,7 @@ export default function BookingsPage() {
   }
 
   const visibleSubItems = bookingsMenu.subItems.filter(
-    item => !item.permissionId || hasPermission(item.permissionId)
+    item => canAccessMenuItem(item, bookingsMenu)
   );
 
   return (

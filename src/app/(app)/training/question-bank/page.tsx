@@ -124,7 +124,7 @@ export default function QuestionBankPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                    className="h-9 w-full justify-between border-border bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-muted/40"
                   >
                     <span className="flex items-center gap-2">
                       <MoreHorizontal className="h-3.5 w-3.5" />
@@ -150,7 +150,7 @@ export default function QuestionBankPage() {
             ) : (
               <div className="flex gap-2 w-full sm:w-auto">
                   <AiExamGenerator onGenerated={handleAiGenerated} />
-                  <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
+                  <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
                       <PlusCircle className="h-4 w-4" /> Add Question
                   </Button>
               </div>

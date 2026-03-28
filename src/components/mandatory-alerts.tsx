@@ -73,7 +73,7 @@ export function MandatoryAlerts({ alerts, onAcknowledged }: MandatoryAlertsProps
         <ScrollArea className="max-h-[60vh] pr-6">
             <div className="space-y-4 py-4">
                 {alerts.map(alert => (
-                    <AlertCard key={alert.id} alert={alert} tenantId={tenantId} canManage={false} showReadReceipts={false} />
+                    <AlertCard key={alert.id} alert={alert} tenantId={tenantId || ''} canManage={false} showReadReceipts={false} />
                 ))}
             </div>
         </ScrollArea>

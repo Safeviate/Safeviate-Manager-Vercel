@@ -71,7 +71,7 @@ export function StartAuditDialog({
   const [newAuditId, setNewAuditId] = useState<string | null>(null);
 
   const orgsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
+    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
     [firestore, tenantId]
   );
   const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
@@ -94,8 +94,8 @@ export function StartAuditDialog({
 
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore || !user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+    if (!firestore || !user || !tenantId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Tenant context is not ready yet. Please try again.' });
         return;
     }
     setIsSubmitting(true);

@@ -99,6 +99,12 @@ export const menuConfig: MenuItem[] = [
         description: 'Manage emergency contacts, triggers, and live response diaries.',
         permissionId: 'operations-erp-view',
       },
+      {
+        href: '/operations/vehicle-usage',
+        label: 'Vehicle Usage',
+        description: 'Book company vehicles out and back in with live availability tracking.',
+        permissionId: 'operations-view',
+      },
     ],
   },
   {
@@ -219,6 +225,12 @@ export const menuConfig: MenuItem[] = [
         href: '/assets/aircraft',
         label: 'Aircraft',
         description: 'Manage all aircraft in your fleet.',
+        permissionId: 'assets-view',
+      },
+      {
+        href: '/assets/vehicles',
+        label: 'Vehicles',
+        description: 'Manage company vehicles and ground assets.',
         permissionId: 'assets-view',
       },
     ],

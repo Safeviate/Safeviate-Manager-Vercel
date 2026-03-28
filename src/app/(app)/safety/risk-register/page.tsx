@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
-import type { TabVisibilitySettings } from '../../admin/external/page';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { MainPageHeader } from '@/components/page-header';
@@ -40,6 +39,10 @@ const DEFAULT_HAZARD_AREAS = [
     'Security', 
     'Administration & Management'
 ];
+
+type RiskTabVisibilitySettings = {
+    visibilities?: Record<string, boolean>;
+};
 
 function ManageAreasDialog({ tenantId, settings, trigger }: { tenantId: string, settings: RiskRegisterSettings | null, trigger?: ReactNode }) {
     const firestore = useFirestore();
@@ -163,7 +166,7 @@ export default function RiskRegisterPage() {
   const { data: allRisks, isLoading: isLoadingRisks } = useCollection<Risk>(risksQuery);
   const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
   const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
+  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<RiskTabVisibilitySettings>(visibilitySettingsRef);
   const { data: registerSettings, isLoading: isLoadingSettings } = useDoc<RiskRegisterSettings>(registerSettingsRef);
 
   const hazardAreas = React.useMemo(() => {

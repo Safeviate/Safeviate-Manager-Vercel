@@ -196,7 +196,7 @@ function WBCalculatorContent() {
                             <Label value="Weight (lbs)" angle={-90} position="insideLeft" />
                         </YAxis>
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter name="Envelope" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} isAnimationActive={false} />
+                        <Scatter name="Envelope" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} isAnimationActive={false} />
                         <Scatter name="Current Load" data={[{ x: results.cg, y: results.weight }]} isAnimationActive={false}>
                             <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
                         </Scatter>

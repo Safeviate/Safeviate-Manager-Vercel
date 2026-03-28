@@ -16,7 +16,7 @@ import { doc } from 'firebase/firestore';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { DocumentUploader } from '../document-uploader';
+import { DocumentUploader } from '@/components/document-uploader';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { useUserProfile } from '@/hooks/use-user-profile';

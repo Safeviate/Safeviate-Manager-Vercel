@@ -116,15 +116,16 @@ function AttentionList({
   );
 }
 
+const quickActions = [
+  { label: 'Daily Schedule', href: '/bookings/schedule' },
+  { label: 'Bookings History', href: '/bookings/history' },
+  { label: 'Quality Audits', href: '/quality/audits' },
+  { label: 'Safety Reports', href: '/safety/safety-reports' },
+  { label: 'Risk Register', href: '/safety/risk-register' },
+  { label: 'Accounting & Billing', href: '/admin/accounting' },
+] as const;
+
 function QuickActions() {
-  const actions = [
-    { label: 'Daily Schedule', href: '/bookings/schedule' },
-    { label: 'Bookings History', href: '/bookings/history' },
-    { label: 'Quality Audits', href: '/quality/audits' },
-    { label: 'Safety Reports', href: '/safety/safety-reports' },
-    { label: 'Risk Register', href: '/safety/risk-register' },
-    { label: 'Accounting & Billing', href: '/admin/accounting' },
-  ];
 
   return (
     <Card className="shadow-none border">
@@ -133,7 +134,7 @@ function QuickActions() {
         <CardDescription>Jump into the areas management checks most often.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
-        {actions.map((action) => (
+        {quickActions.map((action) => (
           <Button
             key={action.href}
             asChild
@@ -154,31 +155,30 @@ function QuickActions() {
 export default function DashboardPage() {
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
-  const activeTenantId = tenantId || 'safeviate';
 
   const bookingsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/bookings`)) : null),
-    [firestore, activeTenantId]
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
+    [firestore, tenantId]
   );
   const aircraftQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/aircrafts`)) : null),
-    [firestore, activeTenantId]
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
+    [firestore, tenantId]
   );
   const auditsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/quality-audits`)) : null),
-    [firestore, activeTenantId]
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null),
+    [firestore, tenantId]
   );
   const capsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/corrective-action-plans`)) : null),
-    [firestore, activeTenantId]
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
+    [firestore, tenantId]
   );
   const safetyReportsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/safety-reports`)) : null),
-    [firestore, activeTenantId]
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null),
+    [firestore, tenantId]
   );
   const risksQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${activeTenantId}/risks`)) : null),
-    [firestore, activeTenantId]
+    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/risks`)) : null),
+    [firestore, tenantId]
   );
 
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);

@@ -219,7 +219,7 @@ export default function AccountingPage() {
                       variant="outline"
                       size="sm"
                       disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
-                      className="h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                      className="h-9 w-full justify-between border-border bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-muted/40"
                     >
                       <span className="flex items-center gap-2">
                         <MoreHorizontal className="h-3.5 w-3.5" />
@@ -250,7 +250,7 @@ export default function AccountingPage() {
                       <Eye className="h-3.5 w-3.5 text-primary" /> Preview ({selectedIds.size})
                   </Button>
                   <Button 
-                      className="gap-2 font-black shadow-md h-9 px-6 text-[10px] uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shrink-0" 
+                      className="gap-2 font-black shadow-md h-9 px-6 text-[10px] uppercase tracking-tight shrink-0" 
                       onClick={handleSageExport} 
                       disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
                   >
@@ -345,7 +345,7 @@ export default function AccountingPage() {
 
             <DialogFooter className="shrink-0 border-t p-4 md:p-0 md:pt-4 no-print flex flex-col md:flex-row gap-2">
                 <DialogClose asChild><Button variant="outline" className="w-full md:w-auto h-10 text-[10px] font-black uppercase border-slate-300">Close</Button></DialogClose>
-                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto h-10 text-[10px] font-black uppercase bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">
+                <Button onClick={handleSageExport} className="gap-2 w-full md:w-auto h-10 text-[10px] font-black uppercase shadow-md">
                     <FileSpreadsheet className="h-4 w-4" /> Download CSV & Update Status
                 </Button>
             </DialogFooter>

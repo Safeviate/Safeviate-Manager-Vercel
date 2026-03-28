@@ -7,8 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, arrayUnion, collection, query } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, arrayUnion, collection, query, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Send, MessageSquare, UserPlus, X } from 'lucide-react';
@@ -43,7 +43,7 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
     [personnel, assignedUserId]
   );
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !userProfile || !firestore) return;
 
     setIsSubmitting(true);
@@ -65,14 +65,22 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
       messageItem.assignedToName = `${assignedUser.firstName} ${assignedUser.lastName}`;
     }
 
-    updateDocumentNonBlocking(reportRef, {
-      discussion: arrayUnion(messageItem)
-    });
-
-    setNewMessage('');
-    setAssignedUserId(null);
-    setIsSubmitting(false);
-    toast({ title: 'Comment Posted' });
+    try {
+      await updateDoc(reportRef, {
+        discussion: arrayUnion(messageItem)
+      });
+      setNewMessage('');
+      setAssignedUserId(null);
+      toast({ title: 'Comment Posted' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Post failed',
+        description: error instanceof Error ? error.message : 'Unable to post this comment right now.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const sortedMessages = [...(report.discussion || [])].sort((a, b) => 

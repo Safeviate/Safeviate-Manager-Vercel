@@ -160,7 +160,7 @@ export default function PersonnelPage() {
           description="Manage all non-flying staff in your organization."
           actions={
              <PersonnelForm 
-                tenantId={tenantId} 
+                tenantId={tenantId || ''} 
                 roles={roles || []} 
                 departments={departments || []}
                 trigger={
@@ -168,7 +168,7 @@ export default function PersonnelPage() {
                         disabled={!canCreateUsers}
                         variant={isMobile ? 'outline' : 'default'}
                         size={isMobile ? 'sm' : 'default'}
-                        className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : 'w-full gap-2 bg-emerald-700 px-6 text-xs font-black uppercase text-white shadow-md hover:bg-emerald-800 sm:w-auto'}
+                        className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full gap-2 px-6 text-xs font-black uppercase shadow-md sm:w-auto'}
                     >
                         <span className="flex items-center gap-2">
                             <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />

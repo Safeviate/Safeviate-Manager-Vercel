@@ -141,7 +141,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="w-full h-11 flex justify-between items-center px-4 border-slate-200 bg-white font-black uppercase text-[11px] tracking-tighter shadow-sm"
+                                    className="w-full h-11 flex justify-between items-center px-4 border-border bg-background font-black uppercase text-[11px] tracking-tighter shadow-sm hover:bg-muted/40"
                                 >
                                     <div className="flex items-center gap-2">
                                         <MoreHorizontal className="h-4 w-4" />
@@ -189,10 +189,10 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                     ) : (
                         <div className="flex flex-row items-center justify-between gap-4">
                             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center shrink-0">
-                                <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                                <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">
                                     Implementation & Strategy
                                 </TabsTrigger>
-                                <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                                <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">
                                     Approval & Sign-off
                                 </TabsTrigger>
                             </TabsList>
@@ -224,7 +224,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                             type="button" 
                                             size="sm" 
                                             onClick={() => implementationFormRef.current?.submit()} 
-                                            className="h-9 px-6 gap-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-black uppercase shadow-md"
+                                            className="h-9 px-6 gap-2 rounded-full text-[10px] font-black uppercase shadow-md"
                                         >
                                             <ShieldCheck className="h-3.5 w-3.5" />
                                             Save Strategy

@@ -242,7 +242,7 @@ function SafetyRecommendationsDialog({ reports }: { reports: SafetyReport[] }) {
                     )}
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleAnalyze} disabled={isLoading || !canAnalyze} className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs">
+                <Button onClick={handleAnalyze} disabled={isLoading || !canAnalyze} className="font-black uppercase text-xs">
                         {isLoading ? 'Generating...' : 'Generate Recommendations'}
                     </Button>
                 </DialogFooter>
@@ -298,8 +298,8 @@ export default function SafetyReportsPage() {
                             className={cn(
                               'h-9 text-xs font-black uppercase tracking-tight gap-2',
                               isMobile
-                                ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100 sm:w-auto'
-                                : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-md'
+                                ? 'w-full justify-between bg-background px-3 text-foreground shadow-sm border-input hover:bg-accent/40 sm:w-auto'
+                                : 'shadow-md'
                             )}
                         >
                             <Link href={`/safety/new-report?orgId=${orgId}`}>

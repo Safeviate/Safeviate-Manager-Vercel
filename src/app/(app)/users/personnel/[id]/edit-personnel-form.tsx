@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { doc, collection, query } from 'firebase/firestore';
+import { doc, collection, query, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +23,45 @@ import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/pag
 import { Switch } from '@/components/ui/switch';
 
 type UserProfile = Personnel | PilotProfile;
+
+type PersonnelFormState = {
+  id: string;
+  userType: UserProfile['userType'];
+  userNumber?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  contactNumber?: string;
+  organizationId?: string | null;
+  role?: string;
+  permissions?: string[];
+  accessOverrides?: {
+    hiddenMenus?: string[];
+  };
+  dateOfBirth?: string;
+  isErpIncerfaContact?: boolean;
+  isErpAlerfaContact?: boolean;
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+  };
+  documents?: {
+    name: string;
+    url: string;
+    uploadDate: string;
+    expirationDate?: string | null;
+  }[];
+  department?: string;
+  pilotLicense?: {
+    licenseNumber?: string;
+    issueDate?: string;
+    expirationDate?: string;
+    ratings?: string[];
+    endorsements?: string[];
+  };
+  logbookTemplateId?: string;
+};
 
 interface EditPersonnelFormProps {
   tenantId: string;
@@ -62,28 +101,35 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   const [isContactOpen, setIsContactOpen] = useState(true);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
-  const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  const [formData, setFormData] = useState<PersonnelFormState | null>(null);
   
   useEffect(() => {
-    setFormData(JSON.parse(JSON.stringify(user)));
+    setFormData(JSON.parse(JSON.stringify(user)) as PersonnelFormState);
   }, [user]);
   
-  const handleInputChange = (field: keyof UserProfile, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = <K extends keyof PersonnelFormState>(field: K, value: PersonnelFormState[K]) => {
+    setFormData(prev => (prev ? { ...prev, [field]: value } : prev));
   };
 
-  const handleNestedInputChange = (field: keyof UserProfile, subField: string, value: any) => {
-    setFormData(prev => ({
+  const handleNestedInputChange = <K extends keyof NonNullable<PersonnelFormState['pilotLicense']>>(
+    field: 'pilotLicense',
+    subField: K,
+    value: NonNullable<PersonnelFormState['pilotLicense']>[K]
+  ) => {
+    setFormData(prev => {
+      if (!prev) return prev;
+      return {
         ...prev,
         [field]: {
-            ...(prev[field] as object || {}),
-            [subField]: value
-        }
-    }));
+          ...(prev[field] || {}),
+          [subField]: value,
+        },
+      };
+    });
   };
 
-  const handleUpdateUser = () => {
-    if (!formData.userType || !formData.firstName?.trim() || !formData.lastName?.trim() || !formData.email?.trim()) {
+  const handleUpdateUser = async () => {
+    if (!formData || !formData.userType || !formData.firstName?.trim() || !formData.lastName?.trim() || !formData.email?.trim()) {
         toast({ variant: 'destructive', title: 'Missing Fields' });
         return;
     }
@@ -93,17 +139,25 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     const collectionName = determineCollection(formData.userType);
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
     
-    let dataToUpdate: Partial<UserProfile> = { ...formData };
+    let dataToUpdate: Partial<PersonnelFormState> = { ...formData };
     if (!isPilotProfile(formData)) {
-        delete (dataToUpdate as Partial<PilotProfile>).pilotLicense;
-        delete (dataToUpdate as Partial<PilotProfile>).logbookTemplateId;
+        delete dataToUpdate.pilotLicense;
+        delete dataToUpdate.logbookTemplateId;
     } else {
-        delete (dataToUpdate as Partial<Personnel>).department;
+        delete dataToUpdate.department;
     }
 
-    updateDocumentNonBlocking(userRef, dataToUpdate);
-    toast({ title: 'User Updated' });
-    onCancel();
+    try {
+      await updateDoc(userRef, dataToUpdate);
+      toast({ title: 'User Updated' });
+      onCancel();
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'The profile could not be saved. Please try again.',
+      });
+    }
   };
   
   const allPermissionIds = useMemo(() => 
@@ -113,29 +167,48 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   []);
 
   const areAllSelected = useMemo(() => {
-    return allPermissionIds.length > 0 && (formData.permissions || []).length === allPermissionIds.length
-  }, [formData.permissions, allPermissionIds]);
+    return allPermissionIds.length > 0 && (formData?.permissions || []).length === allPermissionIds.length
+  }, [formData?.permissions, allPermissionIds]);
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
-    const currentPermissions = formData.permissions || [];
-    const newPermissions = checked 
-      ? [...currentPermissions, permissionId] 
-      : currentPermissions.filter((id) => id !== permissionId);
+    if (!formData) return;
+      const currentPermissions = formData.permissions || [];
+      const role = roles.find((r) => r.id === formData.role);
+    const rolePermissions = role?.permissions || [];
+    const isRoleGranted = rolePermissions.includes(permissionId);
+
+    if (!isRoleGranted) {
+      toast({
+        variant: 'destructive',
+        title: 'Role Required',
+        description: 'This permission must be included in the selected role before it can be overridden for the user.',
+      });
+      return;
+    }
+
+    const newPermissions = checked
+      ? Array.from(new Set([...currentPermissions.filter((id) => id !== `!${permissionId}`), permissionId]))
+      : currentPermissions.filter((id) => id !== permissionId).concat(`!${permissionId}`);
     handleInputChange('permissions', newPermissions);
   };
 
   const handleSelectAllToggle = () => {
-    handleInputChange('permissions', areAllSelected ? [] : allPermissionIds);
+    const role = formData ? roles.find((r) => r.id === formData.role) : null;
+    const rolePermissions = role?.permissions || [];
+    handleInputChange('permissions', areAllSelected ? [] : rolePermissions);
   };
   
   const handleRoleChange = (roleId: string) => {
     const role = roles.find(r => r.id === roleId);
     if (role) {
-      setFormData(prev => ({
+      const currentOverrides = (formData?.permissions || []).filter((permissionId) =>
+        permissionId.startsWith('!') || (role.permissions || []).includes(permissionId)
+      );
+      setFormData(prev => prev ? ({
         ...prev,
         role: role.id,
-        permissions: role.permissions || [] 
-      }));
+        permissions: Array.from(new Set([...(role.permissions || []), ...currentOverrides]))
+      }) : prev);
     }
   }
 
@@ -156,17 +229,17 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-2"><Label>User Type</Label><Select onValueChange={(value) => handleInputChange('userType', value)} value={formData.userType} disabled><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{userTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                  <div className="space-y-2"><Label>User Number (Billing)</Label><Input value={formData.userNumber || ''} onChange={(e) => handleInputChange('userNumber', e.target.value)} placeholder="e.g., ACC-001" /></div>
-                  <div className="space-y-2"><Label>First Name</Label><Input value={formData.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Last Name</Label><Input value={formData.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={formData.email || ''} onChange={(e) => handleInputChange('email', e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Contact Number</Label><Input value={formData.contactNumber || ''} onChange={(e) => handleInputChange('contactNumber', e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Role</Label><Select onValueChange={handleRoleChange} value={formData.role}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{roles.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>User Type</Label><Select onValueChange={(value) => handleInputChange('userType', value as PersonnelFormState['userType'])} value={formData?.userType} disabled><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{userTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>User Number (Billing)</Label><Input value={formData?.userNumber || ''} onChange={(e) => handleInputChange('userNumber', e.target.value)} placeholder="e.g., ACC-001" /></div>
+                  <div className="space-y-2"><Label>First Name</Label><Input value={formData?.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Last Name</Label><Input value={formData?.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={formData?.email || ''} onChange={(e) => handleInputChange('email', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Contact Number</Label><Input value={formData?.contactNumber || ''} onChange={(e) => handleInputChange('contactNumber', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Role</Label><Select onValueChange={handleRoleChange} value={formData?.role}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{roles.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent></Select></div>
                   
                   <div className="space-y-2">
                       <Label>Organization</Label>
-                      <Select onValueChange={(v) => handleInputChange('organizationId', v === 'internal' ? null : v)} value={formData.organizationId || 'internal'}>
+                      <Select onValueChange={(v) => handleInputChange('organizationId', v === 'internal' ? null : v)} value={formData?.organizationId || 'internal'}>
                           <SelectTrigger><SelectValue/></SelectTrigger>
                           <SelectContent>
                               <SelectItem value="internal">Safeviate (Internal)</SelectItem>
@@ -178,7 +251,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
                     <Switch 
                       id="erp-incerfa" 
-                      checked={!!formData.isErpIncerfaContact} 
+                      checked={!!formData?.isErpIncerfaContact} 
                       onCheckedChange={(val) => handleInputChange('isErpIncerfaContact', val)} 
                     />
                     <Label htmlFor="erp-incerfa" className="cursor-pointer text-xs">ERP INCERFA Contact</Label>
@@ -187,25 +260,25 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
                     <Switch 
                       id="erp-alerfa" 
-                      checked={!!formData.isErpAlerfaContact} 
+                      checked={!!formData?.isErpAlerfaContact} 
                       onCheckedChange={(val) => handleInputChange('isErpAlerfaContact', val)} 
                     />
                     <Label htmlFor="erp-alerfa" className="cursor-pointer text-xs">ERP ALERFA Contact</Label>
                   </div>
 
-                  {!isPilotProfile(formData) && (
+                  {formData && !isPilotProfile(formData) && (
                       <div className="space-y-2">
                           <Label>Department</Label>
-                          <Select onValueChange={(value) => handleInputChange('department', value)} value={(formData as Personnel).department}>
+                          <Select onValueChange={(value) => handleInputChange('department', value)} value={formData.department}>
                               <SelectTrigger><SelectValue/></SelectTrigger>
                               <SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                           </Select>
                       </div>
                   )}
-                  {isPilotProfile(formData) && (
+                  {formData && isPilotProfile(formData) && (
                     <>
-                      <div className="space-y-2"><Label>License Number</Label><Input value={(formData as PilotProfile).pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} /></div>
-                      <div className="space-y-2"><Label>Logbook Template</Label><Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={(formData as PilotProfile).logbookTemplateId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{logbookTemplates.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-2"><Label>License Number</Label><Input value={formData.pilotLicense?.licenseNumber || ''} onChange={(e) => handleNestedInputChange('pilotLicense', 'licenseNumber', e.target.value)} /></div>
+                      <div className="space-y-2"><Label>Logbook Template</Label><Select onValueChange={(value) => handleInputChange('logbookTemplateId', value)} value={formData.logbookTemplateId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{logbookTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select></div>
                     </>
                   )}
                 </CollapsibleContent>
@@ -229,11 +302,20 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                                       <div key={resource.id} className='space-y-2 break-inside-avoid'>
                                           <h4 className='font-medium border-b pb-1'>{resource.name}</h4>
                                           <div className="flex flex-col gap-2 pt-1">
-                                              {resource.actions.map((action) => {
+                                          {resource.actions.map((action) => {
                                                   const permissionId = `${resource.id}-${action}`;
+                                                  const role = formData ? roles.find((r) => r.id === formData.role) : null;
+                                                  const isRoleGranted = !!role?.permissions?.includes(permissionId);
+                                                  const isUserGranted = !!(formData?.permissions || []).includes(permissionId);
+                                                  const isDenied = !!(formData?.permissions || []).includes(`!${permissionId}`);
                                                   return (
                                                       <div key={permissionId} className="flex items-center space-x-2">
-                                                          <Checkbox id={`edit-${permissionId}`} checked={(formData.permissions || []).includes(permissionId)} onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)} />
+                                                          <Checkbox
+                                                            id={`edit-${permissionId}`}
+                                                            checked={(isRoleGranted && !isDenied) || isUserGranted}
+                                                            disabled={!isRoleGranted}
+                                                            onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                          />
                                                           <label htmlFor={`edit-${permissionId}`} className="text-sm font-medium leading-none cursor-pointer capitalize">{action}</label>
                                                       </div>
                                                   );

@@ -21,8 +21,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -90,11 +90,19 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
     },
   });
 
-  const onSubmit = (values: TriageFormValues) => {
+  const onSubmit = async (values: TriageFormValues) => {
     if (!firestore) return;
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
-    updateDocumentNonBlocking(reportRef, values);
-    toast({ title: 'Triage Details Saved' });
+    try {
+      await updateDoc(reportRef, values);
+      toast({ title: 'Triage Details Saved' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Unable to save triage details.',
+      });
+    }
   };
 
   return (
@@ -128,7 +136,7 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
                         </div>
                         {!isStacked && (
                             <div className="flex justify-end pt-4">
-                                <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                                <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
                                     <Save className="mr-2 h-4 w-4" /> Save Triage Details
                                 </Button>
                             </div>

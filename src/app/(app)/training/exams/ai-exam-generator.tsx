@@ -24,9 +24,10 @@ import type { ExamTemplate } from '@/types/training';
 
 interface AiExamGeneratorProps {
   onGenerated: (questions: ExamTemplate['questions']) => void;
+  trigger?: React.ReactNode;
 }
 
-export function AiExamGenerator({ onGenerated }: AiExamGeneratorProps) {
+export function AiExamGenerator({ onGenerated, trigger }: AiExamGeneratorProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -115,7 +116,9 @@ export function AiExamGenerator({ onGenerated }: AiExamGeneratorProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2"><Wand2 className="h-4 w-4" /> Generate Questions with AI</Button>
+        {trigger || (
+          <Button variant="outline" className="gap-2"><Wand2 className="h-4 w-4" /> Generate Questions with AI</Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>

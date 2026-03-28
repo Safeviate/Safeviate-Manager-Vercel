@@ -22,6 +22,7 @@ export const useTenantConfig = () => {
 
   return {
     tenant,
+    tenantId,
     isLoading,
     error,
   };

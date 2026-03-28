@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,7 +35,7 @@ interface RoleFormProps {
   existingRole?: {
     id: string;
     name: string;
-    category: RoleCategory;
+    category?: RoleCategory;
     permissions: string[];
     requiredDocuments?: string[];
   };
@@ -98,7 +98,7 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
     }
   }
 
-  const handleSaveRole = () => {
+  const handleSaveRole = async () => {
     if (!roleName.trim()) {
       toast({
         variant: 'destructive',
@@ -126,18 +126,36 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
 
     if (existingRole) {
       const roleRef = doc(firestore, 'tenants', tenantId, 'roles', existingRole.id);
-      updateDocumentNonBlocking(roleRef, roleData);
-      toast({
-        title: 'Role Updated',
-        description: `The "${roleName}" role has been updated.`,
-      });
+      try {
+        await updateDoc(roleRef, roleData);
+        toast({
+          title: 'Role Updated',
+          description: `The "${roleName}" role has been updated.`,
+        });
+      } catch {
+        toast({
+          variant: 'destructive',
+          title: 'Save Failed',
+          description: 'The role could not be updated. Please try again.',
+        });
+        return;
+      }
     } else {
       const rolesRef = collection(firestore, 'tenants', tenantId, 'roles');
-      addDocumentNonBlocking(rolesRef, roleData);
-      toast({
-        title: 'Role Added',
-        description: `The "${roleName}" role is being created.`,
-      });
+      try {
+        await addDoc(rolesRef, roleData);
+        toast({
+          title: 'Role Added',
+          description: `The "${roleName}" role has been created.`,
+        });
+      } catch {
+        toast({
+          variant: 'destructive',
+          title: 'Save Failed',
+          description: 'The role could not be created. Please try again.',
+        });
+        return;
+      }
     }
     
     setIsOpen(false);

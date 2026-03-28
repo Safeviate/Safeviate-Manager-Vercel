@@ -6,7 +6,7 @@ import { menuConfig } from '@/lib/menu-config';
 import { usePermissions } from '@/hooks/use-permissions';
 
 export default function TrainingPage() {
-  const { hasPermission } = usePermissions();
+  const { canAccessMenuItem } = usePermissions();
   const trainingMenu = menuConfig.find(item => item.href === '/training');
 
   if (!trainingMenu || !trainingMenu.subItems) {
@@ -18,7 +18,7 @@ export default function TrainingPage() {
   }
 
   const visibleSubItems = trainingMenu.subItems.filter(
-    item => !item.permissionId || hasPermission(item.permissionId)
+    item => canAccessMenuItem(item, trainingMenu)
   );
 
   if (visibleSubItems.length === 0) {

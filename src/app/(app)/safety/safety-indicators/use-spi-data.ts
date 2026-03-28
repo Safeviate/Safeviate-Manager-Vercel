@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { format, parse, differenceInMinutes } from 'date-fns';
-import type { SpiConfig } from './edit-spi-form';
+import type { SpiConfig } from '@/types/spi';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 
@@ -25,14 +25,14 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
         };
         
         // 1. If manual override data is present, use it.
-        if (spi.monthlyData && spi.monthlyData.some(v => v > 0)) {
-            const monthlyData = spi.monthlyData.map((value, i) => ({
+        if (spi.monthlyData && spi.monthlyData.some((v: number) => v > 0)) {
+            const monthlyData = spi.monthlyData.map((value: number, i: number) => ({
                 label: format(new Date(currentYear, i), 'MMM yy'),
                 value: value || 0
             }));
             
-            let total = spi.monthlyData.reduce((sum, val) => sum + (val || 0), 0);
-            let yearlyValue = spi.unit === 'Count' ? total / 12 : total / (spi.monthlyData.filter(v => v > 0).length || 1);
+            let total = spi.monthlyData.reduce((sum: number, val: number) => sum + (val || 0), 0);
+            let yearlyValue = spi.unit === 'Count' ? total / 12 : total / (spi.monthlyData.filter((v: number) => v > 0).length || 1);
 
             return {
                 monthlyData,

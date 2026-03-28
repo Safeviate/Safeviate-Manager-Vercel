@@ -61,14 +61,32 @@ const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondar
     }
 }
 
-function DeleteBookingButton({ booking, tenantId }: { booking: EnrichedBooking, tenantId: string }) {
+type BookingBuckets = {
+  all: EnrichedBooking[];
+  training: EnrichedBooking[];
+  private: EnrichedBooking[];
+  maintenance: EnrichedBooking[];
+  cancelled: EnrichedBooking[];
+};
+
+function DeleteBookingButton({
+  booking,
+  tenantId,
+  canDelete,
+  canDeleteCompleted,
+}: {
+  booking: EnrichedBooking;
+  tenantId: string;
+  canDelete: boolean;
+  canDeleteCompleted: boolean;
+}) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { hasPermission } = usePermissions();
     const isCompleted = booking.status === 'Completed';
-    const canDelete = hasPermission('bookings-delete') && (!isCompleted || hasPermission('admin-database-manage'));
 
-    if (!canDelete) return null;
+    const isAllowed = canDelete && (!isCompleted || canDeleteCompleted);
+
+    if (!isAllowed) return null;
 
     const handleDelete = () => {
         if (!firestore) return;
@@ -109,7 +127,17 @@ function DeleteBookingButton({ booking, tenantId }: { booking: EnrichedBooking, 
     );
 }
 
-const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], tenantId: string }) => {
+const BookingsTable = ({
+  bookings,
+  tenantId,
+  canDeleteBookings,
+  canDeleteCompletedBookings,
+}: {
+  bookings: EnrichedBooking[];
+  tenantId: string;
+  canDeleteBookings: boolean;
+  canDeleteCompletedBookings: boolean;
+}) => {
     if (bookings.length === 0) {
         return (
             <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">
@@ -171,7 +199,12 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
                                                 </Link>
                                             </Button>
                                         )}
-                                        <DeleteBookingButton booking={b} tenantId={tenantId} />
+                                        <DeleteBookingButton
+                                          booking={b}
+                                          tenantId={tenantId}
+                                          canDelete={canDeleteBookings}
+                                          canDeleteCompleted={canDeleteCompletedBookings}
+                                        />
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -186,6 +219,7 @@ const BookingsTable = ({ bookings, tenantId }: { bookings: EnrichedBooking[], te
 export default function BookingsHistoryPage() {
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
+  const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('all');
 
@@ -206,13 +240,18 @@ export default function BookingsHistoryPage() {
   const { data: students } = useCollection<PilotProfile>(studentsQuery);
   const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
 
+  const userMap = useMemo(() => {
+    if (!personnel || !instructors || !students || !privatePilots) return new Map<string, string>();
+    const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
+    const map = new Map(allUsers.map((person) => [person.id, `${person.firstName} ${person.lastName}`]));
+    map.set('DEVELOPER_MODE', 'System (Developer)');
+    return map;
+  }, [personnel, instructors, students, privatePilots]);
+
   const enrichedBookings = useMemo((): EnrichedBooking[] => {
-    if (!bookings || !aircraft || !personnel || !instructors || !students || !privatePilots) return [];
+    if (!bookings || !aircraft || userMap.size === 0) return [];
 
     const aircraftMap = new Map(aircraft.map(a => [a.id, a]));
-    const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
-    const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
-    userMap.set('DEVELOPER_MODE', 'System (Developer)');
 
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);
@@ -225,12 +264,26 @@ export default function BookingsHistoryPage() {
         aircraft: bookingAircraft,
       };
     });
-  }, [bookings, aircraft, personnel, instructors, students, privatePilots]);
+  }, [bookings, aircraft, userMap]);
 
-  const trainingBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Training Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
-  const privateBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Private Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
-  const maintenanceBookings = useMemo(() => enrichedBookings.filter(b => b.type === 'Maintenance Flight' && b.status !== 'Cancelled' && b.status !== 'Cancelled with Reason'), [enrichedBookings]);
-  const cancelledBookings = useMemo(() => enrichedBookings.filter(b => b.status === 'Cancelled' || b.status === 'Cancelled with Reason'), [enrichedBookings]);
+  const bookingBuckets = useMemo((): BookingBuckets => {
+    const activeBookings = enrichedBookings.filter(
+      (booking) => booking.status !== 'Cancelled' && booking.status !== 'Cancelled with Reason'
+    );
+
+    return {
+      all: enrichedBookings,
+      training: activeBookings.filter((booking) => booking.type === 'Training Flight'),
+      private: activeBookings.filter((booking) => booking.type === 'Private Flight'),
+      maintenance: activeBookings.filter((booking) => booking.type === 'Maintenance Flight'),
+      cancelled: enrichedBookings.filter(
+        (booking) => booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason'
+      ),
+    };
+  }, [enrichedBookings]);
+
+  const canDeleteBookings = hasPermission('bookings-delete');
+  const canDeleteCompletedBookings = hasPermission('admin-database-manage');
 
   const tabs = [
     { value: 'all', label: 'All' },
@@ -258,11 +311,11 @@ export default function BookingsHistoryPage() {
           />
           <CardContent className='p-0 flex-1 min-h-0'>
                 <div className={cn("overflow-auto", isMobile ? "h-full min-h-0" : "h-[calc(100vh-21rem)]")}>
-                    <TabsContent value="all" className='m-0'><BookingsTable bookings={enrichedBookings} tenantId={tenantId || ''} /></TabsContent>
-                    <TabsContent value="training" className='m-0'><BookingsTable bookings={trainingBookings} tenantId={tenantId || ''} /></TabsContent>
-                    <TabsContent value="private" className='m-0'><BookingsTable bookings={privateBookings} tenantId={tenantId || ''} /></TabsContent>
-                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={maintenanceBookings} tenantId={tenantId || ''} /></TabsContent>
-                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={cancelledBookings} tenantId={tenantId || ''} /></TabsContent>
+                    <TabsContent value="all" className='m-0'><BookingsTable bookings={bookingBuckets.all} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
+                    <TabsContent value="training" className='m-0'><BookingsTable bookings={bookingBuckets.training} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
+                    <TabsContent value="private" className='m-0'><BookingsTable bookings={bookingBuckets.private} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
+                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={bookingBuckets.maintenance} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
+                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={bookingBuckets.cancelled} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
                 </div>
             </CardContent>
         </Tabs>

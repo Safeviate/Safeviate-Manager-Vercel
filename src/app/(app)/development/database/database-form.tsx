@@ -21,17 +21,33 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save, Briefcase } from 'lucide-react';
+import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save, Briefcase, Info } from 'lucide-react';
 import type { Tenant, IndustryType } from '@/types/quality';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
 const DEFAULT_BUTTON = { 'button-primary-background': '#7cc4f7', 'button-primary-foreground': '#1e293b', 'button-primary-accent': '#63b2a7', 'button-primary-accent-foreground': '#ffffff' };
 const DEFAULT_CARD = { card: '#ebf5fb', 'card-foreground': '#1e293b', 'card-border': '#d1d5db' };
 const DEFAULT_POPOVER = { popover: '#ebf5fb', 'popover-foreground': '#1e293b', 'popover-accent': '#7cc4f7', 'popover-accent-foreground': '#1e293b' };
 const DEFAULT_SIDEBAR = { 'sidebar-background': '#dbeafb', 'sidebar-foreground': '#1e293b', 'sidebar-accent': '#f1f5f9', 'sidebar-accent-foreground': '#1e293b', 'sidebar-border': '#94a3b8' };
-const DEFAULT_HEADER = { 'header-background': '#ebf5fb', 'header-foreground': '#1e293b', 'header-border': '#e2e8f0' };
+const DEFAULT_SIDEBAR_BACKGROUND_IMAGE = '/sidebar-background.png';
+const DEFAULT_HEADER = { 'header-background': '#171514', 'header-foreground': '#f3efe8', 'header-border': '#3a312b' };
 const DEFAULT_SWIMLANE = { 'swimlane-header-background': '#f1f5f9', 'swimlane-header-foreground': '#475569' };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
+
+const mergeThemeSection = <T extends Record<string, string>>(defaults: T, incoming?: Record<string, string>) => {
+  const merged = { ...defaults };
+  if (!incoming) return merged;
+
+  (Object.keys(defaults) as Array<keyof T>).forEach((key) => {
+    const nextValue = incoming[key as string];
+    if (typeof nextValue === 'string') {
+      merged[key] = nextValue as T[keyof T];
+    }
+  });
+
+  return merged;
+};
 
 const INDUSTRY_TYPES: IndustryType[] = [
   'Aviation: Flight Training (ATO)',
@@ -39,6 +55,47 @@ const INDUSTRY_TYPES: IndustryType[] = [
   'Aviation: Maintenance (AMO)',
   'General: Occupational Health & Safety (OHS)'
 ];
+
+const INDUSTRY_MODULES: Record<IndustryType, string[]> = {
+  'Aviation: Flight Training (ATO)': [
+    'Dashboard and My Dashboard',
+    'Bookings and daily scheduling',
+    'Operations and ERP tools',
+    'Vehicle usage and fleet checkout',
+    'Safety management modules',
+    'Quality audits and coherence matrix',
+    'Training, exams, and student progress',
+    'Aircraft and vehicle asset management',
+    'Users and admin configuration',
+  ],
+  'Aviation: Charter / Ops (AOC)': [
+    'Dashboard and My Dashboard',
+    'Bookings and daily scheduling',
+    'Operations and ERP tools',
+    'Vehicle usage and fleet checkout',
+    'Safety management modules',
+    'Quality audits and task tracking',
+    'Aircraft and vehicle asset management',
+    'Users and admin configuration',
+  ],
+  'Aviation: Maintenance (AMO)': [
+    'Dashboard and My Dashboard',
+    'Operations and company documents',
+    'Vehicle usage and fleet checkout',
+    'Safety management modules',
+    'Quality audits and CAP tracking',
+    'Aircraft and vehicle asset management',
+    'Users and admin configuration',
+  ],
+  'General: Occupational Health & Safety (OHS)': [
+    'Dashboard and My Dashboard',
+    'Operations document control and vehicle usage',
+    'Safety management modules',
+    'Quality audits and task tracking',
+    'Vehicle asset management',
+    'Users and admin configuration',
+  ],
+};
 
 export function DatabaseForm() {
   const firestore = useFirestore();
@@ -62,6 +119,7 @@ export function DatabaseForm() {
   const [cardTheme, setCardTheme] = useState(DEFAULT_CARD);
   const [popoverTheme, setPopoverTheme] = useState(DEFAULT_POPOVER);
   const [sidebarTheme, setSidebarTheme] = useState(DEFAULT_SIDEBAR);
+  const [sidebarBackgroundImage, setSidebarBackgroundImage] = useState(DEFAULT_SIDEBAR_BACKGROUND_IMAGE);
   const [headerTheme, setHeaderTheme] = useState(DEFAULT_HEADER);
   const [swimlaneTheme, setSwimlaneTheme] = useState(DEFAULT_SWIMLANE);
   
@@ -79,18 +137,19 @@ export function DatabaseForm() {
     setLogoPreview(t.logoUrl || null);
     
     // Load complex theme or fallback to defaults/basic colors
-    setMainTheme(t.theme?.main || { 
-        ...DEFAULT_MAIN, 
-        primary: t.theme?.primaryColour || DEFAULT_MAIN.primary, 
-        background: t.theme?.backgroundColour || DEFAULT_MAIN.background,
-        accent: t.theme?.accentColour || DEFAULT_MAIN.accent 
+    setMainTheme({
+        ...mergeThemeSection(DEFAULT_MAIN, t.theme?.main),
+        primary: t.theme?.primaryColour || mergeThemeSection(DEFAULT_MAIN, t.theme?.main).primary,
+        background: t.theme?.backgroundColour || mergeThemeSection(DEFAULT_MAIN, t.theme?.main).background,
+        accent: t.theme?.accentColour || mergeThemeSection(DEFAULT_MAIN, t.theme?.main).accent,
     });
-    setButtonTheme(t.theme?.button || DEFAULT_BUTTON);
-    setCardTheme(t.theme?.card || DEFAULT_CARD);
-    setPopoverTheme(t.theme?.popover || DEFAULT_POPOVER);
-    setSidebarTheme(t.theme?.sidebar || DEFAULT_SIDEBAR);
-    setHeaderTheme(t.theme?.header || DEFAULT_HEADER);
-    setSwimlaneTheme(t.theme?.swimlane || DEFAULT_SWIMLANE);
+    setButtonTheme(mergeThemeSection(DEFAULT_BUTTON, t.theme?.button));
+    setCardTheme(mergeThemeSection(DEFAULT_CARD, t.theme?.card));
+    setPopoverTheme(mergeThemeSection(DEFAULT_POPOVER, t.theme?.popover));
+    setSidebarTheme(mergeThemeSection(DEFAULT_SIDEBAR, t.theme?.sidebar));
+    setSidebarBackgroundImage(t.theme?.sidebarBackgroundImage || DEFAULT_SIDEBAR_BACKGROUND_IMAGE);
+    setHeaderTheme(mergeThemeSection(DEFAULT_HEADER, t.theme?.header));
+    setSwimlaneTheme(mergeThemeSection(DEFAULT_SWIMLANE, t.theme?.swimlane));
     
     setEnabledHrefs(new Set(t.enabledMenus || []));
 
@@ -118,6 +177,10 @@ export function DatabaseForm() {
         });
     };
     walk(menuConfig);
+    newEnabled.add('/assets');
+    newEnabled.add('/assets/vehicles');
+    newEnabled.add('/operations');
+    newEnabled.add('/operations/vehicle-usage');
     setEnabledHrefs(newEnabled);
     toast({ title: 'Industry Presets Applied', description: `Authorized modules have been adjusted for ${newIndustry}.` });
   };
@@ -144,6 +207,7 @@ export function DatabaseForm() {
     setCardTheme(DEFAULT_CARD);
     setPopoverTheme(DEFAULT_POPOVER);
     setSidebarTheme(DEFAULT_SIDEBAR);
+    setSidebarBackgroundImage(DEFAULT_SIDEBAR_BACKGROUND_IMAGE);
     setHeaderTheme(DEFAULT_HEADER);
     setSwimlaneTheme(DEFAULT_SWIMLANE);
     setEnabledHrefs(new Set());
@@ -210,6 +274,7 @@ export function DatabaseForm() {
             card: cardTheme,
             popover: popoverTheme,
             sidebar: sidebarTheme,
+            sidebarBackgroundImage,
             header: headerTheme,
             swimlane: swimlaneTheme,
           },
@@ -261,7 +326,36 @@ export function DatabaseForm() {
                 <CardTitle>Tenant Manager</CardTitle>
                 <CardDescription>Manage authorized features and branding for any organization on the system.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={handleClearForm}><PlusCircle className="mr-2 h-4 w-4" /> New Tenant</Button>
+            <div className="flex items-center gap-2">
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-9 w-9" aria-label="View industry modules">
+                            <Info className="h-4 w-4" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-[380px] space-y-4">
+                        <div className="space-y-1">
+                            <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Industry Modules</h4>
+                            <p className="text-xs text-muted-foreground">
+                                These are the default module groups available for each industry preset in Tenant Manager.
+                            </p>
+                        </div>
+                        <div className="space-y-3">
+                            {INDUSTRY_TYPES.map((industryType) => (
+                                <div key={industryType} className="rounded-lg border bg-muted/20 p-3">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-foreground">{industryType}</p>
+                                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                        {INDUSTRY_MODULES[industryType].map((moduleName) => (
+                                            <li key={moduleName}>- {moduleName}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
+                    </PopoverContent>
+                </Popover>
+                <Button variant="outline" size="sm" onClick={handleClearForm}><PlusCircle className="mr-2 h-4 w-4" /> New Tenant</Button>
+            </div>
         </div>
       </CardHeader>
       
@@ -380,6 +474,18 @@ export function DatabaseForm() {
                     <ColorSection title="Header" themeState={headerTheme} setter={setHeaderTheme} prefix="header-" />
                     <ColorSection title="Swimlane Header" themeState={swimlaneTheme} setter={setSwimlaneTheme} prefix="swimlane-header-" />
                     <ColorSection title="Sidebar" themeState={sidebarTheme} setter={setSidebarTheme} prefix="sidebar-" />
+                    <div className="space-y-1.5 p-4 border rounded-lg bg-background/50">
+                        <Label htmlFor="tenant-sidebar-background-image" className="text-[10px] uppercase font-bold text-muted-foreground">
+                            Sidebar Background Image URL
+                        </Label>
+                        <Input
+                          id="tenant-sidebar-background-image"
+                          type="text"
+                          value={sidebarBackgroundImage}
+                          onChange={(e) => setSidebarBackgroundImage(e.target.value)}
+                          placeholder="https://example.com/sidebar-texture.jpg"
+                        />
+                    </div>
                     <ColorSection title="Cards" themeState={cardTheme} setter={setCardTheme} prefix="card-" />
                     <ColorSection title="Popovers & Dropdowns" themeState={popoverTheme} setter={setPopoverTheme} prefix="popover-" />
                 </div>

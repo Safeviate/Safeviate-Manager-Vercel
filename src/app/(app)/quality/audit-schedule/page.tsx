@@ -302,8 +302,8 @@ export default function AuditSchedulePage() {
                         className={cn(
                             'h-9 text-[10px] font-black uppercase tracking-tight gap-2',
                             isMobile
-                                ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100'
-                                : 'px-6 bg-emerald-700 hover:bg-emerald-800 text-white shadow-md'
+                                ? 'w-full justify-between bg-background px-3 text-foreground shadow-sm border-border hover:bg-muted/40'
+                                : 'px-6 shadow-md'
                         )}
                     >
                         <span className="flex items-center gap-2">

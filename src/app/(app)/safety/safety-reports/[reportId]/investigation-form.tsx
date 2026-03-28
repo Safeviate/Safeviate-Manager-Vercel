@@ -24,8 +24,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -107,7 +107,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     name: "investigationTasks",
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     if (!firestore) return;
 
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
@@ -119,8 +119,16 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
         }))
     };
 
-    updateDocumentNonBlocking(reportRef, dataToSave);
-    toast({ title: 'Investigation Details Saved' });
+    try {
+      await updateDoc(reportRef, dataToSave);
+      toast({ title: 'Investigation Details Saved' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Unable to save investigation details.',
+      });
+    }
   };
 
   const handleUserSelection = (index: number, userId: string) => {
@@ -153,7 +161,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
               )}
               {!isStacked && (
                 <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                  <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                  <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
                     <Save className="mr-2 h-4 w-4" /> Save Investigation Details
                   </Button>
                 </div>

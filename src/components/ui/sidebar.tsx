@@ -20,6 +20,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+const sidebarBackgroundStyle: React.CSSProperties = {
+  backgroundImage: "var(--sidebar-background-image, none)",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundRepeat: "no-repeat",
+}
+
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
@@ -186,6 +193,7 @@ const Sidebar = React.forwardRef<
             "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
             className
           )}
+          style={sidebarBackgroundStyle}
           ref={ref}
           {...props}
         >
@@ -235,6 +243,7 @@ const Sidebar = React.forwardRef<
           <div
             data-sidebar="sidebar"
             className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            style={sidebarBackgroundStyle}
           >
             {children}
           </div>
@@ -246,9 +255,13 @@ const Sidebar = React.forwardRef<
 Sidebar.displayName = "Sidebar"
 
 const SidebarMobile = React.forwardRef<
-  React.ElementRef<typeof Sheet>,
+  HTMLDivElement,
   React.ComponentProps<typeof Sheet>
->((props, ref) => <Sheet ref={ref} {...props} />)
+>(({ children, ...props }, ref) => (
+  <div ref={ref}>
+    <Sheet {...props}>{children}</Sheet>
+  </div>
+))
 SidebarMobile.displayName = "SidebarMobile"
 
 const SidebarMobileContent = React.forwardRef<
@@ -266,6 +279,7 @@ const SidebarMobileContent = React.forwardRef<
       style={
         {
           "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
+          ...sidebarBackgroundStyle,
         } as React.CSSProperties
       }
       {...props}

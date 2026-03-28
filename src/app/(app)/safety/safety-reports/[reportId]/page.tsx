@@ -78,6 +78,17 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     );
   }
 
+  if (!tenantId) {
+    return (
+      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+        <p className="text-muted-foreground">Tenant context is required to load this report.</p>
+        <Button asChild variant="link" className="mt-4">
+          <Link href="/safety/safety-reports">Return to reports list</Link>
+        </Button>
+      </div>
+    );
+  }
+
   if (error || !report) {
     return (
       <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
@@ -145,13 +156,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                   />
                 ) : (
                   <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center w-full">
-                    <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Full Report</TabsTrigger>
-                    <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Report & Triage</TabsTrigger>
-                    <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Hazard & Risk ID</TabsTrigger>
-                    <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Investigation</TabsTrigger>
-                    <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Corrective Actions</TabsTrigger>
-                    <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">Final Review</TabsTrigger>
-                    <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                    <TabsTrigger value="full" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">Full Report</TabsTrigger>
+                    <TabsTrigger value="triage" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">Report & Triage</TabsTrigger>
+                    <TabsTrigger value="hazards" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">Hazard & Risk ID</TabsTrigger>
+                    <TabsTrigger value="investigation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">Investigation</TabsTrigger>
+                    <TabsTrigger value="cap" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">Corrective Actions</TabsTrigger>
+                    <TabsTrigger value="review" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">Final Review</TabsTrigger>
+                    <TabsTrigger value="discussion" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">
                       Discussion {myMentionsCount > 0 && <Badge className="ml-2 h-4 px-1.5 min-w-4 flex items-center justify-center text-[10px]">{myMentionsCount}</Badge>}
                     </TabsTrigger>
                   </TabsList>

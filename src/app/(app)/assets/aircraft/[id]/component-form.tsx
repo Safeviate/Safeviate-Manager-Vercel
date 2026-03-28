@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,11 +17,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, arrayUnion } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
-import type { Aircraft } from '@/types/aircraft';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 
 const componentSchema = z.object({
   name: z.string().min(1, "Component name is required"),
@@ -31,6 +32,9 @@ const componentSchema = z.object({
   tsn: z.number({ coerce: true }).min(0),
   tso: z.number({ coerce: true }).min(0),
   totalTime: z.number({ coerce: true }).min(0),
+  installHours: z.number({ coerce: true }).min(0).default(0),
+  maxHours: z.number({ coerce: true }).min(0).default(0),
+  notes: z.string().default(''),
 });
 
 type FormValues = z.infer<typeof componentSchema>;
@@ -38,48 +42,72 @@ type FormValues = z.infer<typeof componentSchema>;
 interface ComponentFormProps {
   tenantId: string;
   aircraftId: string;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
+  isOpen?: boolean;
+  setIsOpen?: (open: boolean) => void;
+  existingComponent?: AircraftComponent;
   trigger?: React.ReactNode;
 }
 
-export function ComponentForm({ tenantId, aircraftId, isOpen, setIsOpen, trigger }: ComponentFormProps) {
+export function ComponentForm({ tenantId, aircraftId, isOpen, setIsOpen, existingComponent, trigger }: ComponentFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const dialogOpen = isOpen ?? internalIsOpen;
+  const handleOpenChange = setIsOpen ?? setInternalIsOpen;
+
+  const aircraftRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
+    [firestore, tenantId, aircraftId]
+  );
+  const { data: aircraft } = useDoc<Aircraft>(aircraftRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(componentSchema),
     defaultValues: {
-      name: '',
-      manufacturer: '',
-      serialNumber: '',
-      partNumber: '',
-      installDate: new Date().toISOString().split('T')[0],
-      tsn: 0,
-      tso: 0,
-      totalTime: 0,
+      name: existingComponent?.name || '',
+      manufacturer: existingComponent?.manufacturer || '',
+      serialNumber: existingComponent?.serialNumber || '',
+      partNumber: existingComponent?.partNumber || '',
+      installDate: existingComponent?.installDate?.split('T')[0] || new Date().toISOString().split('T')[0],
+      tsn: existingComponent?.tsn || 0,
+      tso: existingComponent?.tso || 0,
+      totalTime: existingComponent?.totalTime || 0,
+      installHours: existingComponent?.installHours || 0,
+      maxHours: existingComponent?.maxHours || 0,
+      notes: existingComponent?.notes || '',
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    if (!firestore) return;
-    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId);
-    
-    updateDocumentNonBlocking(aircraftRef, {
-      components: arrayUnion({ ...values, id: uuidv4() })
-    });
+  const onSubmit = async (values: FormValues) => {
+    if (!firestore || !aircraftRef || !aircraft) return;
 
-    toast({ title: "Component Added" });
-    setIsOpen(false);
-    form.reset();
+    const nextComponent: AircraftComponent = {
+      ...values,
+      id: existingComponent?.id || uuidv4(),
+    };
+    const updatedComponents = (aircraft.components || []).filter((component) => component.id !== existingComponent?.id);
+    updatedComponents.push(nextComponent);
+
+    try {
+      await updateDoc(aircraftRef, { components: updatedComponents });
+      toast({ title: existingComponent ? 'Component Updated' : 'Component Added' });
+      handleOpenChange(false);
+      form.reset();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: existingComponent ? 'Update failed' : 'Create failed',
+        description: error instanceof Error ? error.message : 'Unable to save this component.',
+      });
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Track New Component</DialogTitle>
+          <DialogTitle>{existingComponent ? 'Edit Component' : 'Track New Component'}</DialogTitle>
           <DialogDescription>Enter maintenance details for lifecyle tracking.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -100,7 +128,7 @@ export function ComponentForm({ tenantId, aircraftId, isOpen, setIsOpen, trigger
             </div>
             <DialogFooter>
               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Add Component</Button>
+              <Button type="submit">{existingComponent ? 'Save Component' : 'Add Component'}</Button>
             </DialogFooter>
           </form>
         </Form>

@@ -71,7 +71,7 @@ export function VisibilityManager() {
             </h3>
             <p className="text-xs text-muted-foreground italic">Select functional modules enabled for the organization sidebar.</p>
           </div>
-          <Button onClick={handleSaveModules} className="text-[10px] font-black uppercase h-9 px-6 bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">Apply Changes</Button>
+          <Button onClick={handleSaveModules} className="text-[10px] font-black uppercase h-9 px-6 shadow-md">Apply Changes</Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -1,14 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, where, limit, setDoc } from 'firebase/firestore';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 
 type UserProfile = PilotProfile | Personnel;
-type UserLink = { profilePath: string };
+type UserLink = { email?: string; profilePath: string };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
-const MASTER_ADMIN_EMAIL = 'barry@safeviate.com'; // Master Admin Bypass
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -33,7 +32,7 @@ const getTenantOverride = () => {
 };
 
 const canOverrideTenant = (profile: UserProfile | null, isAnonymous: boolean) => {
-    if (isAnonymous) return true;
+    if (isAnonymous) return false;
 
     const role = (profile as Personnel | null)?.role?.toLowerCase();
     return role === 'dev' || role === 'developer';
@@ -42,6 +41,8 @@ const canOverrideTenant = (profile: UserProfile | null, isAnonymous: boolean) =>
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
     const { user: authUser, isUserLoading: isAuthLoading } = useUser();
+    const [profileRefreshToken, setProfileRefreshToken] = useState(0);
+    const [tenantOverride, setTenantOverride] = useState<string | null>(() => getTenantOverride());
 
     const userLinkRef = useMemoFirebase(
         () => (firestore && authUser && !authUser.isAnonymous ? doc(firestore, 'users', authUser.uid) : null),
@@ -50,109 +51,80 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: userLink, isLoading: isUserLinkLoading, error: userLinkError } = useDoc<UserLink>(userLinkRef);
 
+    const fallbackUserLinkQuery = useMemoFirebase(
+        () => (
+            firestore && authUser?.email && !authUser.isAnonymous
+                ? query(collection(firestore, 'users'), where('email', '==', authUser.email), limit(1))
+                : null
+        ),
+        [firestore, authUser]
+    );
+
+    const { data: fallbackUserLinks, isLoading: isFallbackUserLinkLoading, error: fallbackUserLinkError } = useCollection<UserLink>(fallbackUserLinkQuery);
+    const resolvedUserLink = userLink ?? fallbackUserLinks?.[0] ?? null;
+
     const userProfileRef = useMemoFirebase(
-        () => (firestore && userLink?.profilePath ? doc(firestore, userLink.profilePath) : null),
-        [firestore, userLink]
+        () => (firestore && resolvedUserLink?.profilePath ? doc(firestore, resolvedUserLink.profilePath) : null),
+        [firestore, resolvedUserLink, profileRefreshToken]
     );
 
     const { data: userProfileData, isLoading: isProfileDocLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
 
-    const [finalUserProfile, setFinalUserProfile] = useState<UserProfile | null>(null);
-    const [tenantId, setTenantId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
-    
+    const isLoading = isAuthLoading || isUserLinkLoading || isFallbackUserLinkLoading || isProfileDocLoading;
+    const error = (userLinkError || fallbackUserLinkError || profileError) ?? null;
+
+    const finalUserProfile = useMemo(() => {
+        if (isLoading || !authUser || authUser.isAnonymous) return null;
+        if (!resolvedUserLink?.profilePath || !userProfileData) return null;
+        return userProfileData;
+    }, [isLoading, authUser, resolvedUserLink, userProfileData]);
+
+    const tenantId = useMemo(() => {
+        if (!finalUserProfile || !resolvedUserLink?.profilePath) return null;
+
+        const pathParts = resolvedUserLink.profilePath.split('/');
+        const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
+        const overrideTenantId = canOverrideTenant(finalUserProfile, false) ? tenantOverride : null;
+        return overrideTenantId || profileTenantId;
+    }, [finalUserProfile, resolvedUserLink, tenantOverride]);
+
     useEffect(() => {
-        const loading = isAuthLoading || isUserLinkLoading || isProfileDocLoading;
-        setIsLoading(loading);
-
-        const combinedError = userLinkError || profileError;
-        setError(combinedError);
-
-        if (loading) {
-            setFinalUserProfile(null);
-            setTenantId(null);
-            return;
-        };
-
-        if (!authUser) {
-            setFinalUserProfile(null);
-            setTenantId(null);
+        if (!firestore || !authUser || authUser.isAnonymous || userLink || !resolvedUserLink?.profilePath) {
             return;
         }
 
-        // --- Master Admin Bypass ---
-        if (authUser.email === MASTER_ADMIN_EMAIL) {
-            const adminProfile: Personnel = {
-                id: authUser.uid,
-                userType: 'Personnel',
-                firstName: 'Barry',
-                lastName: 'Admin',
-                email: authUser.email!,
-                role: 'dev', // Grants all permissions
-                permissions: [],
-            };
-            setFinalUserProfile(adminProfile);
-            setTenantId(getTenantOverride() || 'safeviate');
-            return;
-        }
-
-        if (authUser.isAnonymous) {
-             const devProfile: Personnel = {
-                id: 'DEVELOPER_MODE',
-                userType: 'Personnel',
-                firstName: 'Developer',
-                lastName: 'Mode',
-                email: authUser.email || 'dev@safeviate.com',
-                role: 'dev',
-                permissions: [],
-            };
-            setFinalUserProfile(devProfile);
-            setTenantId(getTenantOverride() || 'safeviate');
-            return;
-        }
-
-        if (userProfileData && userLink?.profilePath) {
-            setFinalUserProfile(userProfileData);
-            const pathParts = userLink.profilePath.split('/');
-            const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
-            const overrideTenantId = canOverrideTenant(userProfileData, false) ? getTenantOverride() : null;
-            setTenantId(overrideTenantId || profileTenantId);
-        } else {
-            setFinalUserProfile(null);
-            setTenantId(null);
-        }
-
-    }, [isAuthLoading, isUserLinkLoading, isProfileDocLoading, userLinkError, profileError, authUser, userProfileData, userLink]);
+        void setDoc(
+            doc(firestore, 'users', authUser.uid),
+            {
+                email: authUser.email || resolvedUserLink.email,
+                profilePath: resolvedUserLink.profilePath,
+            },
+            { merge: true }
+        );
+    }, [firestore, authUser, userLink, resolvedUserLink]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
+        const handleProfileUpdate = () => {
+            setProfileRefreshToken((current) => current + 1);
+        };
+
         const syncTenantOverride = () => {
-            const overrideTenantId = getTenantOverride();
-
-            if (authUser?.isAnonymous || authUser?.email === MASTER_ADMIN_EMAIL) {
-                setTenantId(overrideTenantId || 'safeviate');
-                return;
-            }
-
-            if (!canOverrideTenant(finalUserProfile, false)) return;
-            if (!userLink?.profilePath) return;
-
-            const pathParts = userLink.profilePath.split('/');
-            const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
-            setTenantId(overrideTenantId || profileTenantId);
+            setTenantOverride(getTenantOverride());
         };
 
         syncTenantOverride();
+        window.addEventListener('safeviate-profile-updated', handleProfileUpdate);
         window.addEventListener('storage', syncTenantOverride);
         window.addEventListener('safeviate-tenant-switch', syncTenantOverride);
 
         return () => {
+            window.removeEventListener('safeviate-profile-updated', handleProfileUpdate);
             window.removeEventListener('storage', syncTenantOverride);
             window.removeEventListener('safeviate-tenant-switch', syncTenantOverride);
         };
-    }, [authUser, finalUserProfile, userLink]);
+    }, []);
 
     const value = useMemo(() => ({
         userProfile: finalUserProfile,

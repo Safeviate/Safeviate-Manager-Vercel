@@ -148,25 +148,25 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                 <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
                   <TabsTrigger 
                     value="overview" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
                   >
                     Overview
                   </TabsTrigger>
                   <TabsTrigger 
                     value="maintenance" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
                   >
                     Maintenance
                   </TabsTrigger>
                   <TabsTrigger 
                     value="components" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
                   >
                     Components
                   </TabsTrigger>
                   <TabsTrigger 
                     value="documents" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
                   >
                     Documents
                   </TabsTrigger>
@@ -183,7 +183,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                       <div className="grid grid-cols-1 gap-6">
                         <DetailItem label="Manufacturer" value={aircraft.make} />
                         <DetailItem label="Model" value={aircraft.model} />
-                        <DetailItem label="Engine Type" value={aircraft.type} />
+                        <DetailItem label="Engine Type" value={aircraft.type || 'N/A'} />
                       </div>
                     </div>
 
@@ -606,7 +606,7 @@ function AddMaintenanceLogDialog({ aircraftId, tenantId }: { aircraftId: string;
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2 h-9 px-6 text-xs font-black uppercase bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">
+        <Button size="sm" className="gap-2 h-9 px-6 text-xs font-black uppercase shadow-md">
           <PlusCircle className="h-3.5 w-3.5" /> Add Log Entry
         </Button>
       </DialogTrigger>
@@ -675,7 +675,7 @@ function AddComponentDialog({ aircraftId, tenantId }: { aircraftId: string; tena
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2 h-9 px-6 text-xs font-black uppercase bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">
+        <Button size="sm" className="gap-2 h-9 px-6 text-xs font-black uppercase shadow-md">
           <PlusCircle className="h-3.5 w-3.5" /> Track Component
         </Button>
       </DialogTrigger>

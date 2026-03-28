@@ -1,15 +1,18 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { FirebaseError } from 'firebase/app';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Globe, Save } from 'lucide-react';
+import { Trash2, Globe, Save, ImagePlus, Loader2 } from 'lucide-react';
 import { useTheme, type SavedTheme } from '@/components/theme-provider';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useStorage } from '@/firebase';
+import { collection, doc, updateDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,6 +27,7 @@ interface ColorThemeFormProps {
 export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const storage = useStorage();
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { 
@@ -37,6 +41,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     setPopoverThemeValue, 
     sidebarTheme, 
     setSidebarThemeValue, 
+    sidebarBackgroundImage,
+    setSidebarBackgroundImage,
     headerTheme, 
     setHeaderThemeValue,
     swimlaneTheme,
@@ -52,6 +58,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
   const [themeName, setThemeName] = useState('');
   const [isMounted, setIsMounted] = useState(false);
+  const [isUploadingSidebarImage, setIsUploadingSidebarImage] = useState(false);
 
   const canManageOrganization = hasPermission('admin-settings-manage');
 
@@ -105,6 +112,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
             'sidebar-accent-foreground': sidebarTheme['sidebar-accent-foreground'],
             'sidebar-border': sidebarTheme['sidebar-border'],
         },
+        sidebarBackgroundImage: tenant.theme.sidebarBackgroundImage || sidebarBackgroundImage,
         headerColors: (tenant.theme.header as any) || { 
             'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 
             'header-foreground': headerTheme['header-foreground'], 
@@ -119,7 +127,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     toast({ title: "Tenant Theme Applied", description: `The theme for "${tenant.name}" has been applied.` });
   };
 
-  const handleSaveToOrganization = () => {
+  const handleSaveToOrganization = async () => {
     if (!firestore || !tenantId) return;
     
     const tenantRef = doc(firestore, 'tenants', tenantId);
@@ -134,17 +142,26 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         card: cardTheme,
         popover: popoverTheme,
         sidebar: sidebarTheme,
+        sidebarBackgroundImage,
         header: headerTheme,
         swimlane: swimlaneTheme,
       }
     };
 
-    updateDocumentNonBlocking(tenantRef, dataToSave);
-    
-    toast({
-      title: "Organization Default Updated",
-      description: "These branding settings have been saved as the default for all members of your organization."
-    });
+    try {
+      await updateDoc(tenantRef, dataToSave);
+      toast({
+        title: "Organization Default Updated",
+        description: "These branding settings have been saved as the default for all members of your organization."
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: "The organization branding could not be saved."
+      });
+    }
   };
 
   const handleSaveTheme = () => {
@@ -169,8 +186,43 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   
   const handleReset = () => {
     resetToDefaults();
-    toast({ title: "Theme Reset", description: "The theme has been reset to its default values." });
+    toast({ title: "Browser Theme Reset", description: "Your local browser theme overrides have been cleared for this company." });
   }
+
+  const handleSidebarBackgroundUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!tenantId) {
+      toast({ variant: "destructive", title: "No Tenant Context", description: "Load your organization before uploading a sidebar background." });
+      return;
+    }
+
+    setIsUploadingSidebarImage(true);
+    try {
+      const sanitizedFileName = file.name.replace(/\s+/g, '-').toLowerCase();
+      const storageRef = ref(storage, `tenants/${tenantId}/branding/sidebar/${Date.now()}-${sanitizedFileName}`);
+      await uploadBytes(storageRef, file);
+      const downloadUrl = await getDownloadURL(storageRef);
+      setSidebarBackgroundImage(downloadUrl);
+      toast({ title: "Sidebar Background Uploaded", description: "The image has been uploaded and applied to the sidebar preview." });
+    } catch (error) {
+      console.error(error);
+      const isUnauthorized =
+        error instanceof FirebaseError && error.code === 'storage/unauthorized';
+
+      toast({
+        variant: "destructive",
+        title: isUnauthorized ? "Storage Rules Not Published" : "Upload Failed",
+        description: isUnauthorized
+          ? "Firebase Storage is blocking this upload. Publish the Storage rules in Firebase Console, then try again."
+          : "The sidebar background image could not be uploaded."
+      });
+    } finally {
+      setIsUploadingSidebarImage(false);
+      event.target.value = '';
+    }
+  };
 
   const formatLabel = (key: string) => {
     const clean = key.replace('popover-', '').replace('button-primary-', '').replace('sidebar-', '').replace('header-', '').replace('swimlane-header-', '');
@@ -328,6 +380,66 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                         </div>
                         ))}
                     </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="sidebar-background-image" className="text-[9px] font-black uppercase text-muted-foreground">
+                            Sidebar Background Image URL
+                        </Label>
+                        <Input
+                          id="sidebar-background-image"
+                          type="text"
+                          value={sidebarBackgroundImage}
+                          onChange={(e) => setSidebarBackgroundImage(e.target.value)}
+                          placeholder="https://example.com/sidebar-texture.jpg"
+                          className="h-10"
+                        />
+                    </div>
+                    <div className="space-y-3 rounded-xl border bg-muted/10 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Upload Sidebar Background</p>
+                                <p className="text-xs text-muted-foreground">Upload an image to Firebase Storage and use it for the sidebar background.</p>
+                            </div>
+                            <Label
+                              htmlFor="sidebar-background-upload"
+                              className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-[10px] font-black uppercase tracking-widest hover:bg-muted"
+                            >
+                              {isUploadingSidebarImage ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Uploading
+                                </>
+                              ) : (
+                                <>
+                                  <ImagePlus className="mr-2 h-4 w-4" />
+                                  Choose Image
+                                </>
+                              )}
+                            </Label>
+                            <Input
+                              id="sidebar-background-upload"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleSidebarBackgroundUpload}
+                              disabled={isUploadingSidebarImage}
+                              className="hidden"
+                            />
+                        </div>
+                        {sidebarBackgroundImage ? (
+                          <div className="relative h-32 overflow-hidden rounded-lg border">
+                            <Image
+                              src={sidebarBackgroundImage}
+                              alt="Sidebar background preview"
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-dashed p-6 text-center text-xs text-muted-foreground">
+                            No sidebar background image selected.
+                          </div>
+                        )}
+                    </div>
                 </section>
             </div>
         </div>
@@ -362,7 +474,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         <Separator />
 
         <div className="flex justify-start">
-            <Button onClick={handleReset} variant="outline" className="text-[10px] font-black uppercase h-10 px-8 border-slate-300">Reset System Defaults</Button>
+            <Button onClick={handleReset} variant="outline" className="text-[10px] font-black uppercase h-10 px-8 border-slate-300">Reset My Browser Theme</Button>
         </div>
     </div>
   );

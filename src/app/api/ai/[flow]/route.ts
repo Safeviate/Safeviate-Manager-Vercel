@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { flowRegistry, type RegisteredFlowName } from '@/ai/flow-registry';
+import { authenticateAiRequest, isAuthorizedForAiFlow } from '@/lib/server/ai-auth';
 
 export const runtime = 'nodejs';
 
@@ -10,6 +11,22 @@ type RouteContext = {
 };
 
 export async function GET(_: Request, { params }: RouteContext) {
+  return NextResponse.json(
+    { ok: false, error: 'Method not allowed.' },
+    { status: 405 }
+  );
+}
+
+export async function POST(request: Request, { params }: RouteContext) {
+  const requestUrl = new URL(request.url);
+  const origin = request.headers.get('origin');
+  if (origin && origin !== requestUrl.origin) {
+    return NextResponse.json(
+      { ok: false, error: 'Forbidden origin.' },
+      { status: 403 }
+    );
+  }
+
   const { flow } = await params;
   const definition = flowRegistry[flow as RegisteredFlowName];
 
@@ -18,31 +35,23 @@ export async function GET(_: Request, { params }: RouteContext) {
       {
         ok: false,
         error: `Unknown AI flow: ${flow}`,
-        availableFlows: Object.keys(flowRegistry),
       },
       { status: 404 }
     );
   }
 
-  return NextResponse.json({
-    ok: true,
-    flow,
-    availableFlows: Object.keys(flowRegistry),
-  });
-}
-
-export async function POST(request: Request, { params }: RouteContext) {
-  const { flow } = await params;
-  const definition = flowRegistry[flow as RegisteredFlowName];
-
-  if (!definition) {
+  const authResult = await authenticateAiRequest(request);
+  if (!authResult.ok) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: `Unknown AI flow: ${flow}`,
-        availableFlows: Object.keys(flowRegistry),
-      },
-      { status: 404 }
+      { ok: false, error: authResult.error },
+      { status: authResult.status }
+    );
+  }
+
+  if (!isAuthorizedForAiFlow(flow, authResult.userProfile, authResult.effectivePermissions)) {
+    return NextResponse.json(
+      { ok: false, error: 'You do not have permission to run this AI flow.' },
+      { status: 403 }
     );
   }
 

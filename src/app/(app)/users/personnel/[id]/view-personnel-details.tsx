@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Personnel, PilotProfile } from '../page';
@@ -18,7 +18,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { format } from 'date-fns';
 import { DocumentUploader } from '@/components/document-uploader';
 import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
@@ -72,6 +72,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [hiddenMenus, setHiddenMenus] = useState<string[]>(user.accessOverrides?.hiddenMenus || []);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const firestore = useFirestore();
@@ -79,6 +80,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const { tenantId } = useUserProfile();
 
   const canEdit = hasPermission('users-edit');
+
+  useEffect(() => {
+    setHiddenMenus(user.accessOverrides?.hiddenMenus || []);
+  }, [user]);
 
   const expirySettingsRef = useMemoFirebase(
     () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
@@ -152,10 +157,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     });
   }, [role, user.documents]);
 
-  const handleToggleMenuOverride = (href: string, hidden: boolean, subHrefs?: string[]) => {
+  const handleToggleMenuOverride = async (href: string, hidden: boolean, subHrefs?: string[]) => {
     if (!firestore || !tenantId || !canEdit) return;
     
-    const currentHidden = user.accessOverrides?.hiddenMenus || [];
+    const currentHidden = hiddenMenus;
     let newHidden: string[];
 
     if (hidden) {
@@ -168,24 +173,52 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     
     const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    updateDocumentNonBlocking(userRef, { 'accessOverrides.hiddenMenus': newHidden });
-    toast({ title: hidden ? "Access Restricted" : "Access Restored" });
+    try {
+      await updateDoc(userRef, { 'accessOverrides.hiddenMenus': newHidden });
+      setHiddenMenus(newHidden);
+      window.dispatchEvent(new Event('safeviate-profile-updated'));
+      toast({ title: hidden ? "Access Restricted" : "Access Restored" });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Module access could not be updated. Please try again.',
+      });
+    }
   };
 
-  const handlePermissionToggle = (permissionId: string, checked: boolean) => {
+  const handlePermissionToggle = async (permissionId: string, checked: boolean) => {
     if (!firestore || !tenantId || !canEdit) return;
     const currentPermissions = user.permissions || [];
     const isInherited = role?.permissions?.includes(permissionId);
-    let newPermissions: string[];
-    if (isInherited) {
-        newPermissions = checked ? currentPermissions.filter(p => p !== `!${permissionId}`) : [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
-    } else {
-        newPermissions = checked ? [...currentPermissions.filter(p => p !== `!${permissionId}`), permissionId] : currentPermissions.filter(p => p !== permissionId);
+
+    if (!isInherited) {
+        toast({
+            variant: 'destructive',
+            title: 'Role Required',
+            description: 'This permission must be granted by the role before an individual override can be applied.',
+        });
+        return;
     }
+
+    let newPermissions: string[];
+
+    newPermissions = checked
+        ? currentPermissions.filter(p => p !== `!${permissionId}`)
+        : [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
+
     const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
     const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    updateDocumentNonBlocking(userRef, { permissions: newPermissions });
-    toast({ title: "Access Level Updated" });
+    try {
+      await updateDoc(userRef, { permissions: newPermissions });
+      toast({ title: "Access Level Updated" });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Granular permissions could not be updated. Please try again.',
+      });
+    }
   };
 
   const isStudent = isPilotProfile(user) && user.userType === 'Student';
@@ -358,15 +391,13 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {menuConfig.map((menu) => {
                                             const subHrefs = menu.subItems?.map(s => s.href) || [];
-                                            const isHidden = user.accessOverrides?.hiddenMenus?.includes(menu.href);
-                                            const isVisible = !isHidden;
                                             
                                             return (
-                                                <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
+                                                  <div key={menu.href} className="p-4 border rounded-xl bg-muted/10 space-y-3">
                                                     <div className="flex items-center space-x-2">
                                                         <Checkbox 
                                                             id={`user-mod-${menu.href}`} 
-                                                            checked={isVisible}
+                                                            checked={!hiddenMenus.includes(menu.href)}
                                                             onCheckedChange={(val) => handleToggleMenuOverride(menu.href, !val, subHrefs)}
                                                             disabled={!canEdit}
                                                         />
@@ -378,13 +409,11 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                     {menu.subItems && (
                                                         <div className="pl-6 space-y-2 border-l ml-2">
                                                             {menu.subItems.map((sub) => {
-                                                                const isSubHidden = user.accessOverrides?.hiddenMenus?.includes(sub.href);
-                                                                const isSubVisible = !isSubHidden;
                                                                 return (
                                                                     <div key={sub.href} className="flex items-center space-x-2">
                                                                         <Checkbox 
                                                                             id={`user-submod-${sub.href}`} 
-                                                                            checked={isSubVisible}
+                                                                            checked={!hiddenMenus.includes(sub.href)}
                                                                             onCheckedChange={(val) => handleToggleMenuOverride(sub.href, !val)}
                                                                             disabled={!canEdit}
                                                                         />
@@ -418,7 +447,12 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                         const isEffective = (isInherited && !isDenied) || isOverridden;
                                                         return (
                                                             <div key={action} className="flex items-center space-x-3">
-                                                                <Checkbox id={`perm-${permissionId}`} checked={!!isEffective} disabled={!canEdit} onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)} />
+                                                                <Checkbox
+                                                                  id={`perm-${permissionId}`}
+                                                                  checked={!!isEffective}
+                                                                  disabled={!canEdit || !isInherited}
+                                                                  onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
+                                                                />
                                                                 <label htmlFor={`perm-${permissionId}`} className={cn("text-[11px] font-bold uppercase cursor-pointer", isInherited && !isDenied && !isOverridden && "text-muted-foreground italic")}>
                                                                     {action}
                                                                     {isInherited && !isDenied && !isOverridden && <span className="ml-2 text-[9px] opacity-70">(Role)</span>}

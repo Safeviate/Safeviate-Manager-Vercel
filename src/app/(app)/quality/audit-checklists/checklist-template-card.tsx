@@ -34,7 +34,10 @@ export function ChecklistTemplateCard({ category, templates, tenantId, departmen
     const isMobile = useIsMobile();
 
     const handleDelete = (templateId: string, templateTitle: string) => {
-        if (!firestore) return;
+        if (!firestore || !tenantId) {
+            toast({ variant: 'destructive', title: 'Unable to delete', description: 'Tenant context is not ready yet.' });
+            return;
+        }
         const templateRef = doc(firestore, `tenants/${tenantId}/quality-audit-templates`, templateId);
         deleteDocumentNonBlocking(templateRef);
         toast({ title: "Template Deleted", description: `"${templateTitle}" has been removed.`});

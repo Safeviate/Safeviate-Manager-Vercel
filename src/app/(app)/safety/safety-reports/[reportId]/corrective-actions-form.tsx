@@ -22,8 +22,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { PlusCircle, Trash2, CalendarIcon, Save, CheckCircle2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -71,7 +71,7 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
     name: "correctiveActions",
   });
 
-  const onSubmit = (values: CapFormValues) => {
+  const onSubmit = async (values: CapFormValues) => {
     if (!firestore) return;
 
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
@@ -82,15 +82,23 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
         }))
     };
     
-    updateDocumentNonBlocking(reportRef, dataToSave);
-    toast({ title: 'Corrective Actions Saved' });
+    try {
+      await updateDoc(reportRef, dataToSave);
+      toast({ title: 'Corrective Actions Saved' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Unable to save corrective actions.',
+      });
+    }
   };
 
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
       <div className="shrink-0 border-b bg-muted/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 className="text-lg font-black uppercase tracking-tight">Corrective Action Plan (CAP)</h3>
-        <Button type="button" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })} className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-9 px-6 shadow-md no-print">
+        <Button type="button" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })} className="font-black uppercase text-xs h-9 px-6 shadow-md no-print">
             <PlusCircle className="mr-2 h-4 w-4" /> Add Action
         </Button>
       </div>
@@ -110,7 +118,7 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
             )}
             {!isStacked && (
                 <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                    <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                    <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
                         <Save className="mr-2 h-4 w-4" /> Save Corrective Actions
                     </Button>
                 </div>

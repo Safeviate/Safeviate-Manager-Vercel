@@ -23,7 +23,7 @@ import { Plane, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   menuConfig,
 } from '@/lib/menu-config';
@@ -44,66 +44,103 @@ import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { usePermissions } from '@/hooks/use-permissions';
 import { firebaseConfig } from '@/firebase/config';
 
+const LAST_SUBMENU_STORAGE_KEY = 'safeviate:last-submenu-by-parent';
+
+const getLastSubmenuByParent = (): Record<string, string> => {
+    if (typeof window === 'undefined') return {};
+    try {
+        return JSON.parse(window.localStorage.getItem(LAST_SUBMENU_STORAGE_KEY) || '{}') as Record<string, string>;
+    } catch {
+        return {};
+    }
+};
+
+const setLastSubmenuByParent = (parentHref: string, subHref: string) => {
+    if (typeof window === 'undefined') return;
+    const current = getLastSubmenuByParent();
+    window.localStorage.setItem(
+        LAST_SUBMENU_STORAGE_KEY,
+        JSON.stringify({ ...current, [parentHref]: subHref })
+    );
+};
+
+const clearLastSubmenuByParent = (parentHref: string) => {
+    if (typeof window === 'undefined') return;
+    const current = getLastSubmenuByParent();
+    if (!(parentHref in current)) return;
+    const { [parentHref]: _removed, ...rest } = current;
+    window.localStorage.setItem(LAST_SUBMENU_STORAGE_KEY, JSON.stringify(rest));
+};
+
+type SidebarSharedState = {
+  tenantIndustry?: string;
+  userDisplayName: string;
+  userFallback: string;
+};
+
 const SidebarItems = () => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
-    const { tenant } = useTenantConfig();
-    const { userProfile } = useUserProfile();
-    const { hasPermission } = usePermissions();
+    const { canAccessMenuItem } = usePermissions();
+    const lastSubmenuByParent = useMemo(() => getLastSubmenuByParent(), [pathname]);
+    const [openParents, setOpenParents] = useState<Record<string, boolean>>({});
+    const [dismissedParents, setDismissedParents] = useState<Record<string, boolean>>({});
 
-    const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
+    useEffect(() => {
+        setOpenParents((current) => {
+            const next = { ...current };
+            for (const item of menuConfig) {
+                if (!item.subItems?.length) continue;
+                const shouldBeOpen = pathname.startsWith(item.href) && pathname !== item.href;
+                if (shouldBeOpen) {
+                    next[item.href] = true;
+                } else if (next[item.href] === undefined) {
+                    next[item.href] = false;
+                }
+            }
+            return next;
+        });
+    }, [pathname]);
   
     const filteredItems = useMemo(() => {
-      return menuConfig.filter(item => {
-        // 1. Check Industry modularity constraints
-        const isAviationOnly = item.href.includes('/bookings') || item.href.includes('/assets') || item.href.includes('/admin/mb-config');
-        if (!isAviation && isAviationOnly) return false;
-
-        // 2. Check Tenant-level module enablement
-        const isEnabledByTenant = !tenant?.enabledMenus || tenant.enabledMenus.includes(item.href);
-        if (!isEnabledByTenant) return false;
-
-        // 3. Check User-level override (hidden menus)
-        const isHiddenByUser = userProfile?.accessOverrides?.hiddenMenus?.includes(item.href);
-        if (isHiddenByUser) return false;
-
-        // 4. Check Role-level permissions
-        if (item.permissionId && !hasPermission(item.permissionId)) return false;
-
-        return true;
-      });
-    }, [tenant, userProfile, hasPermission, isAviation]);
+      return menuConfig.filter((item) => canAccessMenuItem(item));
+    }, [canAccessMenuItem]);
 
     return (
         <SidebarMenu>
             {filteredItems.map((item, index) => {
                 const Icon = item.icon;
-                const isParentActive = pathname.startsWith(item.href);
-
-                const subItems = (item.subItems || []).filter(sub => {
-                    // Check industry modularity for subitems
-                    const isAviationOnlySub = sub.href.includes('/training/student-progress');
-                    if (!isAviation && isAviationOnlySub) return false;
-
-                    const isSubHidden = userProfile?.accessOverrides?.hiddenMenus?.includes(sub.href);
-                    if (isSubHidden) return false;
-                    
-                    const isSubEnabledByTenant = !tenant?.enabledMenus || tenant.enabledMenus.includes(sub.href);
-                    if (!isSubEnabledByTenant) return false;
-
-                    if (sub.permissionId && !hasPermission(sub.permissionId)) return false;
-                    return true;
-                });
+                const subItems = (item.subItems || []).filter((sub) => canAccessMenuItem(sub, item));
+                const activeSubItem = subItems.find((sub) => pathname === sub.href);
+                const rememberedSubHref = lastSubmenuByParent[item.href];
+                const rememberedSubItem = subItems.find((sub) => sub.href === rememberedSubHref);
+                const isOpen = openParents[item.href] ?? false;
+                const isDismissed = dismissedParents[item.href] ?? false;
+                const selectedSubItem = isDismissed ? null : (activeSubItem || (isOpen ? rememberedSubItem : null) || null);
+                const isParentActive = (isOpen || !!activeSubItem) && !isDismissed;
 
                 let content;
                 if (subItems.length > 0) {
                     content = (
-                        <SidebarCollapsible defaultOpen={isParentActive}>
+                        <SidebarCollapsible open={isOpen}>
                             <SidebarCollapsibleTrigger asChild>
                                 <SidebarMenuButton
-                                    isActive={isParentActive && !subItems.some(sub => pathname === sub.href)}
+                                    isActive={!!selectedSubItem}
                                     tooltip={item.label}
                                     className="justify-between"
+                                    onClick={() => {
+                                      setOpenParents((current) => {
+                                        const nextOpen = !current[item.href];
+                                        if (!nextOpen) {
+                                          clearLastSubmenuByParent(item.href);
+                                          setDismissedParents((dismissed) => ({ ...dismissed, [item.href]: true }));
+                                        }
+                                        if (nextOpen) {
+                                          setDismissedParents((dismissed) => ({ ...dismissed, [item.href]: false }));
+                                        }
+                                        return { ...current, [item.href]: nextOpen };
+                                      });
+                                    }}
                                 >
                                     <div className="flex items-center gap-2">
                                         <Icon className="h-5 w-5" />
@@ -116,10 +153,18 @@ const SidebarItems = () => {
                                 <SidebarMenuSub>
                                     {subItems.map((subItem) => (
                                         <SidebarMenuSubItem key={subItem.href}>
-                                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                            <SidebarMenuSubButton
+                                              asChild
+                                              isActive={pathname === subItem.href || selectedSubItem?.href === subItem.href}
+                                            >
                                                 <Link 
                                                     href={subItem.href} 
-                                                    onClick={() => setOpenMobile(false)}
+                                                    onClick={() => {
+                                                      setOpenMobile(false);
+                                                      setLastSubmenuByParent(item.href, subItem.href);
+                                                      setDismissedParents((dismissed) => ({ ...dismissed, [item.href]: false }));
+                                                      setOpenParents((current) => ({ ...current, [item.href]: true }));
+                                                    }}
                                                 >
                                                     <span>{subItem.label}</span>
                                                 </Link>
@@ -156,11 +201,10 @@ const SidebarItems = () => {
     )
 }
 
-const SidebarFooterContent = () => {
+const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSharedState, 'userDisplayName' | 'userFallback'>) => {
     const auth = useAuth();
     const router = useRouter();
     const { setOpenMobile } = useSidebar();
-    const { userProfile } = useUserProfile();
 
     const handleSignOut = () => {
       if (auth) {
@@ -171,28 +215,22 @@ const SidebarFooterContent = () => {
       router.push('/login');
     };
     
-    const displayName = userProfile 
-      ? `${userProfile.firstName} ${userProfile.lastName}` 
-      : 'Developer';
-
-    const fallback = displayName.charAt(0).toUpperCase();
-
     return (
         <SidebarGroup>
           <SidebarMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
-                    tooltip={displayName}
+                    tooltip={userDisplayName}
                     className="w-full h-auto py-2 justify-start items-center gap-3"
                   >
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={`https://picsum.photos/seed/${displayName}/100/100`} />
-                      <AvatarFallback>{fallback}</AvatarFallback>
+                      <AvatarImage src={`https://picsum.photos/seed/${userDisplayName}/100/100`} />
+                      <AvatarFallback>{userFallback}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col gap-0.5 items-start overflow-hidden group-data-[collapsible=icon]:hidden">
                       <span className="text-sm font-bold truncate w-full">
-                        {displayName}
+                        {userDisplayName}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-mono truncate w-full opacity-60">
                         {firebaseConfig.projectId}
@@ -226,10 +264,13 @@ export function AppSidebarMobile() {
     const { openMobile, setOpenMobile } = useSidebar();
     const isMobile = useIsMobile();
     const { tenant } = useTenantConfig();
+    const { userProfile } = useUserProfile();
   
     if (!isMobile) return null;
 
     const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
+    const userDisplayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Developer';
+    const userFallback = userDisplayName.charAt(0).toUpperCase();
   
     return (
       <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
@@ -254,7 +295,7 @@ export function AppSidebarMobile() {
             <SidebarItems />
           </SidebarContent>
           <SidebarFooter>
-            <SidebarFooterContent />
+            <SidebarFooterContent userDisplayName={userDisplayName} userFallback={userFallback} />
           </SidebarFooter>
         </SidebarMobileContent>
       </SidebarMobile>
@@ -263,7 +304,10 @@ export function AppSidebarMobile() {
 
 export function AppSidebar() {
   const { tenant } = useTenantConfig();
+  const { userProfile } = useUserProfile();
   const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
+  const userDisplayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Developer';
+  const userFallback = userDisplayName.charAt(0).toUpperCase();
 
   return (
     <Sidebar>
@@ -284,7 +328,7 @@ export function AppSidebar() {
         <SidebarItems />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarFooterContent />
+        <SidebarFooterContent userDisplayName={userDisplayName} userFallback={userFallback} />
       </SidebarFooter>
     </Sidebar>
   );

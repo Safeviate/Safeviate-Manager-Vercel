@@ -143,7 +143,7 @@ export default function AccountingPage() {
               <Button 
                 size="sm"
                 variant={isMobile ? "outline" : "default"}
-                className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "h-9 px-6 text-[10px] font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2 shrink-0"} 
+                className={isMobile ? "h-9 w-full justify-between border-border bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-muted/40" : "h-9 px-6 text-[10px] font-black uppercase tracking-tight shadow-md gap-2 shrink-0"} 
                 onClick={handleSageExport} 
                 disabled={selectedIds.size === 0 || activeTab !== 'unbilled'}
               >

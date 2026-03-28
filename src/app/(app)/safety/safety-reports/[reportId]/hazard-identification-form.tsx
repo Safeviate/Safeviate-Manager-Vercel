@@ -16,8 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport, ReportHazard, ReportRisk } from '@/types/safety-report';
-import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { PlusCircle, Trash2, Save, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
@@ -123,18 +123,18 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                     <h5 className="text-[10px] font-black uppercase tracking-widest opacity-70">{label}</h5>
                 </div>
                 <Badge variant="outline" className="h-6 font-black text-[10px] border-white/20 bg-white/10 text-inherit">
-                    {likelihood}{severityLabels[severity]?.letter} — {riskLevel}
+                    {likelihood}{severityLabels[(severity as number) || 1]?.letter} - {riskLevel}
                 </Badge>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                 <Controller 
                     control={control} 
-                    name={`${path}.likelihood`} 
+                    name={`${path}.likelihood` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
-                                <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
+                                <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[(value as number) || 1]}</span>
                             </div>
                             <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[1, 2, 3, 4, 5].map((num) => (
@@ -160,12 +160,12 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                 />
                 <Controller 
                     control={control} 
-                    name={`${path}.severity`} 
+                    name={`${path}.severity` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
-                                <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
+                                <span className="text-[10px] font-black uppercase truncate">{severityLabels[(value as number) || 1]?.name}</span>
                             </div>
                             <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[5, 4, 3, 2, 1].map((num) => (
@@ -256,15 +256,17 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
 interface HazardIdentificationFormProps {
   report: SafetyReport;
   tenantId: string;
+  riskMatrixColors?: Record<string, string>;
   isStacked?: boolean;
 }
 
-export function HazardIdentificationForm({ report, tenantId, isStacked = false }: HazardIdentificationFormProps) {
+export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, isStacked = false }: HazardIdentificationFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
   const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
+  const activeRiskMatrixColors = riskMatrixColors ?? riskMatrixSettings?.colors;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(hazardIdentificationSchema),
@@ -278,18 +280,26 @@ export function HazardIdentificationForm({ report, tenantId, isStacked = false }
     name: "initialHazards",
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     if (!firestore) return;
     const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
-    updateDocumentNonBlocking(reportRef, values);
-    toast({ title: 'Hazard Identification Saved' });
+    try {
+      await updateDoc(reportRef, values);
+      toast({ title: 'Hazard Identification Saved' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Unable to save hazard identification.',
+      });
+    }
   };
 
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
       <div className="shrink-0 border-b bg-muted/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 className="text-lg font-black uppercase tracking-tight">Hazard & Risk Identification</h3>
-        <Button type="button" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', risks: [] })} className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-9 px-6 shadow-md no-print">
+        <Button type="button" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', risks: [] })} className="font-black uppercase text-xs h-9 px-6 shadow-md no-print">
             <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
         </Button>
       </div>
@@ -299,18 +309,18 @@ export function HazardIdentificationForm({ report, tenantId, isStacked = false }
             <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
               {isStacked ? (
                 <div className="p-6 space-y-6">
-                  <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixSettings?.colors} removeHazard={removeHazard} />
+                  <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={activeRiskMatrixColors} removeHazard={removeHazard} />
                 </div>
               ) : (
                 <ScrollArea className="flex-1 p-6">
                   <div className="space-y-6">
-                    <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={riskMatrixSettings?.colors} removeHazard={removeHazard} />
+                    <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={activeRiskMatrixColors} removeHazard={removeHazard} />
                   </div>
                 </ScrollArea>
               )}
               {!isStacked && (
                 <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                    <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                    <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
                     <Save className="mr-2 h-4 w-4" /> Save Hazard Identification
                     </Button>
                 </div>

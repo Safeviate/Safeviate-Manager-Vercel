@@ -10,6 +10,7 @@ import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Up
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -283,7 +284,7 @@ const WBCalculator = () => {
                           <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" />
                         </YAxis>
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter data={envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => null} />
+                        <Scatter data={envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
                         <Scatter data={envelope}>
                           {envelope.map((entry, index) => <Cell key={index} fill={POINT_COLORS[index % POINT_COLORS.length]} />)}
                         </Scatter>

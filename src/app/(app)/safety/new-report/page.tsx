@@ -3,15 +3,14 @@
 import { useState } from 'react';
 import { NewSafetyReportForm, type NewSafetyReportValues } from './new-safety-report-form';
 import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { addDoc, collection, doc, getDocs, query, runTransaction, where } from 'firebase/firestore';
+import { collection, doc, runTransaction } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { Department } from '../../admin/department/page';
 import type { SafetyReport } from '@/types/safety-report';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import type { Aircraft } from '@/types/aircraft';
+import { useCollection } from '@/firebase';
 
 const getReportTypePrefix = (type: NewSafetyReportValues['reportType']): string => {
     switch (type) {
@@ -30,6 +29,11 @@ export default function NewSafetyReportPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { tenantId } = useUserProfile();
+  const aircraftsRef = useMemoFirebase(
+    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
+    [firestore, tenantId]
+  );
+  const { data: aircrafts } = useCollection<Aircraft>(aircraftsRef);
 
   const handleNewReport = async (values: NewSafetyReportValues) => {
     if (!firestore || !user || !tenantId) {
@@ -98,6 +102,7 @@ export default function NewSafetyReportPage() {
 
   return (
     <NewSafetyReportForm 
+        aircrafts={aircrafts || []}
         onSubmit={handleNewReport}
         isSubmitting={isSubmitting}
     />
