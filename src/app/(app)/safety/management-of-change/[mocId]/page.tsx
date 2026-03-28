@@ -146,8 +146,16 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                         {isMobile ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-300 rounded-full shadow-sm">
-                                        <MoreHorizontal className="h-4 w-4" />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 w-40 justify-between bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <MoreHorizontal className="h-3.5 w-3.5" />
+                                            Actions
+                                        </span>
+                                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56">

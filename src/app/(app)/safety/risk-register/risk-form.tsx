@@ -173,7 +173,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[1, 2, 3, 4, 5].map((num) => (
                                     <Button
                                         key={num}
@@ -181,7 +181,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                                         variant={value === num ? "default" : "outline"}
                                         size="icon"
                                         className={cn(
-                                            "h-8 w-8 text-xs font-bold transition-all",
+                                            "h-8 w-8 text-xs font-bold transition-all shrink-0",
                                             value === num 
                                                 ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
@@ -204,7 +204,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[5, 4, 3, 2, 1].map((num) => (
                                     <Button
                                         key={num}
@@ -212,7 +212,7 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                                         variant={value === num ? "default" : "outline"}
                                         size="icon"
                                         className={cn(
-                                            "h-8 w-8 text-xs font-bold transition-all",
+                                            "h-8 w-8 text-xs font-bold transition-all shrink-0",
                                             value === num 
                                                 ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
@@ -243,7 +243,7 @@ const MitigationsArray = ({ riskIndex, personnel, riskMatrixColors }: { riskInde
                 <div key={field.id} className="p-4 border rounded-md bg-background shadow-sm">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                       <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel>Mitigation Action</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger placeholder="Assign..." /></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                       <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.reviewDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Review Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-10 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                       <div className="flex items-center gap-2">
                         <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>

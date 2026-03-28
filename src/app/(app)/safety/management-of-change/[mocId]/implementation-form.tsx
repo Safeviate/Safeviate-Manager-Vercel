@@ -224,7 +224,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[1, 2, 3, 4, 5].map((num) => (
                                     <Button
                                         key={num}
@@ -232,7 +232,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                                         variant={value === num ? "default" : "outline"}
                                         size="icon"
                                         className={cn(
-                                            "h-8 w-8 text-xs font-bold transition-all",
+                                            "h-8 w-8 text-xs font-bold transition-all shrink-0",
                                             value === num 
                                                 ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
@@ -255,7 +255,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[5, 4, 3, 2, 1].map((num) => (
                                     <Button
                                         key={num}
@@ -263,7 +263,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                                         variant={value === num ? "default" : "outline"}
                                         size="icon"
                                         className={cn(
-                                            "h-8 w-8 text-xs font-bold transition-all",
+                                            "h-8 w-8 text-xs font-bold transition-all shrink-0",
                                             value === num 
                                                 ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
