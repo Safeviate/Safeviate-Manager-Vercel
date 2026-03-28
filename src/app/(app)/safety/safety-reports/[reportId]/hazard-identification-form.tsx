@@ -327,7 +327,7 @@ function HazardFields({ hazardFields, form, riskMatrixColors, removeHazard }: { 
   return (
     <>
       {hazardFields.map((field, index) => (
-          <div key={field.id} className="rounded-xl border bg-muted/10 overflow-hidden">
+          <div key={field.id} className="rounded-xl border bg-muted/10 overflow-hidden border-slate-200">
               <div className="p-4 border-b bg-background/50">
                   <div className="flex items-center gap-3">
                       <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-black">
@@ -340,7 +340,7 @@ function HazardFields({ hazardFields, form, riskMatrixColors, removeHazard }: { 
                               </FormControl>
                           </FormItem>
                       )} />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive no-print"><Trash2 className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive no-print hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                   </div>
               </div>
               <div className="p-4 pt-2">

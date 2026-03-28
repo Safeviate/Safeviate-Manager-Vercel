@@ -68,7 +68,7 @@ const formSchema = z.object({
 
 export type RiskFormValues = z.infer<typeof formSchema>;
 
-// --- Helper to map dates for form state ---
+// --- Helper Functions ---
 const mapDatesToObjects = (risk?: Risk | null): RiskFormValues => {
     if (!risk) {
         return {
@@ -238,21 +238,23 @@ const MitigationsArray = ({ riskIndex, personnel, riskMatrixColors }: { riskInde
     const { fields, append, remove } = useFieldArray({ control, name: `risks.${riskIndex}.mitigations` });
 
     return (
-        <div className='pl-6 mt-4 space-y-4'>
+        <div className='pl-0 sm:pl-6 mt-4 space-y-4'>
             {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="p-4 border rounded-md bg-background shadow-sm">
+                <div key={field.id} className="p-4 border rounded-xl bg-background shadow-sm border-slate-200">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel>Mitigation Action</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel>Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger placeholder="Assign..." /></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.reviewDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Review Date</Label><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-10 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Mitigation Action</FormLabel><FormControl><Textarea placeholder='Describe the mitigation...' {...field} className="min-h-[80px] bg-muted/5 font-medium text-sm" /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger className="h-9 bg-muted/5"><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                      <FormField control={control} name={`risks.${riskIndex}.mitigations.${mitigationIndex}.reviewDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Review Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-9 pl-3 text-left font-bold bg-muted/5 text-xs border-slate-300", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "dd MMM yyyy") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-3 w-3 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                       <div className="flex items-center gap-2">
-                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(mitigationIndex)} className="h-9 w-9 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                   </div>
                   <div className="mt-4"><RiskAssessmentEditor path={`risks.${riskIndex}.mitigations.${mitigationIndex}.residualRiskAssessment`} label="Residual Risk Assessment" riskMatrixColors={riskMatrixColors} /></div>
                 </div>
             ))}
-            <Button type="button" variant="secondary" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', reviewDate: new Date(), residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}><PlusCircle className="mr-2 h-4 w-4" />Add Mitigation</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', reviewDate: new Date(), residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })} className="w-full h-9 border-dashed border-2 font-black uppercase text-[9px] tracking-widest bg-muted/5">
+                <PlusCircle className="mr-2 h-3.5 w-3.5" /> Add Mitigation Control
+            </Button>
         </div>
     )
 }
@@ -265,29 +267,29 @@ const RisksArray = ({ personnel, riskMatrixColors }: { personnel: Personnel[]; r
         <div className="space-y-4">
             {fields.map((field, riskIndex) => (
                 <Collapsible key={field.id} defaultOpen>
-                    <Card className="bg-muted/30 border-none shadow-none">
-                        <CardHeader className="flex flex-row items-center p-4 bg-muted/20">
+                    <Card className="bg-muted/10 border-none shadow-none rounded-xl overflow-hidden">
+                        <CardHeader className="flex flex-row items-center p-4 bg-muted/20 border-b">
                             <CollapsibleTrigger asChild>
                                 <Button variant="ghost" size="icon" className="mr-2 h-8 w-8 [&[data-state=open]>svg]:rotate-180">
                                     <ChevronDown className="h-4 w-4 transition-transform duration-200" />
                                 </Button>
                             </CollapsibleTrigger>
                             <div className="flex-1">
-                                <FormField control={control} name={`risks.${riskIndex}.description`} render={({ field }) => ( <FormItem><FormLabel className="sr-only">Risk</FormLabel><FormControl><Input placeholder='Describe the potential risk outcome...' {...field} className="bg-background" /></FormControl><FormMessage /></FormItem> )}/>
+                                <FormField control={control} name={`risks.${riskIndex}.description`} render={({ field }) => ( <FormItem><FormLabel className="sr-only">Risk</FormLabel><FormControl><Input placeholder='Describe the potential risk outcome...' {...field} className="bg-background font-bold text-sm h-10" /></FormControl><FormMessage /></FormItem> )}/>
                             </div>
                             <Button type="button" variant="ghost" size="icon" className="text-destructive ml-2" onClick={() => remove(riskIndex)}><Trash2 className="h-4 w-4" /></Button>
                         </CardHeader>
                         <CollapsibleContent>
                             <CardContent className="space-y-4 p-4 pt-6">
                                 <RiskAssessmentEditor path={`risks.${riskIndex}.initialRiskAssessment`} label="Initial Risk Assessment" riskMatrixColors={riskMatrixColors} />
-                                <h4 className="font-bold text-xs uppercase text-muted-foreground pt-4 border-t tracking-widest">Mitigations & Actions</h4>
+                                <h4 className="font-black text-[9px] uppercase text-muted-foreground pt-4 border-t tracking-[0.2em] mb-2">Mitigations & Controls</h4>
                                 <MitigationsArray riskIndex={riskIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                             </CardContent>
                         </CollapsibleContent>
                     </Card>
                 </Collapsible>
             ))}
-            <Button type="button" variant="outline" className="w-full h-12 border-dashed" onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}><PlusCircle className="mr-2 h-4 w-4" />Add Risk Potential</Button>
+            <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-black uppercase text-[10px] tracking-widest bg-primary/5 text-primary hover:bg-primary/10" onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}><PlusCircle className="mr-2 h-4 w-4" /> Define New Risk Potential</Button>
         </div>
     )
 }
@@ -365,23 +367,32 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {!hideHeader && (
             <CardHeader className="px-0">
-                <CardTitle>{existingRisk ? 'Edit Hazard' : 'Add New Hazard'}</CardTitle>
-                <CardDescription>A hazard can have multiple associated risks, and each risk can have multiple mitigations.</CardDescription>
+                <CardTitle>Hazard Identification</CardTitle>
+                <CardDescription>Assess operational hazards and define specific mitigation strategies.</CardDescription>
             </CardHeader>
           )}
-          <CardContent className="px-0 space-y-6">
-            <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel>Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a hazard area" /></SelectTrigger></FormControl><SelectContent>{hazardAreas.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem><FormLabel>Hazard Identification</FormLabel><FormControl><Textarea placeholder="Describe the identifiable hazard (e.g., Unstable approach conditions)..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+          <CardContent className="px-0 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 border rounded-xl bg-muted/5">
+                <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-11 bg-background border-slate-300 font-bold"><SelectValue placeholder="Select area..." /></SelectTrigger></FormControl><SelectContent>{hazardAreas.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Identifying Hazard</FormLabel><FormControl><Input placeholder="e.g., Unstable approach conditions..." {...field} className="h-11 bg-background border-slate-300 font-bold" /></FormControl><FormMessage /></FormItem> )} />
+            </div>
+            
             <Separator />
-            <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Associated Risks & Outcomes</h3>
+            
+            <div className="space-y-6">
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Associated Risks & Outcomes
+              </h3>
               <RisksArray personnel={personnel} riskMatrixColors={riskMatrixSettings?.colors} />
-              <FormField control={form.control} name="risks" render={({ field }) => ( <FormMessage className="mt-2" /> )} />
+              <FormField control={form.control} name="risks" render={() => <FormMessage />} />
             </div>
           </CardContent>
-          <div className="flex justify-end gap-2 pt-6">
-              <Button type="button" variant="outline" onClick={onCancel || (() => router.back())} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting} className="w-40">{isSubmitting ? 'Saving...' : (existingRisk ? 'Save Changes' : 'Add Hazard')}</Button>
+          <div className="flex justify-end gap-2 pt-6 border-t mt-10">
+              <Button type="button" variant="outline" onClick={onCancel || (() => router.back())} disabled={isSubmitting} className="h-10 px-8 text-xs font-black uppercase border-slate-300">Cancel</Button>
+              <Button type="submit" disabled={isSubmitting} className="w-48 h-10 font-black uppercase text-xs shadow-md">
+                  {isSubmitting ? 'Saving...' : (existingRisk ? 'Save Changes' : 'Record Hazard')}
+              </Button>
           </div>
         </form>
       </Form>
