@@ -20,7 +20,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { callAiFlow } from '@/lib/ai-client';
 import type { AnalyzeMocInput, AnalyzeMocOutput } from '@/ai/flows/analyze-moc-flow';
 import type { RiskMatrixSettings } from '@/types/risk';
@@ -221,8 +221,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     name={`${path}.likelihood`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-4">
-                            <div className="flex flex-col min-w-[120px]">
-                                <Label className="text-[10px] uppercase font-bold opacity-70">Likelihood</Label>
+                            <div className="flex items-center gap-2 min-w-[180px]">
+                                <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
                             <div className="flex gap-1">
@@ -252,8 +252,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     name={`${path}.severity`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-4">
-                            <div className="flex flex-col min-w-[120px]">
-                                <Label className="text-[10px] uppercase font-bold opacity-70">Severity</Label>
+                            <div className="flex items-center gap-2 min-w-[180px]">
+                                <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
                             <div className="flex gap-1">
@@ -493,7 +493,13 @@ interface ImplementationFormProps {
   personnel: Personnel[];
 }
 
-export function ImplementationForm({ moc, tenantId, personnel }: ImplementationFormProps) {
+export interface ImplementationFormHandle {
+  submit: () => void;
+  analyze: () => void;
+  addPhase: () => void;
+}
+
+export const ImplementationForm = forwardRef<ImplementationFormHandle, ImplementationFormProps>(({ moc, tenantId, personnel }, ref) => {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -543,6 +549,12 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
         setIsAnalyzing(false);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    submit: () => form.handleSubmit(onSubmit)(),
+    analyze: handleAnalyze,
+    addPhase: () => appendPhase({ id: uuidv4(), title: '', steps: [] })
+  }));
   
   return (
     <FormProvider {...form}>
@@ -620,22 +632,10 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                     )}
                 </CardContent>
            </Card>
-
-          <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3 no-print">
-             <Button type="button" variant="outline" size="lg" onClick={handleAnalyze} disabled={isAnalyzing} className="h-14 px-8 shadow-2xl rounded-full bg-background border-4 border-white/20 font-black uppercase tracking-tight gap-3">
-                {isAnalyzing ? <Loader2 className="h-6 w-6 animate-spin" /> : <WandSparkles className="h-6 w-6 text-primary" />}
-                AI Analyze
-            </Button>
-            <Button type="button" variant="outline" size="lg" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })} className="h-14 px-8 shadow-2xl rounded-full bg-background border-4 border-white/20 font-black uppercase tracking-tight gap-3">
-                <PlusCircle className="h-6 w-6 text-emerald-600" />
-                Add Phase
-            </Button>
-             <Button type="submit" size="lg" className="h-14 px-10 shadow-2xl rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase tracking-tight gap-3 border-4 border-white/20">
-                <ShieldCheck className="h-6 w-6" /> Save Strategy
-            </Button>
-          </div>
         </form>
       </Form>
     </FormProvider>
   );
-}
+});
+
+ImplementationForm.displayName = 'ImplementationForm';

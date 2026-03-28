@@ -1,24 +1,29 @@
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useFormContext, Controller, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Form
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { SafetyReport, ReportHazard } from '@/types/safety-report';
+import type { SafetyReport } from '@/types/safety-report';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, Signature, Save, ShieldCheck } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
+import { Signature, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Image from 'next/image';
-import React from 'react';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import React from 'react';
 
 // --- Helper Functions ---
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
@@ -94,7 +99,7 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
     },
   });
 
-  const { fields: hazardFields, append: appendHazard, remove: removeHazard } = useFieldArray({
+  const { fields: hazardFields, remove: removeHazard } = useFieldArray({
     control: form.control,
     name: "hazards",
   });
@@ -133,28 +138,30 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
         <h3 className="text-lg font-black uppercase tracking-tight">Final Review & Closure</h3>
       </div>
       <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
-            {isStacked ? (
-              <div className="p-6 space-y-10">
-                <ReviewFields form={form} hazardFields={hazardFields} removeHazard={removeHazard} appendHazard={appendHazard} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} />
-              </div>
-            ) : (
-              <ScrollArea className="flex-1 p-6">
-                <div className="space-y-10">
-                  <ReviewFields form={form} hazardFields={hazardFields} removeHazard={removeHazard} appendHazard={appendHazard} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} />
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
+              {isStacked ? (
+                <div className="p-6 space-y-10">
+                  <ReviewFields form={form} hazardFields={hazardFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} />
                 </div>
-              </ScrollArea>
-            )}
-            {!isStacked && (
-                <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                    <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
-                        <Save className="mr-2 h-4 w-4" /> Save Final Review
-                    </Button>
-                </div>
-            )}
-          </form>
-        </Form>
+              ) : (
+                <ScrollArea className="flex-1 p-6">
+                  <div className="space-y-10">
+                    <ReviewFields form={form} hazardFields={hazardFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} />
+                  </div>
+                </ScrollArea>
+              )}
+              {!isStacked && (
+                  <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
+                      <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-xs h-10 px-8 shadow-md">
+                          <Save className="mr-2 h-4 w-4" /> Save Final Review
+                      </Button>
+                  </div>
+              )}
+            </form>
+          </Form>
+        </FormProvider>
       </div>
     </div>
   );

@@ -169,8 +169,8 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     name={`${path}.likelihood` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-4">
-                            <div className="flex flex-col min-w-[120px]">
-                                <Label className="text-[10px] uppercase font-bold opacity-70">Likelihood</Label>
+                            <div className="flex items-center gap-2 min-w-[180px]">
+                                <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
                             <div className="flex gap-1">
@@ -200,8 +200,8 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                     name={`${path}.severity` as any} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex items-center gap-4">
-                            <div className="flex flex-col min-w-[120px]">
-                                <Label className="text-[10px] uppercase font-bold opacity-70">Severity</Label>
+                            <div className="flex items-center gap-2 min-w-[180px]">
+                                <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
                             <div className="flex gap-1">

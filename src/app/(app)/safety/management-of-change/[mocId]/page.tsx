@@ -1,18 +1,18 @@
 'use client';
 
-import { use, useMemo, useState } from 'react';
+import { use, useMemo, useState, useRef } from 'react';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Printer, Pencil, ShieldAlert } from 'lucide-react';
+import { Printer, Zap, PlusCircle, ShieldCheck, WandSparkles } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import type { ManagementOfChange } from '@/types/moc';
-import { ImplementationForm } from './implementation-form';
+import { ImplementationForm, type ImplementationFormHandle } from './implementation-form';
 import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { Department } from '@/app/(app)/admin/department/page';
@@ -21,7 +21,6 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { MainPageHeader } from '@/components/page-header';
 
 interface MocDetailPageProps {
   params: Promise<{ mocId: string }>;
@@ -40,6 +39,8 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
   const mocId = resolvedParams.mocId;
+  const [activeTab, setActiveTab] = useState('implementation');
+  const implementationFormRef = useRef<ImplementationFormHandle>(null);
 
   const mocRef = useMemoFirebase(
     () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'management-of-change', mocId) : null),
@@ -83,9 +84,9 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1 h-full">
         <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-[400px] w-full" />
+        <Skeleton className="flex-1 w-full" />
       </div>
     );
   }
@@ -103,11 +104,11 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
-      <Tabs defaultValue="implementation" className="flex-1 flex flex-col overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
         
         {/* --- STICKY HEADER SECTION --- */}
         <div className="sticky top-0 z-30 bg-card rounded-xl border overflow-hidden flex flex-col shadow-none mb-6 no-print shrink-0">
-            <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6">
+            <CardHeader className="bg-muted/5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6">
                 <div className="flex-1 min-w-0">
                     <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
                         {moc.mocNumber}: {moc.title}
@@ -122,7 +123,40 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                         <DetailItem label="Proposed" value={format(new Date(moc.proposalDate), 'dd MMM yyyy')} />
                     </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {activeTab === 'implementation' && (
+                        <>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => implementationFormRef.current?.analyze()} 
+                                className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
+                            >
+                                <WandSparkles className="h-3.5 w-3.5 text-primary" />
+                                AI Analyze
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => implementationFormRef.current?.addPhase()} 
+                                className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
+                            >
+                                <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
+                                Add Phase
+                            </Button>
+                            <Button 
+                                type="button" 
+                                size="sm" 
+                                onClick={() => implementationFormRef.current?.submit()} 
+                                className="h-9 px-6 gap-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-black uppercase shadow-md"
+                            >
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Save Strategy
+                            </Button>
+                        </>
+                    )}
                     <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
                         <Printer className="h-4 w-4" />
                         Print
@@ -146,6 +180,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         <div className="flex-1 overflow-y-auto no-scrollbar pb-20 no-print">
             <TabsContent value="implementation" className="m-0 outline-none">
                 <ImplementationForm
+                    ref={implementationFormRef}
                     key={moc.id}
                     moc={moc}
                     tenantId={tenantId || ''}
