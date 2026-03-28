@@ -152,7 +152,6 @@ const getRiskScoreColor = (
     return { backgroundColor: '#10b981', color: 'white' };
 };
 
-// --- Standard Row Helper ---
 const CompactRow = ({ label, children, actions }: { label: string; children: React.ReactNode; actions?: React.ReactNode }) => (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b last:border-b-0 hover:bg-muted/5 transition-colors">
         <div className="flex-1 min-w-0">

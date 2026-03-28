@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronsUpDown, PlusCircle, FileEdit } from 'lucide-react';
+import { ChevronsUpDown, PlusCircle, FileEdit, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -22,6 +22,12 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { useState } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function ManagementOfChangePage() {
     const firestore = useFirestore();
@@ -60,20 +66,41 @@ export default function ManagementOfChangePage() {
                     description="Formal process for evaluating and managing changes to operations or procedures."
                     actions={
                         canViewAll && (
-                            <Button
-                                asChild
-                                size="sm"
-                                variant={isMobile ? "outline" : "default"}
-                                className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"}
-                            >
-                                <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
-                                    <span className="flex items-center gap-2">
-                                        <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
-                                        {isMobile ? "Propose" : "Propose Change"}
-                                    </span>
-                                    {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-                                </Link>
-                            </Button>
+                            isMobile ? (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full h-11 flex justify-between items-center px-4 border-slate-200 bg-white font-black uppercase text-[11px] tracking-tight shadow-sm"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <PlusCircle className="h-4 w-4" />
+                                                <span>Propose</span>
+                                            </div>
+                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
+                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                Propose New Change
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            ) : (
+                                <Button
+                                    asChild
+                                    size="sm"
+                                    className="w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"
+                                >
+                                    <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
+                                        <PlusCircle className="h-4 w-4" />
+                                        Propose Change
+                                    </Link>
+                                </Button>
+                            )
                         )
                     }
                 />

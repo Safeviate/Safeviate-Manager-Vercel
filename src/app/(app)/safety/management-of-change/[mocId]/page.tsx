@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Printer, Zap, PlusCircle, ShieldCheck, WandSparkles, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Printer, Zap, PlusCircle, ShieldCheck, WandSparkles, ChevronDown, MoreHorizontal, MoreVertical, ChevronsUpDown } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -114,7 +114,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         
         {/* --- STICKY HEADER SECTION --- */}
         <div className="sticky top-0 z-30 bg-card rounded-xl border overflow-hidden flex flex-col shadow-none mb-6 no-print shrink-0">
-            <CardHeader className="bg-muted/5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6">
+            <CardHeader className="bg-muted/5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 shrink-0">
                 <div className="flex-1 min-w-0">
                     <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
                         {moc.mocNumber}: {moc.title}
@@ -131,59 +131,57 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                 </div>
             </CardHeader>
 
-            <div className="border-b bg-muted/5 px-6 py-2">
-                <div className="flex flex-row items-center justify-between gap-4">
-                    <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center shrink-0">
-                        <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
-                            Implementation & Strategy
-                        </TabsTrigger>
-                        <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
-                            Approval & Sign-off
-                        </TabsTrigger>
-                    </TabsList>
+            <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
+                <div className="flex flex-col gap-4">
+                    {/* TOP ACTION ROW FOR MOBILE */}
+                    {isMobile && activeTab === 'implementation' && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="w-full h-11 flex justify-between items-center px-4 border-slate-200 bg-white font-black uppercase text-[11px] tracking-tight shadow-sm"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span>Actions</span>
+                                    </div>
+                                    <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                                <DropdownMenuItem onClick={() => implementationFormRef.current?.analyze()}>
+                                    <WandSparkles className="mr-2 h-4 w-4 text-primary" />
+                                    AI Analyze Strategy
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => implementationFormRef.current?.addPhase()}>
+                                    <PlusCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                    Add New Phase
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => implementationFormRef.current?.submit()} className="font-bold text-emerald-700">
+                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                    Save Strategy
+                                </DropdownMenuItem>
+                                <Separator className="my-1" />
+                                <DropdownMenuItem onClick={handlePrint}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Print Document
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
 
-                    <div className="flex items-center gap-2 shrink-0">
-                        {isMobile ? (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-9 w-40 justify-between bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <MoreHorizontal className="h-3.5 w-3.5" />
-                                            Actions
-                                        </span>
-                                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56">
-                                    {activeTab === 'implementation' && (
-                                        <>
-                                            <DropdownMenuItem onClick={() => implementationFormRef.current?.analyze()}>
-                                                <WandSparkles className="mr-2 h-4 w-4 text-primary" />
-                                                <span>AI Analyze</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => implementationFormRef.current?.addPhase()}>
-                                                <PlusCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                                <span>Add Phase</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => implementationFormRef.current?.submit()} className="font-bold text-emerald-700">
-                                                <ShieldCheck className="mr-2 h-4 w-4" />
-                                                <span>Save Strategy</span>
-                                            </DropdownMenuItem>
-                                            <Separator className="my-1" />
-                                        </>
-                                    )}
-                                    <DropdownMenuItem onClick={handlePrint}>
-                                        <Printer className="mr-2 h-4 w-4" />
-                                        <span>Print</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        ) : (
-                            <>
+                    <div className="flex flex-row items-center justify-between gap-4">
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center shrink-0">
+                            <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                                Implementation & Strategy
+                            </TabsTrigger>
+                            <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
+                                Approval & Sign-off
+                            </TabsTrigger>
+                        </TabsList>
+
+                        {!isMobile && (
+                            <div className="flex items-center gap-2 shrink-0">
                                 {activeTab === 'implementation' && (
                                     <>
                                         <Button 
@@ -221,7 +219,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                     <Printer className="h-4 w-4" />
                                     Print
                                 </Button>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>

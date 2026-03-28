@@ -129,7 +129,7 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                 <Controller 
                     control={control} 
-                    name={`${path}.likelihood` as any} 
+                    name={`${path}.likelihood`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
@@ -160,7 +160,7 @@ const RiskAssessmentEditor = ({ path, label, riskMatrixColors }: { path: string;
                 />
                 <Controller 
                     control={control} 
-                    name={`${path}.severity` as any} 
+                    name={`${path}.severity`} 
                     render={({ field: { onChange, value } }) => ( 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
@@ -202,7 +202,7 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
     });
 
     return (
-        <div className="space-y-3 pl-4 border-l-2 ml-2 mt-3">
+        <div className="space-y-3 pl-0 mt-3">
             {fields.map((field, riskIndex) => (
                 <div key={field.id} className="p-3 bg-muted/30 border rounded-lg space-y-3">
                     <div className="flex items-start gap-2">
