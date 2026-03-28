@@ -126,6 +126,31 @@ const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => 
     return 'Critical';
 }
 
+const getRiskScoreColor = (
+    likelihood: number,
+    severity: number,
+    colors?: Record<string, string>
+  ): { backgroundColor: string; color: string } => {
+    const severityToLetter: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+    const severityLetter = severityToLetter[severity] || 'E';
+    const cellId = `${likelihood}${severityLetter}`;
+    
+    if (colors && colors[cellId]) {
+        const hex = colors[cellId].replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        const textColor = (yiq >= 128) ? 'black' : 'white';
+        return { backgroundColor: colors[cellId], color: textColor };
+    }
+    
+    const score = likelihood * severity;
+    if (score > 9) return { backgroundColor: '#ef4444', color: 'white' };
+    if (score > 4) return { backgroundColor: '#f59e0b', color: 'black' };
+    return { backgroundColor: '#10b981', color: 'white' };
+};
+
 interface RiskAssessmentEditorProps {
     path: string;
     label: string;
@@ -140,6 +165,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     
     const riskScore = (likelihood || 1) * (severity || 1);
     const riskLevel = getRiskLevel(riskScore);
+    const riskColors = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
     const likelihoodLabels: Record<number, string> = {
         5: 'Frequent',
@@ -163,10 +189,18 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     }, [riskScore, riskLevel, path, setValue]);
 
     return (
-        <div className="bg-muted/10 border border-slate-200 rounded-xl p-4 mb-4">
-            <div className="flex items-center gap-2 mb-4">
-                <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground" />
-                <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</h5>
+        <div 
+            className="border border-slate-200 rounded-xl p-4 mb-4 transition-colors"
+            style={{ backgroundColor: riskColors.backgroundColor, color: riskColors.color }}
+        >
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <ShieldAlert className="h-3.5 w-3.5 opacity-70" />
+                    <h5 className="text-[10px] font-black uppercase tracking-widest opacity-70">{label}</h5>
+                </div>
+                <Badge variant="outline" className="h-6 font-black text-[10px] border-white/20 bg-white/10 text-inherit">
+                    {likelihood}{severityLabels[severity]?.letter} — {riskLevel}
+                </Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Controller 
@@ -175,8 +209,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     render={({ field: { onChange, value } }) => ( 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Likelihood: {value}</Label>
-                                <span className="text-[10px] italic text-muted-foreground">({likelihoodLabels[value]})</span>
+                                <Label className="text-[10px] uppercase font-bold opacity-70">Likelihood: {value}</Label>
+                                <span className="text-[10px] italic opacity-60">({likelihoodLabels[value]})</span>
                             </div>
                             <div className="flex flex-wrap gap-1">
                                 {[1, 2, 3, 4, 5].map((num) => (
@@ -187,7 +221,9 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                                         size="sm"
                                         className={cn(
                                             "h-8 w-8 p-0 text-xs font-bold transition-all",
-                                            value === num ? "bg-primary text-primary-foreground shadow-md scale-110" : "bg-background hover:bg-muted"
+                                            value === num 
+                                                ? "bg-white text-black shadow-md scale-110 border-white" 
+                                                : "bg-transparent hover:bg-white/10 border-current opacity-70"
                                         )}
                                         onClick={() => onChange(num)}
                                     >
@@ -204,8 +240,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     render={({ field: { onChange, value } }) => ( 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Severity: {severityLabels[value]?.letter}</Label>
-                                <span className="text-[10px] italic text-muted-foreground">({severityLabels[value]?.name})</span>
+                                <Label className="text-[10px] uppercase font-bold opacity-70">Severity: {severityLabels[value]?.letter}</Label>
+                                <span className="text-[10px] italic opacity-60">({severityLabels[value]?.name})</span>
                             </div>
                             <div className="flex flex-wrap gap-1">
                                 {[5, 4, 3, 2, 1].map((num) => (
@@ -216,7 +252,9 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                                         size="sm"
                                         className={cn(
                                             "h-8 w-8 p-0 text-xs font-bold transition-all",
-                                            value === num ? "bg-primary text-primary-foreground shadow-md scale-110" : "bg-background hover:bg-muted"
+                                            value === num 
+                                                ? "bg-white text-black shadow-md scale-110 border-white" 
+                                                : "bg-transparent hover:bg-white/10 border-current opacity-70"
                                         )}
                                         onClick={() => onChange(num)}
                                     >
