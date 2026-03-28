@@ -21,6 +21,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { MainPageHeader } from '@/components/page-header';
 
 interface MocDetailPageProps {
   params: Promise<{ mocId: string }>;
@@ -101,11 +102,11 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col pt-0 px-1 pb-20">
-      <Tabs defaultValue="implementation" className="w-full flex flex-col">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+      <Tabs defaultValue="implementation" className="flex-1 flex flex-col overflow-hidden">
         
-        {/* --- MAIN HEADER --- */}
-        <div className="rounded-xl border overflow-hidden flex flex-col bg-card shadow-none mb-6 no-print">
+        {/* --- STICKY HEADER SECTION --- */}
+        <div className="sticky top-0 z-30 bg-card rounded-xl border overflow-hidden flex flex-col shadow-none mb-6 no-print shrink-0">
             <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6">
                 <div className="flex-1 min-w-0">
                     <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
@@ -141,17 +142,15 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
             </div>
         </div>
 
-        {/* --- CONTENT --- */}
-        <div className="flex-1 no-print">
+        {/* --- SCROLLABLE CONTENT --- */}
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-20 no-print">
             <TabsContent value="implementation" className="m-0 outline-none">
-                <div className="flex flex-col gap-6">
-                    <ImplementationForm
-                        key={moc.id}
-                        moc={moc}
-                        tenantId={tenantId || ''}
-                        personnel={personnel || []}
-                    />
-                </div>
+                <ImplementationForm
+                    key={moc.id}
+                    moc={moc}
+                    tenantId={tenantId || ''}
+                    personnel={personnel || []}
+                />
             </TabsContent>
             
             <TabsContent value="approval" className="m-0 outline-none">

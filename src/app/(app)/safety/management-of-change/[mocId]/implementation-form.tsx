@@ -551,17 +551,6 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
            <Card className="shadow-none border rounded-xl overflow-hidden">
                 <MainPageHeader 
                     title="Implementation Strategy"
-                    actions={
-                        <div className="flex gap-2 w-full sm:w-auto">
-                            <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={isAnalyzing} className="h-9 px-4 text-[10px] font-black uppercase border-slate-300 gap-2">
-                                {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <WandSparkles className="h-3 w-3 text-primary" />}
-                                AI Analyze
-                            </Button>
-                            <Button type="button" variant="default" size="sm" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })} className="h-9 px-6 text-[10px] font-black uppercase bg-emerald-700 hover:bg-emerald-800 text-white gap-2">
-                                <PlusCircle className="h-3.5 w-3.5" /> Add Phase
-                            </Button>
-                        </div>
-                    }
                 />
                 <CardContent className="p-0 bg-background">
                     {/* --- CONSOLIDATED METADATA ROWS --- */}
@@ -632,7 +621,15 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
                 </CardContent>
            </Card>
 
-          <div className="fixed bottom-8 right-8 z-50 no-print">
+          <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3 no-print">
+             <Button type="button" variant="outline" size="lg" onClick={handleAnalyze} disabled={isAnalyzing} className="h-14 px-8 shadow-2xl rounded-full bg-background border-4 border-white/20 font-black uppercase tracking-tight gap-3">
+                {isAnalyzing ? <Loader2 className="h-6 w-6 animate-spin" /> : <WandSparkles className="h-6 w-6 text-primary" />}
+                AI Analyze
+            </Button>
+            <Button type="button" variant="outline" size="lg" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })} className="h-14 px-8 shadow-2xl rounded-full bg-background border-4 border-white/20 font-black uppercase tracking-tight gap-3">
+                <PlusCircle className="h-6 w-6 text-emerald-600" />
+                Add Phase
+            </Button>
              <Button type="submit" size="lg" className="h-14 px-10 shadow-2xl rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase tracking-tight gap-3 border-4 border-white/20">
                 <ShieldCheck className="h-6 w-6" /> Save Strategy
             </Button>
