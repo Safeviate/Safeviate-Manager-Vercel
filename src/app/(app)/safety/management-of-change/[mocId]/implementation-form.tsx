@@ -219,8 +219,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     control={control} 
                     name={`${path}.likelihood`} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[180px]">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
                             </div>
@@ -250,8 +250,8 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     control={control} 
                     name={`${path}.severity`} 
                     render={({ field: { onChange, value } }) => ( 
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-1.5 min-w-[180px]">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
                                 <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
                             </div>
@@ -412,7 +412,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: { 
                 </div>
             ))}
              <Button type="button" variant="outline" onClick={() => append({ id: uuidv4(), description: '', risks: [] })} className="w-full bg-amber-500/5 text-amber-700 border-amber-500/20 border-dashed gap-2 font-black uppercase text-[9px] h-9">
-                <PlusCircle className="h-3 w-3" /> Identify New Hazard
+                <PlusCircle className="h-3.3 w-3" /> Identify New Hazard
              </Button>
         </div>
     )
