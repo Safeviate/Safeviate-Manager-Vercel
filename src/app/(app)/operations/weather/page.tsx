@@ -14,6 +14,7 @@ export default function WeatherPage() {
   const [icao, setIcao] = useState('');
   const [loading, setLoading] = useState(false);
   const [weatherData, setWeatherData] = useState<any | null>(null);
+  const [tafData, setTafData] = useState<any | null>(null);
   const [avwxData, setAvwxData] = useState<any | null>(null);
   const [checkWxData, setCheckWxData] = useState<any | null>(null);
   const [mapLayer, setMapLayer] = useState<'radar' | 'satellite' | 'wind' | 'clouds' | 'rain' | 'temp'>('radar');
@@ -58,10 +59,16 @@ export default function WeatherPage() {
     setLoading(true);
 
     try {
-      // 1. Fetch from NOAA (Our reliable primary/fallback source)
       const noaaRes = await fetch(`/api/weather?ids=${station}`);
       const noaaJson = await noaaRes.json();
       if (noaaJson && noaaJson.length > 0) setWeatherData(noaaJson[0]); else setWeatherData(null);
+
+      // 1.5 Fetch TAF from NOAA
+      try {
+        const tafRes = await fetch(`/api/weather/taf?ids=${station}`);
+        const tafJson = await tafRes.json();
+        if (tafJson && tafJson.length > 0) setTafData(tafJson[0]); else setTafData(null);
+      } catch (err) { setTafData(null); }
 
       // 2. Fetch from AVWX (Enhanced translations)
       try {
@@ -148,6 +155,7 @@ export default function WeatherPage() {
           <div className="flex justify-between items-center bg-muted/20 p-1.5 rounded-xl border overflow-x-auto no-scrollbar">
             <TabsList className="bg-transparent border-none">
                 <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 font-black uppercase text-[10px] tracking-widest text-foreground">Overview</TabsTrigger>
+                {tafData && <TabsTrigger value="taf" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 font-black uppercase text-[10px] tracking-widest text-foreground">Forecast (TAF)</TabsTrigger>}
                 {avwxData && <TabsTrigger value="translated" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 font-black uppercase text-[10px] tracking-widest text-foreground">Translated (AVWX)</TabsTrigger>}
                 {checkWxData && <TabsTrigger value="checkwx" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 font-black uppercase text-[10px] tracking-widest text-foreground">Decoded (CheckWX)</TabsTrigger>}
             </TabsList>
@@ -167,7 +175,11 @@ export default function WeatherPage() {
                     <Badge className={`text-base font-black px-4 py-1 uppercase tracking-widest shadow-sm ${getFlightCategoryColor(weatherData.fltcat)}`}>
                         {weatherData.fltcat || 'UNKNOWN'}
                     </Badge>
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">OBS: {new Date(weatherData.obsTime).toLocaleString()}</span>
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">
+                        OBS: {typeof weatherData.obsTime === 'number' 
+                          ? new Date(weatherData.obsTime * 1000).toLocaleString() 
+                          : new Date(weatherData.obsTime).toLocaleString()}
+                    </span>
                     </div>
                 </div>
                 
@@ -204,6 +216,74 @@ export default function WeatherPage() {
                 </CardContent>
             </Card>
           </TabsContent>
+
+          {tafData && (
+            <TabsContent value="taf" className="m-0 space-y-6">
+                <Card className="border-l-4 border-l-blue-500 overflow-hidden shadow-sm">
+                    <div className="p-6 pb-4 border-b bg-muted/5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div>
+                        <h3 className="text-4xl font-black tracking-tighter uppercase">{tafData.icaoId} TAF</h3>
+                        <p className="text-muted-foreground font-bold text-sm tracking-wider uppercase flex items-center gap-2 mt-1 uppercase text-foreground">
+                            Terminal Aerodrome Forecast
+                        </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 text-right">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">ISSUED: {new Date(tafData.issueTime).toLocaleString()}</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">VALID: {typeof tafData.validTimeFrom === 'number' ? new Date(tafData.validTimeFrom * 1000).toLocaleString() : new Date(tafData.validTimeFrom).toLocaleString()} - {typeof tafData.validTimeTo === 'number' ? new Date(tafData.validTimeTo * 1000).toLocaleString() : new Date(tafData.validTimeTo).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    
+                    <CardContent className="p-6 space-y-6 bg-muted/10">
+                        {tafData.fcsts && tafData.fcsts.map((fcst: any, index: number) => (
+                            <div key={index} className="bg-background border rounded-lg p-4 shadow-sm space-y-3">
+                                <div className="flex justify-between items-center border-b pb-2">
+                                    <Badge variant="outline" className="font-black uppercase tracking-tighter text-[10px]">
+                                        {fcst.type || 'PERIOD'}
+                                     </Badge>
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                        FROM: {typeof fcst.timeFrom === 'number' ? new Date(fcst.timeFrom * 1000).toLocaleString() : new Date(fcst.timeFrom).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Wind</span>
+                                        <p className="text-sm font-black">{fcst.wdir === 'VRB' ? 'VRB' : fcst.wdir ? `${fcst.wdir}°` : 'CALM'} {fcst.wspd ? `@ ${fcst.wspd}kt` : ''}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Visibility</span>
+                                        <p className="text-sm font-black">{fcst.visib != null ? `${fcst.visib} SM` : 'N/A'}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Clouds</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {fcst.clouds && fcst.clouds.map((cloud: any, i: number) => (
+                                                <Badge key={i} variant="secondary" className="text-[9px] font-bold uppercase">
+                                                    {cloud.cover} @ {cloud.base}FT
+                                                </Badge>
+                                            ))}
+                                            {(!fcst.clouds || fcst.clouds.length === 0) && <p className="text-sm font-black">CLEAR</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                                {fcst.wx && (
+                                    <div className="pt-2 border-t">
+                                        <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Weather</span>
+                                        <p className="text-sm font-bold text-blue-600">{fcst.wx}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        
+                        <div className="mt-4">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5 mb-2 text-foreground">RAW TAF</span>
+                            <p className="font-mono text-sm font-medium p-4 bg-background border rounded-lg shadow-inner break-words leading-relaxed text-foreground whitespace-pre-wrap">
+                                {tafData.rawTAF}
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+          )}
 
           {checkWxData && (
             <TabsContent value="checkwx" className="m-0 space-y-6">
