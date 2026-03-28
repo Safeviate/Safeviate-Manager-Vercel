@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Printer, Zap, PlusCircle, ShieldCheck, WandSparkles, ChevronDown } from 'lucide-react';
+import { Printer, Zap, PlusCircle, ShieldCheck, WandSparkles, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -21,7 +21,12 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface MocDetailPageProps {
   params: Promise<{ mocId: string }>;
@@ -39,7 +44,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
-  const mocId = resolvedParams.id || (resolvedParams as any).mocId; // Support both route param patterns
+  const mocId = resolvedParams.mocId;
   const [activeTab, setActiveTab] = useState('implementation');
   const implementationFormRef = useRef<ImplementationFormHandle>(null);
 
@@ -127,7 +132,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
             </CardHeader>
 
             <div className="border-b bg-muted/5 px-6 py-2">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-row items-center justify-between gap-4">
                     <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center shrink-0">
                         <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0">
                             Implementation & Strategy
@@ -137,44 +142,79 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                         </TabsTrigger>
                     </TabsList>
 
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        {activeTab === 'implementation' && (
+                    <div className="flex items-center gap-2 shrink-0">
+                        {isMobile ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-300 rounded-full shadow-sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                    {activeTab === 'implementation' && (
+                                        <>
+                                            <DropdownMenuItem onClick={() => implementationFormRef.current?.analyze()}>
+                                                <WandSparkles className="mr-2 h-4 w-4 text-primary" />
+                                                <span>AI Analyze</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => implementationFormRef.current?.addPhase()}>
+                                                <PlusCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                                <span>Add Phase</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => implementationFormRef.current?.submit()} className="font-bold text-emerald-700">
+                                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                                <span>Save Strategy</span>
+                                            </DropdownMenuItem>
+                                            <Separator className="my-1" />
+                                        </>
+                                    )}
+                                    <DropdownMenuItem onClick={handlePrint}>
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        <span>Print</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
                             <>
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => implementationFormRef.current?.analyze()} 
-                                    className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
-                                >
-                                    <WandSparkles className="h-3.5 w-3.5 text-primary" />
-                                    AI Analyze
-                                </Button>
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => implementationFormRef.current?.addPhase()} 
-                                    className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
-                                >
-                                    <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
-                                    Add Phase
-                                </Button>
-                                <Button 
-                                    type="button" 
-                                    size="sm" 
-                                    onClick={() => implementationFormRef.current?.submit()} 
-                                    className="h-9 px-6 gap-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-black uppercase shadow-md"
-                                >
-                                    <ShieldCheck className="h-3.5 w-3.5" />
-                                    Save Strategy
+                                {activeTab === 'implementation' && (
+                                    <>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => implementationFormRef.current?.analyze()} 
+                                            className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
+                                        >
+                                            <WandSparkles className="h-3.5 w-3.5 text-primary" />
+                                            AI Analyze
+                                        </Button>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => implementationFormRef.current?.addPhase()} 
+                                            className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
+                                        >
+                                            <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
+                                            Add Phase
+                                        </Button>
+                                        <Button 
+                                            type="button" 
+                                            size="sm" 
+                                            onClick={() => implementationFormRef.current?.submit()} 
+                                            className="h-9 px-6 gap-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-black uppercase shadow-md"
+                                        >
+                                            <ShieldCheck className="h-3.5 w-3.5" />
+                                            Save Strategy
+                                        </Button>
+                                    </>
+                                )}
+                                <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+                                    <Printer className="h-4 w-4" />
+                                    Print
                                 </Button>
                             </>
                         )}
-                        <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
-                            <Printer className="h-4 w-4" />
-                            Print
-                        </Button>
                     </div>
                 </div>
             </div>
