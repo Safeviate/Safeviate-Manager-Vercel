@@ -191,7 +191,7 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
     }, [riskScore, riskLevel, path, setValue]);
 
     return (
-        <div className="bg-muted/10 border border-slate-200 rounded-2xl p-6">
+        <div className="bg-muted/10 border border-slate-200 rounded-2xl p-6 mb-4">
             <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6 flex items-center gap-2">
                 <ShieldAlert className="h-3 w-3" />
                 {label}
@@ -224,7 +224,6 @@ const RiskAssessmentEditor: React.FC<RiskAssessmentEditorProps> = ({ path, label
                     >
                         {displayValue}
                     </div>
-                    <span className="text-[9px] font-black uppercase tracking-tighter opacity-40">Risk Code</span>
                 </div>
             </div>
         </div>
@@ -239,36 +238,32 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
     });
 
     return (
-        <div className='space-y-6 mt-8'>
+        <div className='space-y-6 mt-4'>
             <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-primary/20"></div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary shrink-0 flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Risk Mitigation Controls
-                </p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary shrink-0">Mitigation Controls</p>
                 <div className="h-px flex-1 bg-primary/20"></div>
             </div>
             {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="p-6 border rounded-2xl bg-white shadow-sm border-slate-200 relative overflow-hidden group">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
+                <div key={field.id} className="p-6 border rounded-2xl bg-white border-slate-200">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel className="text-[10px] font-black uppercase">Action / Control Strategy</FormLabel><FormControl><Textarea placeholder='Describe the specific mitigation action...' {...field} className="min-h-[80px] bg-muted/5 font-medium" /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase">Responsible Person</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</Select><FormMessage /></FormItem> )}/>
-                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.completionDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="text-[10px] font-black uppercase">Target Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-10 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
-                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase">Action Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</Select><FormMessage /></FormItem> )}/>
-                      <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)} className="h-10 w-10 shrink-0 shadow-sm"><Trash2 className="h-4 w-4" /></Button>
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.description`} render={({ field }) => ( <FormItem className="md:col-span-4"><FormLabel className="text-[10px] font-black uppercase">Action / Control</FormLabel><FormControl><Textarea placeholder='Describe mitigation...' {...field} className="min-h-[80px]" /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.responsiblePersonId`} render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase">Assignee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl><SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</Select><FormMessage /></FormItem> )}/>
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.completionDate`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel className="text-[10px] font-black uppercase">Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-10 pl-3 font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                      <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.status`} render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase">Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</Select><FormMessage /></FormItem> )}/>
+                      <Button type="button" variant="destructive" size="icon" onClick={() => remove(mitigationIndex)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                   </div>
-                   <div className="mt-8 border-t border-dashed pt-6">
+                   <div className="mt-6 border-t pt-4">
                       <RiskAssessmentEditor
                           path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.mitigations.${mitigationIndex}.residualRiskAssessment`}
-                          label="Residual Risk (Post-Mitigation)"
+                          label="Residual Risk Assessment"
                           riskMatrixColors={riskMatrixColors}
                       />
                   </div>
                 </div>
             ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })} className="w-full py-6 border-dashed border-2 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all gap-2">
-                <PlusCircle className="h-4 w-4" /> Add Control Action
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })} className="w-full h-10 border-dashed border-2 hover:bg-muted/10">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Control Action
             </Button>
         </div>
     )
@@ -282,33 +277,28 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
     });
 
     return (
-        <div className="space-y-12 mt-6">
+        <div className="space-y-10 mt-6">
             {fields.map((field, riskIndex) => (
-                <div key={field.id} className="relative pb-8 border-b last:border-0">
-                    <div className="flex items-start gap-6 mb-8">
+                <div key={field.id} className="pb-10 border-b last:border-0">
+                    <div className="flex items-start gap-4 mb-6">
                         <div className="flex-1">
                             <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.description`} render={({ field }) => ( 
                                 <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                        <ArrowRight className="h-3 w-3" />
-                                        Potential Consequence / Risk Outcome
-                                    </FormLabel>
-                                    <FormControl><Input placeholder='What is the potential negative outcome of this hazard?' {...field} className="font-bold text-lg border-none bg-muted/20 shadow-none focus-visible:ring-2 focus-visible:ring-primary/20 h-12" /></FormControl>
+                                    <FormLabel className="text-[10px] font-black uppercase text-primary">Consequence / Risk Outcome</FormLabel>
+                                    <FormControl><Input placeholder='Potential negative outcome...' {...field} className="font-bold border-none bg-muted/20 h-12" /></FormControl>
                                     <FormMessage />
                                 </FormItem> 
                             )}/>
                         </div>
-                        <Button type="button" variant="ghost" size="icon" className="text-destructive mt-6 h-10 w-10 hover:bg-destructive/10" onClick={() => remove(riskIndex)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="text-destructive mt-6" onClick={() => remove(riskIndex)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     
-                    <div className="space-y-10">
-                        <RiskAssessmentEditor
-                            path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.initialRiskAssessment`}
-                            label="Initial Risk Assessment (Gross Risk)"
-                            riskMatrixColors={riskMatrixColors}
-                        />
-                        <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={riskIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
-                    </div>
+                    <RiskAssessmentEditor
+                        path={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks.${riskIndex}.initialRiskAssessment`}
+                        label="Initial Risk Assessment"
+                        riskMatrixColors={riskMatrixColors}
+                    />
+                    <MitigationsArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} riskIndex={riskIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                 </div>
             ))}
             <Button
@@ -316,9 +306,9 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
                 variant="ghost"
                 size="sm"
                 onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}
-                className="text-primary hover:bg-primary/5 font-black uppercase text-[10px] gap-2 tracking-widest py-4 w-full justify-start pl-0"
+                className="text-primary hover:bg-primary/5 font-black uppercase text-[10px] gap-2"
             >
-                <PlusCircle className="h-4 w-4" /> Add Potential Risk Outcome
+                <PlusCircle className="h-4 w-4" /> Add Potential Risk
             </Button>
         </div>
     )
@@ -327,38 +317,33 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
 const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: { phaseIndex: number, stepIndex: number, personnel: Personnel[], riskMatrixColors?: Record<string, string> }) => {
     const { control } = useFormContext();
     const { fields, append, remove } = useFieldArray({
-        control: control,
+        control,
         name: `phases.${phaseIndex}.steps.${stepIndex}.hazards`,
     });
 
     return (
-        <div className="space-y-16 mt-8">
+        <div className="space-y-12 mt-8">
             {(fields || []).map((field, hazardIndex) => (
-                <div key={field.id} className="relative bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-                    <div className="flex items-center justify-between bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl mb-8">
+                <div key={field.id} className="p-8 border-2 border-slate-100 rounded-3xl bg-white shadow-sm">
+                    <div className="flex items-center justify-between mb-8 border-b pb-4">
                         <div className="flex items-center gap-4 flex-1">
-                            <div className="h-10 w-10 rounded-xl bg-amber-500 flex items-center justify-center shrink-0 shadow-lg">
-                                <AlertTriangle className="h-6 w-6 text-white" />
-                            </div>
+                            <AlertTriangle className="h-6 w-6 text-amber-500" />
                             <div className="flex-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-800/60 mb-1">Identified Operational Hazard</p>
+                                <p className="text-[10px] font-black uppercase text-amber-800/40">Hazard Identification</p>
                                 <FormField control={control} name={`phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.description`} render={({ field }) => ( 
                                     <FormItem className="flex-1">
-                                        <FormControl><Input placeholder='Identify the hazard (e.g. fatigue, weather, mechanical issue)...' {...field} className="border-none bg-transparent shadow-none font-black text-xl focus-visible:ring-0 p-0 h-auto" /></FormControl>
+                                        <FormControl><Input placeholder='Describe the hazard...' {...field} className="border-none bg-transparent shadow-none font-black text-xl p-0 h-auto focus-visible:ring-0" /></FormControl>
                                     </FormItem> 
                                 )}/>
                             </div>
                         </div>
-                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-10 w-10" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(hazardIndex)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    
-                    <div className="pl-0">
-                        <RisksArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
-                    </div>
+                    <RisksArray phaseIndex={phaseIndex} stepIndex={stepIndex} hazardIndex={hazardIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                 </div>
             ))}
-             <Button type="button" variant="secondary" onClick={() => append({ id: uuidv4(), description: '', risks: [] })} className="w-full bg-amber-600/5 hover:bg-amber-600/10 text-amber-700 border-amber-600/20 border-2 border-dashed gap-3 font-black uppercase text-[11px] h-14 rounded-2xl">
-                <PlusCircle className="h-5 w-5" /> Identify & Add New Hazard
+             <Button type="button" variant="secondary" onClick={() => append({ id: uuidv4(), description: '', risks: [] })} className="w-full bg-amber-500/5 hover:bg-amber-500/10 text-amber-700 border-amber-500/20 border-2 border-dashed gap-3 font-black uppercase text-[10px] h-12 rounded-2xl">
+                <PlusCircle className="h-4 w-4" /> Identify New Hazard
              </Button>
         </div>
     )
@@ -373,45 +358,43 @@ const StepsArray = ({ phaseIndex, personnel, riskMatrixColors }: { phaseIndex: n
     });
   
     return (
-        <div className="space-y-20 pt-6">
+        <div className="space-y-20 mt-8">
             {(fields || []).map((step, stepIndex) => (
                  <div key={step.id} className="relative">
-                    <div className="flex items-center gap-5 border-b-4 border-slate-100 pb-6 mb-10">
-                        <div className="h-12 w-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-lg shadow-xl shrink-0">
+                    <div className="flex items-center gap-6 border-b-4 border-slate-50 pb-6 mb-10">
+                        <div className="h-12 w-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-lg shadow-lg shrink-0">
                             {stepIndex + 1}
                         </div>
                         <div className="flex-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Step Identification</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Implementation Step</p>
                             <FormField
                                 control={control}
                                 name={`phases.${phaseIndex}.steps.${stepIndex}.description`}
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormControl>
-                                            <Input placeholder="Describe this implementation step or milestone action..." {...field} className="border-none shadow-none font-black text-2xl p-0 h-auto focus-visible:ring-0 tracking-tight" />
+                                            <Input placeholder="Describe action..." {...field} className="border-none shadow-none font-black text-2xl p-0 h-auto focus-visible:ring-0 tracking-tight" />
                                         </FormControl>
                                     </FormItem>
                                 )}
                             />
                         </div>
-                         <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-12 w-12 shrink-0" onClick={() => remove(stepIndex)}><Trash2 className="h-5 w-5" /></Button>
+                         <Button type="button" variant="ghost" size="icon" className="text-destructive h-12 w-12" onClick={() => remove(stepIndex)}><Trash2 className="h-5 w-5" /></Button>
                     </div>
                     
-                    <div className="pl-0 sm:pl-16">
+                    <div className="pl-0 lg:pl-16">
                         <HazardsArray phaseIndex={phaseIndex} stepIndex={stepIndex} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                     </div>
                 </div>
             ))}
-            <div className="pt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
-                    className="w-full h-16 border-dashed border-4 font-black uppercase text-xs gap-3 tracking-widest hover:bg-slate-50 transition-all rounded-3xl"
-                >
-                    <PlusCircle className="h-6 w-6" /> Create New Implementation Step
-                </Button>
-            </div>
+            <Button
+                type="button"
+                variant="outline"
+                onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
+                className="w-full h-16 border-dashed border-4 font-black uppercase text-xs gap-3 tracking-widest rounded-3xl"
+            >
+                <PlusCircle className="h-6 w-6" /> Create New Step
+            </Button>
         </div>
     );
 };
@@ -464,15 +447,10 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
             reason: moc.reason,
             scope: moc.scope,
         };
-        const result = await callAiFlow<AnalyzeMocInput, AnalyzeMocOutput>(
-            'analyzeMoc',
-            mocData
-        );
-
+        const result = await callAiFlow<AnalyzeMocInput, AnalyzeMocOutput>('analyzeMoc', mocData);
         const phasesWithDateObjects = mapDatesToObjects(result.phases);
         form.reset({ phases: phasesWithDateObjects });
-
-        toast({ title: 'AI Analysis Complete', description: 'The implementation plan has been populated. Review and save the changes.' });
+        toast({ title: 'AI Analysis Complete' });
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'AI Analysis Failed', description: error.message });
     } finally {
@@ -483,64 +461,54 @@ export function ImplementationForm({ moc, tenantId, personnel }: ImplementationF
   return (
     <FormProvider {...form}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-20 max-w-[1200px] mx-auto" key={formKey}>
-           <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/5 border border-slate-200 p-6 rounded-3xl no-print gap-4">
-              <div className="space-y-1 text-center sm:text-left">
-                  <h3 className="text-base font-black uppercase tracking-tight">Implementation Strategy Builder</h3>
-                  <p className="text-xs text-muted-foreground font-medium">Map out phases, identify hazards, and conduct risk assessments.</p>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-20 max-w-[1200px] mx-auto pb-40" key={formKey}>
+           <div className="flex flex-col sm:flex-row justify-between items-center bg-muted/5 border p-6 rounded-3xl no-print gap-4">
+              <div className="space-y-1">
+                  <h3 className="text-base font-black uppercase tracking-tight">Implementation Strategy</h3>
+                  <p className="text-xs text-muted-foreground font-medium">Map phases, identify hazards, and conduct risk assessments.</p>
               </div>
               <div className="flex gap-3 w-full sm:w-auto">
-                <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={isAnalyzing} className="flex-1 h-11 px-6 text-[11px] font-black uppercase gap-2 border-slate-300 shadow-sm hover:bg-white transition-all">
+                <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={isAnalyzing} className="flex-1 h-11 px-6 text-[11px] font-black uppercase gap-2 border-slate-300">
                     {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4 text-primary" />}
                     AI Analyze
                 </Button>
-                <Button type="button" variant="default" size="sm" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })} className="flex-1 h-11 px-8 text-[11px] font-black uppercase gap-2 bg-emerald-700 hover:bg-emerald-800 shadow-md">
+                <Button type="button" variant="default" size="sm" onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })} className="flex-1 h-11 px-8 text-[11px] font-black uppercase gap-2 bg-emerald-700 hover:bg-emerald-800">
                     <PlusCircle className="h-4 w-4" /> Add Phase
                 </Button>
               </div>
           </div>
 
-          <div className="space-y-32 pb-40">
+          <div className="space-y-40">
             {phaseFields.map((field, index) => (
                 <div key={field.id} className="relative">
                     <div className="flex items-center justify-between border-b-8 border-emerald-700/10 pb-6 mb-12">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="flex items-center gap-4 flex-1">
                             <div className="h-14 w-14 rounded-2xl bg-emerald-700 flex items-center justify-center text-white shadow-xl shrink-0">
                                 <Zap className="h-8 w-8" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-black uppercase tracking-widest text-emerald-800/40 mb-1">Primary Implementation Phase</p>
+                            <div className="flex-1">
+                                <p className="text-[11px] font-black uppercase text-emerald-800/40">Core Phase</p>
                                 <FormField
                                     control={form.control}
                                     name={`phases.${index}.title`}
                                     render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormControl>
-                                        <Input className="text-4xl font-black border-none shadow-none p-0 focus-visible:ring-0 uppercase tracking-tighter truncate leading-none" placeholder="Phase Title (e.g. Planning)" {...field} />
+                                        <Input className="text-4xl font-black border-none shadow-none p-0 focus-visible:ring-0 uppercase tracking-tighter" placeholder="Phase Title..." {...field} />
                                         </FormControl>
                                     </FormItem>
                                     )}
                                 />
                             </div>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={() => removePhase(index)} className="text-destructive border-slate-200 hover:bg-destructive/5 font-black uppercase text-[10px] h-9 px-4 shrink-0 no-print ml-4">
+                        <Button type="button" variant="outline" size="sm" onClick={() => removePhase(index)} className="text-destructive font-black uppercase text-[10px] h-9 px-4 no-print ml-4 border-slate-200">
                             Delete Phase
                         </Button>
                     </div>
 
-                    <div className="space-y-12">
-                        <StepsArray phaseIndex={index} personnel={personnel} riskMatrixColors={riskMatrixSettings?.colors} />
-                    </div>
+                    <StepsArray phaseIndex={index} personnel={personnel} riskMatrixColors={riskMatrixSettings?.colors} />
                 </div>
             ))}
-            
-            {phaseFields.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-40 border-8 border-dashed rounded-[3rem] opacity-10">
-                  <ShieldCheck className="h-32 w-32 mb-6" />
-                  <p className="text-4xl font-black uppercase tracking-tighter text-center">Implementation Empty</p>
-                  <p className="font-black uppercase tracking-widest mt-2">Initialize your plan above</p>
-              </div>
-            )}
           </div>
 
           <div className="fixed bottom-8 right-8 z-50 no-print flex gap-4">
