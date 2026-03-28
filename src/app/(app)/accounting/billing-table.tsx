@@ -86,7 +86,7 @@ export function BillingTable({
                     <TableCell className="px-4">
                       <Checkbox 
                         checked={selectedIds.has(booking.id)}
-                        onToggle={() => onToggleSelection(booking.id)}
+                        onCheckedChange={() => onToggleSelection(booking.id)}
                       />
                     </TableCell>
                     <TableCell className="font-mono text-[11px] font-black text-primary uppercase">{booking.bookingNumber}</TableCell>
