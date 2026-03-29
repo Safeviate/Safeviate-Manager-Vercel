@@ -278,12 +278,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </div>
                             </CardContent>
                             <Separator />
-                            <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><AlertTriangle className="h-4 w-4" /> Mass & Balance</CardTitle></CardHeader>
-                            <CardContent className="px-8 md:px-10 pb-10">
+                            <CardHeader className="pt-10 pb-4"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary opacity-80"><AlertTriangle className="h-4 w-4" /> Mass & Balance Analysis</CardTitle></CardHeader>
+                            <CardContent className="px-8 md:px-10 pb-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
                                     <div className="flex flex-col">
                                         <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
-                                            <div className="min-w-[800px] h-[850px] relative">
+                                            <div className="min-w-[800px] h-[1000px] relative">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                                                         <CartesianGrid strokeDasharray="3 3" />
@@ -315,7 +315,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             </div>
                                             <Button size="sm" onClick={handleSaveToBooking} disabled={isCompleted} className="w-full h-10 uppercase text-xs font-black bg-emerald-700 shadow-md hover:bg-emerald-800">Save Load config</Button>
                                         </div>
-                                        <ScrollArea className="h-[400px] pr-4">
+                                        <ScrollArea className="h-[600px] pr-4">
                                             <div className="space-y-4">
                                                 {stations.map(s => (
                                                     <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm">

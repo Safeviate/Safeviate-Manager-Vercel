@@ -1,73 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { collection, doc, arrayUnion, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
-import { useForm } from 'react-hook-form';
-import type { Booking, OverrideLog } from "@/types/booking";
-import type { Aircraft } from '@/types/aircraft';
-import type { Personnel, PilotProfile } from '@/app/(app)/users/personnel/page';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { usePermissions } from '@/hooks/use-permissions';
-import { useUserProfile } from '@/hooks/use-user-profile';
-import { CheckCircle2, ClipboardCheck, FileClock, History, Clock, PencilLine, Edit2, ShieldCheck, Lock, UserCheck, Map as NavIcon, FileText, AlertTriangle, LayoutDashboard } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import { Label as UILabel } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { NavlogBuilder } from '../../../bookings/navlog-builder';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, Cell, Label } from 'recharts';
-import { isPointInPolygon } from '@/lib/utils';
-import { BookingDetailHeader } from '@/components/booking-detail-header';
-
-const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
-
-interface ViewBookingDetailsProps {
-    booking: Booking;
-}
-
-const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
-    const start = Number(min);
-    const end = Number(max);
-    if (isNaN(start) || isNaN(end) || start >= end) return [];
-    const diff = end - start;
-    const roughStep = diff / (stepCount - 1);
-    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
-    const normalizedStep = roughStep / magnitude;
-    let step;
-    if (normalizedStep < 1.5) step = 1 * magnitude;
-    else if (normalizedStep < 3) step = 2 * magnitude;
-    else if (normalizedStep < 7) step = 5 * magnitude;
-    else step = 10 * magnitude;
-    const ticks = [];
-    let current = Math.ceil(start / step) * step;
-    if (current > start) ticks.push(start);
-    while (current <= end) {
-        ticks.push(current);
-        current += step;
-    }
-    return ticks;
-};
-
-const DetailItem = ({ label, value, children }: { label: string, value?: string | number | undefined | null, children?: React.ReactNode }) => (
-    <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
-        {children ? children : <p className="text-sm font-bold text-foreground">{value ?? 'N/A'}</p>}
-    </div>
-);
-
-const formatDateSafe = (dateString: string | undefined, formatString: string): string => {
-    if (!dateString) return 'N/A';
+import { useMemo, useState, useEffect } => 'N/A';
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'Invalid Date';
@@ -175,11 +108,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </CardContent>
                             <Separator />
                             <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
-                            <CardContent className="pb-10">
+                            <CardContent className="pb-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
                                     <div className="flex flex-col">
                                         <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
-                                            <div className="min-w-[800px] h-[850px] relative">
+                                            <div className="min-w-[800px] h-[1000px] relative">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                                                         <CartesianGrid strokeDasharray="3 3" />
@@ -206,7 +139,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 {results.isSafe ? "Safe Loading" : "Outside Envelope"}
                                             </div>
                                         </div>
-                                        <ScrollArea className="h-[400px] pr-4">
+                                        <ScrollArea className="h-[600px] pr-4">
                                             <div className="space-y-4">
                                                 {stations.map(s => (
                                                     <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm border-slate-200">

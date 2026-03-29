@@ -174,8 +174,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
                             </CardContent>
                             <Separator />
-                            <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance</CardTitle></CardHeader>
-                            <CardContent className="pb-10">
+                            <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
+                            <CardContent className="pb-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
                                     <div className="flex flex-col">
                                         <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile && "mx-auto w-full max-w-[430px]")}>
@@ -188,7 +188,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     {results.isSafe ? 'Within Limits' : 'Out Of Limits'}
                                                 </Badge>
                                             </div>
-                                            <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[850px]")}>
+                                            <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[1000px]")}>
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <ScatterChart margin={isMobile ? { top: 12, right: 16, bottom: 16, left: 4 } : { top: 20, right: 28, bottom: 32, left: 20 }}>
                                                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -245,7 +245,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
                                             <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700 shadow-md hover:bg-emerald-800">Save Load config</Button>
                                         </div>
-                                        <ScrollArea className="h-[400px] pr-4">
+                                        <ScrollArea className="h-[600px] pr-4">
                                             <div className="space-y-4">
                                                 {stations.map(s => (
                                                     <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm">
