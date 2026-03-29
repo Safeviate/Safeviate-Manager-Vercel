@@ -14,13 +14,32 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     return (
         <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
             <Card className="flex-1 overflow-hidden flex flex-col shadow-none border">
-                {/* Sticky Header Section: Identity & Navigation */}
-                <div className="sticky top-0 z-30 bg-card">
+                {/* Sticky Header Section: Identity, Metadata & Navigation */}
+                <div className="sticky top-0 z-30 bg-card border-b">
                     <MainPageHeader 
                         title={`Booking #${booking.bookingNumber}`}
                         description={booking.type}
                     />
-                    <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
+                    
+                    {/* Metadata Grid Bar */}
+                    <div className="px-6 py-4 bg-muted/5 border-b">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                                <p className="text-sm font-bold text-foreground">{booking.status}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</p>
+                                <p className="text-sm font-bold text-foreground">{booking.date}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft ID</p>
+                                <p className="text-sm font-bold text-foreground uppercase">{booking.aircraftId}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-muted/5 px-6 py-2 shrink-0">
                         <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
                             <TabsTrigger 
                                 value="overview" 
@@ -35,21 +54,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 {/* Content Area */}
                 <ScrollArea className="flex-1">
                     <TabsContent value="overview" className="m-0">
-                        <CardContent className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Report Reference</p>
-                                    <p className="text-sm font-bold text-foreground">OPS-{booking.bookingNumber}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Type</p>
-                                    <p className="text-sm font-bold text-foreground">{booking.type}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
-                                    <p className="text-sm font-bold text-foreground uppercase">{booking.aircraftId}</p>
-                                </div>
-                            </div>
+                        <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
+                            Operations view: Detailed audit trail and compliance metadata.
                         </CardContent>
                     </TabsContent>
                 </ScrollArea>
