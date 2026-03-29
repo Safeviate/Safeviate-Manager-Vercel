@@ -12,3 +12,5 @@ secrets:
     secret: GOOGLE_MAPS_API_KEY
   - variable: GOOGLE_GENAI_API_KEY
     secret: GOOGLE_GENAI_API_KEY
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
