@@ -4,13 +4,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MainPageHeader } from "@/components/page-header";
+import { NavlogBuilder } from "@/app/(app)/bookings/navlog-builder";
 import type { Booking } from "@/types/booking";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 interface ViewBookingDetailsProps {
     booking: Booking;
 }
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
+    const { tenantId } = useUserProfile();
+
     return (
         <Tabs defaultValue="mass-and-balance" className="flex-1 overflow-hidden flex flex-col">
             <Card className="flex-1 overflow-hidden flex flex-col shadow-none border">
@@ -65,9 +69,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </CardContent>
                     </TabsContent>
                     <TabsContent value="navlog" className="m-0">
-                        <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
-                            Operations view: Route and Navigation log for flight #{booking.bookingNumber}.
-                        </CardContent>
+                        <NavlogBuilder booking={booking} tenantId={tenantId || ''} />
                     </TabsContent>
                 </ScrollArea>
             </Card>
