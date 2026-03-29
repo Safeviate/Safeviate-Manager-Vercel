@@ -24,14 +24,8 @@ const findCurrentItem = (
       }
     }
   }
-  for (const item of items) {
-    if (pathname === item.href) {
-      return item;
-    }
-  }
   return undefined;
 };
-
 
 const getTitle = (pathname: string): string => {
   const allMenuItems = menuConfig;
@@ -56,14 +50,12 @@ const getTitle = (pathname: string): string => {
   return '';
 };
 
-
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = useIsMobile();
   const title = getTitle(pathname);
 
-  // Detect if we are on a detail page
   const segments = pathname.split('/').filter(Boolean);
   const isDetailPage = segments.length >= 3;
 
@@ -85,7 +77,7 @@ export function AppHeader() {
             variant="outline" 
             size="sm" 
             onClick={handleBack}
-            className="h-9 rounded-md border-[hsl(var(--header-border)/0.8)] bg-[hsl(var(--header-foreground)/0.08)] px-4 text-[10px] font-black uppercase tracking-tight text-header-foreground shadow-md transition-all hover:bg-[hsl(var(--header-foreground)/0.14)] shrink-0 whitespace-nowrap"
+            className="rounded-md font-black uppercase text-sm border-slate-300 px-4 h-9 shadow-md transition-all shrink-0 whitespace-nowrap"
           >
             {backConfig.text}
           </Button>

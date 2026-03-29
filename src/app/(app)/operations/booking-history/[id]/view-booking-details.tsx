@@ -1,10 +1,9 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Construction, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MainPageHeader } from "@/components/page-header";
 import type { Booking } from "@/types/booking";
 
 interface ViewBookingDetailsProps {
@@ -13,42 +12,48 @@ interface ViewBookingDetailsProps {
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     return (
-        <div className="flex flex-col h-full items-center justify-center p-4">
-            <Card className="max-w-2xl w-full border-dashed bg-muted/5 shadow-none">
-                <CardHeader className="text-center pb-2">
-                    <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Construction className="h-6 w-6 text-primary" />
+        <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
+            <Card className="flex-1 overflow-hidden flex flex-col shadow-none border">
+                {/* Sticky Header Section: Identity & Navigation */}
+                <div className="sticky top-0 z-30 bg-card">
+                    <MainPageHeader 
+                        title={`Booking #${booking.bookingNumber}`}
+                        description={booking.type}
+                    />
+                    <div className="border-b bg-muted/5 px-6 py-2 shrink-0">
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                            <TabsTrigger 
+                                value="overview" 
+                                className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                            >
+                                Overview
+                            </TabsTrigger>
+                        </TabsList>
                     </div>
-                    <CardTitle className="text-2xl font-black uppercase tracking-tighter">
-                        Rebuilding Detail View
-                    </CardTitle>
-                    <CardDescription className="text-xs font-bold uppercase tracking-widest">
-                        Booking Reference: #{booking.bookingNumber}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                    <div className="flex flex-col items-center gap-4 py-8 border-y border-dashed">
-                        <Badge variant="outline" className="h-8 px-6 font-black uppercase tracking-widest text-primary border-primary/30">
-                            {booking.type}
-                        </Badge>
-                        <p className="text-sm text-muted-foreground text-center max-w-sm font-medium italic leading-relaxed">
-                            The operations flight history card logic is being completely refactored.
-                        </p>
-                    </div>
-                </CardContent>
-                <CardFooter className="flex justify-center pb-8">
-                    <Button asChild variant="outline" size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight border-slate-300">
-                        <Link href="/operations/booking-history">
-                            <ArrowLeft className="mr-2 h-3.5 w-3.5" />
-                            Back to History
-                        </Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
-    );
-}
+                </div>
 
-function CardFooter({ children, className }: { children: React.ReactNode, className?: string }) {
-    return <div className={className}>{children}</div>;
+                {/* Content Area */}
+                <ScrollArea className="flex-1">
+                    <TabsContent value="overview" className="m-0">
+                        <CardContent className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Report Reference</p>
+                                    <p className="text-sm font-bold text-foreground">OPS-{booking.bookingNumber}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Type</p>
+                                    <p className="text-sm font-bold text-foreground">{booking.type}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
+                                    <p className="text-sm font-bold text-foreground uppercase">{booking.aircraftId}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </TabsContent>
+                </ScrollArea>
+            </Card>
+        </Tabs>
+    );
 }

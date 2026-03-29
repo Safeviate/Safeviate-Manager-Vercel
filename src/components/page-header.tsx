@@ -5,14 +5,15 @@ import { cn } from '@/lib/utils';
 interface MainPageHeaderProps {
   title: string;
   description?: string;
-  actions?: ReactNode; // For action buttons like "New Report" or "Add User"
+  actions?: ReactNode;
   className?: string;
 }
 
 /**
- * A standardized header component for main page cards across the application.
- * Ensures consistent typography, spacing, and responsive layout for page titles.
- * Automatically handles action buttons in a separate bordered, scrollable row.
+ * Standardized MainPageHeader as per UI Source of Truth.
+ * Layout: flex flex-col lg:flex-row lg:items-center lg:justify-between
+ * Title: text-xl sm:text-2xl font-black uppercase truncate font-headline
+ * Description: text-xs sm:text-sm font-medium text-muted-foreground
  */
 export const MainPageHeader: FC<MainPageHeaderProps> = ({
   title,
@@ -21,27 +22,27 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
   className
 }) => {
   return (
-    <div className={cn("flex flex-col w-full shrink-0", className)}>
+    <div className={cn("flex flex-col w-full shrink-0 border-b bg-muted/5", className)}>
       <CardHeader
-        className="flex flex-row items-center justify-between p-4 md:p-6 border-b bg-muted/5"
+        className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-4 md:p-6 gap-4"
       >
         <div className="flex min-w-0 flex-col gap-1">
-          <CardTitle className="text-[12px] uppercase font-black tracking-wider text-muted-foreground whitespace-nowrap">
+          <CardTitle className="text-xl sm:text-2xl font-black uppercase truncate font-headline tracking-tight">
             {title}
           </CardTitle>
           {description ? (
-            <p className="text-sm text-muted-foreground/90">{description}</p>
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+              {description}
+            </p>
           ) : null}
         </div>
-      </CardHeader>
 
-      {actions && (
-        <div className="w-full overflow-x-auto no-scrollbar border-b bg-muted/5">
-          <div className="flex w-full flex-wrap items-center gap-2 px-4 md:px-6 py-3">
+        {actions && (
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto mt-2 lg:mt-0">
             {actions}
           </div>
-        </div>
-      )}
+        )}
+      </CardHeader>
     </div>
   );
 };
