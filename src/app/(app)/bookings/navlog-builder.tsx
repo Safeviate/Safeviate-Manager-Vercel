@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, Navigation } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
-import type { Booking, NavlogLeg, Navlog } from '@/types/booking';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { Trash2 } from 'lucide-react';
+import type { Booking, NavlogLeg } from '@/types/booking';
+import { useFirestore } from '@/firebase';
 import { calculateWindTriangle, calculateEte, getBearing, getDistance, calculateFuelRequired, getMagneticVariation } from '@/lib/e6b';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import type { Aircraft } from '@/types/aircraft';
+import { cn } from '@/lib/utils';
 
 interface NavlogBuilderProps {
     booking: Booking;
@@ -169,9 +169,9 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     }, [legs, arrivalLatitude, arrivalLongitude, departureLatitude, departureLongitude, arrival, globalTas, globalWindDir, globalWindSpd, globalVariation, globalFuelBurn]);
 
     return (
-        <div className="flex flex-col gap-6 pb-10">
+        <div className="flex flex-col h-full min-h-[600px]">
             {/* Header Inputs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/5 border-b">
+            <div className="shrink-0 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/5 border-b">
                 <div className="space-y-4">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Departure Info</Label>
                     <div className="flex gap-2">
@@ -193,7 +193,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
             </div>
 
             {/* Global Settings */}
-            <div className="px-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="shrink-0 px-6 py-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 border-b">
                 <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">TAS (KT)</Label>
                     <Input type="number" value={globalTas} onChange={(e) => setGlobalTas(Number(e.target.value))} className="h-8 text-xs font-bold bg-background" />
@@ -216,55 +216,59 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
             </div>
 
             {/* Navlog Table */}
-            <div className="rounded-xl border overflow-hidden mx-6 bg-card shadow-sm">
-                <Table>
-                    <TableHeader className="bg-muted/30">
-                        <TableRow>
-                            <TableHead className="w-12 text-center text-[10px] uppercase font-bold tracking-wider">Seq</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Fix</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">TR</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">MH</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-right">Dist</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">ETE</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">Total</TableHead>
-                            {!isReadOnly && <TableHead className="w-10"></TableHead>}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {computedLegs.map((leg, i) => (
-                            <TableRow key={leg.id} className="hover:bg-muted/5 group">
-                                <TableCell className="text-center font-bold text-xs text-muted-foreground">
-                                    {leg.legType === 'arrival-fix' ? 'ARR' : (i + 1).toString().padStart(2, '0')}
-                                </TableCell>
-                                <TableCell>
-                                    <Input 
-                                        value={leg.waypoint} 
-                                        onChange={(e) => handleLegChange(leg.id, 'waypoint', e.target.value.toUpperCase())} 
-                                        className="h-7 border-none bg-transparent font-black text-sm p-0 focus-visible:ring-0 uppercase"
-                                        readOnly={isReadOnly || leg.id === 'terminal-leg'}
-                                    />
-                                </TableCell>
-                                <TableCell className="text-center font-mono font-bold text-xs">{Math.round(leg.trueCourse || 0)}°</TableCell>
-                                <TableCell className="text-center font-mono font-black text-xs text-primary">{Math.round(leg.magneticHeading || 0).toString().padStart(3, '0')}°</TableCell>
-                                <TableCell className="text-right font-mono font-bold text-xs">{leg.distance?.toFixed(1)} NM</TableCell>
-                                <TableCell className="text-center font-mono font-bold text-xs text-emerald-600">{formatEte(leg.ete || 0)}</TableCell>
-                                <TableCell className="text-center font-mono font-black text-xs">{formatEte(leg.cumulativeEte || 0)}</TableCell>
-                                {!isReadOnly && (
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveLeg(leg.id)} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100">
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                    </TableCell>
+            <div className="flex-1 min-h-0 px-6 py-6">
+                <div className="h-full rounded-xl border overflow-hidden bg-card shadow-sm flex flex-col">
+                    <div className="flex-1 overflow-auto no-scrollbar">
+                        <Table>
+                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                                <TableRow>
+                                    <TableHead className="w-12 text-center text-[10px] uppercase font-bold tracking-wider">Seq</TableHead>
+                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider">Fix</TableHead>
+                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">TR</TableHead>
+                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">MH</TableHead>
+                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider text-right">Dist</TableHead>
+                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">ETE</TableHead>
+                                    <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">Total</TableHead>
+                                    {!isReadOnly && <TableHead className="w-10"></TableHead>}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {computedLegs.map((leg, i) => (
+                                    <TableRow key={leg.id} className="hover:bg-muted/5 group">
+                                        <TableCell className="text-center font-bold text-xs text-muted-foreground">
+                                            {leg.legType === 'arrival-fix' ? 'ARR' : (i + 1).toString().padStart(2, '0')}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input 
+                                                value={leg.waypoint} 
+                                                onChange={(e) => handleLegChange(leg.id, 'waypoint', e.target.value.toUpperCase())} 
+                                                className="h-7 border-none bg-transparent font-black text-sm p-0 focus-visible:ring-0 uppercase"
+                                                readOnly={isReadOnly || leg.id === 'terminal-leg'}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="text-center font-mono font-bold text-xs">{Math.round(leg.trueCourse || 0)}°</TableCell>
+                                        <TableCell className="text-center font-mono font-black text-xs text-primary">{Math.round(leg.magneticHeading || 0).toString().padStart(3, '0')}°</TableCell>
+                                        <TableCell className="text-right font-mono font-bold text-xs">{leg.distance?.toFixed(1)} NM</TableCell>
+                                        <TableCell className="text-center font-mono font-bold text-xs text-emerald-600">{formatEte(leg.ete || 0)}</TableCell>
+                                        <TableCell className="text-center font-mono font-black text-xs">{formatEte(leg.cumulativeEte || 0)}</TableCell>
+                                        {!isReadOnly && (
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleRemoveLeg(leg.id)} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ))}
+                                {computedLegs.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="h-64 text-center text-muted-foreground italic text-xs uppercase font-bold tracking-widest bg-muted/5">No waypoints defined.</TableCell>
+                                    </TableRow>
                                 )}
-                            </TableRow>
-                        ))}
-                        {computedLegs.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground italic text-xs uppercase font-bold tracking-widest bg-muted/5">No waypoints defined.</TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
             </div>
         </div>
     );

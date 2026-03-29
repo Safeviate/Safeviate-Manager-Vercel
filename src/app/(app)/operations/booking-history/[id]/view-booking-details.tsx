@@ -61,13 +61,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 </div>
 
                 {/* Content Area: Vertical scrolling built in right from the start */}
-                <div className="flex-1 overflow-y-auto no-scrollbar bg-background">
-                    <TabsContent value="mass-and-balance" className="m-0">
+                <div className="flex-1 overflow-y-auto no-scrollbar bg-background flex flex-col">
+                    <TabsContent value="mass-and-balance" className="m-0 flex-1">
                         <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
                             Operations view: Mass and Balance validation for flight #{booking.bookingNumber}.
                         </CardContent>
                     </TabsContent>
-                    <TabsContent value="navlog" className="m-0">
+                    <TabsContent value="navlog" className="m-0 flex-1 h-full flex flex-col">
                         <NavlogBuilder booking={booking} tenantId={tenantId || ''} />
                     </TabsContent>
                 </div>
