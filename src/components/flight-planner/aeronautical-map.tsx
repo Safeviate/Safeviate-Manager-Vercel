@@ -68,7 +68,6 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                     />
                 </LayersControl.BaseLayer>
 
-                {/* Overlays Section - Using plural layer names for OpenAIP */}
                 <LayersControl.Overlay checked name="OpenAIP Airspaces">
                     <TileLayer
                         url={`https://api.core.openaip.net/api/tiles/airspaces/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}

@@ -9,6 +9,7 @@ import { NavlogBuilder } from "@/app/(app)/bookings/navlog-builder";
 import type { Booking, NavlogLeg } from "@/types/booking";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Map as MapIcon, X, Navigation, Trash2, Loader2, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
