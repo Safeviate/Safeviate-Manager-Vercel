@@ -163,7 +163,6 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     if (!bookings || !aircrafts || !audits || !caps || !safetyReports || !risks) return null;
 
-    const now = new Date();
     const aircraftMap = new Map(aircrafts.map((aircraft) => [aircraft.id, aircraft.tailNumber]));
 
     const completedBookings = bookings.filter((booking) => booking.status === 'Completed');
@@ -379,8 +378,7 @@ export default function DashboardPage() {
               <CardTitle>Fleet Utilization</CardTitle>
               <CardDescription>Top aircraft by logged Hobbs time.</CardDescription>
             </CardHeader>
-            <CardContent className="h-[320px] 
-             pb-0">
+            <CardContent className="h-[320px] pb-0">
               <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.aircraftChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>

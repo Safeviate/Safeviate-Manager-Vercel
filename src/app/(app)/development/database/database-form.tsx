@@ -21,11 +21,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save, Briefcase } from 'lucide-react';
+import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save, Briefcase, MonitorSmartphone } from 'lucide-react';
 import type { Tenant, IndustryType } from '@/types/quality';
 
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
+const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
 
 const INDUSTRY_TYPES: IndustryType[] = [
   'Aviation: Flight Training (ATO)',
@@ -49,11 +50,18 @@ export function DatabaseForm() {
   const [tenantName, setTenantName] = useState('');
   const [industry, setIndustry] = useState<IndustryType>('Aviation: Flight Training (ATO)');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [localIndustryOverride, setLocalIndustryOverride] = useState<string>('');
   
   const [mainTheme, setMainTheme] = useState(DEFAULT_MAIN);
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
   const isDeveloperMode = userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        setLocalIndustryOverride(window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY) || 'none');
+    }
+  }, []);
 
   const sortedTenants = useMemo(() => {
     if (!tenants) return [];
@@ -82,7 +90,6 @@ export function DatabaseForm() {
   const handleIndustryChange = (newIndustry: IndustryType) => {
     setIndustry(newIndustry);
     
-    // Auto-pre-configure menus based on industry logic
     const newEnabled = new Set<string>();
     const walk = (items: any[]) => {
         items.forEach(i => {
@@ -104,11 +111,22 @@ export function DatabaseForm() {
     toast({ title: 'Industry Presets Applied', description: `Authorized modules have been adjusted for ${newIndustry}.` });
   };
 
+  const handleApplyIndustryOverride = (val: string) => {
+    if (typeof window === 'undefined') return;
+    setLocalIndustryOverride(val);
+    if (val === 'none') {
+        window.localStorage.removeItem(INDUSTRY_OVERRIDE_KEY);
+    } else {
+        window.localStorage.setItem(INDUSTRY_OVERRIDE_KEY, val);
+    }
+    window.dispatchEvent(new Event('safeviate-industry-switch'));
+    toast({ title: 'UI Simulation Updated', description: `Layout switched to ${val === 'none' ? 'Database Default' : val}.` });
+  };
+
   const handleSwitchTenant = (tenant: Tenant) => {
     if (typeof window === 'undefined') return;
 
     window.localStorage.setItem(TENANT_OVERRIDE_STORAGE_KEY, tenant.id);
-    // Dispatch custom event to trigger refresh in UserProfileProvider
     window.dispatchEvent(new Event('safeviate-tenant-switch'));
 
     toast({
@@ -133,10 +151,14 @@ export function DatabaseForm() {
       subHrefs?.forEach(sh => newEnabled.delete(sh));
     } else {
       newEnabled.add(href);
-      subHrefs?.forEach(sh => newEnabled.add(sh));
+      subHrefs?.forEach(sh => addHrefs(sh, newEnabled));
     }
     setEnabledHrefs(newEnabled);
   };
+
+  const addHrefs = (href: string, set: Set<string>) => {
+      set.add(href);
+  }
 
   const toggleSubMenu = (parentHref: string, href: string) => {
     const newEnabled = new Set(enabledHrefs);
@@ -203,8 +225,8 @@ export function DatabaseForm() {
       </CardHeader>
       
       <div className="p-6 pb-0 border-b bg-muted/10">
-          <div className="flex flex-col md:flex-row gap-4 items-end mb-6">
-              <div className="space-y-2 flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-6">
+              <div className="space-y-2">
                   <Label>Load Existing Tenant</Label>
                   <Select onValueChange={handleLoadTenant} value={selectedTenantId || undefined}>
                       <SelectTrigger><SelectValue placeholder={isLoadingTenants ? "Loading..." : "Choose a tenant..."} /></SelectTrigger>
@@ -213,14 +235,14 @@ export function DatabaseForm() {
                       </SelectContent>
                   </Select>
               </div>
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2">
                   <Label htmlFor="tenant-name">Tenant Name</Label>
                   <Input id="tenant-name" placeholder="e.g., Safeviate Inc." value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
               </div>
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Briefcase className="h-3.5 w-3.5 text-primary" />
-                    Industry Profile
+                    Industry Profile (Permanent)
                   </Label>
                   <Select onValueChange={(v) => handleIndustryChange(v as IndustryType)} value={industry}>
                       <SelectTrigger>
@@ -233,62 +255,58 @@ export function DatabaseForm() {
               </div>
           </div>
 
-          <div className="mb-6 space-y-3 rounded-lg border bg-background p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Active Organizations</h3>
-                      <p className="text-sm text-muted-foreground">Quickly switch between configured tenants for developer review.</p>
+          <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-3 rounded-lg border bg-background p-4 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-wider text-primary flex items-center gap-2">
+                            <MonitorSmartphone className="h-4 w-4" />
+                            UI Layout Switcher (Simulation)
+                          </h3>
+                          <p className="text-xs text-muted-foreground">Test layout responsiveness to industry shifts locally.</p>
+                      </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Active: {(sortedTenants.find((tenant) => tenant.id === activeTenantId)?.name) || activeTenantId || 'None'}
-                      </Badge>
-                      {!isDeveloperMode && (
-                          <Badge variant="secondary">Switching disabled (Developer only)</Badge>
-                      )}
+                  <div className="pt-2">
+                    <Select value={localIndustryOverride} onValueChange={handleApplyIndustryOverride}>
+                        <SelectTrigger className="h-10 border-dashed border-2">
+                            <SelectValue placeholder="No local override active" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Database Default (No Override)</SelectItem>
+                            {INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                   </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                  {sortedTenants.length === 0 ? (
-                      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                          No organizations found.
+              <div className="space-y-3 rounded-lg border bg-background p-4 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Impersonation</h3>
+                          <p className="text-xs text-muted-foreground">Switch active tenant view for developer review.</p>
                       </div>
-                  ) : (
-                      sortedTenants.map((tenant) => {
-                          const isActiveTenant = tenant.id === activeTenantId;
-
+                      <Badge variant="outline" className="gap-1.5 h-6">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Active: {(sortedTenants.find((tenant) => tenant.id === activeTenantId)?.name) || activeTenantId || 'None'}
+                      </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                      {sortedTenants.slice(0, 4).map((tenant) => {
+                          const isActive = tenant.id === activeTenantId;
                           return (
-                              <div key={tenant.id} className="flex flex-col gap-3 rounded-lg border bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-                                  <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                          <Building2 className="h-4 w-4 text-primary" />
-                                          <span className="font-semibold">{tenant.name}</span>
-                                          {isActiveTenant && <Badge className="bg-green-600 hover:bg-green-600">Active</Badge>}
-                                      </div>
-                                      <p className="text-xs text-muted-foreground">ID: {tenant.id} • {tenant.industry || 'Standard Profile'}</p>
-                                  </div>
-                                  <div className="flex gap-2">
-                                      <Button type="button" variant="outline" size="sm" onClick={() => handleLoadTenant(tenant.id)}>
-                                          <Pencil className="mr-2 h-4 w-4" />
-                                          Edit
-                                      </Button>
-                                      <Button
-                                          type="button"
-                                          size="sm"
-                                          variant={isActiveTenant ? 'secondary' : 'default'}
-                                          onClick={() => handleSwitchTenant(tenant)}
-                                          disabled={!isDeveloperMode || isActiveTenant}
-                                      >
-                                          <ArrowRightLeft className="mr-2 h-4 w-4" />
-                                          {isActiveTenant ? 'Current' : 'Switch To'}
-                                      </Button>
-                                  </div>
-                              </div>
+                              <Button
+                                  key={tenant.id}
+                                  variant={isActive ? 'secondary' : 'outline'}
+                                  size="sm"
+                                  className="h-8 text-[10px] font-black uppercase"
+                                  onClick={() => handleSwitchTenant(tenant)}
+                                  disabled={isActive}
+                              >
+                                  {tenant.name}
+                              </Button>
                           );
-                      })
-                  )}
+                      })}
+                  </div>
               </div>
           </div>
       </div>
@@ -296,7 +314,6 @@ export function DatabaseForm() {
       <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="p-6 space-y-10">
-            {/* --- Menu Config Section --- */}
             <div className="space-y-4">
                 <h3 className="text-xl font-bold">Authorized Navigation</h3>
                 <p className="text-sm text-muted-foreground">Select the application modules visible to this tenant.</p>

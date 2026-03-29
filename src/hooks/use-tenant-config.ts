@@ -42,7 +42,7 @@ export const useTenantConfig = () => {
 
   const { data: tenantData, isLoading, error } = useDoc<Tenant>(tenantRef);
 
-  const isDeveloper = userProfile?.role?.toLowerCase() === 'dev' || userProfile?.id === 'DEVELOPER_MODE';
+  const isDeveloper = userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';
 
   const modifiedTenant = useMemo(() => {
     if (!tenantData) return null;
