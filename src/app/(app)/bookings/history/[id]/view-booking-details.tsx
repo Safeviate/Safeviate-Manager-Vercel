@@ -12,7 +12,7 @@ interface ViewBookingDetailsProps {
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     return (
-        <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
+        <Tabs defaultValue="mass-and-balance" className="flex-1 overflow-hidden flex flex-col">
             <Card className="flex-1 overflow-hidden flex flex-col shadow-none border">
                 {/* Sticky Header Section: Identity, Metadata & Navigation */}
                 <div className="sticky top-0 z-30 bg-card border-b">
@@ -42,10 +42,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <div className="bg-muted/5 px-6 py-2 shrink-0">
                         <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
                             <TabsTrigger 
-                                value="overview" 
+                                value="mass-and-balance" 
                                 className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
                             >
-                                Overview
+                                Mass and Balance
+                            </TabsTrigger>
+                            <TabsTrigger 
+                                value="navlog" 
+                                className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
+                            >
+                                Navlog
                             </TabsTrigger>
                         </TabsList>
                     </div>
@@ -53,9 +59,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
                 {/* Content Area */}
                 <ScrollArea className="flex-1">
-                    <TabsContent value="overview" className="m-0">
+                    <TabsContent value="mass-and-balance" className="m-0">
                         <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
-                            Use the navigation above to view specific flight records, logs, and assessments.
+                            Mass and Balance calculations and envelope visualization for flight #{booking.bookingNumber}.
+                        </CardContent>
+                    </TabsContent>
+                    <TabsContent value="navlog" className="m-0">
+                        <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
+                            Navigation log and route planning for flight #{booking.bookingNumber}.
                         </CardContent>
                     </TabsContent>
                 </ScrollArea>
