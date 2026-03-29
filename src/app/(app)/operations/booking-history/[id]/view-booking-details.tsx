@@ -175,11 +175,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </CardContent>
                             <Separator />
                             <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
-                            <CardContent className="pb-32">
+                            <CardContent className="pb-10">
                                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
                                     <div className="flex flex-col">
                                         <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
-                                            <div className="min-w-[800px] h-[650px] relative">
+                                            <div className="min-w-[800px] h-[850px] relative">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                                                         <CartesianGrid strokeDasharray="3 3" />

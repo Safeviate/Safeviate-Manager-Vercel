@@ -167,7 +167,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <ScrollArea className="flex-1 min-h-0">
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                                <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
+                                <DetailItem label="Status" value={booking.status} />
                                 <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
                                 <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
                                 <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
@@ -175,7 +175,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </CardContent>
                             <Separator />
                             <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance</CardTitle></CardHeader>
-                            <CardContent className="pb-20">
+                            <CardContent className="pb-10">
                                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
                                     <div className="flex flex-col">
                                         <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile && "mx-auto w-full max-w-[430px]")}>
@@ -188,7 +188,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     {results.isSafe ? 'Within Limits' : 'Out Of Limits'}
                                                 </Badge>
                                             </div>
-                                            <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[650px]")}>
+                                            <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[850px]")}>
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <ScatterChart margin={isMobile ? { top: 12, right: 16, bottom: 16, left: 4 } : { top: 20, right: 28, bottom: 32, left: 20 }}>
                                                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
