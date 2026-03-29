@@ -2,15 +2,10 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
   maxInstances: 1
 
-# Link secrets from Google Secret Manager to your app hosting environment
 secrets:
   - variable: GOOGLE_MAPS_API_KEY
     secret: GOOGLE_MAPS_API_KEY
-  - variable: GOOGLE_GENAI_API_KEY
+  - variable: GOOGLE_API_KEY  # This is the "nickname"
     secret: GOOGLE_GENAI_API_KEY
-  - variable: GEMINI_API_KEY
-    secret: GEMINI_API_KEY

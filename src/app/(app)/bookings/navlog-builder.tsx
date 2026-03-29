@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { collection } from 'firebase/firestore';
@@ -498,6 +498,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     return (
         <TooltipProvider>
             <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto">
 
                 
                 <div className="p-4 border-b bg-muted/10 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -532,7 +533,8 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         {renderWeatherBriefing('Arrival Weather', arrival, airportBriefings.arrival, airportBriefingLoading.arrival, 'arrival')}
                     </div>
                 </div>
-
+                </div>
+                </div>
                 {!isReadOnly && (
                     <Dialog open={plannerOpen} onOpenChange={setPlannerOpen}>
                         <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden bg-slate-900 border-slate-700 flex flex-col">
@@ -738,7 +740,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                     )}
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-auto">
+                <div className="overflow-x-auto">
                     <div className="min-w-[1320px]">
                     <Table className="w-full table-fixed">
                         <TableHeader className="bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
