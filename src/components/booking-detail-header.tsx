@@ -29,24 +29,24 @@ export function BookingDetailHeader({
   const isMobile = useIsMobile();
 
   return (
-    <Card className="shrink-0 overflow-hidden border shadow-none">
-      <div className="border-b bg-muted/5 px-4 md:px-6 py-4">
-        <p className="text-[12px] font-black uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-      </div>
-
-      <div className="border-b bg-muted/5 px-4 md:px-6 py-3">
+    <>
+      {/* Primary Header Section (White background like Bookings History) */}
+      <div className="border-b px-4 md:px-6 py-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-2 md:gap-3">
-            {status ? (
-              <Badge variant={status === 'Approved' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                {status}
-              </Badge>
-            ) : null}
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {subtitle}
-            </span>
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">
+              {title}
+            </h1>
+            <div className="flex items-center gap-3">
+              {status ? (
+                <Badge variant={status === 'Approved' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                  {status}
+                </Badge>
+              ) : null}
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                {subtitle}
+              </span>
+            </div>
           </div>
           {flightHours ? (
             <div className="flex items-center gap-2 self-start md:self-auto">
@@ -60,18 +60,22 @@ export function BookingDetailHeader({
         </div>
       </div>
 
-      <div className="border-b bg-background/95 px-4 md:px-6 py-3">
-        <ResponsiveTabRow
-          value={activeTab}
-          onValueChange={onTabChange}
-          placeholder="Select Section"
-          action={tabRowAction}
-          options={[
-            { value: 'flight-details', label: 'Flight Details', icon: FileText },
-            { value: 'navlog', label: 'Navlog', icon: NavIcon },
-          ]}
-        />
+      {/* Navigation Sub-header (Muted background strip like Filter pins) */}
+      <div className="border-b bg-muted/20 px-4 md:px-6 py-3 sticky top-0 z-20 backdrop-blur-sm">
+        <div className="relative">
+          <ResponsiveTabRow
+            value={activeTab}
+            onValueChange={onTabChange}
+            placeholder="Select Section"
+            action={tabRowAction}
+            joinedDesktopTabs={true}
+            options={[
+              { value: 'flight-details', label: 'Flight Details', icon: FileText },
+              { value: 'navlog', label: 'Navlog', icon: NavIcon },
+            ]}
+          />
+        </div>
       </div>
-    </Card>
+    </>
   );
 }

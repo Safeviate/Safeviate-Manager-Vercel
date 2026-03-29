@@ -131,7 +131,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
             }
         } catch (e) { console.warn('NOAA lookup failed:', e); }
 
-        // Source 2: OpenAIP airport database (global coverage — reliable for FA** airports)
+        // Source 2: OpenAIP airport database (global coverage â€” reliable for FA** airports)
         try {
             const openAipRes = await fetch(`/api/openaip?resource=airports&icaoCode=${station}&limit=1`);
             if (openAipRes.ok) {
@@ -379,13 +379,13 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         METAR: <span className="font-mono font-normal text-muted-foreground">{briefing.metar.rawOb ?? 'No raw METAR available'}</span>
                     </p>
                     <p className="text-muted-foreground">
-                        Wind {briefing.metar.wdir ?? '--'}° @ {briefing.metar.wspd ?? '--'}kt
+                        Wind {briefing.metar.wdir ?? '--'}Â° @ {briefing.metar.wspd ?? '--'}kt
                         {briefing.metar.wgst ? ` gust ${briefing.metar.wgst}kt` : ''}
                     </p>
                     <p className="text-muted-foreground">
                         Vis {briefing.metar.visib ?? '--'} SM
-                        {briefing.metar.temp != null ? `, Temp ${briefing.metar.temp}°C` : ''}
-                        {briefing.metar.dewp != null ? `, Dewpoint ${briefing.metar.dewp}°C` : ''}
+                        {briefing.metar.temp != null ? `, Temp ${briefing.metar.temp}Â°C` : ''}
+                        {briefing.metar.dewp != null ? `, Dewpoint ${briefing.metar.dewp}Â°C` : ''}
                     </p>
                     {briefing.taf ? (
                         <p className="text-muted-foreground">
@@ -497,16 +497,8 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
 
     return (
         <TooltipProvider>
-            <Card className="flex h-full min-h-0 w-full flex-col overflow-hidden border shadow-none">
-                <MainPageHeader
-                    title="Navigation Log (Navlog)"
-                    description="Plan legs and calculate headings/time burn."
-                    actions={!isReadOnly ? (
-                        <Button size="sm" onClick={handleSave} className="gap-2">
-                            <Save className="h-4 w-4" /> Save Plan
-                        </Button>
-                    ) : undefined}
-                />
+            <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+
                 
                 <div className="p-4 border-b bg-muted/10 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-3">
@@ -613,7 +605,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         <Input type="number" value={globalTas} onChange={(e) => setGlobalTas(Number(e.target.value))} className="h-8 w-full max-w-[140px] font-mono text-xs bg-slate-900/50" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Wind Dir (°T)</label>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Wind Dir (Â°T)</label>
                         <Input type="number" value={globalWindDir} onChange={(e) => setGlobalWindDir(Number(e.target.value))} className="h-8 w-full max-w-[140px] font-mono text-xs bg-slate-900/50" />
                     </div>
                     <div className="space-y-1">
@@ -621,7 +613,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         <Input type="number" value={globalWindSpd} onChange={(e) => setGlobalWindSpd(Number(e.target.value))} className="h-8 w-full max-w-[140px] font-mono text-xs bg-slate-900/50" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Mag Var (°) <span className="text-emerald-500 text-[8px] font-black">AUTO</span></label>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Mag Var (Â°) <span className="text-emerald-500 text-[8px] font-black">AUTO</span></label>
                         <div className="flex gap-1 items-center">
                             <Input
                                 type="number"
@@ -708,7 +700,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                             <div className="space-y-1">
                                                 <div className="flex items-center gap-1 text-[9px] font-bold text-white/70">
                                                     <Wind className="h-2.5 w-2.5 text-sky-400" />
-                                                    {data.metar.wdir === 'VRB' ? 'VRB' : `${data.metar.wdir ?? '--'}°`} @ {data.metar.wspd ?? '--'}kt
+                                                    {data.metar.wdir === 'VRB' ? 'VRB' : `${data.metar.wdir ?? '--'}Â°`} @ {data.metar.wspd ?? '--'}kt
                                                     {data.metar.wgst ? <span className="text-red-400"> G{data.metar.wgst}kt</span> : null}
                                                 </div>
                                                 <div className="flex items-center gap-1 text-[9px] font-bold text-white/70">
@@ -717,13 +709,13 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                                 </div>
                                                 <div className="flex items-center gap-1 text-[9px] font-bold text-white/70">
                                                     <Thermometer className="h-2.5 w-2.5 text-orange-400" />
-                                                    {data.metar.temp != null ? `${data.metar.temp}°C` : '--'} / DP {data.metar.dewp != null ? `${data.metar.dewp}°C` : '--'}
+                                                    {data.metar.temp != null ? `${data.metar.temp}Â°C` : '--'} / DP {data.metar.dewp != null ? `${data.metar.dewp}Â°C` : '--'}
                                                 </div>
                                                 {data.metar.altim && (
                                                     <div className="text-[9px] font-bold text-white/50">QNH {data.metar.altim.toFixed(0)} hPa</div>
                                                 )}
                                                 <p className="text-[8px] font-mono text-white/25 break-all leading-relaxed pt-1 border-t border-white/5">
-                                                    {(data.metar.rawOb ?? '').substring(0, 90)}{(data.metar.rawOb?.length ?? 0) > 90 ? '…' : ''}
+                                                    {(data.metar.rawOb ?? '').substring(0, 90)}{(data.metar.rawOb?.length ?? 0) > 90 ? 'â€¦' : ''}
                                                 </p>
                                             </div>
                                         ) : (
@@ -731,10 +723,10 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                         )}
                                         {data.taf && (
                                             <div className="pt-1.5 border-t border-white/5">
-                                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider">TAF · {data.taf.fcsts?.length ?? 0} periods</span>
+                                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider">TAF Â· {data.taf.fcsts?.length ?? 0} periods</span>
                                                 {data.taf.fcsts?.[0] && (
                                                     <p className="text-[8px] text-white/30 font-mono mt-0.5">
-                                                        {(data.taf.rawTAF ?? '').substring(0, 60)}…
+                                                        {(data.taf.rawTAF ?? '').substring(0, 60)}â€¦
                                                     </p>
                                                 )}
                                             </div>
@@ -792,12 +784,12 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                             placeholder="---"
                                         />
                                     </TableCell>
-                                    <TableCell className="px-3 text-center text-[10px] font-black text-primary whitespace-nowrap">{Math.round(leg.trueCourse || 0)}°</TableCell>
-                                    <TableCell className="px-3 text-center text-[10px] font-black text-white bg-slate-900/30 whitespace-nowrap">{Math.round(leg.magneticHeading || 0).toString().padStart(3, '0')}°</TableCell>
+                                    <TableCell className="px-3 text-center text-[10px] font-black text-primary whitespace-nowrap">{Math.round(leg.trueCourse || 0)}Â°</TableCell>
+                                    <TableCell className="px-3 text-center text-[10px] font-black text-white bg-slate-900/30 whitespace-nowrap">{Math.round(leg.magneticHeading || 0).toString().padStart(3, '0')}Â°</TableCell>
                                     <TableCell className="px-3 text-center text-[11px] font-black text-amber-500 whitespace-nowrap">{leg.distance?.toFixed(1)} NM</TableCell>
                                     <TableCell className="px-3 text-center text-[10px] font-bold text-primary whitespace-nowrap">{Math.round(leg.groundSpeed || 0)}</TableCell>
                                     <TableCell className="px-3 text-center text-[10px] font-bold text-primary font-mono whitespace-nowrap">{formatEte(leg.ete || 0)}</TableCell>
-                                    <TableCell className="px-3 text-center text-[10px] font-bold text-emerald-500 font-mono whitespace-nowrap">{leg.tripFuel ? `${leg.tripFuel.toFixed(1)}` : '—'}</TableCell>
+                                    <TableCell className="px-3 text-center text-[10px] font-bold text-emerald-500 font-mono whitespace-nowrap">{leg.tripFuel ? `${leg.tripFuel.toFixed(1)}` : 'â€”'}</TableCell>
                                     <TableCell className="px-3 text-center text-[10px] font-black text-white bg-slate-900/50 font-mono whitespace-nowrap">{formatEte(leg.cumulativeEte || 0)}</TableCell>
                                     {!isReadOnly && (
                                         <TableCell>
@@ -846,12 +838,12 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                 <tfoot>
                                     <tr className="border-t-2 border-primary/20 bg-muted/30">
                                         <td colSpan={6} className="text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground py-2 px-3 whitespace-nowrap">Route Totals</td>
-                                        <td className="text-center text-[10px] font-black text-primary py-2 px-3 whitespace-nowrap">—</td>
-                                        <td className="text-center text-[10px] font-black text-white bg-slate-900/30 py-2 px-3 whitespace-nowrap">—</td>
+                                        <td className="text-center text-[10px] font-black text-primary py-2 px-3 whitespace-nowrap">â€”</td>
+                                        <td className="text-center text-[10px] font-black text-white bg-slate-900/30 py-2 px-3 whitespace-nowrap">â€”</td>
                                         <td className="text-center text-[11px] font-black text-amber-500 py-2 px-3 whitespace-nowrap">{totalDist.toFixed(1)} NM</td>
-                                        <td className="text-center text-[10px] font-bold text-primary py-2 px-3 whitespace-nowrap">—</td>
+                                        <td className="text-center text-[10px] font-bold text-primary py-2 px-3 whitespace-nowrap">â€”</td>
                                         <td className="text-center text-[10px] font-black text-primary font-mono py-2 px-3 whitespace-nowrap">{formatEte(totalEte)}</td>
-                                        <td className="text-center text-[10px] font-black text-emerald-500 font-mono py-2 px-3 whitespace-nowrap">{globalFuelBurn > 0 ? `${totalFuel.toFixed(1)} ${globalFuelBurnUnit}` : '—'}</td>
+                                        <td className="text-center text-[10px] font-black text-emerald-500 font-mono py-2 px-3 whitespace-nowrap">{globalFuelBurn > 0 ? `${totalFuel.toFixed(1)} ${globalFuelBurnUnit}` : 'â€”'}</td>
                                         <td className="text-center text-[10px] font-black text-white bg-slate-900/50 font-mono py-2 px-3 whitespace-nowrap">{formatEte(totalEte)}</td>
                                         {!isReadOnly && <td />}
                                     </tr>
@@ -891,7 +883,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         <p className="text-[9px] font-bold text-muted-foreground uppercase">Pro Tip: Use the map planner for visual legs</p>
                     </div>
                 )}
-            </Card>
+            </div>
         </TooltipProvider>
     );
 }
@@ -1307,4 +1299,5 @@ function AviationLayerController({
         </>
     );
 }
+
 

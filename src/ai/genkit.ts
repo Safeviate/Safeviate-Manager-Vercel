@@ -1,16 +1,20 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+// 1. Prioritize the official Google name
+const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
-    console.error("CRITICAL: Neither GEMINI_API_KEY nor GOOGLE_GENAI_API_KEY is available in the environment!");
+  console.error("CRITICAL: No API Key found in environment variables!");
 } else {
-    const keySource = process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'GOOGLE_GENAI_API_KEY';
-    console.log(`Genkit initialized using key from: ${keySource}`);
+  // Useful for your logs to see which one Firebase is actually passing
+  const keySource = process.env.GOOGLE_GENAI_API_KEY ? 'GOOGLE_GENAI_API_KEY' : 'GEMINI_API_KEY';
+  console.log(`Genkit initialized using key from: ${keySource}`);
 }
 
 export const ai = genkit({
-  plugins: [googleAI({ apiKey: apiKey || 'MISSING_API_KEY' })],
-  model: 'googleai/gemini-1.5-pro',
+  plugins: [
+    googleAI({ apiKey }) // No fallback string, let Genkit handle the missing key error
+  ],
+  model: 'googleai/gemini-1.5-flash', // Use the stable alias you verified in terminal
 });

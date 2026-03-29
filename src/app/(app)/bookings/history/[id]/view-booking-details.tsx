@@ -213,7 +213,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     return (
-        <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
@@ -235,113 +235,111 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     }
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
-                    <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <Card className={cn("flex h-full min-h-[calc(100dvh-13rem)] flex-1 flex-col overflow-hidden border shadow-none lg:min-h-[calc(100dvh-10rem)]", isMobile && "min-h-[calc(100dvh-13rem)]")}>
-                            <ScrollArea className="min-h-0 flex-1">
-                                <CardContent className="p-0">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12 p-8 md:p-10 bg-muted/5">
-                                        <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
-                                        <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                                        <DetailItem label="Schedule" value={`${formatDateSafe(booking.start, 'p')} - ${formatDateSafe(booking.end, 'p')}`} />
-                                        <DetailItem label="Instructor" value={instructors?.find(i => i.id === booking.instructorId)?.firstName || 'N/A'} />
-                                        <DetailItem label="Student" value={students?.find(s => s.id === booking.studentId)?.firstName || 'N/A'} />
-                                        <DetailItem label="Approved By" value={booking.approvedByName || 'Pending'} />
+                    <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
+                        <ScrollArea className="min-h-0 flex-1">
+                            <CardContent className="p-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12 p-8 md:p-10 bg-muted/5">
+                                    <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
+                                    <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
+                                    <DetailItem label="Schedule" value={`${formatDateSafe(booking.start, 'p')} - ${formatDateSafe(booking.end, 'p')}`} />
+                                    <DetailItem label="Instructor" value={instructors?.find(i => i.id === booking.instructorId)?.firstName || 'N/A'} />
+                                    <DetailItem label="Student" value={students?.find(s => s.id === booking.studentId)?.firstName || 'N/A'} />
+                                    <DetailItem label="Approved By" value={booking.approvedByName || 'Pending'} />
+                                </div>
+                            </CardContent>
+                            <Separator />
+                            <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><History className="h-4 w-4" /> Technical Log</CardTitle></CardHeader>
+                            <CardContent className="space-y-8 px-8 md:px-10 pb-12">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className={cn("p-4 rounded-xl border bg-muted/10", isPreFlightBlocked && !booking.preFlight && "opacity-50")}>
+                                        <h3 className="font-bold text-xs uppercase flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-green-600" /> Pre-Flight</h3>
+                                        {activeEditView === 'pre-flight' ? (
+                                            <PreFlightLogForm booking={booking} aircraft={aircraft!} tenantId={tenantId!} onCancel={() => setActiveEditView('none')} onSuccess={() => setActiveEditView('none')} />
+                                        ) : booking.preFlightData ? (
+                                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                                <DetailItem label="Start Hobbs" value={booking.preFlightData.hobbs.toFixed(1)} />
+                                                <DetailItem label="Start Tacho" value={booking.preFlightData.tacho.toFixed(1)} />
+                                            </div>
+                                        ) : <p className="text-xs text-muted-foreground mt-2 italic">Waiting for log entry.</p>}
+                                        {!booking.preFlight && !isCompleted && canLogPre && activeEditView !== 'pre-flight' && (
+                                            <Button size="sm" onClick={() => setActiveEditView('pre-flight')} className="mt-4 h-8 text-[10px] uppercase font-black">Record Pre-Flight</Button>
+                                        )}
                                     </div>
-                                </CardContent>
-                                <Separator />
-                                <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><History className="h-4 w-4" /> Technical Log</CardTitle></CardHeader>
-                                <CardContent className="space-y-8 px-8 md:px-10 pb-12">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className={cn("p-4 rounded-xl border bg-muted/10", isPreFlightBlocked && !booking.preFlight && "opacity-50")}>
-                                            <h3 className="font-bold text-xs uppercase flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-green-600" /> Pre-Flight</h3>
-                                            {activeEditView === 'pre-flight' ? (
-                                                <PreFlightLogForm booking={booking} aircraft={aircraft!} tenantId={tenantId!} onCancel={() => setActiveEditView('none')} onSuccess={() => setActiveEditView('none')} />
-                                            ) : booking.preFlightData ? (
-                                                <div className="grid grid-cols-2 gap-4 mt-4">
-                                                    <DetailItem label="Start Hobbs" value={booking.preFlightData.hobbs.toFixed(1)} />
-                                                    <DetailItem label="Start Tacho" value={booking.preFlightData.tacho.toFixed(1)} />
-                                                </div>
-                                            ) : <p className="text-xs text-muted-foreground mt-2 italic">Waiting for log entry.</p>}
-                                            {!booking.preFlight && !isCompleted && canLogPre && activeEditView !== 'pre-flight' && (
-                                                <Button size="sm" onClick={() => setActiveEditView('pre-flight')} className="mt-4 h-8 text-[10px] uppercase font-black">Record Pre-Flight</Button>
-                                            )}
-                                        </div>
-                                        <div className={cn("p-4 rounded-xl border bg-muted/10", !booking.preFlight && "opacity-50")}>
-                                            <h3 className="font-bold text-xs uppercase flex items-center gap-2"><FileClock className="h-4 w-4 text-blue-600" /> Post-Flight</h3>
-                                            {activeEditView === 'post-flight' ? (
-                                                <PostFlightLogForm booking={booking} aircraft={aircraft!} tenantId={tenantId!} onCancel={() => setActiveEditView('none')} onSuccess={() => setActiveEditView('none')} />
-                                            ) : booking.postFlightData ? (
-                                                <div className="grid grid-cols-2 gap-4 mt-4">
-                                                    <DetailItem label="End Hobbs" value={booking.postFlightData.hobbs.toFixed(1)} />
-                                                    <DetailItem label="End Tacho" value={booking.postFlightData.tacho.toFixed(1)} />
-                                                </div>
-                                            ) : <p className="text-xs text-muted-foreground mt-2 italic">Waiting for completion.</p>}
-                                            {booking.preFlight && !isCompleted && canLogPost && activeEditView !== 'post-flight' && (
-                                                <Button size="sm" onClick={() => setActiveEditView('post-flight')} className="mt-4 h-8 text-[10px] uppercase font-black">Finalize Flight</Button>
-                                            )}
-                                        </div>
+                                    <div className={cn("p-4 rounded-xl border bg-muted/10", !booking.preFlight && "opacity-50")}>
+                                        <h3 className="font-bold text-xs uppercase flex items-center gap-2"><FileClock className="h-4 w-4 text-blue-600" /> Post-Flight</h3>
+                                        {activeEditView === 'post-flight' ? (
+                                            <PostFlightLogForm booking={booking} aircraft={aircraft!} tenantId={tenantId!} onCancel={() => setActiveEditView('none')} onSuccess={() => setActiveEditView('none')} />
+                                        ) : booking.postFlightData ? (
+                                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                                <DetailItem label="End Hobbs" value={booking.postFlightData.hobbs.toFixed(1)} />
+                                                <DetailItem label="End Tacho" value={booking.postFlightData.tacho.toFixed(1)} />
+                                            </div>
+                                        ) : <p className="text-xs text-muted-foreground mt-2 italic">Waiting for completion.</p>}
+                                        {booking.preFlight && !isCompleted && canLogPost && activeEditView !== 'post-flight' && (
+                                            <Button size="sm" onClick={() => setActiveEditView('post-flight')} className="mt-4 h-8 text-[10px] uppercase font-black">Finalize Flight</Button>
+                                        )}
                                     </div>
-                                </CardContent>
-                                <Separator />
-                                <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><AlertTriangle className="h-4 w-4" /> Mass & Balance</CardTitle></CardHeader>
-                                <CardContent className="min-h-full px-8 md:px-10 pb-40">
-                                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
-                                        <div className="flex flex-col">
-                                            <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
-                                                <div className="min-w-[800px] h-[450px] relative">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" />
-                                                            <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow>
-                                                                <Label value="CG (in)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" />
-                                                            </XAxis>
-                                                            <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow>
-                                                                <Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" />
-                                                            </YAxis>
-                                                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
-                                                            <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
-                                                            </Scatter>
-                                                        </ScatterChart>
-                                                    </ResponsiveContainer>
-                                                </div>
+                                </div>
+                            </CardContent>
+                            <Separator />
+                            <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><AlertTriangle className="h-4 w-4" /> Mass & Balance</CardTitle></CardHeader>
+                            <CardContent className="min-h-full px-8 md:px-10 pb-40">
+                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
+                                    <div className="flex flex-col">
+                                        <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
+                                            <div className="min-w-[800px] h-[450px] relative">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow>
+                                                            <Label value="CG (in)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" />
+                                                        </XAxis>
+                                                        <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow>
+                                                            <Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" />
+                                                        </YAxis>
+                                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                                        <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
+                                                        <Scatter data={[{ x: results.cg, y: results.weight }]}>
+                                                            <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
+                                                        </Scatter>
+                                                    </ScatterChart>
+                                                </ResponsiveContainer>
                                             </div>
                                         </div>
-                                        <div className="space-y-6 pr-1">
-                                            <div className="p-4 bg-muted/30 rounded-xl space-y-4 border">
-                                                <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
-                                                <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
-                                                <div className={cn("p-2 rounded text-center text-[10px] font-black uppercase", results.isSafe ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
-                                                    {results.isSafe ? "Safe Loading" : "Outside Envelope"}
-                                                </div>
-                                                <Button size="sm" onClick={handleSaveToBooking} disabled={isCompleted} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Load config</Button>
+                                    </div>
+                                    <div className="space-y-6 pr-1">
+                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4 border">
+                                            <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
+                                            <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
+                                            <div className={cn("p-2 rounded text-center text-[10px] font-black uppercase", results.isSafe ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
+                                                {results.isSafe ? "Safe Loading" : "Outside Envelope"}
                                             </div>
-                                            <ScrollArea className="h-[400px] pr-4">
-                                                <div className="space-y-4">
-                                                    {stations.map(s => (
-                                                        <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm">
-                                                            <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
-                                                            <div className="flex items-center gap-2">
-                                                                <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} disabled={isCompleted} className="h-8 text-xs font-bold" />
-                                                                <div className="text-[10px] font-bold text-muted-foreground w-8">LBS</div>
-                                                            </div>
+                                            <Button size="sm" onClick={handleSaveToBooking} disabled={isCompleted} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Load config</Button>
+                                        </div>
+                                        <ScrollArea className="h-[400px] pr-4">
+                                            <div className="space-y-4">
+                                                {stations.map(s => (
+                                                    <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm">
+                                                        <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
+                                                        <div className="flex items-center gap-2">
+                                                            <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} disabled={isCompleted} className="h-8 text-xs font-bold" />
+                                                            <div className="text-[10px] font-bold text-muted-foreground w-8">LBS</div>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </ScrollArea>
-                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
                                     </div>
-                                </CardContent>
-                            </ScrollArea>
-                        </Card>
+                                </div>
+                            </CardContent>
+                        </ScrollArea>
                     </TabsContent>
                     <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden">
                         <NavlogBuilder booking={booking} tenantId={tenantId!} />
                     </TabsContent>
                 </div>
             </Tabs>
-        </div>
+        </Card>
     );
 }
 

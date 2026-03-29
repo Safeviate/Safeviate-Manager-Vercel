@@ -23,18 +23,12 @@ import { Label as UILabel } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { NavlogBuilder } from '../../../bookings/navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, Cell, Label } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { BookingDetailHeader } from '@/components/booking-detail-header';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
 
@@ -143,131 +137,94 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const fYMin = Math.min(...allY) - 100;
     const fYMax = Math.max(...allY) + 100;
 
-    const tabs = [
-        { value: 'flight-details', label: 'Flight Details', icon: FileText },
-        { value: 'navlog', label: 'Navlog', icon: NavIcon },
-    ];
     const openPlannerFromHeader = () => {
         if (activeTab !== 'navlog') setActiveTab('navlog');
         setTimeout(() => window.dispatchEvent(new Event('open-navlog-planner')), 0);
     };
 
     return (
-        <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full min-h-0 flex-1 flex-col">
-                <div className="shrink-0 px-1">
-                    {isMobile ? (
-                        <div className="mb-4">
-                            <Select value={activeTab} onValueChange={setActiveTab}>
-                                <SelectTrigger className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase h-9">
-                                    <SelectValue placeholder="Select Section" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {tabs.map((tab) => (
-                                        <SelectItem key={tab.value} value={tab.value} className="text-[10px] font-bold uppercase">
-                                            <div className="flex items-center gap-2">
-                                                <tab.icon className="h-3.5 w-3.5" />
-                                                {tab.label}
+                <BookingDetailHeader
+                    title={booking.type}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId}`}
+                    status={booking.status}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    tabRowAction={
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={openPlannerFromHeader}
+                            className="h-9 gap-2 text-[10px] font-black uppercase tracking-widest"
+                        >
+                            Open Interactive Planner
+                        </Button>
+                    }
+                />
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
+                        <ScrollArea className="min-h-0 flex-1">
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 pb-10">
+                                <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase">{booking.status}</Badge></DetailItem>
+                                <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
+                                <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
+                            </CardContent>
+                            <Separator />
+                            <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
+                            <CardContent className="pb-32">
+                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
+                                    <div className="flex flex-col h-full min-h-[500px]">
+                                        <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x bg-background rounded-xl border p-4">
+                                            <div className="min-w-[800px] h-full relative">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow><Label value="CG (in)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" /></XAxis>
+                                                        <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow><Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" /></YAxis>
+                                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                                        <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
+                                                        <Scatter data={[{ x: results.cg, y: results.weight }]}>
+                                                            <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
+                                                        </Scatter>
+                                                    </ScatterChart>
+                                                </ResponsiveContainer>
                                             </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    ) : (
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                            <TabsList className="h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
-                                {tabs.map((tab) => (
-                                    <TabsTrigger 
-                                        key={tab.value} 
-                                        value={tab.value} 
-                                        className="gap-2 rounded-full border px-4 py-2 text-[10px] font-black uppercase data-[state=active]:bg-button-primary sm:px-6"
-                                    >
-                                        <tab.icon className="h-4 w-4" />
-                                        {tab.label}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={openPlannerFromHeader}
-                                className="h-9 gap-2 text-[10px] font-black uppercase tracking-widest"
-                            >
-                                Open Interactive Planner
-                            </Button>
-                        </div>
-                    )}
-                </div>
-                <div className="flex min-h-0 flex-1 flex-col">
-                    <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <Card className="flex min-h-[calc(100dvh-13rem)] flex-1 flex-col overflow-hidden border shadow-none lg:min-h-[calc(100dvh-10rem)]">
-                            <CardHeader className="border-b bg-muted/20 shrink-0">
-                                <CardTitle className="text-sm font-black uppercase tracking-tight">{booking.type}</CardTitle>
-                                <CardDescription className="text-[10px] font-bold uppercase">{booking.bookingNumber} • {aircraft ? aircraft.tailNumber : booking.aircraftId}</CardDescription>
-                            </CardHeader>
-                            <ScrollArea className="min-h-0 flex-1">
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 pb-10">
-                                    <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase">{booking.status}</Badge></DetailItem>
-                                    <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
-                                    <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                                </CardContent>
-                                <Separator />
-                                <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
-                                <CardContent className="pb-32">
-                                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
-                                        <div className="flex flex-col h-full min-h-[500px]">
-                                            <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x bg-background rounded-xl border p-4">
-                                                <div className="min-w-[800px] h-full relative">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" />
-                                                            <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow><Label value="CG (in)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" /></XAxis>
-                                                            <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow><Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" /></YAxis>
-                                                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
-                                                            <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
-                                                            </Scatter>
-                                                        </ScatterChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-6 pr-1">
-                                            <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-slate-200">
-                                                <DetailItem label="Total Weight"><p className="text-2xl font-black text-foreground">{results.weight} lbs</p></DetailItem>
-                                                <DetailItem label="Center Gravity"><p className="text-2xl font-black text-foreground">{results.cg} in</p></DetailItem>
-                                                <div className={cn(
-                                                    "p-2 rounded-lg text-center font-black uppercase text-[10px] tracking-widest",
-                                                    results.isSafe ? "bg-green-100 text-green-700 border border-green-200" : "bg-red-100 text-red-700 border border-red-200"
-                                                )}>
-                                                    {results.isSafe ? "Safe Loading" : "Outside Envelope"}
-                                                </div>
-                                            </div>
-                                            <ScrollArea className="h-[400px] pr-4">
-                                                <div className="space-y-4">
-                                                    {stations.map(s => (
-                                                        <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm border-slate-200">
-                                                            <UILabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{s.name}</UILabel>
-                                                            <div className="flex items-center gap-2">
-                                                                <Input type="number" value={s.weight} readOnly className="h-8 text-xs font-bold bg-muted/5 border-none shadow-none focus-visible:ring-0" />
-                                                                <div className="text-[9px] font-black text-muted-foreground w-8 uppercase">LBS</div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </ScrollArea>
                                         </div>
                                     </div>
-                                </CardContent>
-                            </ScrollArea>
-                        </Card>
+                                    <div className="space-y-6 pr-1">
+                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-slate-200">
+                                            <DetailItem label="Total Weight"><p className="text-2xl font-black text-foreground">{results.weight} lbs</p></DetailItem>
+                                            <DetailItem label="Center Gravity"><p className="text-2xl font-black text-foreground">{results.cg} in</p></DetailItem>
+                                            <div className={cn(
+                                                "p-2 rounded-lg text-center font-black uppercase text-[10px] tracking-widest",
+                                                results.isSafe ? "bg-green-100 text-green-700 border border-green-200" : "bg-red-100 text-red-700 border border-red-200"
+                                            )}>
+                                                {results.isSafe ? "Safe Loading" : "Outside Envelope"}
+                                            </div>
+                                        </div>
+                                        <ScrollArea className="h-[400px] pr-4">
+                                            <div className="space-y-4">
+                                                {stations.map(s => (
+                                                    <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm border-slate-200">
+                                                        <UILabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{s.name}</UILabel>
+                                                        <div className="flex items-center gap-2">
+                                                            <Input type="number" value={s.weight} readOnly className="h-8 text-xs font-bold bg-muted/5 border-none shadow-none focus-visible:ring-0" />
+                                                            <div className="text-[9px] font-black text-muted-foreground w-8 uppercase">LBS</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </ScrollArea>
                     </TabsContent>
                     <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden"><NavlogBuilder booking={booking} tenantId={tenantId!} /></TabsContent>
                 </div>
             </Tabs>
-        </div>
+        </Card>
     );
 }
