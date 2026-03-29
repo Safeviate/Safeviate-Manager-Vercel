@@ -2,7 +2,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MainPageHeader } from "@/components/page-header";
 import { NavlogBuilder } from "@/app/(app)/bookings/navlog-builder";
 import type { Booking } from "@/types/booking";
@@ -16,7 +15,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const { tenantId } = useUserProfile();
 
     return (
-        <Tabs defaultValue="mass-and-balance" className="flex-1 overflow-hidden flex flex-col">
+        <Tabs defaultValue="navlog" className="flex-1 overflow-hidden flex flex-col">
             <Card className="flex-1 overflow-hidden flex flex-col shadow-none border">
                 {/* Sticky Header Section: Identity, Metadata & Navigation */}
                 <div className="sticky top-0 z-30 bg-card border-b">
@@ -61,8 +60,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </div>
                 </div>
 
-                {/* Content Area */}
-                <ScrollArea className="flex-1">
+                {/* Content Area: Vertical scrolling built in right from the start */}
+                <div className="flex-1 overflow-y-auto no-scrollbar bg-background">
                     <TabsContent value="mass-and-balance" className="m-0">
                         <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
                             Mass and Balance calculations and envelope visualization for flight #{booking.bookingNumber}.
@@ -71,7 +70,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <TabsContent value="navlog" className="m-0">
                         <NavlogBuilder booking={booking} tenantId={tenantId || ''} />
                     </TabsContent>
-                </ScrollArea>
+                </div>
             </Card>
         </Tabs>
     );

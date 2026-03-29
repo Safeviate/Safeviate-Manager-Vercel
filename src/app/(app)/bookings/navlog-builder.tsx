@@ -1,22 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { collection } from 'firebase/firestore';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState, useMemo } from 'react';
+import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Navigation, MapPin, Save, Info, Radio, Droplets, ChevronUp, ChevronDown, CloudLightning, Wind, Eye, Thermometer } from 'lucide-react';
+import { Trash2, Navigation } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Booking, NavlogLeg, Navlog } from '@/types/booking';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
 import { calculateWindTriangle, calculateEte, getBearing, getDistance, calculateFuelRequired, getMagneticVariation } from '@/lib/e6b';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import type { Aircraft } from '@/types/aircraft';
 
@@ -33,7 +28,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
         [firestore, tenantId]
     );
     const { data: aircrafts } = useCollection<Aircraft>(aircraftQuery);
-    const aircraft = useMemo(() => aircrafts?.find((ac) => ac.id === booking.aircraftId), [aircrafts, booking.aircraftId]);
     
     const [legs, setLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
     const [departure, setDeparture] = useState(booking.navlog?.departureIcao || '');
@@ -43,20 +37,13 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     const [arrivalLatitude, setArrivalLatitude] = useState<number | undefined>(booking.navlog?.arrivalLatitude);
     const [arrivalLongitude, setArrivalLongitude] = useState<number | undefined>(booking.navlog?.arrivalLongitude);
     const [lookupLoading, setLookupLoading] = useState<Record<string, boolean>>({});
+    
     const [globalTas, setGlobalTas] = useState<number>(booking.navlog?.globalTas || 100);
     const [globalWindDir, setGlobalWindDir] = useState<number>(booking.navlog?.globalWindDirection || 0);
     const [globalWindSpd, setGlobalWindSpd] = useState<number>(booking.navlog?.globalWindSpeed || 0);
     const [globalVariation, setGlobalVariation] = useState<number>(booking.navlog?.globalVariation || 0);
     const [globalFuelBurn, setGlobalFuelBurn] = useState<number>(booking.navlog?.globalFuelBurn || 0);
     const [globalFuelBurnUnit, setGlobalFuelBurnUnit] = useState<'GPH' | 'LPH'>(booking.navlog?.globalFuelBurnUnit || 'LPH');
-    const [airportBriefingLoading, setAirportBriefingLoading] = useState<Record<'departure' | 'arrival', boolean>>({
-        departure: false,
-        arrival: false,
-    });
-    const [airportBriefings, setAirportBriefings] = useState<Record<'departure' | 'arrival', { metar: any | null; taf: any | null }>>({
-        departure: { metar: null, taf: null },
-        arrival: { metar: null, taf: null },
-    });
 
     const isReadOnly = booking.status === 'Completed';
 
@@ -111,13 +98,13 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
             }
             
             if (updatedLeg.trueCourse !== undefined) {
-                const tas = updatedLeg.trueAirspeed ?? globalTas;
-                const wDir = updatedLeg.windDirection ?? globalWindDir;
-                const wSpd = updatedLeg.windSpeed ?? globalWindSpd;
+                const tas = updatedLeg.trueAirspeed || globalTas;
+                const wDir = updatedLeg.windDirection || globalWindDir;
+                const wSpd = updatedLeg.windSpeed || globalWindSpd;
                 const autoVariation = (updatedLeg.latitude !== undefined && updatedLeg.longitude !== undefined)
                     ? getMagneticVariation(updatedLeg.latitude, updatedLeg.longitude)
                     : undefined;
-                const varMg = updatedLeg.variation ?? autoVariation ?? globalVariation;
+                const varMg = updatedLeg.variation || autoVariation || globalVariation;
 
                 const result = calculateWindTriangle({
                     trueCourse: Number(updatedLeg.trueCourse),
@@ -133,7 +120,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
 
                 if (updatedLeg.distance !== undefined && updatedLeg.groundSpeed > 0) {
                     updatedLeg.ete = parseFloat(calculateEte(Number(updatedLeg.distance), updatedLeg.groundSpeed).toFixed(1));
-                    const burn = updatedLeg.fuelBurnPerHour ?? globalFuelBurn;
+                    const burn = updatedLeg.fuelBurnPerHour || globalFuelBurn;
                     if (burn > 0) {
                         updatedLeg.tripFuel = parseFloat(calculateFuelRequired(updatedLeg.ete, burn).toFixed(1));
                     }
@@ -151,28 +138,12 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
         });
     };
 
-    const handleAddLeg = () => {
-        setLegs([...legs, { id: uuidv4(), waypoint: '', legType: 'waypoint', trueAirspeed: globalTas, variation: globalVariation }]);
-    };
-
-    const handleRemoveLeg = (id: string) => setLegs(legs.filter(l => l.id !== id));
-
     const handleLegChange = (id: string, field: keyof NavlogLeg, value: any) => {
         const updatedLegs = legs.map(leg => (leg.id === id ? { ...leg, [field]: value } : leg));
         setLegs(recalculateLegs(updatedLegs));
     };
 
-    const handleSave = () => {
-        if (!firestore) return;
-        const navlog: Navlog = {
-            legs, departureIcao: departure, arrivalIcao: arrival,
-            departureLatitude, departureLongitude, arrivalLatitude, arrivalLongitude,
-            globalTas, globalWindDirection: globalWindDir, globalWindSpeed: globalWindSpd,
-            globalVariation, globalFuelBurn, globalFuelBurnUnit,
-        };
-        updateDocumentNonBlocking(doc(firestore, `tenants/${tenantId}/bookings`, booking.id), { navlog });
-        toast({ title: 'Navlog Saved' });
-    };
+    const handleRemoveLeg = (id: string) => setLegs(legs.filter(l => l.id !== id));
 
     const formatEte = (minutes: number): string => {
         if (!minutes || minutes <= 0) return '--:--';
@@ -198,13 +169,14 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     }, [legs, arrivalLatitude, arrivalLongitude, departureLatitude, departureLongitude, arrival, globalTas, globalWindDir, globalWindSpd, globalVariation, globalFuelBurn]);
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 pb-10">
+            {/* Header Inputs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/5 border-b">
                 <div className="space-y-4">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Departure Info</Label>
                     <div className="flex gap-2">
-                        <Input placeholder="DEP ICAO" value={departure} onChange={(e) => setDeparture(e.target.value.toUpperCase())} className="h-9 font-mono uppercase" />
-                        <Button variant="outline" size="sm" onClick={() => handleLookup('departure')} className="h-9 font-black uppercase text-[10px] border-slate-300">
+                        <Input placeholder="DEP ICAO" value={departure} onChange={(e) => setDeparture(e.target.value.toUpperCase())} className="h-9 font-mono uppercase bg-background" />
+                        <Button variant="outline" size="sm" onClick={() => handleLookup('departure')} disabled={lookupLoading['departure-lookup']} className="h-9 font-black uppercase text-[10px] border-slate-300">
                             Lookup
                         </Button>
                     </div>
@@ -212,39 +184,41 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                 <div className="space-y-4">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Arrival Info</Label>
                     <div className="flex gap-2">
-                        <Input placeholder="ARR ICAO" value={arrival} onChange={(e) => setArrival(e.target.value.toUpperCase())} className="h-9 font-mono uppercase" />
-                        <Button variant="outline" size="sm" onClick={() => handleLookup('arrival')} className="h-9 font-black uppercase text-[10px] border-slate-300">
+                        <Input placeholder="ARR ICAO" value={arrival} onChange={(e) => setArrival(e.target.value.toUpperCase())} className="h-9 font-mono uppercase bg-background" />
+                        <Button variant="outline" size="sm" onClick={() => handleLookup('arrival')} disabled={lookupLoading['arrival-lookup']} className="h-9 font-black uppercase text-[10px] border-slate-300">
                             Lookup
                         </Button>
                     </div>
                 </div>
             </div>
 
+            {/* Global Settings */}
             <div className="px-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">TAS (KT)</Label>
-                    <Input type="number" value={globalTas} onChange={(e) => setGlobalTas(Number(e.target.value))} className="h-8 text-xs font-bold" />
+                    <Input type="number" value={globalTas} onChange={(e) => setGlobalTas(Number(e.target.value))} className="h-8 text-xs font-bold bg-background" />
                 </div>
                 <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Wind Dir</Label>
-                    <Input type="number" value={globalWindDir} onChange={(e) => setGlobalWindDir(Number(e.target.value))} className="h-8 text-xs font-bold" />
+                    <Input type="number" value={globalWindDir} onChange={(e) => setGlobalWindDir(Number(e.target.value))} className="h-8 text-xs font-bold bg-background" />
                 </div>
                 <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Wind Spd</Label>
-                    <Input type="number" value={globalWindSpd} onChange={(e) => setGlobalWindSpd(Number(e.target.value))} className="h-8 text-xs font-bold" />
+                    <Input type="number" value={globalWindSpd} onChange={(e) => setGlobalWindSpd(Number(e.target.value))} className="h-8 text-xs font-bold bg-background" />
                 </div>
                 <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Fuel Burn</Label>
                     <div className="flex gap-1">
-                        <Input type="number" value={globalFuelBurn} onChange={(e) => setGlobalFuelBurn(Number(e.target.value))} className="h-8 text-xs font-bold" />
+                        <Input type="number" value={globalFuelBurn} onChange={(e) => setGlobalFuelBurn(Number(e.target.value))} className="h-8 text-xs font-bold bg-background" />
                         <Button variant="outline" className="h-8 text-[8px] font-black" onClick={() => setGlobalFuelBurnUnit(globalFuelBurnUnit === 'LPH' ? 'GPH' : 'LPH')}>{globalFuelBurnUnit}</Button>
                     </div>
                 </div>
             </div>
 
+            {/* Navlog Table */}
             <div className="rounded-xl border overflow-hidden mx-6 bg-card shadow-sm">
                 <Table>
-                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                    <TableHeader className="bg-muted/30">
                         <TableRow>
                             <TableHead className="w-12 text-center text-[10px] uppercase font-bold tracking-wider">Seq</TableHead>
                             <TableHead className="text-[10px] uppercase font-bold tracking-wider">Fix</TableHead>
