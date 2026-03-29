@@ -9,7 +9,7 @@ import { NavlogBuilder } from "@/app/(app)/bookings/navlog-builder";
 import type { Booking, NavlogLeg } from "@/types/booking";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
-import { Map as MapIcon, X, Plus, Navigation, Trash2, GripVertical, Save, Loader2, RotateCcw } from "lucide-react";
+import { Map as MapIcon, X, Navigation, Trash2, Loader2, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { doc, updateDoc } from 'firebase/firestore';
@@ -17,7 +17,6 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateWindTriangle, getDistance, getBearing, getMagneticVariation, calculateEte, calculateFuelRequired } from '@/lib/e6b';
-import { Badge } from '@/components/ui/badge';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(

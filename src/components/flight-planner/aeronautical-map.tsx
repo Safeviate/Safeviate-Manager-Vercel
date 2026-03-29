@@ -55,30 +55,30 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
             style={{ background: '#0f172a' }}
         >
             <LayersControl position="topright">
-                <LayersControl.BaseLayer checked name="Satellite (Hybrid)">
-                    <TileLayer
-                        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-                        attribution="&copy; Google Maps"
-                    />
-                </LayersControl.BaseLayer>
-                <LayersControl.BaseLayer name="Light (Standard)">
+                <LayersControl.BaseLayer checked name="Light (Standard)">
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         attribution="&copy; OpenStreetMap contributors"
                     />
                 </LayersControl.BaseLayer>
+                <LayersControl.BaseLayer name="Satellite (Hybrid)">
+                    <TileLayer
+                        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                        attribution="&copy; Google Maps"
+                    />
+                </LayersControl.BaseLayer>
 
-                {/* Overlays Section - Toggled via the stack icon */}
+                {/* Overlays Section - Using plural layer names for OpenAIP */}
                 <LayersControl.Overlay checked name="OpenAIP Airspaces">
                     <TileLayer
-                        url={`https://api.core.openaip.net/api/tiles/airspace/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        url={`https://api.core.openaip.net/api/tiles/airspaces/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
                         attribution="&copy; OpenAIP"
                         opacity={0.7}
                     />
                 </LayersControl.Overlay>
                 <LayersControl.Overlay checked name="OpenAIP Airports">
                     <TileLayer
-                        url={`https://api.core.openaip.net/api/tiles/airport/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        url={`https://api.core.openaip.net/api/tiles/airports/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
                         attribution="&copy; OpenAIP"
                     />
                 </LayersControl.Overlay>

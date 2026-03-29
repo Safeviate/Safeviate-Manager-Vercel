@@ -7,6 +7,7 @@ import type { Booking } from '@/types/booking';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Trash2, Navigation } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 interface NavlogBuilderProps {
     booking: Booking;
