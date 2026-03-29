@@ -31,6 +31,7 @@ function MapEvents({ onAddWaypoint }: { onAddWaypoint: (lat: number, lon: number
 
 export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMapProps) {
     const [isMounted, setIsMounted] = useState(false);
+    const OPENAIP_KEY = '1cbf7bdd18e52e7fa977c6d106847397';
 
     useEffect(() => {
         setIsMounted(true);
@@ -54,22 +55,36 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
             style={{ background: '#0f172a' }}
         >
             <LayersControl position="topright">
-                <LayersControl.BaseLayer name="Satellite (Hybrid)">
+                <LayersControl.BaseLayer checked name="Satellite (Hybrid)">
                     <TileLayer
                         url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
                         attribution="&copy; Google Maps"
                     />
                 </LayersControl.BaseLayer>
-                <LayersControl.BaseLayer checked name="Light (Standard)">
+                <LayersControl.BaseLayer name="Light (Standard)">
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution="&copy; OpenStreetMap"
+                        attribution="&copy; OpenStreetMap contributors"
                     />
                 </LayersControl.BaseLayer>
 
-                <LayersControl.Overlay checked name="OpenAIP Aeronautical">
+                {/* Overlays Section - Toggled via the stack icon */}
+                <LayersControl.Overlay checked name="OpenAIP Airspaces">
                     <TileLayer
-                        url="https://api.core.openaip.net/api/tiles/{z}/{x}/{y}.png?apiKey=1cbf7bdd18e52e7fa977c6d106847397"
+                        url={`https://api.core.openaip.net/api/tiles/airspace/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        attribution="&copy; OpenAIP"
+                        opacity={0.7}
+                    />
+                </LayersControl.Overlay>
+                <LayersControl.Overlay checked name="OpenAIP Airports">
+                    <TileLayer
+                        url={`https://api.core.openaip.net/api/tiles/airport/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        attribution="&copy; OpenAIP"
+                    />
+                </LayersControl.Overlay>
+                <LayersControl.Overlay name="OpenAIP Master Chart">
+                    <TileLayer
+                        url={`https://api.core.openaip.net/api/tiles/openaip/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
                         attribution="&copy; OpenAIP"
                         opacity={0.8}
                     />
@@ -85,7 +100,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                 >
                     <Popup>
                         <div className="text-xs font-black uppercase space-y-1">
-                            <p className="text-primary">{leg.waypoint}</p>
+                            <p className="text-primary font-bold">{leg.waypoint}</p>
                             <p className="text-[10px] text-muted-foreground">Waypoint {index + 1}</p>
                         </div>
                     </Popup>
