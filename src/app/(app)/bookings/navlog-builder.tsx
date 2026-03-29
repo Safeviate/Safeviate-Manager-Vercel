@@ -292,17 +292,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                     </TableBody>
                 </Table>
             </div>
-
-            {!isReadOnly && (
-                <div className="flex justify-between items-center p-6 border-t bg-muted/5 no-print">
-                    <Button variant="outline" size="sm" onClick={handleAddLeg} className="h-9 px-6 font-black uppercase text-[10px] border-slate-300">
-                        <Plus className="mr-2 h-4 w-4" /> Add Waypoint
-                    </Button>
-                    <Button onClick={handleSave} className="h-9 px-8 font-black uppercase text-[10px] bg-emerald-700 hover:bg-emerald-800 shadow-md">
-                        <Save className="mr-2 h-4 w-4" /> Save Navlog
-                    </Button>
-                </div>
-            )}
         </div>
     );
 }
