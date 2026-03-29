@@ -5,6 +5,7 @@ import { collection } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Navigation, MapPin, Save, Info, Radio, Droplets, ChevronUp, ChevronDown, CloudLightning, Wind, Eye, Thermometer } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
