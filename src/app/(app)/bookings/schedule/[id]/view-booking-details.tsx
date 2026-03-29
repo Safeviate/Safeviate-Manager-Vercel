@@ -10,9 +10,9 @@ import type { Booking, NavlogLeg } from "@/types/booking";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Map as MapIcon, X, Navigation, Trash2, Loader2, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { doc, updateDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -164,7 +164,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <div className="flex-1 overflow-y-auto no-scrollbar bg-background flex flex-col">
                         <TabsContent value="mass-and-balance" className="m-0 flex-1">
                             <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
-                                Mass and Balance calculations and envelope visualization.
+                                Mass and balance calculations and envelope visualization.
                             </CardContent>
                         </TabsContent>
                         <TabsContent value="navlog" className="m-0 flex-1 h-full flex flex-col">

@@ -45,7 +45,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
 
     const center: [number, number] = legs.length > 0 
         ? [legs[legs.length - 1].latitude!, legs[legs.length - 1].longitude!]
-        : [-25.9, 27.9]; // Default: FALA region
+        : [-25.9, 27.9]; // Default: Johannesburg/Lanseria Region
 
     return (
         <MapContainer 
