@@ -6,6 +6,8 @@ import { MainPageHeader } from "@/components/page-header";
 import { NavlogBuilder } from "@/app/(app)/bookings/navlog-builder";
 import type { Booking } from "@/types/booking";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { Button } from "@/components/ui/button";
+import { Map as MapIcon } from "lucide-react";
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -42,8 +44,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </div>
                     </div>
 
-                    <div className="bg-muted/5 px-6 py-2 shrink-0">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                    <div className="bg-muted/5 px-6 py-2 shrink-0 flex items-center justify-between gap-4">
+                        <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center">
                             <TabsTrigger 
                                 value="mass-and-balance" 
                                 className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
@@ -57,6 +59,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 Navlog
                             </TabsTrigger>
                         </TabsList>
+
+                        <Button 
+                            size="sm" 
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-md font-black uppercase text-[10px] h-8 px-4 gap-2 shrink-0"
+                        >
+                            <MapIcon className="h-3.5 w-3.5" />
+                            Interactive Planner
+                        </Button>
                     </div>
                 </div>
 
