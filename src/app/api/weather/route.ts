@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = `https://aviationweather.gov/api/data/metar?ids=${ids}&format=json&taf=true`;
+    // Note: In a real environment, you'd use a more specific aviation weather API.
+    // For this prototype, we're using the public NOAA aviation weather data service.
+    const url = `https://aviationweather.gov/api/data/metar?ids=${ids}&format=json`;
     const response = await fetch(url);
     
     if (!response.ok) {

@@ -21,20 +21,17 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import type { Aircraft } from '@/types/aircraft';
 import { MainPageHeader } from '@/components/page-header';
 
-// Leaflet Imports
-import { MapContainer, TileLayer, Marker, Polyline, useMap, useMapEvents, GeoJSON, CircleMarker } from 'react-leaflet';
+// Leaflet Imports with SSR safety
+import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 
-// Fix missing leaf images in NextJS & Custom SVGs
-const createLabeledIcon = (label: string, color: string) => {
-    return L.divIcon({
-        className: 'custom-div-icon',
-        html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5); font-size: 10px;">${label}</div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
-    });
-};
+// Dynamically import Leaflet components to avoid window resolution issues
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Polyline = dynamic(() => import('react-leaflet').then(mod => mod.Polyline), { ssr: false });
+const CircleMarker = dynamic(() => import('react-leaflet').then(mod => mod.CircleMarker), { ssr: false });
+const GeoJSON = dynamic(() => import('react-leaflet').then(mod => mod.GeoJSON), { ssr: false });
 
 interface NavlogBuilderProps {
     booking: Booking;
@@ -119,7 +116,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
             throw new Error('Enter a valid ICAO code (3-4 characters).');
         }
 
-        // Source 1: NOAA Aviation Weather (fastest, returns coords inside METAR)
         try {
             const noaaRes = await fetch(`/api/weather?ids=${station}`);
             if (noaaRes.ok) {
@@ -130,32 +126,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                 if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
             }
         } catch (e) { console.warn('NOAA lookup failed:', e); }
-
-        // Source 2: OpenAIP airport database (global coverage â€” reliable for FA** airports)
-        try {
-            const openAipRes = await fetch(`/api/openaip?resource=airports&icaoCode=${station}&limit=1`);
-            if (openAipRes.ok) {
-                const openAipData = await openAipRes.json();
-                const airport = openAipData.items?.[0];
-                if (airport?.geometry?.coordinates?.length >= 2) {
-                    // GeoJSON order is [longitude, latitude]
-                    const lon = Number(airport.geometry.coordinates[0]);
-                    const lat = Number(airport.geometry.coordinates[1]);
-                    if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
-                }
-            }
-        } catch (e) { console.warn('OpenAIP lookup failed:', e); }
-
-        // Source 3: AVWX (last resort)
-        try {
-            const avwxRes = await fetch(`/api/weather/avwx?icao=${station}`);
-            if (avwxRes.ok) {
-                const avwxJson = await avwxRes.json();
-                const lat = Number(avwxJson?.lat ?? avwxJson?.latitude ?? avwxJson?.station?.latitude);
-                const lon = Number(avwxJson?.lon ?? avwxJson?.longitude ?? avwxJson?.station?.longitude);
-                if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
-            }
-        } catch (e) { console.warn('AVWX lookup failed:', e); }
 
         throw new Error(`No coordinates found for ${station}. Check the ICAO code and try again.`);
     };
@@ -250,8 +220,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                 updatedLeg.trueHeading = parseFloat(result.heading.toFixed(1));
                 updatedLeg.groundSpeed = parseFloat(result.groundSpeed.toFixed(1));
 
-                // Variation is positive east and negative west.
-                // Magnetic heading = true heading - variation.
                 updatedLeg.magneticHeading = (updatedLeg.trueHeading - Number(varMg) + 360) % 360;
 
                 if (updatedLeg.distance !== undefined && updatedLeg.groundSpeed > 0) {
@@ -272,31 +240,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
 
             return updatedLeg;
         });
-    };
-
-    const getFlightCategory = (data: any): string | null => {
-        if (!data) return null;
-        if (data.fltcat && data.fltcat !== 'UNKNOWN') return data.fltcat;
-        const vis = parseFloat(data.visib);
-        let ceiling = 10000;
-        if (data.clouds?.length > 0) {
-            const layers = data.clouds.filter((c: any) => c.cover === 'BKN' || c.cover === 'OVC');
-            if (layers.length > 0) ceiling = Math.min(...layers.map((l: any) => l.base || 10000));
-        }
-        if (vis > 5 && ceiling > 3000) return 'VFR';
-        if (vis >= 3 && ceiling >= 1000) return 'MVFR';
-        if (vis >= 1 && ceiling >= 500) return 'IFR';
-        return 'LIFR';
-    };
-
-    const flightCatColor = (cat: string | null) => {
-        switch (cat) {
-            case 'VFR':  return 'bg-green-500/20 text-green-400 border-green-500/30';
-            case 'MVFR': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-            case 'IFR':  return 'bg-red-500/20 text-red-400 border-red-500/30';
-            case 'LIFR': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-            default:     return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-        }
     };
 
     const fetchBriefing = async () => {
@@ -379,36 +322,18 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         METAR: <span className="font-mono font-normal text-muted-foreground">{briefing.metar.rawOb ?? 'No raw METAR available'}</span>
                     </p>
                     <p className="text-muted-foreground">
-                        Wind {briefing.metar.wdir ?? '--'}Â° @ {briefing.metar.wspd ?? '--'}kt
+                        Wind {briefing.metar.wdir ?? '--'}° @ {briefing.metar.wspd ?? '--'}kt
                         {briefing.metar.wgst ? ` gust ${briefing.metar.wgst}kt` : ''}
                     </p>
                     <p className="text-muted-foreground">
                         Vis {briefing.metar.visib ?? '--'} SM
-                        {briefing.metar.temp != null ? `, Temp ${briefing.metar.temp}Â°C` : ''}
-                        {briefing.metar.dewp != null ? `, Dewpoint ${briefing.metar.dewp}Â°C` : ''}
+                        {briefing.metar.temp != null ? `, Temp ${briefing.metar.temp}°C` : ''}
+                        {briefing.metar.dewp != null ? `, Dewpoint ${briefing.metar.dewp}°C` : ''}
                     </p>
-                    {briefing.taf ? (
-                        <p className="text-muted-foreground">
-                            TAF: <span className="font-mono">{briefing.taf.rawTAF ?? 'No raw TAF available'}</span>
-                        </p>
-                    ) : (
-                        <p className="text-muted-foreground">TAF: unavailable</p>
-                    )}
                 </div>
             ) : (
                 <p className="text-[10px] text-muted-foreground">No weather briefing loaded yet.</p>
             )}
-            {!collapsedBriefings[type] && !loading && icao ? (
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-[9px] font-black uppercase tracking-widest"
-                    onClick={() => void loadAirportBriefing(type, icao)}
-                >
-                    Refresh Weather
-                </Button>
-            ) : null}
         </div>
     );
 
@@ -533,71 +458,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         {renderWeatherBriefing('Arrival Weather', arrival, airportBriefings.arrival, airportBriefingLoading.arrival, 'arrival')}
                     </div>
                 </div>
-                {!isReadOnly && (
-                    <Dialog open={plannerOpen} onOpenChange={setPlannerOpen}>
-                        <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden bg-slate-900 border-slate-700 flex flex-col">
-                            <DialogHeader className="p-4 bg-slate-950 border-b border-white/5 shrink-0">
-                                <DialogTitle className="text-white text-sm font-black uppercase tracking-widest">Mission Route Planner</DialogTitle>
-                            </DialogHeader>
-                            <div className="flex-1 relative w-full h-full min-h-0 bg-slate-900">
-                                <MapContainer
-                                    center={departureLatitude && departureLongitude ? [departureLatitude, departureLongitude] : [-25.7479, 28.2293]}
-                                    zoom={10}
-                                    className="w-full h-full z-0"
-                                >
-                                    <TileLayer 
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                    />
-                                    
-                                    <AviationLayerController 
-                                        departure={{ lat: departureLatitude, lng: departureLongitude }}
-                                        legs={legs}
-                                        arrival={{ lat: arrivalLatitude, lng: arrivalLongitude }}
-                                        mapMode={mapMode}
-                                        setMapMode={setMapMode}
-                                        setDepartureLatitude={setDepartureLatitude}
-                                        setDepartureLongitude={setDepartureLongitude}
-                                        setDeparture={setDeparture}
-                                        setArrivalLatitude={setArrivalLatitude}
-                                        setArrivalLongitude={setArrivalLongitude}
-                                        setArrival={setArrival}
-                                        setLegs={setLegs}
-                                        onClear={handleClearPlan}
-                                        lookupICAO={fetchCoordinatesForIcao}
-                                        recalculateLegs={recalculateLegs}
-                                    />
-                                    
-                                    {departureLatitude !== undefined && departureLongitude !== undefined && (
-                                        <Marker position={[departureLatitude, departureLongitude]} icon={createLabeledIcon('D', '#3b82f6')} />
-                                    )}
-                                    {legs.map((l, i) => (
-                                        l.latitude !== undefined && l.longitude !== undefined && (
-                                            <Marker 
-                                                key={l.id} 
-                                                position={[l.latitude, l.longitude]} 
-                                                icon={createLabeledIcon((i + 1).toString(), '#ef4444')} 
-                                            />
-                                        )
-                                    ))}
-                                    {arrivalLatitude !== undefined && arrivalLongitude !== undefined && (
-                                        <Marker position={[arrivalLatitude, arrivalLongitude]} icon={createLabeledIcon('A', '#10b981')} />
-                                    )}
-                                    <Polyline
-                                        positions={[
-                                            ...(departureLatitude !== undefined && departureLongitude !== undefined ? [[departureLatitude, departureLongitude] as [number, number]] : []),
-                                            ...legs.filter(l => l.latitude !== undefined && l.longitude !== undefined).map(l => [l.latitude!, l.longitude!] as [number, number]),
-                                            ...(arrivalLatitude !== undefined && arrivalLongitude !== undefined ? [[arrivalLatitude, arrivalLongitude] as [number, number]] : [])
-                                        ]}
-                                        color="#F59E0B"
-                                        weight={3}
-                                        opacity={0.8}
-                                    />
-                                </MapContainer>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                )}
 
                 <div className="p-3 border-b bg-muted/10 grid grid-cols-1 gap-3 lg:grid-cols-6">
                     <div className="space-y-1">
@@ -605,7 +465,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         <Input type="number" value={globalTas} onChange={(e) => setGlobalTas(Number(e.target.value))} className="h-8 w-full max-w-[140px] font-mono text-xs bg-slate-900/50" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Wind Dir (Â°T)</label>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Wind Dir (°T)</label>
                         <Input type="number" value={globalWindDir} onChange={(e) => setGlobalWindDir(Number(e.target.value))} className="h-8 w-full max-w-[140px] font-mono text-xs bg-slate-900/50" />
                     </div>
                     <div className="space-y-1">
@@ -613,7 +473,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         <Input type="number" value={globalWindSpd} onChange={(e) => setGlobalWindSpd(Number(e.target.value))} className="h-8 w-full max-w-[140px] font-mono text-xs bg-slate-900/50" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Mag Var (Â°) <span className="text-emerald-500 text-[8px] font-black">AUTO</span></label>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground pl-1 flex items-center gap-1"><Navigation className="h-3 w-3" /> Mag Var (°)</label>
                         <div className="flex gap-1 items-center">
                             <Input
                                 type="number"
@@ -622,20 +482,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                 className="h-8 w-full max-w-[110px] font-mono text-xs bg-slate-900/50"
                                 placeholder="fallback"
                             />
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-[8px] font-black uppercase px-2 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-black"
-                                title="Auto-fill from departure coordinates"
-                                onClick={() => {
-                                    if (departureLatitude !== undefined && departureLongitude !== undefined) {
-                                        setGlobalVariation(getMagneticVariation(departureLatitude, departureLongitude));
-                                    }
-                                }}
-                                disabled={departureLatitude === undefined}
-                            >
-                                FILL
-                            </Button>
                         </div>
                     </div>
                     <div className="space-y-1 lg:col-span-2">
@@ -643,99 +489,8 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         <div className="flex flex-wrap gap-1 items-center">
                             <Input type="number" value={globalFuelBurn} onChange={(e) => setGlobalFuelBurn(Number(e.target.value))} className="h-8 w-full max-w-[110px] font-mono text-xs bg-slate-900/50" />
                             <Button variant="outline" size="sm" className="h-8 text-[8px] font-black uppercase px-2 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-black" onClick={() => setGlobalFuelBurnUnit(globalFuelBurnUnit === 'GPH' ? 'LPH' : 'GPH')}>{globalFuelBurnUnit}</Button>
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase whitespace-nowrap">Endurance (hrs)</span>
-                            <Input
-                                type="number"
-                                step="0.1"
-                                min="0"
-                                value={fuelEnduranceHours ?? ''}
-                                onChange={(e) => setFuelEnduranceHours(e.target.value ? Number(e.target.value) : undefined)}
-                                className="h-8 w-full max-w-[90px] font-mono text-xs bg-slate-900/50"
-                            />
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">
-                                {fuelEnduranceHours !== undefined ? `Max flight ${formatDuration(fuelEnduranceHours * 60)}` : 'Set on aircraft'}
-                            </span>
                         </div>
                     </div>
-                </div>
-
-                {/* Weather Briefing Panel */}
-                <div className="border-b">
-                    <div className="px-4 py-2 flex items-center justify-between bg-sky-950/30 border-b border-sky-500/10">
-                        <div className="flex items-center gap-2">
-                            <CloudLightning className="h-3.5 w-3.5 text-sky-400" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-sky-400">Flight Briefing</span>
-                            {Object.keys(briefingData).length > 0 && !briefingLoading && (
-                                <Badge variant="outline" className="text-[8px] border-sky-500/30 text-sky-400 px-1.5 h-4">
-                                    {Object.keys(briefingData).length} Stations
-                                </Badge>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {Object.keys(briefingData).length > 0 && (
-                                <Button size="sm" variant="ghost" className="h-7 text-[9px] font-black uppercase text-muted-foreground hover:text-foreground" onClick={() => setBriefingExpanded(!briefingExpanded)}>
-                                    {briefingExpanded ? 'Hide' : 'Show'}
-                                </Button>
-                            )}
-                            <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-[9px] font-black uppercase text-sky-400 hover:bg-sky-500/10" onClick={fetchBriefing} disabled={briefingLoading}>
-                                {briefingLoading ? <Info className="h-3 w-3 animate-spin" /> : <Radio className="h-3 w-3" />}
-                                {briefingLoading ? 'Fetching...' : 'Fetch Briefing'}
-                            </Button>
-                        </div>
-                    </div>
-                    {briefingExpanded && Object.keys(briefingData).length > 0 && (
-                        <div className="flex gap-3 overflow-x-auto p-3 bg-sky-950/10" style={{ scrollbarWidth: 'none' }}>
-                            {Object.entries(briefingData).map(([icao, data]) => {
-                                const cat = getFlightCategory(data.metar);
-                                return (
-                                    <div key={icao} className="min-w-[195px] max-w-[195px] bg-slate-900/70 border border-white/8 rounded-lg p-3 space-y-2 flex-shrink-0">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-black uppercase text-white tracking-wider">{icao}</span>
-                                            {cat
-                                                ? <Badge className={cn('text-[8px] px-1.5 py-0 h-4 font-black border', flightCatColor(cat))}>{cat}</Badge>
-                                                : <Badge variant="outline" className="text-[8px] px-1.5 py-0 h-4 border-white/10 text-white/30">NO DATA</Badge>
-                                            }
-                                        </div>
-                                        {data.metar ? (
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-1 text-[9px] font-bold text-white/70">
-                                                    <Wind className="h-2.5 w-2.5 text-sky-400" />
-                                                    {data.metar.wdir === 'VRB' ? 'VRB' : `${data.metar.wdir ?? '--'}Â°`} @ {data.metar.wspd ?? '--'}kt
-                                                    {data.metar.wgst ? <span className="text-red-400"> G{data.metar.wgst}kt</span> : null}
-                                                </div>
-                                                <div className="flex items-center gap-1 text-[9px] font-bold text-white/70">
-                                                    <Eye className="h-2.5 w-2.5 text-amber-400" />
-                                                    {data.metar.visib ?? '--'} SM
-                                                </div>
-                                                <div className="flex items-center gap-1 text-[9px] font-bold text-white/70">
-                                                    <Thermometer className="h-2.5 w-2.5 text-orange-400" />
-                                                    {data.metar.temp != null ? `${data.metar.temp}Â°C` : '--'} / DP {data.metar.dewp != null ? `${data.metar.dewp}Â°C` : '--'}
-                                                </div>
-                                                {data.metar.altim && (
-                                                    <div className="text-[9px] font-bold text-white/50">QNH {data.metar.altim.toFixed(0)} hPa</div>
-                                                )}
-                                                <p className="text-[8px] font-mono text-white/25 break-all leading-relaxed pt-1 border-t border-white/5">
-                                                    {(data.metar.rawOb ?? '').substring(0, 90)}{(data.metar.rawOb?.length ?? 0) > 90 ? 'â€¦' : ''}
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <p className="text-[9px] text-white/30 font-bold">No METAR available</p>
-                                        )}
-                                        {data.taf && (
-                                            <div className="pt-1.5 border-t border-white/5">
-                                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider">TAF Â· {data.taf.fcsts?.length ?? 0} periods</span>
-                                                {data.taf.fcsts?.[0] && (
-                                                    <p className="text-[8px] text-white/30 font-mono mt-0.5">
-                                                        {(data.taf.rawTAF ?? '').substring(0, 60)}â€¦
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
                 </div>
 
                 <div className="overflow-x-auto">
@@ -784,38 +539,16 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                             placeholder="---"
                                         />
                                     </TableCell>
-                                    <TableCell className="px-3 text-center text-[10px] font-black text-primary whitespace-nowrap">{Math.round(leg.trueCourse || 0)}Â°</TableCell>
-                                    <TableCell className="px-3 text-center text-[10px] font-black text-white bg-slate-900/30 whitespace-nowrap">{Math.round(leg.magneticHeading || 0).toString().padStart(3, '0')}Â°</TableCell>
+                                    <TableCell className="px-3 text-center text-[10px] font-black text-primary whitespace-nowrap">{Math.round(leg.trueCourse || 0)}°</TableCell>
+                                    <TableCell className="px-3 text-center text-[10px] font-black text-white bg-slate-900/30 whitespace-nowrap">{Math.round(leg.magneticHeading || 0).toString().padStart(3, '0')}°</TableCell>
                                     <TableCell className="px-3 text-center text-[11px] font-black text-amber-500 whitespace-nowrap">{leg.distance?.toFixed(1)} NM</TableCell>
                                     <TableCell className="px-3 text-center text-[10px] font-bold text-primary whitespace-nowrap">{Math.round(leg.groundSpeed || 0)}</TableCell>
                                     <TableCell className="px-3 text-center text-[10px] font-bold text-primary font-mono whitespace-nowrap">{formatEte(leg.ete || 0)}</TableCell>
-                                    <TableCell className="px-3 text-center text-[10px] font-bold text-emerald-500 font-mono whitespace-nowrap">{leg.tripFuel ? `${leg.tripFuel.toFixed(1)}` : 'â€”'}</TableCell>
+                                    <TableCell className="px-3 text-center text-[10px] font-bold text-emerald-500 font-mono whitespace-nowrap">{leg.tripFuel ? `${leg.tripFuel.toFixed(1)}` : '—'}</TableCell>
                                     <TableCell className="px-3 text-center text-[10px] font-black text-white bg-slate-900/50 font-mono whitespace-nowrap">{formatEte(leg.cumulativeEte || 0)}</TableCell>
                                     {!isReadOnly && (
                                         <TableCell>
                                             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {leg.id !== 'terminal-leg' && (
-                                                    <>
-                                                        <Button
-                                                            variant="ghost" size="icon"
-                                                            className="h-5 w-5 hover:text-primary hover:bg-primary/10"
-                                                            onClick={() => handleMoveLeg(leg.id, 'up')}
-                                                            disabled={legs.findIndex(l => l.id === leg.id) === 0}
-                                                            title="Move Up"
-                                                        >
-                                                            <ChevronUp className="h-3 w-3" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost" size="icon"
-                                                            className="h-5 w-5 hover:text-primary hover:bg-primary/10"
-                                                            onClick={() => handleMoveLeg(leg.id, 'down')}
-                                                            disabled={legs.findIndex(l => l.id === leg.id) === legs.length - 1}
-                                                            title="Move Down"
-                                                        >
-                                                            <ChevronDown className="h-3 w-3" />
-                                                        </Button>
-                                                    </>
-                                                )}
                                                 <Button
                                                     variant="ghost" size="icon"
                                                     className="h-5 w-5 hover:text-red-500 hover:bg-red-500/10"
@@ -830,57 +563,17 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                 </TableRow>
                             ))}
                         </TableBody>
-                        {computedLegs.length > 0 && (() => {
-                            const totalDist = computedLegs.reduce((s, l) => s + (l.distance || 0), 0);
-                            const totalEte = computedLegs[computedLegs.length - 1]?.cumulativeEte || 0;
-                            const totalFuel = computedLegs.reduce((s, l) => s + (l.tripFuel || 0), 0);
-                            return (
-                                <tfoot>
-                                    <tr className="border-t-2 border-primary/20 bg-muted/30">
-                                        <td colSpan={6} className="text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground py-2 px-3 whitespace-nowrap">Route Totals</td>
-                                        <td className="text-center text-[10px] font-black text-primary py-2 px-3 whitespace-nowrap">â€”</td>
-                                        <td className="text-center text-[10px] font-black text-white bg-slate-900/30 py-2 px-3 whitespace-nowrap">â€”</td>
-                                        <td className="text-center text-[11px] font-black text-amber-500 py-2 px-3 whitespace-nowrap">{totalDist.toFixed(1)} NM</td>
-                                        <td className="text-center text-[10px] font-bold text-primary py-2 px-3 whitespace-nowrap">â€”</td>
-                                        <td className="text-center text-[10px] font-black text-primary font-mono py-2 px-3 whitespace-nowrap">{formatEte(totalEte)}</td>
-                                        <td className="text-center text-[10px] font-black text-emerald-500 font-mono py-2 px-3 whitespace-nowrap">{globalFuelBurn > 0 ? `${totalFuel.toFixed(1)} ${globalFuelBurnUnit}` : 'â€”'}</td>
-                                        <td className="text-center text-[10px] font-black text-white bg-slate-900/50 font-mono py-2 px-3 whitespace-nowrap">{formatEte(totalEte)}</td>
-                                        {!isReadOnly && <td />}
-                                    </tr>
-                                </tfoot>
-                            );
-                        })()}
                     </Table>
                     </div>
                 </div>
-                {computedLegs.length > 0 && globalFuelBurn > 0 && (() => {
-                    const tripFuelTotal = computedLegs.reduce((s, l) => s + (l.tripFuel || 0), 0);
-                    const reserve45 = parseFloat(((globalFuelBurn / 60) * 45).toFixed(1));
-                    const blockFuel = parseFloat((tripFuelTotal + reserve45).toFixed(1));
-                    const plannedFlightMinutes = computedLegs[computedLegs.length - 1]?.cumulativeEte || 0;
-                    const enduranceMinutes = fuelEnduranceHours !== undefined ? fuelEnduranceHours * 60 : 0;
-                    const remainingMinutes = fuelEnduranceHours !== undefined ? enduranceMinutes - plannedFlightMinutes : undefined;
-                    return (
-                        <div className="px-4 py-2 border-t bg-emerald-950/20 border-emerald-500/10 flex flex-wrap gap-x-6 gap-y-1 items-center">
-                            <span className="text-[9px] font-black uppercase text-emerald-500/60 tracking-wider flex items-center gap-1"><Droplets className="h-3 w-3" /> Fuel Summary</span>
-                            <span className="text-[10px] font-black text-emerald-400">Trip: {tripFuelTotal.toFixed(1)} {globalFuelBurnUnit}</span>
-                            <span className="text-[10px] font-black text-amber-400">45min Reserve: {reserve45.toFixed(1)} {globalFuelBurnUnit}</span>
-                            <span className="text-[10px] font-black text-white border-l border-white/20 pl-4">Block Required: <span className="text-emerald-300">{blockFuel.toFixed(1)} {globalFuelBurnUnit}</span></span>
-                            <span className={cn(
-                                "text-[10px] font-black border-l border-white/20 pl-4",
-                                remainingMinutes === undefined ? "text-muted-foreground" : remainingMinutes >= 0 ? "text-sky-300" : "text-red-400"
-                            )}>
-                                Endurance: {fuelEnduranceHours !== undefined ? `${formatDuration(enduranceMinutes)} ${remainingMinutes !== undefined && remainingMinutes >= 0 ? `(res ${formatDuration(remainingMinutes)})` : remainingMinutes !== undefined ? `(short ${formatDuration(Math.abs(remainingMinutes))})` : ''}` : 'N/A'}
-                            </span>
-                        </div>
-                    );
-                })()}
                 {!isReadOnly && (
                     <div className="mt-auto p-3 border-t bg-muted/5 flex justify-between items-center shrink-0">
                         <Button variant="outline" size="sm" onClick={handleAddLeg} className="gap-2 h-8 text-[10px] font-black uppercase tracking-widest border-primary/20 text-primary">
                             <Plus className="h-4 w-4" /> Add Manual Waypoint
                         </Button>
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase">Pro Tip: Use the map planner for visual legs</p>
+                        <Button variant="outline" size="sm" onClick={handleSave} className="gap-2 h-8 text-[10px] font-black uppercase tracking-widest border-emerald-500/20 text-emerald-600">
+                            <Save className="h-4 w-4" /> Save Navlog
+                        </Button>
                     </div>
                 )}
             </div>
@@ -888,417 +581,3 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
         </TooltipProvider>
     );
 }
-
-/**
- * AviationLayerController
- * Handles the tactical map overlays and mission framing.
- */
-function AviationLayerController({ 
-    departure, legs, arrival, mapMode, setMapMode, 
-    setDepartureLatitude, setDepartureLongitude, setDeparture,
-    setArrivalLatitude, setArrivalLongitude, setArrival, 
-    setLegs, onClear, lookupICAO, recalculateLegs 
-}: { 
-    departure: { lat?: number, lng?: number }, 
-    legs: NavlogLeg[], 
-    arrival: { lat?: number, lng?: number },
-    mapMode: 'waypoint' | 'departure' | 'arrival',
-    setMapMode: (mode: 'waypoint' | 'departure' | 'arrival') => void,
-    setDepartureLatitude: (lat: number) => void,
-    setDepartureLongitude: (lng: number) => void,
-    setDeparture: (icao: string) => void,
-    setArrivalLatitude: (lat: number) => void,
-    setArrivalLongitude: (lng: number) => void,
-    setArrival: (icao: string) => void,
-    setLegs: (legs: NavlogLeg[]) => void,
-    onClear: () => void,
-    lookupICAO: (icao: string) => Promise<{ lat: number, lon: number }>,
-    recalculateLegs: (legs: NavlogLeg[]) => NavlogLeg[]
-}) {
-    const map = useMap();
-    const { toast } = useToast();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searching, setSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<any[]>([]);
-    const [showResults, setShowResults] = useState(false);
-    const [showAero, setShowAero] = useState(true);
-    const [showAirspaces, setShowAirspaces] = useState(true);
-    const [showObstacles, setShowObstacles] = useState(false);
-    const [showAirports, setShowAirports] = useState(true);
-    const [airspacesGeoJson, setAirspacesGeoJson] = useState<any>({ type: 'FeatureCollection', features: [] });
-    const [obstaclesGeoJson, setObstaclesGeoJson] = useState<any>({ type: 'FeatureCollection', features: [] });
-    const [nearbyAirports, setNearbyAirports] = useState<any[]>([]);
-
-    useEffect(() => {
-        const toFeatureCollection = (items: any[]) => ({
-            type: 'FeatureCollection',
-            features: (items || [])
-                .filter((item: any) => item?.geometry)
-                .map((item: any) => ({
-                    type: 'Feature',
-                    geometry: item.geometry,
-                    properties: item,
-                })),
-        });
-
-        const computeDistanceMeters = (zoom: number) => {
-            if (zoom >= 13) return 20000;
-            if (zoom >= 11) return 45000;
-            if (zoom >= 9) return 80000;
-            return 120000;
-        };
-
-        const loadMapIntel = async () => {
-            const center = map.getCenter();
-            const dist = computeDistanceMeters(map.getZoom());
-            const pos = `${center.lat},${center.lng}`;
-
-            try {
-                const [airspacesRes, obstaclesRes, airportsRes] = await Promise.all([
-                    fetch(`/api/openaip?resource=airspaces&pos=${pos}&dist=${dist}&limit=120`),
-                    fetch(`/api/openaip?resource=obstacles&pos=${pos}&dist=${dist}&limit=180`),
-                    fetch(`/api/openaip?resource=airports&pos=${pos}&dist=${dist}&limit=60`),
-                ]);
-
-                const [airspacesData, obstaclesData, airportsData] = await Promise.all([
-                    airspacesRes.ok ? airspacesRes.json() : { items: [] },
-                    obstaclesRes.ok ? obstaclesRes.json() : { items: [] },
-                    airportsRes.ok ? airportsRes.json() : { items: [] },
-                ]);
-
-                setAirspacesGeoJson(toFeatureCollection(airspacesData.items || []));
-                setObstaclesGeoJson(toFeatureCollection(obstaclesData.items || []));
-                setNearbyAirports(airportsData.items || []);
-            } catch (error) {
-                console.warn('Failed loading OpenAIP map layers', error);
-            }
-        };
-
-        void loadMapIntel();
-        const onMoveEnd = () => { void loadMapIntel(); };
-        map.on('moveend', onMoveEnd);
-        return () => {
-            map.off('moveend', onMoveEnd);
-        };
-    }, [map]);
-
-    useMapEvents({
-        click: async (e) => {
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-            if (!lat || !lng) return;
-
-            try {
-                // Search within 15km
-                const openAipRes = await fetch(`/api/openaip?resource=airports&pos=${lat},${lng}&dist=15000&limit=1`);
-                const openAipData = await openAipRes.json();
-                const nearest = openAipData.items?.[0];
-
-                let name = `FIX ${legs.length + 1}`;
-                let freq = '---';
-
-                if (nearest) {
-                    name = nearest.icaoCode || nearest.name.toUpperCase();
-                    if (nearest.frequencies && nearest.frequencies.length > 0) {
-                        const primary = nearest.frequencies.find((f: any) => ['TOWER', 'CTAF', 'INFO'].includes(f.type)) || nearest.frequencies[0];
-                        freq = `${primary.value} ${primary.unit || 'MHz'}`;
-                    }
-                }
-
-                if (mapMode === 'departure') {
-                    setDepartureLatitude(lat);
-                    setDepartureLongitude(lng);
-                    setDeparture(name.substring(0, 10));
-                    toast({ title: "Departure Set", description: `Mission start at ${name}.` });
-                    setMapMode('waypoint');
-                } else if (mapMode === 'arrival') {
-                    setArrivalLatitude(lat);
-                    setArrivalLongitude(lng);
-                    setArrival(name.substring(0, 10));
-                    toast({ title: "Arrival Set", description: `Mission end at ${name}.` });
-                    setMapMode('waypoint');
-                } else {
-                    setLegs(recalculateLegs([...legs, { 
-                        id: uuidv4(), 
-                        waypoint: name.substring(0, 20), 
-                        latitude: lat, 
-                        longitude: lng, 
-                        frequencies: freq !== '---' ? freq : '',
-                    }]));
-                }
-            } catch (err) {
-                console.error("Map intelligence error", err);
-            }
-        }
-    });
-
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!searchQuery || !map) return;
-        setSearching(true);
-        try {
-            const [airportsRes, navaidsRes, repPointsRes] = await Promise.all([
-                fetch(`/api/openaip?resource=airports&search=${encodeURIComponent(searchQuery)}&limit=3`),
-                fetch(`/api/openaip?resource=navaids&search=${encodeURIComponent(searchQuery)}&limit=3`),
-                fetch(`/api/openaip?resource=reporting-points&search=${encodeURIComponent(searchQuery)}&limit=3`)
-            ]);
-
-            const [airports, navaids, repPoints] = await Promise.all([
-                airportsRes.ok ? airportsRes.json() : { items: [] },
-                navaidsRes.ok ? navaidsRes.json() : { items: [] },
-                repPointsRes.ok ? repPointsRes.json() : { items: [] }
-            ]);
-
-            const results = [
-                ...(airports.items?.map((item: any) => ({ ...item, pointType: 'AIRPORT', displayId: item.icaoCode || item.name })) || []),
-                ...(navaids.items?.map((item: any) => ({ ...item, pointType: 'NAVAID', displayId: item.name || item.id })) || []),
-                ...(repPoints.items?.map((item: any) => ({ ...item, pointType: 'REP. POINT', displayId: item.name || item.id })) || [])
-            ];
-            
-            if (results.length === 0) {
-                 toast({ title: "Radar Search Failed", description: "No matches found in aviation database.", variant: "destructive" });
-                 setShowResults(false);
-            } else {
-                 setSearchResults(results);
-                 setShowResults(true);
-            }
-        } catch (err: any) {
-            toast({ title: "Radar Search Failed", description: err.message, variant: "destructive" });
-        } finally {
-            setSearching(false);
-        }
-    };
-
-    const handleSelectResult = (item: any) => {
-        const coords = item.geometry?.coordinates; 
-        if (coords) {
-            map.flyTo([coords[1], coords[0]], 12);
-            toast({ title: "Radar Lock", description: `Centering on ${item.displayId}.` });
-        }
-        setShowResults(false);
-        setSearchQuery('');
-    };
-
-    const fitRoute = () => {
-        if (!map) return;
-        const coords: L.LatLngTuple[] = [];
-        if (departure.lat !== undefined && departure.lng !== undefined) coords.push([departure.lat, departure.lng]);
-        legs.forEach(l => { if (l.latitude !== undefined && l.longitude !== undefined) coords.push([l.latitude, l.longitude]); });
-        if (arrival.lat !== undefined && arrival.lng !== undefined) coords.push([arrival.lat, arrival.lng]);
-
-        if (coords.length > 0) {
-            const bounds = L.latLngBounds(coords);
-            map.fitBounds(bounds, { padding: [50, 50] });
-            toast({ title: "Fit Route", description: "Mission overview centered." });
-        }
-    };
-
-    return (
-        <>
-            {showAero && (
-                <TileLayer
-                    url="https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=1cbf7bdd18e52e7fa977c6d106847397"
-                    subdomains={['a', 'b', 'c']}
-                    maxZoom={14}
-                    opacity={0.9}
-                    zIndex={10}
-                />
-            )}
-            {showAirspaces && airspacesGeoJson.features.length > 0 && (
-                <GeoJSON
-                    data={airspacesGeoJson}
-                    interactive={false}
-                    style={(feature: any) => {
-                        const clazz = String(feature?.properties?.type || feature?.properties?.classification || '').toUpperCase();
-                        const color =
-                            clazz.includes('CTR') ? '#f59e0b' :
-                            clazz.includes('TMA') ? '#38bdf8' :
-                            clazz.includes('RESTRICTED') ? '#ef4444' :
-                            clazz.includes('DANGER') ? '#dc2626' :
-                            clazz.includes('PROHIBITED') ? '#b91c1c' :
-                            '#a78bfa';
-                        return { color, weight: 1.2, opacity: 0.9, fillOpacity: 0.08 };
-                    }}
-                />
-            )}
-            {showObstacles && obstaclesGeoJson.features.length > 0 && (
-                <GeoJSON
-                    data={obstaclesGeoJson}
-                    interactive={false}
-                    pointToLayer={(_feature: any, latlng: any) => L.circleMarker(latlng, {
-                        radius: 4,
-                        color: '#f97316',
-                        weight: 1.2,
-                        fillColor: '#fb923c',
-                        fillOpacity: 0.8,
-                    })}
-                />
-            )}
-            {showAirports && nearbyAirports.map((airport: any) => {
-                const coords = airport?.geometry?.coordinates;
-                if (!Array.isArray(coords) || coords.length < 2) return null;
-                const lon = Number(coords[0]);
-                const lat = Number(coords[1]);
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-                const ident = airport.icaoCode || airport.iataCode || airport.name || 'Airport';
-                return (
-                    <CircleMarker
-                        key={airport._id || `${ident}-${lat}-${lon}`}
-                        center={[lat, lon]}
-                        radius={4}
-                        interactive={false}
-                        pathOptions={{ color: '#22d3ee', weight: 1.5, fillColor: '#0891b2', fillOpacity: 0.7 }}
-                    />
-                );
-            })}
-
-            <div 
-                className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-[300px]"
-                ref={(ref) => { if (ref) { L.DomEvent.disableClickPropagation(ref); L.DomEvent.disableScrollPropagation(ref); } }}
-            >
-                <form onSubmit={handleSearch} className="relative group">
-                    <Input 
-                        placeholder="Search Airports, Navaids, Fixes..." 
-                        className="bg-slate-950/80 border-white/20 text-white pl-9 h-10 rounded-xl backdrop-blur-md focus:bg-slate-900 transition-all shadow-2xl"
-                        value={searchQuery}
-                        onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            setShowResults(false);
-                        }}
-                    />
-                    <Radio className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-pulse", searching && "text-amber-500")} />
-                    <Button type="submit" size="sm" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 text-white/50 hover:text-white h-8">
-                        GO
-                    </Button>
-                </form>
-
-                {showResults && searchResults.length > 0 && (
-                    <div className="absolute top-full mt-2 w-full bg-slate-950/95 border border-white/10 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col max-h-[300px] overflow-y-auto">
-                        <div className="p-2 border-b border-white/10 bg-black/40 text-[10px] font-black uppercase text-white/50 tracking-widest">
-                            Radar Matches
-                        </div>
-                        {searchResults.map((item, idx) => (
-                            <button
-                                key={idx}
-                                className="w-full text-left px-3 py-2 border-b border-white/5 hover:bg-white/10 transition-colors flex justify-between items-center group"
-                                onClick={() => handleSelectResult(item)}
-                            >
-                                <span className="text-xs font-bold text-white group-hover:text-amber-500 transition-colors">{item.displayId}</span>
-                                <Badge variant="outline" className="text-[8px] px-1 py-0 h-4 border-white/20 text-white/60">{item.pointType}</Badge>
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div 
-                className="absolute top-4 left-4 z-[1000] flex flex-col gap-2"
-                ref={(ref) => { if (ref) { L.DomEvent.disableClickPropagation(ref); L.DomEvent.disableScrollPropagation(ref); } }}
-            >
-                <div className="bg-slate-950/90 border border-white/10 backdrop-blur-xl p-1 rounded-lg shadow-2xl flex flex-col gap-1">
-                    <Button 
-                        size="sm" 
-                        variant={mapMode === 'departure' ? 'default' : 'ghost'} 
-                        className={cn("h-8 gap-2 text-[9px] font-black uppercase justify-start px-3", mapMode === 'departure' ? "bg-amber-500 text-black hover:bg-amber-600" : "text-white hover:bg-white/5")} 
-                        onClick={() => setMapMode('departure')}
-                    >
-                        <MapPin className="h-3 w-3" /> Set Departure
-                    </Button>
-                    <Button 
-                        size="sm" 
-                        variant={mapMode === 'waypoint' ? 'default' : 'ghost'} 
-                        className={cn("h-8 gap-2 text-[9px] font-black uppercase justify-start px-3", mapMode === 'waypoint' ? "bg-primary text-white" : "text-white hover:bg-white/5")} 
-                        onClick={() => setMapMode('waypoint')}
-                    >
-                        <Plus className="h-3 w-3" /> Add Waypoint
-                    </Button>
-                    <Button 
-                        size="sm" 
-                        variant={mapMode === 'arrival' ? 'default' : 'ghost'} 
-                        className={cn("h-8 gap-2 text-[9px] font-black uppercase justify-start px-3", mapMode === 'arrival' ? "bg-amber-500 text-black hover:bg-amber-600" : "text-white hover:bg-white/5")} 
-                        onClick={() => {
-                            if (legs.length > 0) {
-                                const last = legs[legs.length - 1];
-                                if (last.latitude && last.longitude) {
-                                    setArrivalLatitude(last.latitude);
-                                    setArrivalLongitude(last.longitude);
-                                    setArrival(last.waypoint.substring(0, 4));
-                                    setLegs(legs.slice(0, -1)); 
-                                    toast({ title: "Waypoint Promoted", description: `${last.waypoint} is now your arrival destination.` });
-                                }
-                            }
-                            setMapMode('arrival');
-                        }}
-                    >
-                        <MapPin className="h-3 w-3" /> Set Arrival
-                    </Button>
-                </div>
-                <p className="text-[8px] font-bold text-white/30 uppercase pl-1">Targeting: <span className="text-amber-500">{mapMode}</span></p>
-            </div>
-
-            <div 
-                className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 items-end"
-                ref={(ref) => { if (ref) { L.DomEvent.disableClickPropagation(ref); L.DomEvent.disableScrollPropagation(ref); } }}
-            >
-                <div className="bg-slate-950/90 border border-white/10 backdrop-blur-xl p-1 rounded-lg shadow-2xl flex flex-col gap-1 mb-2">
-                    <p className="text-[7px] font-black text-white/30 uppercase px-2 py-1">Tactical Map Layers</p>
-                    <div className="h-[1px] bg-white/5 w-full my-1" />
-                    <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className={cn("h-7 gap-2 text-[8px] font-black uppercase justify-start px-3", showAero ? "text-amber-500 bg-amber-500/10" : "text-white/40")} 
-                        onClick={() => setShowAero(!showAero)}
-                    >
-                        {showAero ? 'Aero Chart: ON' : 'Aero Chart: OFF'}
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        className={cn("h-7 gap-2 text-[8px] font-black uppercase justify-start px-3", showAirspaces ? "text-violet-300 bg-violet-500/10" : "text-white/40")}
-                        onClick={() => setShowAirspaces(!showAirspaces)}
-                    >
-                        {showAirspaces ? 'Airspaces: ON' : 'Airspaces: OFF'}
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        className={cn("h-7 gap-2 text-[8px] font-black uppercase justify-start px-3", showObstacles ? "text-orange-300 bg-orange-500/10" : "text-white/40")}
-                        onClick={() => setShowObstacles(!showObstacles)}
-                    >
-                        {showObstacles ? 'Obstacles: ON' : 'Obstacles: OFF'}
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        className={cn("h-7 gap-2 text-[8px] font-black uppercase justify-start px-3", showAirports ? "text-cyan-300 bg-cyan-500/10" : "text-white/40")}
-                        onClick={() => setShowAirports(!showAirports)}
-                    >
-                        {showAirports ? 'Airports: ON' : 'Airports: OFF'}
-                    </Button>
-                </div>
-
-                <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="bg-primary hover:bg-primary/90 border-none text-white text-[10px] font-black uppercase tracking-widest shadow-xl px-6 h-9 transition-all hover:scale-105" 
-                    onClick={fitRoute}
-                >
-                    <Navigation className="h-3 w-3 mr-2 rotate-45" />
-                    Center Mission Path
-                </Button>
-                <Button 
-                    size="sm" 
-                    variant="destructive" 
-                    className="bg-red-600 hover:bg-red-700 border-none text-white text-[10px] font-black uppercase tracking-widest shadow-xl px-6 h-9 transition-all hover:scale-105" 
-                    onClick={onClear}
-                >
-                    <Trash2 className="h-3 w-3 mr-2" />
-                    Clear Flight Plan
-                </Button>
-                <Badge variant="outline" className="bg-slate-900 border-amber-500/50 text-amber-500 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 mt-1">VFR Aeronautical Layer Active</Badge>
-            </div>
-        </>
-    );
-}
-
-

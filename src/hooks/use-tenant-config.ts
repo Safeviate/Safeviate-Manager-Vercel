@@ -1,6 +1,6 @@
-
 'use client';
 
+import { useMemo } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useUserProfile } from './use-user-profile';
