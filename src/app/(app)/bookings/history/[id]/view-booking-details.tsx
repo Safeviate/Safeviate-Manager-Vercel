@@ -31,8 +31,6 @@ import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, g
 import { useIsMobile } from '@/hooks/use-mobile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
 
-const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
-
 const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
     const start = Number(min);
     const end = Number(max);
@@ -57,7 +55,6 @@ const generateNiceTicks = (min: number | string, max: number | string, stepCount
 };
 
 const formatLitres = (gallons: number) => gallonsToLitres(gallons).toFixed(1);
-const formatKilograms = (pounds: number) => poundsToKilograms(pounds).toFixed(1);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const normalizeFuelStation = (station: any) => {
     if (station?.type !== 'fuel') return station;
@@ -212,7 +209,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     return (
-        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden shadow-none border">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
@@ -233,9 +230,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </Button>
                     }
                 />
-                <div className="flex min-h-0 flex-1 flex-col">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <ScrollArea className="min-h-0 flex-1">
+                        <ScrollArea className="flex-1 min-h-0">
                             <CardContent className="p-0">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12 p-8 md:p-10 bg-muted/5">
                                     <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
@@ -282,8 +279,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </CardContent>
                             <Separator />
                             <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><AlertTriangle className="h-4 w-4" /> Mass & Balance</CardTitle></CardHeader>
-                            <CardContent className="min-h-full px-8 md:px-10 pb-40">
-                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
+                            <CardContent className="px-8 md:px-10 pb-40">
+                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
                                     <div className="flex flex-col">
                                         <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
                                             <div className="min-w-[800px] h-[650px] relative">
@@ -306,14 +303,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-6 pr-1">
-                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4 border">
+                                    <div className="space-y-6">
+                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-slate-200 shadow-sm">
                                             <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
                                             <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
-                                            <div className={cn("p-2 rounded text-center text-[10px] font-black uppercase", results.isSafe ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
+                                            <div className={cn(
+                                                "p-2 rounded-lg text-center text-[10px] font-black uppercase border",
+                                                results.isSafe ? "bg-green-100 text-green-700 border-green-200" : "bg-red-100 text-red-700 border-red-200"
+                                            )}>
                                                 {results.isSafe ? "Safe Loading" : "Outside Envelope"}
                                             </div>
-                                            <Button size="sm" onClick={handleSaveToBooking} disabled={isCompleted} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Load config</Button>
+                                            <Button size="sm" onClick={handleSaveToBooking} disabled={isCompleted} className="w-full h-10 uppercase text-xs font-black bg-emerald-700 shadow-md hover:bg-emerald-800">Save Load config</Button>
                                         </div>
                                         <ScrollArea className="h-[400px] pr-4">
                                             <div className="space-y-4">

@@ -3,12 +3,12 @@
 import { useMemo, useState, useEffect } from 'react';
 import { collection, doc, arrayUnion, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { useForm } from 'react-hook-form';
 import type { Booking, OverrideLog } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
+import type { Personnel, PilotProfile } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -145,7 +145,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     return (
-        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden shadow-none border">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
@@ -167,7 +167,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <ScrollArea className="min-h-0 flex-1">
+                        <ScrollArea className="flex-1 min-h-0">
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 pb-10">
                                 <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase">{booking.status}</Badge></DetailItem>
                                 <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
@@ -176,10 +176,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             <Separator />
                             <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
                             <CardContent className="pb-32">
-                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
-                                    <div className="flex flex-col h-full min-h-[650px]">
-                                        <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x bg-background rounded-xl border p-4">
-                                            <div className="min-w-[800px] h-full relative">
+                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
+                                    <div className="flex flex-col">
+                                        <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
+                                            <div className="min-w-[800px] h-[650px] relative">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                                                         <CartesianGrid strokeDasharray="3 3" />
@@ -195,8 +195,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-6 pr-1">
-                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-slate-200">
+                                    <div className="space-y-6">
+                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-slate-200 shadow-sm">
                                             <DetailItem label="Total Weight"><p className="text-2xl font-black text-foreground">{results.weight} lbs</p></DetailItem>
                                             <DetailItem label="Center Gravity"><p className="text-2xl font-black text-foreground">{results.cg} in</p></DetailItem>
                                             <div className={cn(

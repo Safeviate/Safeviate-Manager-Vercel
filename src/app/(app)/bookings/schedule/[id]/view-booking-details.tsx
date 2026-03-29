@@ -154,7 +154,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const fYMax = Math.max(...allY) + padY;
 
     return (
-        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden shadow-none border">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
@@ -165,7 +165,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <ScrollArea className="min-h-0 flex-1">
+                        <ScrollArea className="flex-1 min-h-0">
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                                 <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
                                 <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
@@ -175,7 +175,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </CardContent>
                             <Separator />
                             <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance</CardTitle></CardHeader>
-                            <CardContent className="min-h-full pb-20">
+                            <CardContent className="pb-20">
                                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
                                     <div className="flex flex-col">
                                         <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile && "mx-auto w-full max-w-[430px]")}>
@@ -240,15 +240,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         </div>
                                     </div>
                                     <div className="space-y-6">
-                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4">
+                                        <div className="p-4 bg-muted/30 rounded-xl space-y-4 border shadow-sm">
                                             <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
                                             <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
-                                            <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Load config</Button>
+                                            <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700 shadow-md hover:bg-emerald-800">Save Load config</Button>
                                         </div>
                                         <ScrollArea className="h-[400px] pr-4">
                                             <div className="space-y-4">
                                                 {stations.map(s => (
-                                                    <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background">
+                                                    <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background shadow-sm">
                                                         <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
                                                         <div className="flex items-center gap-2">
                                                             <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} className="h-8 text-xs font-bold" />
