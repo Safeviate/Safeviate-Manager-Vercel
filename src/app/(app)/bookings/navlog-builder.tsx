@@ -533,8 +533,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         {renderWeatherBriefing('Arrival Weather', arrival, airportBriefings.arrival, airportBriefingLoading.arrival, 'arrival')}
                     </div>
                 </div>
-                </div>
-                </div>
                 {!isReadOnly && (
                     <Dialog open={plannerOpen} onOpenChange={setPlannerOpen}>
                         <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden bg-slate-900 border-slate-700 flex flex-col">
@@ -885,6 +883,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                         <p className="text-[9px] font-bold text-muted-foreground uppercase">Pro Tip: Use the map planner for visual legs</p>
                     </div>
                 )}
+            </div>
             </div>
         </TooltipProvider>
     );
