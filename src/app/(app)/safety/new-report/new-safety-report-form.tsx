@@ -19,7 +19,7 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
-import type { ReportType } from '@/types/safety-report';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 
 const formSchema = z.object({
   reportType: z.string().min(1, "Report type is required."),
@@ -45,6 +45,13 @@ interface NewSafetyReportFormProps {
 export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSafetyReportFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { tenant } = useTenantConfig();
+
+  const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
+
+  const reportTypes = isAviation 
+    ? ['Flight Operations', 'Aircraft Defect', 'Ground Operations', 'General Safety Concern']
+    : ['Workplace Hazard', 'Equipment Failure', 'Environmental Issue', 'Process Non-Conformance', 'General Concern'];
 
   const form = useForm<NewSafetyReportValues>({
     resolver: zodResolver(formSchema),
@@ -64,8 +71,8 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <Card>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-4xl mx-auto">
+        <Card className="shadow-none border">
           <CardHeader>
             <CardTitle>File New Safety Report</CardTitle>
             <CardDescription>
@@ -80,9 +87,20 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Type of Report</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Flight Operations, Aircraft Defect" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a report type" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {reportTypes.map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                        {type}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -91,8 +109,8 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
                     control={form.control}
                     name="isAnonymous"
                     render={({ field }) => (
-                        <FormItem className="flex flex-col rounded-lg border p-3 justify-center">
-                            <FormLabel>File Anonymously</FormLabel>
+                        <FormItem className="flex flex-col rounded-lg border p-3 justify-center bg-muted/10">
+                            <FormLabel className="text-xs">File Anonymously</FormLabel>
                             <div className="flex items-center space-x-2 pt-2">
                                <FormControl>
                                 <Switch
@@ -100,7 +118,7 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
                                     onCheckedChange={field.onChange}
                                 />
                                 </FormControl>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-[10px] text-muted-foreground font-medium">
                                     {field.value ? "Your identity will be hidden." : "Your name will be attached."}
                                 </span>
                             </div>
@@ -112,7 +130,7 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
             <Separator />
 
             <div className="space-y-4">
-                <h3 className="text-lg font-medium">Event Details</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-primary">Event Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <FormField
                         control={form.control}
@@ -126,7 +144,7 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
                                     <Button
                                     variant={"outline"}
                                     className={cn(
-                                        "w-full pl-3 text-left font-normal h-10",
+                                        "w-full pl-3 text-left font-normal h-10 bg-background border-slate-200",
                                         !field.value && "text-muted-foreground"
                                     )}
                                     >
@@ -149,14 +167,14 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
                     <FormField control={form.control} name="eventTime" render={({ field }) => (
                         <FormItem className="flex flex-col">
                             <FormLabel>Time of Event (24h)</FormLabel>
-                            <FormControl><Input type="time" {...field} className="h-10" /></FormControl>
+                            <FormControl><Input type="time" {...field} className="h-10 bg-background border-slate-200" /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="location" render={({ field }) => (
                         <FormItem className="flex flex-col">
                             <FormLabel>Location</FormLabel>
-                            <FormControl><Input placeholder="e.g., Apron Bravo, near Hangar 3" {...field} className="h-10" /></FormControl>
+                            <FormControl><Input placeholder="e.g., Office, Workshop, Apron..." {...field} className="h-10 bg-background border-slate-200" /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
@@ -165,15 +183,15 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
             
             {selectedReportType && <Separator />}
 
-            {selectedReportType === 'Flight Operations' && (
+            {isAviation && selectedReportType === 'Flight Operations' && (
                 <FormField control={form.control} name="phaseOfFlight" render={({ field }) => (<FormItem><FormLabel>Phase of Flight</FormLabel><FormControl><Input placeholder="e.g., Take-off, Cruise, Landing" {...field} /></FormControl><FormMessage /></FormItem>)} />
             )}
             
-            {selectedReportType === 'Aircraft Defect' && (
-                 <FormField control={form.control} name="systemOrComponent" render={({ field }) => (<FormItem><FormLabel>System or Component</FormLabel><FormControl><Input placeholder="e.g., Left main landing gear, PFD unit 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+            {(selectedReportType === 'Aircraft Defect' || selectedReportType === 'Equipment Failure') && (
+                 <FormField control={form.control} name="systemOrComponent" render={({ field }) => (<FormItem><FormLabel>{isAviation ? 'Aircraft' : 'Equipment'} System / Component</FormLabel><FormControl><Input placeholder={isAviation ? "e.g., Left main landing gear" : "e.g., Warehouse Forklift Mast"} {...field} /></FormControl><FormMessage /></FormItem>)} />
             )}
 
-            {(selectedReportType === 'Flight Operations' || selectedReportType === 'Aircraft Defect') && (
+            {isAviation && (selectedReportType === 'Flight Operations' || selectedReportType === 'Aircraft Defect') && (
                 <FormField
                     control={form.control}
                     name="aircraftId"
@@ -209,7 +227,7 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
                     <FormControl>
                         <Textarea
                         placeholder="Describe the event in detail. What happened? What were the conditions? What actions were taken?"
-                        className="min-h-32"
+                        className="min-h-32 bg-background border-slate-200"
                         {...field}
                         />
                     </FormControl>
@@ -220,12 +238,12 @@ export function NewSafetyReportForm({ aircrafts, onSubmit, isSubmitting }: NewSa
 
           </CardContent>
         </Card>
-        <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+        <div className="flex justify-end gap-2 pb-10">
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting} className="h-10 px-8 border-slate-300 font-bold uppercase text-[10px]">
                 Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Report'}
+            <Button type="submit" disabled={isSubmitting} className="h-10 px-10 font-black uppercase text-[10px] bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">
+                {isSubmitting ? 'Submitting...' : 'Submit Safety Report'}
             </Button>
         </div>
       </form>

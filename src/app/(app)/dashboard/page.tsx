@@ -208,11 +208,13 @@ export default function DashboardPage() {
       .slice(0, 6);
 
     const statusChartData = [
-      { name: 'Completed', value: completedBookings.length, fill: 'hsl(var(--chart-2))' },
-      { name: 'Cancelled', value: cancelledBookings.length, fill: 'hsl(var(--chart-1))' },
+      { name: 'Completed', value: isAviation ? completedBookings.length : caps.filter(c => c.status === 'Closed').length, fill: 'hsl(var(--chart-2))' },
+      { name: 'Cancelled', value: isAviation ? cancelledBookings.length : caps.filter(c => c.status === 'Cancelled').length, fill: 'hsl(var(--chart-1))' },
       {
         name: 'Active',
-        value: Math.max(0, (isAviation ? bookings.length : caps.length) - completedBookings.length - cancelledBookings.length),
+        value: isAviation 
+          ? Math.max(0, bookings.length - completedBookings.length - cancelledBookings.length)
+          : overdueItems.length,
         fill: 'hsl(var(--chart-3))',
       },
     ].filter((item) => item.value > 0);
@@ -265,10 +267,6 @@ export default function DashboardPage() {
       }))
     ].slice(0, 6);
 
-    const todayOps = isAviation 
-        ? todayBookings.slice(0, 5).map(b => ({ id: b.id, title: `${b.bookingNumber} • ${aircraftMap.get(b.aircraftId)}`, detail: `${b.startTime} - ${b.endTime} • ${b.status}`, tone: 'neutral' as AttentionItemTone }))
-        : overdueItems.slice(0, 5).map(cap => ({ id: cap.id, title: `Active CAP: ${cap.id.substring(0, 8)}`, detail: `Status: ${cap.status}`, tone: 'neutral' as AttentionItemTone }));
-
     return {
       totalHours: totalHours.toFixed(1),
       activeFleet: aircrafts.length,
@@ -287,8 +285,8 @@ export default function DashboardPage() {
       auditTrendData,
       reportsChartData,
       attentionItems,
-      todayOps,
       upcomingAudits: audits.filter(a => a.status === 'Scheduled').slice(0, 4),
+      criticalRiskItems: criticalRiskItems.slice(0, 5),
     };
   }, [bookings, aircrafts, audits, caps, safetyReports, risks, isAviation]);
 
@@ -381,4 +379,168 @@ export default function DashboardPage() {
               <CardTitle>Fleet Utilization</CardTitle>
               <CardDescription>Top aircraft by logged Hobbs time.</CardDescription>
             </CardHeader>
-            <CardContent className="h-[320px] 
+            <CardContent className="h-[320px] pb-0">
+              <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.aircraftChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+                    <XAxis
+                      dataKey="name"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}h`}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="hours" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="flex flex-col shadow-none border">
+            <CardHeader>
+              <CardTitle>Occurrence Types</CardTitle>
+              <CardDescription>Breakdown of reported safety events.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[320px] pb-0">
+              <ChartContainer config={{ value: { label: 'Reports', color: 'hsl(var(--chart-4))' } }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.reportsChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+                    <XAxis
+                      dataKey="name"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="flex flex-col shadow-none border">
+          <CardHeader>
+            <CardTitle>Status Mix</CardTitle>
+            <CardDescription>How {isAviation ? 'bookings' : 'items'} are resolving.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex h-[320px] flex-col justify-center">
+            <ChartContainer
+              config={{
+                Completed: { label: 'Completed', color: 'hsl(var(--chart-2))' },
+                Cancelled: { label: 'Cancelled', color: 'hsl(var(--chart-1))' },
+                Active: { label: 'Active', color: 'hsl(var(--chart-3))' },
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  <Pie
+                    data={stats.statusChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    strokeWidth={5}
+                  >
+                    {stats.statusChartData.map((entry, index) => (
+                      <Cell key={`status-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+            <div className="flex flex-wrap justify-center gap-4 py-4 text-xs">
+              {stats.statusChartData.map((item) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.fill }} />
+                  <span className="font-medium uppercase text-muted-foreground">
+                    {item.name}: {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr_1fr]">
+        <Card className="flex flex-col overflow-hidden shadow-none border">
+          <CardHeader>
+            <CardTitle>Compliance Trend</CardTitle>
+            <CardDescription>Latest finalized audit performance over time.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[320px] overflow-hidden pt-2">
+            <ChartContainer
+              className="h-full w-full overflow-hidden aspect-auto"
+              config={{ score: { label: 'Compliance %', color: 'hsl(var(--chart-2))' } }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.auditTrendData} margin={{ top: 12, right: 12, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke="var(--color-score)"
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: 'var(--color-score)' }}
+                    activeDot={{ r: 7 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <AttentionList
+          title="Upcoming Audits"
+          description="Scheduled oversight already on the radar."
+          items={stats.upcomingAudits.map((audit) => ({
+            id: audit.id,
+            title: `${audit.auditNumber} • ${audit.title}`,
+            detail: `${format(new Date(audit.auditDate), 'dd MMM yyyy')} • ${audit.status}`,
+            tone: 'warning',
+          }))}
+        />
+
+        <AttentionList
+          title="High Risks"
+          description="Open hazards with high or critical exposure."
+          items={stats.criticalRiskItems}
+        />
+      </div>
+    </div>
+  );
+}
