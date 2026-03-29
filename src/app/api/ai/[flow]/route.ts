@@ -18,9 +18,12 @@ export async function GET(_: Request, { params }: RouteContext) {
 }
 
 export async function POST(request: Request, { params }: RouteContext) {
-  const requestUrl = new URL(request.url);
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  const protocol = request.headers.get('x-forwarded-proto') || (host?.includes('localhost') || host?.includes('127.0.0.1') ? 'http' : 'https');
+  const expectedOrigin = host ? `${protocol}://${host}` : new URL(request.url).origin;
+  
   const origin = request.headers.get('origin');
-  if (origin && origin !== requestUrl.origin) {
+  if (origin && origin !== expectedOrigin) {
     return NextResponse.json(
       { ok: false, error: 'Forbidden origin.' },
       { status: 403 }
