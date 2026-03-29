@@ -10,6 +10,7 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Map as MapIcon, X, Plus, Navigation } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -132,9 +133,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <Button size="sm" className="h-9 px-4 font-black text-[10px] uppercase">Add</Button>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-auto p-4 space-y-4">
-                                <p className="text-[10px] font-black uppercase text-center text-muted-foreground italic py-10 opacity-40">Click the map to add waypoints</p>
-                            </div>
+                            <ScrollArea className="flex-1">
+                                <div className="p-4 space-y-4">
+                                    <p className="text-[10px] font-black uppercase text-center text-muted-foreground italic py-10 opacity-40">Click the map to add waypoints</p>
+                                </div>
+                            </ScrollArea>
                             <div className="p-4 border-t bg-muted/5">
                                 <Button className="w-full h-11 font-black uppercase text-xs gap-2" onClick={() => setIsPlannerOpen(false)}>
                                     <Navigation className="h-4 w-4" />
