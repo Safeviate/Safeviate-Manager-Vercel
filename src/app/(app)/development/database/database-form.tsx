@@ -21,12 +21,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save, Briefcase, Info } from 'lucide-react';
+import { ArrowRightLeft, Building2, CheckCircle2, Pencil, PlusCircle, Save, Briefcase } from 'lucide-react';
 import type { Tenant, IndustryType } from '@/types/quality';
 
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
-const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
 
 const INDUSTRY_TYPES: IndustryType[] = [
   'Aviation: Flight Training (ATO)',
@@ -50,35 +49,11 @@ export function DatabaseForm() {
   const [tenantName, setTenantName] = useState('');
   const [industry, setIndustry] = useState<IndustryType>('Aviation: Flight Training (ATO)');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [localIndustryOverride, setLocalIndustryOverride] = useState<IndustryType | 'none'>('none');
   
   const [mainTheme, setMainTheme] = useState(DEFAULT_MAIN);
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
   const isDeveloperMode = userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY);
-      setLocalIndustryOverride((stored as IndustryType) || 'none');
-    }
-  }, []);
-
-  const handleIndustryOverrideChange = (val: IndustryType | 'none') => {
-    setLocalIndustryOverride(val);
-    if (typeof window !== 'undefined') {
-      if (val === 'none') {
-        window.localStorage.removeItem(INDUSTRY_OVERRIDE_KEY);
-      } else {
-        window.localStorage.setItem(INDUSTRY_OVERRIDE_KEY, val);
-      }
-      window.dispatchEvent(new Event('safeviate-industry-switch'));
-      toast({ 
-        title: 'Industry View Overridden', 
-        description: `Your local UI now simulates ${val === 'none' ? 'the organization setting' : val}.` 
-      });
-    }
-  };
 
   const sortedTenants = useMemo(() => {
     if (!tenants) return [];
@@ -133,6 +108,7 @@ export function DatabaseForm() {
     if (typeof window === 'undefined') return;
 
     window.localStorage.setItem(TENANT_OVERRIDE_STORAGE_KEY, tenant.id);
+    // Dispatch custom event to trigger refresh in UserProfileProvider
     window.dispatchEvent(new Event('safeviate-tenant-switch'));
 
     toast({
@@ -259,83 +235,60 @@ export function DatabaseForm() {
 
           <div className="mb-6 space-y-3 rounded-lg border bg-background p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                      <h3 className="text-sm font-black uppercase tracking-tight text-primary flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        Active Organizations
-                      </h3>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase italic">Switch between tenants or simulate layouts for developer review.</p>
+                  <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Active Organizations</h3>
+                      <p className="text-sm text-muted-foreground">Quickly switch between configured tenants for developer review.</p>
                   </div>
                   <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="gap-1.5 h-7 text-[10px] font-black uppercase">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                      <Badge variant="outline" className="gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                           Active: {(sortedTenants.find((tenant) => tenant.id === activeTenantId)?.name) || activeTenantId || 'None'}
                       </Badge>
+                      {!isDeveloperMode && (
+                          <Badge variant="secondary">Switching disabled (Developer only)</Badge>
+                      )}
                   </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  {/* --- REAL TENANT SWITCHER --- */}
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Persisted Organizations</Label>
-                    <div className="grid grid-cols-1 gap-2">
-                        {sortedTenants.length === 0 ? (
-                            <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-xs text-muted-foreground text-center">
-                                No organizations found.
-                            </div>
-                        ) : (
-                            sortedTenants.map((tenant) => {
-                                const isActiveTenant = tenant.id === activeTenantId;
-                                return (
-                                    <div key={tenant.id} className={cn("flex items-center justify-between p-3 rounded-lg border bg-background transition-colors shadow-sm", isActiveTenant ? "border-primary ring-1 ring-primary/20" : "hover:border-slate-300")}>
-                                        <div className="min-w-0">
-                                            <p className="font-black text-xs uppercase truncate">{tenant.name}</p>
-                                            <p className="text-[9px] text-muted-foreground uppercase">{tenant.industry || 'Standard'}</p>
-                                        </div>
-                                        <div className="flex gap-1.5">
-                                            <Button type="button" variant="outline" size="compact" onClick={() => handleLoadTenant(tenant.id)} className="h-7"><Pencil className="h-3 w-3 mr-1" /> Load</Button>
-                                            <Button
-                                                type="button"
-                                                size="compact"
-                                                variant={isActiveTenant ? 'secondary' : 'default'}
-                                                onClick={() => handleSwitchTenant(tenant)}
-                                                disabled={!isDeveloperMode || isActiveTenant}
-                                                className="h-7"
-                                            >
-                                                {isActiveTenant ? 'ACTIVE' : 'SWITCH'}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                  {sortedTenants.length === 0 ? (
+                      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                          No organizations found.
+                      </div>
+                  ) : (
+                      sortedTenants.map((tenant) => {
+                          const isActiveTenant = tenant.id === activeTenantId;
 
-                  {/* --- LOCAL INDUSTRY OVERRIDE --- */}
-                  <div className="space-y-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
-                    <div className="flex items-center gap-2">
-                        <Info className="h-4 w-4 text-amber-600" />
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-amber-800">UI Layout Switcher (Simulation)</Label>
-                    </div>
-                    <p className="text-[10px] text-amber-700/70 font-medium leading-relaxed">
-                        Use this to test the dynamic layout changes between industries without altering the database.
-                    </p>
-                    <Select onValueChange={(v) => handleIndustryOverrideChange(v as any)} value={localIndustryOverride}>
-                        <SelectTrigger className="h-10 bg-background border-amber-500/30">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">Default (From Database)</SelectItem>
-                            {INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    {localIndustryOverride !== 'none' && (
-                        <Badge variant="outline" className="w-full justify-center border-amber-500/40 text-amber-700 bg-white text-[9px] font-black uppercase py-1">
-                            Simulation Mode: {localIndustryOverride}
-                        </Badge>
-                    )}
-                  </div>
+                          return (
+                              <div key={tenant.id} className="flex flex-col gap-3 rounded-lg border bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                  <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                          <Building2 className="h-4 w-4 text-primary" />
+                                          <span className="font-semibold">{tenant.name}</span>
+                                          {isActiveTenant && <Badge className="bg-green-600 hover:bg-green-600">Active</Badge>}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">ID: {tenant.id} • {tenant.industry || 'Standard Profile'}</p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                      <Button type="button" variant="outline" size="sm" onClick={() => handleLoadTenant(tenant.id)}>
+                                          <Pencil className="mr-2 h-4 w-4" />
+                                          Edit
+                                      </Button>
+                                      <Button
+                                          type="button"
+                                          size="sm"
+                                          variant={isActiveTenant ? 'secondary' : 'default'}
+                                          onClick={() => handleSwitchTenant(tenant)}
+                                          disabled={!isDeveloperMode || isActiveTenant}
+                                      >
+                                          <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                          {isActiveTenant ? 'Current' : 'Switch To'}
+                                      </Button>
+                                  </div>
+                              </div>
+                          );
+                      })
+                  )}
               </div>
           </div>
       </div>

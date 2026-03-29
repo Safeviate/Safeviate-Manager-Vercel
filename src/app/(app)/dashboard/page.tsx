@@ -379,7 +379,8 @@ export default function DashboardPage() {
               <CardTitle>Fleet Utilization</CardTitle>
               <CardDescription>Top aircraft by logged Hobbs time.</CardDescription>
             </CardHeader>
-            <CardContent className="h-[320px] pb-0">
+            <CardContent className="h-[320px] 
+             pb-0">
               <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.aircraftChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>

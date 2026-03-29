@@ -21,11 +21,11 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import type { Aircraft } from '@/types/aircraft';
 import { MainPageHeader } from '@/components/page-header';
 
-// Leaflet Imports with SSR safety
+// Leaflet Imports with SSR safety handled by dynamic imports
 import dynamic from 'next/dynamic';
-import 'leaflet/dist/leaflet.css';
 
-// Dynamically import Leaflet components to avoid window resolution issues
+// Note: leaflet.css is imported in globals.css to avoid build resolution errors in client components
+
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
@@ -282,13 +282,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-    const formatDuration = (minutes: number): string => {
-        if (!minutes || minutes <= 0 || !Number.isFinite(minutes)) return '--:--';
-        const h = Math.floor(minutes / 60);
-        const m = Math.round(minutes % 60);
-        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    };
-
     const renderWeatherBriefing = (
         label: string,
         icao: string,
@@ -349,33 +342,6 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
     };
 
     const handleRemoveLeg = (id: string) => setLegs(legs.filter(l => l.id !== id));
-
-    const handleMoveLeg = (id: string, direction: 'up' | 'down') => {
-        const index = legs.findIndex(l => l.id === id);
-        if (index === -1) return;
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= legs.length) return;
-        const newLegs = [...legs];
-        [newLegs[index], newLegs[targetIndex]] = [newLegs[targetIndex], newLegs[index]];
-        setLegs(recalculateLegs(newLegs));
-    };
-
-    const handleClearArrival = () => {
-        setArrival('');
-        setArrivalLatitude(undefined);
-        setArrivalLongitude(undefined);
-    };
-
-    const handleClearPlan = () => {
-        setLegs([]);
-        setDeparture('');
-        setArrival('');
-        setDepartureLatitude(undefined);
-        setDepartureLongitude(undefined);
-        setArrivalLatitude(undefined);
-        setArrivalLongitude(undefined);
-        toast({ title: "Flight Plan Cleared", description: "All mission data has been reset." });
-    };
 
     const handleLegChange = (id: string, field: keyof NavlogLeg, value: any) => {
         const updatedLegs = legs.map(leg => (leg.id === id ? { ...leg, [field]: value } : leg));
@@ -552,8 +518,8 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                                 <Button
                                                     variant="ghost" size="icon"
                                                     className="h-5 w-5 hover:text-red-500 hover:bg-red-500/10"
-                                                    onClick={() => leg.id === 'terminal-leg' ? handleClearArrival() : handleRemoveLeg(leg.id)}
-                                                    title={leg.id === 'terminal-leg' ? 'Clear Arrival' : 'Delete Leg'}
+                                                    onClick={() => handleRemoveLeg(leg.id)}
+                                                    title='Delete Leg'
                                                 >
                                                     <Trash2 className="h-3 w-3" />
                                                 </Button>
