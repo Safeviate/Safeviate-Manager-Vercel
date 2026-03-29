@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +9,7 @@ import { NavlogBuilder } from "@/app/(app)/bookings/navlog-builder";
 import type { Booking, NavlogLeg } from "@/types/booking";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
-import { Map as MapIcon, X, Plus, Navigation, Trash2, GripVertical, Save, Loader2 } from "lucide-react";
+import { Map as MapIcon, X, Plus, Navigation, Trash2, GripVertical, Save, Loader2, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { doc, updateDoc } from 'firebase/firestore';
@@ -18,6 +17,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateWindTriangle, getDistance, getBearing, getMagneticVariation, calculateEte, calculateFuelRequired } from '@/lib/e6b';
+import { Badge } from '@/components/ui/badge';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -62,10 +62,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             distance = getDistance(start, end);
             trueCourse = getBearing(start, end);
             
-            // Simplified E6B for live preview
             const triangle = calculateWindTriangle({
                 trueCourse,
-                trueAirspeed: 100, // Default TAS
+                trueAirspeed: 100,
                 windDirection: 0,
                 windSpeed: 0
             });
@@ -81,7 +80,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             trueCourse,
             magneticHeading,
             variation,
-            altitude: 3500, // Default
+            altitude: 3500,
             ete: lastLeg ? calculateEte(distance, 100) : 0,
             tripFuel: lastLeg ? calculateFuelRequired(calculateEte(distance, 100), 8.5) : 0
         };
@@ -165,7 +164,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <div className="flex-1 overflow-y-auto no-scrollbar bg-background flex flex-col">
                         <TabsContent value="mass-and-balance" className="m-0 flex-1">
                             <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
-                                Loading mass and balance envelope for {booking.aircraftId}...
+                                Mass and balance calculations will appear here.
                             </CardContent>
                         </TabsContent>
                         <TabsContent value="navlog" className="m-0 flex-1 h-full flex flex-col">
@@ -175,7 +174,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 </Card>
             </Tabs>
 
-            {/* Interactive Planner Dialog */}
             <Dialog open={isPlannerOpen} onOpenChange={setIsPlannerOpen}>
                 <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] flex flex-col p-0 overflow-hidden">
                     <DialogHeader className="p-6 border-b bg-muted/5 shrink-0">
@@ -203,20 +201,26 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             />
                         </div>
 
-                        {/* Waypoint/Search Sidebar */}
                         <div className="w-[350px] border-l bg-card flex flex-col hidden lg:flex">
-                            <div className="p-4 border-b bg-muted/5">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Planned Route</p>
-                                <div className="flex justify-between items-baseline">
-                                    <span className="text-xl font-black text-primary">{plannedLegs.length}</span>
-                                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Waypoints</span>
+                            <div className="p-4 border-b bg-muted/5 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planned Route</p>
+                                    <p className="text-lg font-black text-primary">{plannedLegs.length} Waypoints</p>
                                 </div>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setPlannedLegs([])}
+                                    className="h-8 text-[10px] font-black uppercase border-slate-300"
+                                    disabled={plannedLegs.length === 0}
+                                >
+                                    <RotateCcw className="h-3 w-3 mr-1.5" /> Clear
+                                </Button>
                             </div>
                             <ScrollArea className="flex-1">
                                 <div className="p-2 space-y-2">
                                     {plannedLegs.map((leg, i) => (
                                         <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group">
-                                            <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-center">
                                                     <span className="font-black text-[11px] uppercase truncate">{leg.waypoint}</span>

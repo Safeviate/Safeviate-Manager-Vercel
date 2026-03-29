@@ -1,7 +1,6 @@
-
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, LayersControl, LayerGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { NavlogLeg } from '@/types/booking';
@@ -44,8 +43,8 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
         .map(leg => [leg.latitude!, leg.longitude!] as [number, number]);
 
     const center: [number, number] = legs.length > 0 
-        ? [legs[0].latitude!, legs[0].longitude!]
-        : [-25.9, 27.9]; // Default: Johannesburg/FALA region
+        ? [legs[legs.length - 1].latitude!, legs[legs.length - 1].longitude!]
+        : [-25.9, 27.9]; // Default: FALA region
 
     return (
         <MapContainer 
@@ -55,13 +54,13 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
             style={{ background: '#0f172a' }}
         >
             <LayersControl position="topright">
-                <LayersControl.BaseLayer checked name="Satellite (Hybrid)">
+                <LayersControl.BaseLayer name="Satellite (Hybrid)">
                     <TileLayer
                         url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
                         attribution="&copy; Google Maps"
                     />
                 </LayersControl.BaseLayer>
-                <LayersControl.BaseLayer name="Light (Standard)">
+                <LayersControl.BaseLayer checked name="Light (Standard)">
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         attribution="&copy; OpenStreetMap"
@@ -87,7 +86,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                     <Popup>
                         <div className="text-xs font-black uppercase space-y-1">
                             <p className="text-primary">{leg.waypoint}</p>
-                            <p className="text-[10px] text-muted-foreground">Leg {index + 1}</p>
+                            <p className="text-[10px] text-muted-foreground">Waypoint {index + 1}</p>
                         </div>
                     </Popup>
                 </Marker>
