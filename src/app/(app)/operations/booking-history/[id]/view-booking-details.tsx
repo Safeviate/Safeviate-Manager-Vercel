@@ -147,6 +147,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         { value: 'flight-details', label: 'Flight Details', icon: FileText },
         { value: 'navlog', label: 'Navlog', icon: NavIcon },
     ];
+    const openPlannerFromHeader = () => {
+        if (activeTab !== 'navlog') setActiveTab('navlog');
+        setTimeout(() => window.dispatchEvent(new Event('open-navlog-planner')), 0);
+    };
 
     return (
         <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
@@ -171,23 +175,34 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </Select>
                         </div>
                     ) : (
-                        <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
-                            {tabs.map((tab) => (
-                                <TabsTrigger 
-                                    key={tab.value} 
-                                    value={tab.value} 
-                                    className="gap-2 rounded-full border px-4 py-2 text-[10px] font-black uppercase data-[state=active]:bg-button-primary sm:px-6"
-                                >
-                                    <tab.icon className="h-4 w-4" />
-                                    {tab.label}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <TabsList className="h-auto flex-wrap justify-start gap-2 border-b-0 bg-transparent p-0">
+                                {tabs.map((tab) => (
+                                    <TabsTrigger 
+                                        key={tab.value} 
+                                        value={tab.value} 
+                                        className="gap-2 rounded-full border px-4 py-2 text-[10px] font-black uppercase data-[state=active]:bg-button-primary sm:px-6"
+                                    >
+                                        <tab.icon className="h-4 w-4" />
+                                        {tab.label}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={openPlannerFromHeader}
+                                className="h-9 gap-2 text-[10px] font-black uppercase tracking-widest"
+                            >
+                                Open Interactive Planner
+                            </Button>
+                        </div>
                     )}
                 </div>
                 <div className="flex min-h-0 flex-1 flex-col">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
+                        <Card className="flex min-h-[calc(100dvh-13rem)] flex-1 flex-col overflow-hidden border shadow-none lg:min-h-[calc(100dvh-10rem)]">
                             <CardHeader className="border-b bg-muted/20 shrink-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">{booking.type}</CardTitle>
                                 <CardDescription className="text-[10px] font-bold uppercase">{booking.bookingNumber} • {aircraft ? aircraft.tailNumber : booking.aircraftId}</CardDescription>
@@ -201,7 +216,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <Separator />
                                 <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
                                 <CardContent className="pb-32">
-                                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+                                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
                                         <div className="flex flex-col h-full min-h-[500px]">
                                             <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x bg-background rounded-xl border p-4">
                                                 <div className="min-w-[800px] h-full relative">
@@ -220,7 +235,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-6">
+                                        <div className="space-y-6 pr-1">
                                             <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-slate-200">
                                                 <DetailItem label="Total Weight"><p className="text-2xl font-black text-foreground">{results.weight} lbs</p></DetailItem>
                                                 <DetailItem label="Center Gravity"><p className="text-2xl font-black text-foreground">{results.cg} in</p></DetailItem>
@@ -250,7 +265,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </ScrollArea>
                         </Card>
                     </TabsContent>
-                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col"><NavlogBuilder booking={booking} tenantId={tenantId!} /></TabsContent>
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden"><NavlogBuilder booking={booking} tenantId={tenantId!} /></TabsContent>
                 </div>
             </Tabs>
         </div>

@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { FileSpreadsheet, Calculator, Receipt, ListFilter, ChevronsUpDown } from 'lucide-react';
+import { FileSpreadsheet, Calculator, Receipt, ListFilter, ChevronsUpDown, TrendingUp } from 'lucide-react';
 import { BillingTable } from './billing-table';
+import { CostPredictor } from './cost-predictor';
 import { format } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
@@ -192,6 +193,7 @@ export default function AccountingPage() {
             options={[
               { value: 'unbilled', label: `Unbilled Flights (${enrichedData.unbilled.length})`, icon: ListFilter },
               { value: 'exported', label: `Export History (${enrichedData.exported.length})`, icon: ListFilter },
+              { value: 'predictor', label: `Cost Predictor`, icon: TrendingUp },
             ]}
           />
 
@@ -216,6 +218,10 @@ export default function AccountingPage() {
                 onToggleSelection={() => {}}
                 onToggleAll={() => {}}
               />
+            </TabsContent>
+
+            <TabsContent value="predictor" className="m-0 h-full overflow-auto">
+              <CostPredictor />
             </TabsContent>
           </CardContent>
         </Tabs>

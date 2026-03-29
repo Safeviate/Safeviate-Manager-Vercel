@@ -46,12 +46,10 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
     }
 
     return (
-        <div className="mx-auto flex h-full min-h-0 w-full max-w-[1200px] flex-1 flex-col gap-4 sm:gap-6">
-            <div className="min-h-[calc(100dvh-11rem)] flex-1 overflow-hidden">
+        <div className="flex flex-col h-full min-h-0 w-full max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
             <ViewBookingDetails
                 booking={booking}
             />
-            </div>
         </div>
     );
 }

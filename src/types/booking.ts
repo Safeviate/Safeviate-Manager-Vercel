@@ -57,7 +57,12 @@ export interface OverrideLog {
 export interface NavlogLeg {
     id: string;
     waypoint: string;
+    legType?: 'waypoint' | 'reporting-point' | 'arrival-fix';
+    latitude?: number;
+    longitude?: number;
     altitude?: number;
+    frequencies?: string;
+    notes?: string;
     windDirection?: number;
     windSpeed?: number;
     trueAirspeed?: number;
@@ -70,14 +75,26 @@ export interface NavlogLeg {
     magneticHeading?: number;
     groundSpeed?: number;
     ete?: number;
-    // Actuals
-    ata?: string;
+    cumulativeEte?: number;
+    fuelBurnPerHour?: number;
+    tripFuel?: number;
 }
 
 export interface Navlog {
     legs: NavlogLeg[];
     departureIcao?: string;
     arrivalIcao?: string;
+    departureLatitude?: number;
+    departureLongitude?: number;
+    arrivalLatitude?: number;
+    arrivalLongitude?: number;
+    globalTas?: number;
+    globalWindDirection?: number;
+    globalWindSpeed?: number;
+    globalVariation?: number;
+    globalFuelBurn?: number;
+    globalFuelBurnUnit?: 'GPH' | 'LPH';
+    fuelEnduranceHours?: number;
 }
 
 export interface Booking {

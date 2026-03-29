@@ -33,6 +33,7 @@ export interface Aircraft {
     maintenanceLogs?: string[];
     organizationId?: string | null; // Associated external company ID
     hourlyRate?: number; // Added for accounting
+    fuelEnduranceHours?: number;
     documents?: {
         name: string;
         url: string;

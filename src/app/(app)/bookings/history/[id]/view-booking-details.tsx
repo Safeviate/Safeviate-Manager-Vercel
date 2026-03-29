@@ -75,10 +75,12 @@ interface ViewBookingDetailsProps {
     booking: Booking;
 }
 
-const DetailItem = ({ label, value, children }: { label: string, value?: string | number | undefined | null, children?: React.ReactNode }) => (
-    <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
-        {children ? children : <p className="text-sm font-bold text-foreground">{value ?? 'N/A'}</p>}
+const DetailItem = ({ label, value, children, className }: { label: string, value?: string | number | undefined | null, children?: React.ReactNode, className?: string }) => (
+    <div className={cn("space-y-1.5", className)}>
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">{label}</p>
+        <div className="flex items-center gap-2">
+            {children ? children : <p className="text-base font-black text-foreground tracking-tight">{value ?? 'N/A'}</p>}
+        </div>
     </div>
 );
 
@@ -205,6 +207,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     const canLogPre = hasPermission('bookings-preflight-manage');
     const canLogPost = hasPermission('bookings-postflight-manage');
+    const openPlannerFromHeader = () => {
+        if (activeTab !== 'navlog') setActiveTab('navlog');
+        setTimeout(() => window.dispatchEvent(new Event('open-navlog-planner')), 0);
+    };
 
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -216,22 +222,35 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     flightHours={flightHours}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
+                    tabRowAction={
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={openPlannerFromHeader}
+                            className="h-9 gap-2 text-[10px] font-black uppercase tracking-widest"
+                        >
+                            Open Interactive Planner
+                        </Button>
+                    }
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <Card className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none", isMobile && "min-h-[calc(100dvh-13rem)]")}>
+                        <Card className={cn("flex h-full min-h-[calc(100dvh-13rem)] flex-1 flex-col overflow-hidden border shadow-none lg:min-h-[calc(100dvh-10rem)]", isMobile && "min-h-[calc(100dvh-13rem)]")}>
                             <ScrollArea className="min-h-0 flex-1">
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                                    <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
-                                    <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                                    <DetailItem label="Schedule" value={`${formatDateSafe(booking.start, 'p')} - ${formatDateSafe(booking.end, 'p')}`} />
-                                    <DetailItem label="Instructor" value={instructors?.find(i => i.id === booking.instructorId)?.firstName || 'N/A'} />
-                                    <DetailItem label="Student" value={students?.find(s => s.id === booking.studentId)?.firstName || 'N/A'} />
-                                    <DetailItem label="Approved By" value={booking.approvedByName || 'Pending'} />
+                                <CardContent className="p-0">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12 p-8 md:p-10 bg-muted/5">
+                                        <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
+                                        <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
+                                        <DetailItem label="Schedule" value={`${formatDateSafe(booking.start, 'p')} - ${formatDateSafe(booking.end, 'p')}`} />
+                                        <DetailItem label="Instructor" value={instructors?.find(i => i.id === booking.instructorId)?.firstName || 'N/A'} />
+                                        <DetailItem label="Student" value={students?.find(s => s.id === booking.studentId)?.firstName || 'N/A'} />
+                                        <DetailItem label="Approved By" value={booking.approvedByName || 'Pending'} />
+                                    </div>
                                 </CardContent>
                                 <Separator />
-                                <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Technical Log</CardTitle></CardHeader>
-                                <CardContent className="space-y-8 pb-10">
+                                <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><History className="h-4 w-4" /> Technical Log</CardTitle></CardHeader>
+                                <CardContent className="space-y-8 px-8 md:px-10 pb-12">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className={cn("p-4 rounded-xl border bg-muted/10", isPreFlightBlocked && !booking.preFlight && "opacity-50")}>
                                             <h3 className="font-bold text-xs uppercase flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-green-600" /> Pre-Flight</h3>
@@ -264,9 +283,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </div>
                                 </CardContent>
                                 <Separator />
-                                <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance</CardTitle></CardHeader>
-                                <CardContent className="min-h-full pb-32">
-                                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+                                <CardHeader className="pt-10 pb-4"><CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary opacity-80"><AlertTriangle className="h-4 w-4" /> Mass & Balance</CardTitle></CardHeader>
+                                <CardContent className="min-h-full px-8 md:px-10 pb-40">
+                                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
                                         <div className="flex flex-col">
                                             <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
                                                 <div className="min-w-[800px] h-[450px] relative">
@@ -289,7 +308,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-6">
+                                        <div className="space-y-6 pr-1">
                                             <div className="p-4 bg-muted/30 rounded-xl space-y-4 border">
                                                 <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
                                                 <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
@@ -317,12 +336,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </ScrollArea>
                         </Card>
                     </TabsContent>
-                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col">
-                        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
-                            <div className="min-h-0 flex-1 overflow-hidden">
-                                <NavlogBuilder booking={booking} tenantId={tenantId!} />
-                            </div>
-                        </Card>
+                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+                        <NavlogBuilder booking={booking} tenantId={tenantId!} />
                     </TabsContent>
                 </div>
             </Tabs>

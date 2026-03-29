@@ -372,6 +372,12 @@ export const menuConfig: MenuItem[] = [
         description: 'Create and manipulate table structures.',
         permissionId: 'development-view',
       },
+      {
+        href: '/development/cost-predictor',
+        label: 'Cost Predictor',
+        description: 'Model Firebase operational costs based on company size and activity.',
+        permissionId: 'development-view',
+      },
     ],
   },
 ];

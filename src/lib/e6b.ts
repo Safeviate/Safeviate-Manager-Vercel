@@ -130,3 +130,33 @@ export const calculateEte = (distance: number, groundSpeed: number): number => {
     }
     return (distance / groundSpeed) * 60; // Time in minutes
 };
+
+/**
+ * Calculates the fuel required for a given ETE and fuel burn rate.
+ * @param eteMinutes - Estimated time en route in minutes.
+ * @param fuelBurnPerHour - Fuel burn rate per hour (in any consistent unit: GPH, LPH, etc.).
+ * @returns The fuel required in the same unit as fuelBurnPerHour.
+ */
+export const calculateFuelRequired = (eteMinutes: number, fuelBurnPerHour: number): number => {
+    if (eteMinutes <= 0 || fuelBurnPerHour <= 0) return 0;
+    return (eteMinutes / 60) * fuelBurnPerHour;
+};
+
+/**
+ * Calculates the magnetic declination (variation) at a given geographic point
+ * using the NOAA World Magnetic Model (WMM), accurate to 2025-2030.
+ * @param lat - Latitude in decimal degrees.
+ * @param lon - Longitude in decimal degrees.
+ * @returns Magnetic declination in degrees. Positive = East, Negative = West.
+ */
+export const getMagneticVariation = (lat: number, lon: number): number => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const geomagnetism = require('geomagnetism');
+        const model = geomagnetism.model();
+        const info = model.point([lat, lon]);
+        return parseFloat(info.decl.toFixed(1));
+    } catch {
+        return 0;
+    }
+};

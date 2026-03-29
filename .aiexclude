@@ -30,3 +30,6 @@ assets/
 *.min.js
 *.min.css
 *.map
+
+.idx/
+.codex-dev*
