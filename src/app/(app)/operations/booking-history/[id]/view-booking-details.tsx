@@ -132,10 +132,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
     const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-    const fXMin = Math.min(...allX) - 5;
-    const fXMax = Math.max(...allX) + 5;
-    const fYMin = Math.min(...allY) - 100;
-    const fYMax = Math.max(...allY) + 100;
+    const padX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.2 : 5;
+    const padY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.2 : 100;
+    const fXMin = Math.min(...allX) - padX;
+    const fXMax = Math.max(...allX) + padX;
+    const fYMin = Math.min(...allY) - padY;
+    const fYMax = Math.max(...allY) + padY;
 
     const openPlannerFromHeader = () => {
         if (activeTab !== 'navlog') setActiveTab('navlog');
@@ -175,11 +177,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-primary" /> Mass & Balance Analysis</CardTitle></CardHeader>
                             <CardContent className="pb-32">
                                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
-                                    <div className="flex flex-col h-full min-h-[500px]">
+                                    <div className="flex flex-col h-full min-h-[650px]">
                                         <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x bg-background rounded-xl border p-4">
                                             <div className="min-w-[800px] h-full relative">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
+                                                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                                                         <CartesianGrid strokeDasharray="3 3" />
                                                         <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow><Label value="CG (in)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" /></XAxis>
                                                         <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow><Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" /></YAxis>

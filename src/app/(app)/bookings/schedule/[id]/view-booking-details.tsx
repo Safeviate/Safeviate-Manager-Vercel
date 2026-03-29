@@ -146,8 +146,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
     const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-    const padX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.1 : 5;
-    const padY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.1 : 100;
+    const padX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.2 : 5;
+    const padY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.2 : 100;
     const fXMin = Math.min(...allX) - padX;
     const fXMax = Math.max(...allX) + padX;
     const fYMin = Math.min(...allY) - padY;
@@ -188,7 +188,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     {results.isSafe ? 'Within Limits' : 'Out Of Limits'}
                                                 </Badge>
                                             </div>
-                                            <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[420px]")}>
+                                            <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[650px]")}>
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <ScatterChart margin={isMobile ? { top: 12, right: 16, bottom: 16, left: 4 } : { top: 20, right: 28, bottom: 32, left: 20 }}>
                                                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

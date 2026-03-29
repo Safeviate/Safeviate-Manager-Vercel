@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -17,7 +16,6 @@ import { Save, AlertTriangle, CheckCircle2, ClipboardCheck, FileClock, History, 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label as UILabel } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -198,8 +196,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
     const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-    const padX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.1 : 5;
-    const padY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.1 : 100;
+    const padX = allX.length > 1 ? (Math.max(...allX) - Math.min(...allX)) * 0.2 : 5;
+    const padY = allY.length > 1 ? (Math.max(...allY) - Math.min(...allY)) * 0.2 : 100;
     const fXMin = Math.min(...allX) - padX;
     const fXMax = Math.max(...allX) + padX;
     const fYMin = Math.min(...allY) - padY;
@@ -287,9 +285,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 pr-2 md:pr-4">
                                     <div className="flex flex-col">
                                         <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
-                                            <div className="min-w-[800px] h-[450px] relative">
+                                            <div className="min-w-[800px] h-[650px] relative">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
+                                                    <ScatterChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                                                         <CartesianGrid strokeDasharray="3 3" />
                                                         <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow>
                                                             <Label value="CG (in)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" />
