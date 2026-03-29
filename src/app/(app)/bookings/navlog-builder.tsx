@@ -217,7 +217,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
 
             {/* Navlog Table */}
             <div className="flex-1 min-h-0 px-6 py-6">
-                <div className="h-full rounded-xl border overflow-hidden bg-card shadow-sm flex flex-col">
+                <div className="h-full rounded-xl border overflow-hidden bg-card flex flex-col">
                     <div className="flex-1 overflow-auto no-scrollbar">
                         <Table>
                             <TableHeader className="bg-muted/30 sticky top-0 z-10">
@@ -262,7 +262,7 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                 ))}
                                 {computedLegs.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="h-64 text-center text-muted-foreground italic text-xs uppercase font-bold tracking-widest bg-muted/5">No waypoints defined.</TableCell>
+                                        <TableCell colSpan={8} className="h-64 text-center text-muted-foreground italic text-xs uppercase font-bold tracking-widest">No waypoints defined.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
