@@ -11,7 +11,8 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Map as MapIcon, X, Navigation, Trash2, Loader2, RotateCcw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Map as MapIcon, X, Navigation, Trash2, Loader2, RotateCcw, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { doc, updateDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -109,8 +110,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     return (
         <>
-            <Tabs defaultValue="navlog" className="flex-1 overflow-hidden flex flex-col">
-                <Card className="flex-1 overflow-hidden flex flex-col shadow-none border">
+            <Tabs defaultValue="navlog" className="flex-1 overflow-hidden flex flex-col h-full">
+                <Card className="flex-1 overflow-hidden flex flex-col shadow-none border h-full">
                     <div className="sticky top-0 z-30 bg-card border-b">
                         <MainPageHeader 
                             title={`Booking #${booking.bookingNumber}`}
@@ -121,7 +122,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
-                                    <p className="text-sm font-bold text-foreground">{booking.status}</p>
+                                    <Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                        {booking.status}
+                                    </Badge>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</p>
@@ -136,12 +139,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
                         <div className="bg-muted/5 px-6 py-2 shrink-0 flex items-center justify-between gap-4">
                             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center">
-                                <TabsTrigger 
-                                    value="mass-and-balance" 
-                                    className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
-                                >
-                                    Mass and Balance
-                                </TabsTrigger>
                                 <TabsTrigger 
                                     value="navlog" 
                                     className="rounded-full px-6 py-2 border data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-bold text-[10px] uppercase transition-all shrink-0"
@@ -161,13 +158,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto no-scrollbar bg-background flex flex-col">
-                        <TabsContent value="mass-and-balance" className="m-0 flex-1">
-                            <CardContent className="p-12 text-center text-muted-foreground italic text-sm">
-                                Mass and balance calculations will appear here.
-                            </CardContent>
-                        </TabsContent>
-                        <TabsContent value="navlog" className="m-0 flex-1 h-full flex flex-col">
+                    <div className="flex-1 overflow-hidden bg-background flex flex-col">
+                        <TabsContent value="navlog" className="m-0 flex-1 h-full flex flex-col overflow-hidden">
                             <NavlogBuilder booking={booking} tenantId={tenantId || ''} />
                         </TabsContent>
                     </div>
@@ -258,8 +250,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     onClick={handleCommitRoute}
                                     disabled={isSaving || plannedLegs.length === 0}
                                 >
-                                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
-                                    Commit Route to Log
+                                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Commit Route
                                 </Button>
                             </div>
                         </div>

@@ -45,7 +45,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
 
     const center: [number, number] = legs.length > 0 
         ? [legs[legs.length - 1].latitude!, legs[legs.length - 1].longitude!]
-        : [-25.9, 27.9]; // Default: Johannesburg/Lanseria Region
+        : [-25.9, 27.9]; // Default: Lanseria Region
 
     return (
         <MapContainer 
@@ -100,15 +100,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                         attribution="&copy; OpenAIP"
                     />
                 </LayersControl.Overlay>
-                <LayersControl.Overlay name="OpenAIP Gliding Sectors">
+                <LayersControl.Overlay name="OpenAIP Activity Sectors">
                     <TileLayer
                         url={`https://api.core.openaip.net/api/tiles/gliding/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
-                        attribution="&copy; OpenAIP"
-                    />
-                </LayersControl.Overlay>
-                <LayersControl.Overlay name="OpenAIP Hang Glidings">
-                    <TileLayer
-                        url={`https://api.core.openaip.net/api/tiles/hang-gliding/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
                         attribution="&copy; OpenAIP"
                     />
                 </LayersControl.Overlay>
