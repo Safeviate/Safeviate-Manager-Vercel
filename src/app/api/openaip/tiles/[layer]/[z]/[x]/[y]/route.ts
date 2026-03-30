@@ -4,6 +4,7 @@ const FALLBACK_OPENAIP_KEY = '1cbf7bdd18e52e7fa977c6d106847397';
 
 type Params = {
   params: {
+    layer: string;
     z: string;
     x: string;
     y: string;
@@ -11,26 +12,28 @@ type Params = {
 };
 
 export async function GET(_request: NextRequest, context: Params) {
-  const { z, x, y } = context.params;
+  const { layer, z, x, y } = context.params;
   const apiKey = process.env.OPENAIP_API_KEY || FALLBACK_OPENAIP_KEY;
 
   if (!apiKey) {
     return NextResponse.json({ error: 'OpenAIP API key not configured on server' }, { status: 500 });
   }
 
-  const upstreamUrl = `https://a.api.tiles.openaip.net/api/data/openaip/${z}/${x}/${y}.png?apiKey=${apiKey}`;
+  // All OpenAIP tiles are served from the same endpoint structure.
+  // The 'layer' parameter directly maps to the path on the tile server.
+  const upstreamUrl = `https://a.api.tiles.openaip.net/api/data/${layer}/${z}/${x}/${y}.png?apiKey=${apiKey}`;
 
   try {
     const response = await fetch(upstreamUrl, {
       headers: {
         accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
       },
-      next: { revalidate: 3600 },
+      next: { revalidate: 3600 }, // Cache tiles for 1 hour
     });
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: 'OpenAIP tile request failed', status: response.status },
+        { error: 'OpenAIP tile request failed', status: response.status, url: upstreamUrl },
         { status: response.status }
       );
     }
