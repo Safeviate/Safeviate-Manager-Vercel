@@ -21,7 +21,7 @@ import { Label as UILabel } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { NavlogBuilder } from '@/app/(app)/bookings/navlog-builder';
+import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
@@ -370,40 +370,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     title={booking.type}
                     subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId}`}
                     status={booking.status}
-                    details={
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 xl:grid-cols-7">
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
-                                <Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'} className="mt-1 h-5 px-2 text-[9px] font-black uppercase">
-                                    {booking.status}
-                                </Badge>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
-                                <p className="truncate text-[10px] font-semibold text-foreground">{aircraft ? aircraft.tailNumber : booking.aircraftId}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Date</p>
-                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.start, 'PPP')}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Start Time</p>
-                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.start, 'p')}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">End Time</p>
-                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.end, 'p')}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Instructor</p>
-                                <p className="truncate text-[10px] font-semibold text-foreground">{instructorLabel}</p>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Student</p>
-                                <p className="truncate text-[10px] font-semibold text-foreground">{studentLabel}</p>
-                            </div>
-                        </div>
-                    }
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     tabRowAction={
@@ -442,7 +408,26 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <ScrollArea className="min-h-0 flex-1">
-                            <CardContent className="pt-6 pb-20 space-y-6">
+                            <CardContent className="pt-4 pb-20 space-y-6">
+                                <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Overview</p>
+                                            <p className="text-sm font-black uppercase">Quick Reference</p>
+                                        </div>
+                                        <Badge variant="outline" className="text-[9px] font-black uppercase">Visible in Scroll</Badge>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-4">
+                                        <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
+                                        <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
+                                        <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
+                                        <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
+                                        <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
+                                        <DetailItem label="Instructor" value={instructorLabel} />
+                                        <DetailItem label="Student" value={studentLabel} />
+                                    </div>
+                                </div>
+
                                 <div>
                                     <p className="text-sm text-muted-foreground">Notes</p>
                                     <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>

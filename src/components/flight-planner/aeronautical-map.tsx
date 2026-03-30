@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON, FeatureGroup, useMapEvents, LayersControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -57,6 +57,26 @@ type OpenAipFeature = {
   type?: string;
   icaoCode?: string;
   identifier?: string;
+  runways?: Array<{
+    designator?: string;
+    mainRunway?: boolean;
+    dimension?: {
+      length?: {
+        value?: number;
+      };
+      width?: {
+        value?: number;
+      };
+    };
+    declaredDistance?: {
+      tora?: {
+        value?: number;
+      };
+      lda?: {
+        value?: number;
+      };
+    };
+  }>;
   frequencies?: Array<{
     value?: string;
     name?: string;
@@ -84,6 +104,24 @@ const formatWaypointFrequencies = (frequencies?: OpenAipFeature['frequencies']) 
     .filter(Boolean)
     .join(' • ');
 
+const formatRunwaySummary = (runway: NonNullable<OpenAipFeature['runways']>[number]) => {
+  const designator = runway.designator?.trim();
+  const length = runway.dimension?.length?.value ?? runway.declaredDistance?.tora?.value;
+  const width = runway.dimension?.width?.value;
+  const size = [length ? `${Math.round(length)} m` : '', width ? `${Math.round(width)} m` : '']
+    .filter(Boolean)
+    .join(' x ');
+
+  return [designator ? `RWY ${designator}` : '', size].filter(Boolean).join(' • ');
+};
+
+const formatAirportRunways = (runways?: OpenAipFeature['runways']) =>
+  runways
+    ?.filter((runway) => runway.designator || runway.dimension?.length?.value || runway.declaredDistance?.tora?.value)
+    .slice(0, 4)
+    .map(formatRunwaySummary)
+    .filter(Boolean)
+    .join(' • ');
 type OpenAipAirspace = {
   _id: string;
   name: string;
@@ -497,7 +535,7 @@ const formatAirspaceVerticalLimits = (airspace: OpenAipAirspace): string => {
     '';
 
   const rangeParts = [lower && `Lower ${lower}`, upper && `Upper ${upper}`].filter(Boolean) as string[];
-  if (rangeParts.length > 0) return rangeParts.join(' • ');
+  if (rangeParts.length > 0) return rangeParts.join(' â€¢ ');
   return fallback;
 };
 
@@ -732,6 +770,25 @@ const SearchControl = ({
                 </div>
               </div>
             ) : null}
+            {selected.sourceLayer === 'airports' && selected.runways?.length ? (
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Runways</p>
+                <div className="space-y-1">
+                  {selected.runways
+                    .filter((runway) => runway.designator || runway.dimension?.length?.value || runway.declaredDistance?.tora?.value)
+                    .slice(0, 4)
+                    .map((runway, index) => {
+                      const label = formatRunwaySummary(runway);
+                      if (!label) return null;
+                      return (
+                        <div key={`${selected._id}-rwy-${index}`} className="rounded-md border bg-muted/40 px-2 py-1 text-[11px] font-semibold">
+                          {label}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ) : null}
             <div className="flex gap-2 pt-2">
               <Button size="sm" className="w-full" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
                 blockMapInteraction(event);
@@ -940,7 +997,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
     }
   }, []);
   const buildWaypointContext = useCallback((info: LayerInfoState) => {
-    const primary = info.items[0];
+    const primary =
+      info.items.find((item) => item.layer === 'OpenAIP Airports') ||
+      info.items.find((item) => item.layer === 'OpenAIP Navaids') ||
+      info.items.find((item) => item.layer === 'OpenAIP Reporting Points') ||
+      info.items.find((item) => item.layer === 'OpenAIP Obstacles') ||
+      info.items[0];
     if (!primary) return undefined;
     if (primary.detail) return `${primary.layer} • ${primary.label} • ${primary.detail}`;
     return `${primary.layer} • ${primary.label}`;
@@ -975,7 +1037,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
         layer: match.layer,
         detail: [getAirspaceCategory(match.feature), match.feature.icaoClass ? `class ${match.feature.icaoClass}` : '', verticalLimits]
           .filter(Boolean)
-          .join(' • '),
+          .join(' â€¢ '),
       });
     }
 
@@ -1007,10 +1069,10 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
           layer,
           distanceNm: entry.distance,
           frequencies: formatWaypointFrequencies(entry.feature.frequencies),
+          detail: layer === 'OpenAIP Airports' ? formatAirportRunways(entry.feature.runways) || undefined : undefined,
         });
       }
     };
-
     collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'airports' && airportsVisible), 'OpenAIP Airports', 20);
     collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'navaids' && navaidsVisible), 'OpenAIP Navaids', 20);
     collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'reporting-points' && reportingVisible), 'OpenAIP Reporting Points', 20);
@@ -1548,7 +1610,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                     <p className="font-black uppercase">{item.label}</p>
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                       {item.layer}
-                      {typeof item.distanceNm === 'number' ? ` • ${item.distanceNm.toFixed(1)} NM` : ''}
+                      {typeof item.distanceNm === 'number' ? ` â€¢ ${item.distanceNm.toFixed(1)} NM` : ''}
                     </p>
                     {item.detail && (
                       <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{item.detail}</p>
@@ -1591,3 +1653,8 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
     </MapContainer>
   );
 }
+
+
+
+
+

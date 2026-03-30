@@ -6,9 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Booking } from '@/types/booking';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, Navigation, Clock, Compass, Ruler } from 'lucide-react';
+import { Trash2, Navigation, Clock, Ruler } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface NavlogBuilderProps {
     booking: Booking;
@@ -22,16 +21,16 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
 
     const handleRemoveLeg = async (legId: string) => {
         if (!firestore) return;
-        const updatedLegs = legs.filter(l => l.id !== legId);
+        const updatedLegs = legs.filter((l) => l.id !== legId);
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        
+
         try {
             await updateDoc(bookingRef, {
-                'navlog.legs': updatedLegs
+                'navlog.legs': updatedLegs,
             });
-            toast({ title: "Leg Removed" });
+            toast({ title: 'Leg Removed' });
         } catch (e: any) {
-            toast({ variant: "destructive", title: "Update Failed", description: e.message });
+            toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
         }
     };
 
@@ -60,74 +59,97 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                     <div className="flex items-center gap-2">
                         <Ruler className="h-3.5 w-3.5 text-primary" />
                         <span className="text-[10px] font-black uppercase text-muted-foreground">Total Dist:</span>
-                        <span className="text-xs font-black text-foreground">{legs.reduce((acc, l) => acc + (l.distance || 0), 0).toFixed(1)} NM</span>
+                        <span className="text-xs font-black text-foreground">
+                            {legs.reduce((acc, l) => acc + (l.distance || 0), 0).toFixed(1)} NM
+                        </span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Clock className="h-3.5 w-3.5 text-primary" />
                         <span className="text-[10px] font-black uppercase text-muted-foreground">Total ETE:</span>
-                        <span className="text-xs font-black text-foreground">{legs.reduce((acc, l) => acc + (l.ete || 0), 0).toFixed(0)} MIN</span>
+                        <span className="text-xs font-black text-foreground">
+                            {legs.reduce((acc, l) => acc + (l.ete || 0), 0).toFixed(0)} MIN
+                        </span>
                     </div>
                 </div>
             </div>
-            <ScrollArea className="flex-1">
-                <Table>
-                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                        <TableRow>
-                            <TableHead className="w-12 text-[10px] uppercase font-black px-6">Leg</TableHead>
-                            <TableHead className="text-[10px] uppercase font-black">Waypoint</TableHead>
-                            <TableHead className="text-center text-[10px] uppercase font-black">ALT</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase font-black">TC°</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase font-black">MH°</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase font-black">DIST (NM)</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase font-black">ETE (M)</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase font-black px-6 no-print">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {legs.map((leg, index) => (
-                            <TableRow key={leg.id} className="hover:bg-muted/5 transition-colors border-b last:border-b-0">
-                                <TableCell className="font-black text-xs text-muted-foreground px-6">{index + 1}</TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col">
-                                        <span className="font-black text-sm uppercase text-foreground">{leg.waypoint}</span>
-                                        <span className="text-[9px] font-mono font-bold text-muted-foreground">
-                                            {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
-                                        </span>
-                                        {leg.frequencies && (
-                                            <span className="text-[9px] font-semibold text-emerald-700">
-                                                {leg.frequencies}
-                                            </span>
-                                        )}
-                                        {leg.layerInfo && (
-                                            <span className="text-[9px] font-semibold text-primary">
-                                                {leg.layerInfo}
-                                            </span>
-                                        )}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                    <Badge variant="outline" className="font-mono text-xs font-bold border-slate-300">
-                                        {leg.altitude || '-'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-xs font-bold text-muted-foreground">{leg.trueCourse?.toFixed(0)}°</TableCell>
-                                <TableCell className="text-right">
-                                    <span className="font-mono text-sm font-black text-primary">
-                                        {leg.magneticHeading?.toFixed(0)}°
-                                    </span>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-xs font-black">{leg.distance?.toFixed(1)}</TableCell>
-                                <TableCell className="text-right font-mono text-xs font-black">{leg.ete?.toFixed(0)}</TableCell>
-                                <TableCell className="text-right px-6 no-print">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveLeg(leg.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
+
+            <div className="w-full overflow-x-auto">
+                <Table className="min-w-[1200px]">
+                        <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                            <TableRow className="whitespace-nowrap">
+                                <TableHead className="w-12 text-[10px] uppercase font-black px-6 whitespace-nowrap">Leg</TableHead>
+                                <TableHead className="text-[10px] uppercase font-black whitespace-nowrap">Waypoint</TableHead>
+                                <TableHead className="text-center text-[10px] uppercase font-black whitespace-nowrap">ALT</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">TC°</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">MH°</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">DIST (NM)</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">ETE (M)</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-black px-6 no-print whitespace-nowrap">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
+                        </TableHeader>
+                        <TableBody>
+                            {legs.map((leg, index) => (
+                                <TableRow
+                                    key={leg.id}
+                                    className="hover:bg-muted/5 transition-colors border-b last:border-b-0 whitespace-nowrap"
+                                >
+                                    <TableCell className="font-black text-xs text-muted-foreground px-6 whitespace-nowrap">
+                                        {index + 1}
+                                    </TableCell>
+                                    <TableCell className="min-w-[420px] whitespace-nowrap align-top">
+                                        <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
+                                            <span className="font-black text-sm uppercase text-foreground whitespace-nowrap">
+                                                {leg.waypoint}
+                                            </span>
+                                            <span className="text-[9px] font-mono font-bold text-muted-foreground whitespace-nowrap">
+                                                {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
+                                            </span>
+                                            {leg.frequencies && (
+                                                <span className="text-[9px] font-semibold text-emerald-700 whitespace-nowrap">
+                                                    {leg.frequencies}
+                                                </span>
+                                            )}
+                                            {leg.layerInfo && (
+                                                <span className="text-[9px] font-semibold text-primary whitespace-nowrap">
+                                                    {leg.layerInfo}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-center whitespace-nowrap">
+                                        <Badge variant="outline" className="font-mono text-xs font-bold border-slate-300 whitespace-nowrap">
+                                            {leg.altitude || '-'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-xs font-bold text-muted-foreground whitespace-nowrap">
+                                        {leg.trueCourse?.toFixed(0)}°
+                                    </TableCell>
+                                    <TableCell className="text-right whitespace-nowrap">
+                                        <span className="font-mono text-sm font-black text-primary whitespace-nowrap">
+                                            {leg.magneticHeading?.toFixed(0)}°
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-xs font-black whitespace-nowrap">
+                                        {leg.distance?.toFixed(1)}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-xs font-black whitespace-nowrap">
+                                        {leg.ete?.toFixed(0)}
+                                    </TableCell>
+                                    <TableCell className="text-right px-6 no-print whitespace-nowrap">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleRemoveLeg(leg.id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
                 </Table>
-            </ScrollArea>
+            </div>
         </div>
     );
 }

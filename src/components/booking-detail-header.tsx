@@ -11,7 +11,6 @@ type BookingDetailHeaderProps = {
   title: string;
   subtitle: string;
   status?: string | null;
-  details?: ReactNode;
   flightHours?: string | null;
   activeTab: string;
   onTabChange: (value: string) => void;
@@ -22,7 +21,6 @@ export function BookingDetailHeader({
   title,
   subtitle,
   status,
-  details,
   flightHours,
   activeTab,
   onTabChange,
@@ -60,7 +58,6 @@ export function BookingDetailHeader({
             </div>
           ) : null}
         </div>
-        {details ? <div className="mt-2">{details}</div> : null}
       </div>
 
       {/* Navigation Sub-header (Muted background strip like Filter pins) */}
