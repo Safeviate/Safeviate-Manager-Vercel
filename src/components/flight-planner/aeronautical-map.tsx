@@ -68,6 +68,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                     />
                 </LayersControl.BaseLayer>
 
+                {/* --- OpenAIP Tactical Overlays --- */}
                 <LayersControl.Overlay checked name="OpenAIP Airspaces">
                     <TileLayer
                         url={`https://api.core.openaip.net/api/tiles/airspaces/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
@@ -78,6 +79,36 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                 <LayersControl.Overlay checked name="OpenAIP Airports">
                     <TileLayer
                         url={`https://api.core.openaip.net/api/tiles/airports/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        attribution="&copy; OpenAIP"
+                    />
+                </LayersControl.Overlay>
+                <LayersControl.Overlay checked name="OpenAIP Navaids">
+                    <TileLayer
+                        url={`https://api.core.openaip.net/api/tiles/navaids/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        attribution="&copy; OpenAIP"
+                    />
+                </LayersControl.Overlay>
+                <LayersControl.Overlay name="OpenAIP Reporting Points">
+                    <TileLayer
+                        url={`https://api.core.openaip.net/api/tiles/reporting-points/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        attribution="&copy; OpenAIP"
+                    />
+                </LayersControl.Overlay>
+                <LayersControl.Overlay name="OpenAIP Obstacles">
+                    <TileLayer
+                        url={`https://api.core.openaip.net/api/tiles/obstacles/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        attribution="&copy; OpenAIP"
+                    />
+                </LayersControl.Overlay>
+                <LayersControl.Overlay name="OpenAIP Gliding Sectors">
+                    <TileLayer
+                        url={`https://api.core.openaip.net/api/tiles/gliding/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
+                        attribution="&copy; OpenAIP"
+                    />
+                </LayersControl.Overlay>
+                <LayersControl.Overlay name="OpenAIP Hang Glidings">
+                    <TileLayer
+                        url={`https://api.core.openaip.net/api/tiles/hang-gliding/{z}/{x}/{y}.png?apiKey=${OPENAIP_KEY}`}
                         attribution="&copy; OpenAIP"
                     />
                 </LayersControl.Overlay>
