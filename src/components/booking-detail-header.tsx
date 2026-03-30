@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentType, ReactNode } from 'react';
-import { Clock, FileText, Map as NavIcon } from 'lucide-react';
+import { Clock, FileText, Map as NavIcon, Scale, Settings2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -61,16 +61,18 @@ export function BookingDetailHeader({
       </div>
 
       {/* Navigation Sub-header (Muted background strip like Filter pins) */}
-      <div className="border-b bg-muted/20 px-4 md:px-6 py-3 sticky top-0 z-20 backdrop-blur-sm">
+      <div className="bg-muted/20 px-4 md:px-6 py-3 sticky top-0 z-20 backdrop-blur-sm">
         <div className="relative">
           <ResponsiveTabRow
             value={activeTab}
             onValueChange={onTabChange}
             placeholder="Select Section"
             action={tabRowAction}
-            joinedDesktopTabs={true}
+            joinedDesktopTabs={false}
             options={[
               { value: 'flight-details', label: 'Flight Details', icon: FileText },
+              { value: 'planning', label: 'Planning', icon: Settings2 },
+              { value: 'mass-balance', label: 'Mass & Balance', icon: Scale },
               { value: 'navlog', label: 'Navlog', icon: NavIcon },
             ]}
           />
