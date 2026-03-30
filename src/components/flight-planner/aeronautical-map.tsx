@@ -1,6 +1,6 @@
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, LayersControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON, FeatureGroup, useMapEvents, LayersControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { NavlogLeg } from '@/types/booking';
@@ -8,9 +8,9 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X, Plus, Layers3 } from 'lucide-react';
+import { Search, X, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
@@ -31,8 +31,25 @@ const RouteWaypointIcon = L.divIcon({
 
 interface AeronauticalMapProps {
   legs: NavlogLeg[];
-  onAddWaypoint: (lat: number, lon: number, identifier?: string) => void;
+  onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
 }
+
+type LayerInfoItem = {
+  label: string;
+  layer: string;
+  distanceNm?: number;
+  frequencies?: string;
+  detail?: string;
+};
+
+type LayerInfoState = {
+  lat: number;
+  lon: number;
+  title: string;
+  subtitle?: string;
+  items: LayerInfoItem[];
+  activeLayers: string[];
+};
 
 type OpenAipFeature = {
   _id: string;
@@ -40,21 +57,93 @@ type OpenAipFeature = {
   type?: string;
   icaoCode?: string;
   identifier?: string;
+  frequencies?: Array<{
+    value?: string;
+    name?: string;
+    type?: number;
+    primary?: boolean;
+    publicUse?: boolean;
+  }>;
   geometry?: {
     coordinates?: [number, number];
   };
   sourceLayer: 'airports' | 'navaids' | 'reporting-points';
 };
 
+const formatFrequencyLabel = (frequency: NonNullable<OpenAipFeature['frequencies']>[number]) => {
+  const name = frequency.name?.trim();
+  const value = frequency.value?.trim();
+  if (name && value) return `${name} ${value}`;
+  return name || value || '';
+};
+
+const formatWaypointFrequencies = (frequencies?: OpenAipFeature['frequencies']) =>
+  frequencies
+    ?.filter((frequency) => frequency.publicUse !== false)
+    .map(formatFrequencyLabel)
+    .filter(Boolean)
+    .join(' • ');
+
+type OpenAipAirspace = {
+  _id: string;
+  name: string;
+  type?: number;
+  icaoClass?: number;
+  activity?: number;
+  lowerLimit?: unknown;
+  upperLimit?: unknown;
+  verticalLimits?: unknown;
+  limits?: unknown;
+  floor?: unknown;
+  ceiling?: unknown;
+  geometry?: {
+    type?: 'Polygon' | 'MultiPolygon' | 'LineString' | 'MultiLineString';
+    coordinates?: any;
+  };
+  hoursOfOperation?: {
+    operatingHours?: Array<{
+      dayOfWeek?: number;
+      startTime?: string;
+      endTime?: string;
+    }>;
+  };
+};
+
+type OpenAipObstacle = {
+  _id: string;
+  name: string;
+  geometry?: {
+    type?: 'Point';
+    coordinates?: [number, number];
+  };
+  height?: { value?: number };
+  elevation?: { value?: number };
+};
+
 type FlightPlannerMapSettings = {
   id?: string;
+  baseLayer?: 'light' | 'satellite';
   showMasterChart?: boolean;
   showAirports?: boolean;
   showNavaids?: boolean;
   showReportingPoints?: boolean;
+  showAirspaces?: boolean;
+  showClassE?: boolean;
+  showClassF?: boolean;
+  showClassG?: boolean;
+  showObstacles?: boolean;
+  showMilitaryAreas?: boolean;
+  showTrainingAreas?: boolean;
+  showGlidingSectors?: boolean;
+  showHangGlidings?: boolean;
+  showOnlyActiveAirspace?: boolean;
 };
 
 const OPENAIP_POINT_RESOURCES = ['airports', 'navaids', 'reporting-points'] as const;
+
+const AIRSPACE_CLASS_E = 6;
+const AIRSPACE_CLASS_F = 7;
+const AIRSPACE_CLASS_G = 8;
 
 const mergeOpenAipFeatures = (current: OpenAipFeature[], next: OpenAipFeature[]) => {
   const merged = [...current];
@@ -66,12 +155,73 @@ const mergeOpenAipFeatures = (current: OpenAipFeature[], next: OpenAipFeature[])
   return merged;
 };
 
-function MapEvents({ onAddWaypoint }: { onAddWaypoint: (lat: number, lon: number) => void }) {
+const LONG_PRESS_MS = 550;
+const CLICK_MOVE_TOLERANCE_METERS = 20;
+
+function MapEvents({
+  onShortPress,
+  onLongPress,
+}: {
+  onShortPress: (lat: number, lon: number) => void;
+  onLongPress: (lat: number, lon: number) => void;
+}) {
+  const map = useMap();
+  const pressRef = useRef<{
+    latlng: L.LatLng;
+    timer: number | null;
+    longTriggered: boolean;
+  } | null>(null);
+
+  const clearPress = useCallback(() => {
+    const currentPress = pressRef.current;
+    if (!currentPress) {
+      pressRef.current = null;
+      return;
+    }
+    if (currentPress.timer !== null) {
+      window.clearTimeout(currentPress.timer);
+    }
+    pressRef.current = null;
+  }, []);
+
   useMapEvents({
-    click(e) {
-      onAddWaypoint(e.latlng.lat, e.latlng.lng);
+    mousedown(e) {
+      if ((e.originalEvent as MouseEvent).button !== 0) return;
+      clearPress();
+      pressRef.current = {
+        latlng: e.latlng,
+        longTriggered: false,
+        timer: window.setTimeout(() => {
+          const currentPress = pressRef.current;
+          if (!currentPress) return;
+          currentPress.longTriggered = true;
+          onLongPress(currentPress.latlng.lat, currentPress.latlng.lng);
+        }, LONG_PRESS_MS),
+      };
     },
+    mouseup(e) {
+      const press = pressRef.current;
+      if (!press) return;
+      if (press.timer !== null) {
+        window.clearTimeout(press.timer);
+      }
+
+      const movedMeters = map.distance(press.latlng, e.latlng);
+      const wasLongPress = press.longTriggered;
+      const lat = press.latlng.lat;
+      const lon = press.latlng.lng;
+      pressRef.current = null;
+
+      if (!wasLongPress && movedMeters <= CLICK_MOVE_TOLERANCE_METERS) {
+        onShortPress(lat, lon);
+      }
+    },
+    dragstart: clearPress,
+    contextmenu: clearPress,
   });
+
+  useEffect(() => clearPress, [clearPress]);
+
   return null;
 }
 
@@ -121,6 +271,132 @@ function VisiblePointLoader({ onFeaturesLoaded }: { onFeaturesLoaded: (features:
   return null;
 }
 
+function MapZoomState({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
+
+  useMapEvents({
+    zoomend() {
+      onZoomChange(map.getZoom());
+    },
+  });
+
+  return null;
+}
+
+function VisibleAirspaceLoader({
+  enabled,
+  onFeaturesLoaded,
+}: {
+  enabled: boolean;
+  onFeaturesLoaded: (features: OpenAipAirspace[]) => void;
+}) {
+  const map = useMap();
+  const requestSeq = useRef(0);
+
+  const loadVisibleAirspaces = useCallback(async () => {
+    if (!enabled) return;
+
+    const bounds = map.getBounds().pad(0.25);
+    const bbox = [
+      bounds.getWest().toFixed(6),
+      bounds.getSouth().toFixed(6),
+      bounds.getEast().toFixed(6),
+      bounds.getNorth().toFixed(6),
+    ].join(',');
+    const nextSeq = ++requestSeq.current;
+
+    try {
+      const response = await fetch(`/api/openaip?resource=airspaces&bbox=${bbox}`);
+      const data = await response.json();
+      if (nextSeq !== requestSeq.current) return;
+      onFeaturesLoaded((data.items || []) as OpenAipAirspace[]);
+    } catch (error) {
+      console.error('Viewport OpenAIP airspace load failed', error);
+    }
+  }, [enabled, map, onFeaturesLoaded]);
+
+  useEffect(() => {
+    loadVisibleAirspaces();
+  }, [loadVisibleAirspaces]);
+
+  useMapEvents({
+    moveend: loadVisibleAirspaces,
+    zoomend: loadVisibleAirspaces,
+  });
+
+  return null;
+}
+
+function VisibleObstacleLoader({
+  enabled,
+  onFeaturesLoaded,
+}: {
+  enabled: boolean;
+  onFeaturesLoaded: (features: OpenAipObstacle[]) => void;
+}) {
+  const map = useMap();
+  const requestSeq = useRef(0);
+
+  const loadVisibleObstacles = useCallback(async () => {
+    if (!enabled) return;
+
+    const bounds = map.getBounds().pad(0.35);
+    const bbox = [
+      bounds.getWest().toFixed(6),
+      bounds.getSouth().toFixed(6),
+      bounds.getEast().toFixed(6),
+      bounds.getNorth().toFixed(6),
+    ].join(',');
+    const nextSeq = ++requestSeq.current;
+
+    try {
+      const response = await fetch(`/api/openaip?resource=obstacles&bbox=${bbox}`);
+      const data = await response.json();
+      if (nextSeq !== requestSeq.current) return;
+      onFeaturesLoaded((data.items || []) as OpenAipObstacle[]);
+    } catch (error) {
+      console.error('Viewport OpenAIP obstacle load failed', error);
+    }
+  }, [enabled, map, onFeaturesLoaded]);
+
+  useEffect(() => {
+    loadVisibleObstacles();
+  }, [loadVisibleObstacles]);
+
+  useMapEvents({
+    moveend: loadVisibleObstacles,
+    zoomend: loadVisibleObstacles,
+  });
+
+  return null;
+}
+
+function LayerStateSync({
+  onBaseLayerChange,
+  onOverlayChange,
+}: {
+  onBaseLayerChange: (name: 'light' | 'satellite') => void;
+  onOverlayChange: (name: string, active: boolean) => void;
+}) {
+  useMapEvents({
+    overlayadd(event: any) {
+      onOverlayChange(event.name, true);
+    },
+    overlayremove(event: any) {
+      onOverlayChange(event.name, false);
+    },
+    baselayerchange(event: any) {
+      onBaseLayerChange(event.name === 'Satellite (Hybrid)' ? 'satellite' : 'light');
+    },
+  });
+
+  return null;
+}
+
 const CLICK_SNAP_THRESHOLD_NM = 8;
 
 const toRadians = (value: number) => (value * Math.PI) / 180;
@@ -137,6 +413,187 @@ const distanceNm = (aLat: number, aLon: number, bLat: number, bLon: number) => {
   return 2 * earthRadiusNm * Math.atan2(Math.sqrt(hav), Math.sqrt(1 - hav));
 };
 
+const pointInRing = (lat: number, lon: number, ring: [number, number][]) => {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersect =
+      yi > lat !== yj > lat &&
+      lon < ((xj - xi) * (lat - yi)) / ((yj - yi) || Number.EPSILON) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+};
+
+const pointInPolygonGeometry = (
+  lat: number,
+  lon: number,
+  geometry?: OpenAipAirspace['geometry']
+) => {
+  if (!geometry?.coordinates) return false;
+  if (geometry.type === 'Polygon') {
+    const rings = geometry.coordinates as [number, number][][];
+    if (!rings.length) return false;
+    if (!pointInRing(lat, lon, rings[0])) return false;
+    return !rings.slice(1).some((hole) => pointInRing(lat, lon, hole));
+  }
+  if (geometry.type === 'MultiPolygon') {
+    const polygons = geometry.coordinates as [number, number][][][];
+    return polygons.some((polygon) => {
+      if (!polygon.length) return false;
+      if (!pointInRing(lat, lon, polygon[0])) return false;
+      return !polygon.slice(1).some((hole) => pointInRing(lat, lon, hole));
+    });
+  }
+  return false;
+};
+
+const getAirspaceDisplayLabel = (airspace: OpenAipAirspace) => {
+  const category = getAirspaceCategory(airspace);
+  if (category === 'military') return 'Military Operations Area';
+  if (category === 'training') return 'Training Area';
+  if (category === 'gliding') return 'Gliding Sector';
+  if (category === 'hang') return 'Hang Gliding Site';
+  if (category === 'class-e') return 'Airspace Class E';
+  if (category === 'class-f') return 'Airspace Class F';
+  if (category === 'class-g') return 'Airspace Class G';
+  return 'OpenAIP Airspace';
+};
+
+const formatLimitValue = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return `${value}`;
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const candidates = [
+      record.value,
+      record.altitude,
+      record.height,
+      record.limit,
+      record.text,
+      record.unit,
+      record.reference,
+    ];
+    const parts: string[] = candidates
+      .map((candidate) => formatLimitValue(candidate))
+      .filter(Boolean);
+    return parts.join(' ');
+  }
+  return '';
+};
+
+const formatAirspaceVerticalLimits = (airspace: OpenAipAirspace): string => {
+  const rawVertical = airspace.verticalLimits as Record<string, unknown> | undefined;
+  const lower =
+    formatLimitValue(rawVertical?.lower ?? rawVertical?.lowerLimit ?? rawVertical?.floor ?? airspace.lowerLimit ?? airspace.floor);
+  const upper =
+    formatLimitValue(rawVertical?.upper ?? rawVertical?.upperLimit ?? rawVertical?.ceiling ?? airspace.upperLimit ?? airspace.ceiling);
+  const fallback =
+    formatLimitValue(airspace.limits) ||
+    formatLimitValue(rawVertical?.text) ||
+    formatLimitValue(rawVertical?.display) ||
+    '';
+
+  const rangeParts = [lower && `Lower ${lower}`, upper && `Upper ${upper}`].filter(Boolean) as string[];
+  if (rangeParts.length > 0) return rangeParts.join(' • ');
+  return fallback;
+};
+
+const isAirspaceActiveNow = (airspace: OpenAipAirspace) => {
+  const operatingHours = airspace.hoursOfOperation?.operatingHours;
+  if (!operatingHours || operatingHours.length === 0) return true;
+
+  const now = new Date();
+  const currentDay = now.getDay();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  return operatingHours.some((entry) => {
+    if (entry.dayOfWeek !== undefined && entry.dayOfWeek !== currentDay) return false;
+    if (!entry.startTime || !entry.endTime) return true;
+    if (entry.startTime === '00:00' && entry.endTime === '00:00') return true;
+
+    const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+    const [endHour, endMinute] = entry.endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMinute;
+    const endMinutes = endHour * 60 + endMinute;
+
+    if (startMinutes <= endMinutes) {
+      return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    }
+
+    return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+  });
+};
+
+const isMilitaryAirspace = (airspace: OpenAipAirspace) =>
+  airspace.type === 1 ||
+  airspace.type === 33 ||
+  /MILITARY|SHOOTING|WEAPONS|RANGE|MOA|M\.O\.A|OPERATIONS AREA/i.test(airspace.name);
+
+const isTrainingAirspace = (airspace: OpenAipAirspace) =>
+  airspace.type === 2 ||
+  /TRAINING|GENERAL FLYING|FLYING TNG|PJE/i.test(airspace.name);
+
+const isGlidingAirspace = (airspace: OpenAipAirspace) =>
+  airspace.type === 21 || /GLIDING|GLIDER/i.test(airspace.name);
+
+const isHangGlidingAirspace = (airspace: OpenAipAirspace) =>
+  /HANG\s*GLIDING|HANGGLIDING|HANG/i.test(airspace.name);
+
+const getAirspaceClassCategory = (airspace: OpenAipAirspace) => {
+  if (airspace.icaoClass === AIRSPACE_CLASS_E) return 'class-e';
+  if (airspace.icaoClass === AIRSPACE_CLASS_F) return 'class-f';
+  if (airspace.icaoClass === AIRSPACE_CLASS_G) return 'class-g';
+  return 'other';
+};
+
+const getAirspaceCategory = (airspace: OpenAipAirspace) => {
+  if (isMilitaryAirspace(airspace)) return 'military';
+  if (isTrainingAirspace(airspace)) return 'training';
+  if (isGlidingAirspace(airspace)) return 'gliding';
+  if (isHangGlidingAirspace(airspace)) return 'hang';
+  const classCategory = getAirspaceClassCategory(airspace);
+  if (classCategory !== 'other') return classCategory;
+  return 'other';
+};
+
+const airspaceFeatureCollection = (items: OpenAipAirspace[]) => ({
+  type: 'FeatureCollection' as const,
+  features: items
+    .filter((item) => item.geometry?.coordinates)
+    .map((item) => ({
+      type: 'Feature' as const,
+      geometry: item.geometry,
+        properties: {
+          _id: item._id,
+          name: item.name,
+          type: item.type,
+          icaoClass: item.icaoClass,
+          category: getAirspaceCategory(item),
+          classCategory: getAirspaceClassCategory(item),
+          active: isAirspaceActiveNow(item),
+        },
+      })),
+});
+
+const obstacleFeatureCollection = (items: OpenAipObstacle[]) => ({
+  type: 'FeatureCollection' as const,
+  features: items
+    .filter((item) => item.geometry?.coordinates)
+    .map((item) => ({
+      type: 'Feature' as const,
+      geometry: item.geometry,
+      properties: {
+        _id: item._id,
+        name: item.name,
+        height: item.height?.value,
+        elevation: item.elevation?.value,
+      },
+    })),
+});
+
 const stopPropagation = (event: React.SyntheticEvent) => {
   event.stopPropagation();
 };
@@ -150,7 +607,7 @@ const SearchControl = ({
   onAddWaypoint,
   onResultsChange,
 }: {
-  onAddWaypoint: (lat: number, lon: number, identifier?: string) => void;
+  onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
   onResultsChange: (results: OpenAipFeature[]) => void;
 }) => {
   const map = useMap();
@@ -255,11 +712,41 @@ const SearchControl = ({
           <div className="text-sm space-y-2 w-48">
             <p className="font-bold text-base">{selected.name}</p>
             <p className="text-xs text-muted-foreground">{selected.sourceLayer}</p>
+            {selected.frequencies?.length ? (
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Radio Frequencies</p>
+                <div className="space-y-1">
+                  {selected.frequencies
+                    .filter((frequency) => frequency.publicUse !== false)
+                    .slice(0, 4)
+                    .map((frequency, index) => {
+                      const label = formatFrequencyLabel(frequency);
+                      if (!label) return null;
+                      return (
+                        <div key={`${selected._id}-freq-${index}`} className="rounded-md border bg-muted/40 px-2 py-1 text-[11px] font-semibold">
+                          {label}
+                          {frequency.primary ? ' • primary' : ''}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ) : null}
             <div className="flex gap-2 pt-2">
               <Button size="sm" className="w-full" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
                 blockMapInteraction(event);
                 const [lon, lat] = selected.geometry!.coordinates!;
-                onAddWaypoint(lat, lon, selected.name);
+                onAddWaypoint(
+                  lat,
+                  lon,
+                  selected.icaoCode || selected.identifier || selected.name,
+                  formatWaypointFrequencies(selected.frequencies),
+                  selected.sourceLayer === 'airports'
+                    ? 'OpenAIP Airports'
+                    : selected.sourceLayer === 'navaids'
+                      ? 'OpenAIP Navaids'
+                      : 'OpenAIP Reporting Points'
+                );
                 setSelected(null);
               }}>
                 <Plus className="h-4 w-4 mr-2" /> Add
@@ -282,6 +769,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
   const [isMounted, setIsMounted] = useState(false);
   const [searchFeatures, setSearchFeatures] = useState<OpenAipFeature[]>([]);
   const [viewportFeatures, setViewportFeatures] = useState<OpenAipFeature[]>([]);
+  const [airspaceFeatures, setAirspaceFeatures] = useState<OpenAipAirspace[]>([]);
+  const [obstacleFeatures, setObstacleFeatures] = useState<OpenAipObstacle[]>([]);
+  const [mapZoom, setMapZoom] = useState(8);
   const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const mapSettingsRef = useMemoFirebase(
@@ -291,10 +781,21 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
   const { data: mapSettings } = useDoc<FlightPlannerMapSettings>(mapSettingsRef, {
     initialData: {
       id: 'flight-planner-map',
+      baseLayer: 'light',
       showMasterChart: true,
       showAirports: true,
       showNavaids: true,
       showReportingPoints: true,
+      showAirspaces: true,
+      showClassE: true,
+      showClassF: true,
+      showClassG: true,
+      showObstacles: false,
+      showMilitaryAreas: true,
+      showTrainingAreas: true,
+      showGlidingSectors: true,
+      showHangGlidings: true,
+      showOnlyActiveAirspace: false,
     },
   });
 
@@ -302,21 +803,268 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
   const [airportsVisible, setAirportsVisible] = useState(true);
   const [navaidsVisible, setNavaidsVisible] = useState(true);
   const [reportingVisible, setReportingVisible] = useState(true);
+  const [airspacesVisible, setAirspacesVisible] = useState(true);
+  const [classEVisible, setClassEVisible] = useState(true);
+  const [classFVisible, setClassFVisible] = useState(true);
+  const [classGVisible, setClassGVisible] = useState(true);
+  const [obstaclesVisible, setObstaclesVisible] = useState(false);
+  const [militaryAreasVisible, setMilitaryAreasVisible] = useState(true);
+  const [trainingAreasVisible, setTrainingAreasVisible] = useState(true);
+  const [glidingSectorsVisible, setGlidingSectorsVisible] = useState(true);
+  const [hangGlidingVisible, setHangGlidingVisible] = useState(true);
+  const [onlyActiveAirspace, setOnlyActiveAirspace] = useState(false);
+  const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>('light');
   const [pendingClickLabel, setPendingClickLabel] = useState<string | null>(null);
-  const layersRef = useRef<HTMLDivElement>(null);
+  const [layerInfo, setLayerInfo] = useState<LayerInfoState | null>(null);
+  const mapSettingsHydratedRef = useRef(false);
+  const lastPersistedSettingsRef = useRef<string>('');
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (layersRef.current) {
-      L.DomEvent.disableClickPropagation(layersRef.current);
-      L.DomEvent.disableScrollPropagation(layersRef.current);
+  const openAipFeatures = useMemo(() => mergeOpenAipFeatures(viewportFeatures, searchFeatures), [searchFeatures, viewportFeatures]);
+  const airportFeatures = useMemo(
+    () => viewportFeatures.filter((item) => item.sourceLayer === 'airports' && item.geometry?.coordinates),
+    [viewportFeatures]
+  );
+  const navaidFeatures = useMemo(
+    () => viewportFeatures.filter((item) => item.sourceLayer === 'navaids' && item.geometry?.coordinates),
+    [viewportFeatures]
+  );
+  const reportingPointFeatures = useMemo(
+    () => viewportFeatures.filter((item) => item.sourceLayer === 'reporting-points' && item.geometry?.coordinates),
+    [viewportFeatures]
+  );
+  const airspaceCollections = useMemo(() => {
+    const filterItems = (predicate: (item: OpenAipAirspace) => boolean) =>
+      airspaceFeatureCollection(
+        airspaceFeatures.filter((item) => item.geometry?.coordinates && (!onlyActiveAirspace || isAirspaceActiveNow(item)) && predicate(item))
+      );
+
+    return {
+      classE: filterItems((item) => getAirspaceClassCategory(item) === 'class-e'),
+      classF: filterItems((item) => getAirspaceClassCategory(item) === 'class-f'),
+      classG: filterItems((item) => getAirspaceClassCategory(item) === 'class-g'),
+      military: filterItems((item) => isMilitaryAirspace(item)),
+      training: filterItems((item) => isTrainingAirspace(item)),
+      gliding: filterItems((item) => isGlidingAirspace(item)),
+      hangGliding: filterItems((item) => isHangGlidingAirspace(item)),
+      general: filterItems((item) => {
+        const category = getAirspaceCategory(item);
+        return category === 'other';
+      }),
+    };
+  }, [airspaceFeatures, onlyActiveAirspace]);
+  const obstacleGeoJson = useMemo(() => obstacleFeatureCollection(obstacleFeatures), [obstacleFeatures]);
+  const activeLayerLabels = useMemo(() => {
+    const layers: string[] = [selectedBaseLayer === 'light' ? 'Light (Standard)' : 'Satellite (Hybrid)'];
+    if (masterVisible) layers.push('OpenAIP Master Chart');
+    if (airportsVisible) layers.push('OpenAIP Airports');
+    if (navaidsVisible) layers.push('OpenAIP Navaids');
+    if (reportingVisible) layers.push('OpenAIP Reporting Points');
+    if (airspacesVisible) layers.push('OpenAIP Airspaces');
+    if (classEVisible) layers.push('Airspace Class E');
+    if (classFVisible) layers.push('Airspace Class F');
+    if (classGVisible) layers.push('Airspace Class G');
+    if (militaryAreasVisible) layers.push('Military Operations Areas');
+    if (trainingAreasVisible) layers.push('Training Areas');
+    if (glidingSectorsVisible) layers.push('Gliding Sectors');
+    if (hangGlidingVisible) layers.push('Hang Glidings');
+    if (obstaclesVisible) layers.push('OpenAIP Obstacles');
+    return layers;
+  }, [
+    airportsVisible,
+    airspacesVisible,
+    classEVisible,
+    classFVisible,
+    classGVisible,
+    glidingSectorsVisible,
+    hangGlidingVisible,
+    masterVisible,
+    militaryAreasVisible,
+    navaidsVisible,
+    obstaclesVisible,
+    reportingVisible,
+    selectedBaseLayer,
+    trainingAreasVisible,
+  ]);
+  const airspaceStyle = useCallback((feature: any) => {
+    const category = feature?.properties?.category;
+    let palette = { color: '#38bdf8', fillColor: '#38bdf8' };
+    if (category === 'military') {
+      palette = { color: '#ef4444', fillColor: '#ef4444' };
+    } else if (category === 'training') {
+      palette = { color: '#f59e0b', fillColor: '#f59e0b' };
+    } else if (category === 'gliding') {
+      palette = { color: '#22c55e', fillColor: '#22c55e' };
+    } else if (category === 'hang') {
+      palette = { color: '#a855f7', fillColor: '#a855f7' };
+    } else if (category === 'class-e') {
+      palette = { color: '#3b82f6', fillColor: '#3b82f6' };
+    } else if (category === 'class-f') {
+      palette = { color: '#f97316', fillColor: '#f97316' };
+    } else if (category === 'class-g') {
+      palette = { color: '#14b8a6', fillColor: '#14b8a6' };
+    }
+
+    return {
+      ...palette,
+      weight: 2,
+      fillOpacity: 0.12,
+      opacity: 0.85,
+    };
+  }, []);
+  const featurePointIcon = useCallback((color: string) => L.divIcon({
+    className: '',
+    html: `<div style="width:10px;height:10px;border-radius:9999px;background:${color};border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(15,23,42,0.22);"></div>`,
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
+  }), []);
+  const airportPointIcon = useMemo(() => featurePointIcon('#2563eb'), [featurePointIcon]);
+  const navaidPointIcon = useMemo(() => featurePointIcon('#7c3aed'), [featurePointIcon]);
+  const reportingPointIcon = useMemo(() => featurePointIcon('#d97706'), [featurePointIcon]);
+  const obstaclePointToLayer = useCallback((feature: any, latlng: L.LatLngExpression) => {
+    const height = feature?.properties?.height;
+    return L.circleMarker(latlng, {
+      radius: height && Number(height) > 250 ? 5 : 4,
+      color: '#ef4444',
+      fillColor: '#ef4444',
+      fillOpacity: 0.8,
+      weight: 1,
+    });
+  }, []);
+  const stopMarkerPress = useCallback((event: L.LeafletMouseEvent | L.LeafletEvent) => {
+    if ('originalEvent' in event && event.originalEvent) {
+      L.DomEvent.stop(event.originalEvent as Event);
     }
   }, []);
+  const buildWaypointContext = useCallback((info: LayerInfoState) => {
+    const primary = info.items[0];
+    if (!primary) return undefined;
+    if (primary.detail) return `${primary.layer} • ${primary.label} • ${primary.detail}`;
+    return `${primary.layer} • ${primary.label}`;
+  }, []);
+  const buildLayerInfo = useCallback((lat: number, lon: number): LayerInfoState => {
+    const items: LayerInfoItem[] = [];
+    const airspaceMatches = airspaceFeatures
+      .filter((item) => {
+        if (!item.geometry?.coordinates) return false;
+        if (onlyActiveAirspace && !isAirspaceActiveNow(item)) return false;
+        const category = getAirspaceCategory(item);
+        if (category === 'military') return militaryAreasVisible;
+        if (category === 'training') return trainingAreasVisible;
+        if (category === 'gliding') return glidingSectorsVisible;
+        if (category === 'hang') return hangGlidingVisible;
+        if (category === 'class-e') return classEVisible;
+        if (category === 'class-f') return classFVisible;
+        if (category === 'class-g') return classGVisible;
+        return airspacesVisible;
+      })
+      .filter((item) => pointInPolygonGeometry(lat, lon, item.geometry))
+      .map((item) => ({
+        feature: item,
+        layer: getAirspaceDisplayLabel(item),
+      }))
+      .sort((a, b) => a.layer.localeCompare(b.layer) || a.feature.name.localeCompare(b.feature.name));
 
-  const openAipFeatures = useMemo(() => mergeOpenAipFeatures(viewportFeatures, searchFeatures), [searchFeatures, viewportFeatures]);
+    for (const match of airspaceMatches.slice(0, 4)) {
+      const verticalLimits = formatAirspaceVerticalLimits(match.feature);
+      items.push({
+        label: match.feature.name,
+        layer: match.layer,
+        detail: [getAirspaceCategory(match.feature), match.feature.icaoClass ? `class ${match.feature.icaoClass}` : '', verticalLimits]
+          .filter(Boolean)
+          .join(' • '),
+      });
+    }
+
+    const collectNearest = (
+      features: OpenAipFeature[],
+      layer: string,
+      maxDistanceNm: number,
+      limit = 1
+    ) => {
+      const nearby = features
+        .map((feature) => {
+          const coords = feature.geometry?.coordinates;
+          if (!coords) return null;
+          const [featureLon, featureLat] = coords;
+          return {
+            feature,
+            distance: distanceNm(lat, lon, featureLat, featureLon),
+          };
+        })
+        .filter((entry): entry is { feature: OpenAipFeature; distance: number } => Boolean(entry))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, limit)
+        .filter((entry) => entry.distance <= maxDistanceNm);
+
+      for (const entry of nearby) {
+        const label = entry.feature.icaoCode || entry.feature.identifier || entry.feature.name;
+        items.push({
+          label,
+          layer,
+          distanceNm: entry.distance,
+          frequencies: formatWaypointFrequencies(entry.feature.frequencies),
+        });
+      }
+    };
+
+    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'airports' && airportsVisible), 'OpenAIP Airports', 20);
+    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'navaids' && navaidsVisible), 'OpenAIP Navaids', 20);
+    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'reporting-points' && reportingVisible), 'OpenAIP Reporting Points', 20);
+
+    const obstacleNearest = obstacleFeatures
+      .map((feature) => {
+        const coords = feature.geometry?.coordinates;
+        if (!coords) return null;
+        const [featureLon, featureLat] = coords;
+        return {
+          feature,
+          distance: distanceNm(lat, lon, featureLat, featureLon),
+        };
+      })
+      .filter((entry): entry is { feature: OpenAipObstacle; distance: number } => Boolean(entry))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 1)
+      .find((entry) => entry.distance <= 10);
+
+    if (obstacleNearest) {
+      items.push({
+        label: obstacleNearest.feature.name || 'Obstacle',
+        layer: 'OpenAIP Obstacles',
+        detail: obstacleNearest.feature.height?.value ? `Height ${obstacleNearest.feature.height.value} m` : undefined,
+        distanceNm: obstacleNearest.distance,
+      });
+    }
+
+    return {
+      lat,
+      lon,
+      title: items[0]?.label || 'Map Position',
+      subtitle: airspaceMatches[0]?.layer || undefined,
+      items: items.slice(0, 5),
+      activeLayers: activeLayerLabels,
+    };
+  }, [
+    activeLayerLabels,
+    airspaceFeatures,
+    airportsVisible,
+    classEVisible,
+    classFVisible,
+    classGVisible,
+    glidingSectorsVisible,
+    hangGlidingVisible,
+    militaryAreasVisible,
+    navaidsVisible,
+    obstacleFeatures,
+    openAipFeatures,
+    onlyActiveAirspace,
+    reportingVisible,
+    trainingAreasVisible,
+    airspacesVisible,
+  ]);
   const handleMapClick = useCallback((lat: number, lon: number) => {
     const candidates = openAipFeatures.filter((item) => {
       if (item.sourceLayer === 'airports') return airportsVisible;
@@ -341,22 +1089,104 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
 
     if (nearest && nearestDistance <= CLICK_SNAP_THRESHOLD_NM) {
       const identifier = nearest.icaoCode || nearest.identifier || nearest.name;
+      const frequencies = formatWaypointFrequencies(nearest.frequencies);
+      const context = buildWaypointContext(buildLayerInfo(lat, lon));
       setPendingClickLabel(identifier);
-      onAddWaypoint(lat, lon, identifier);
+      onAddWaypoint(lat, lon, identifier, frequencies, context);
       return;
     }
 
+    const context = buildWaypointContext(buildLayerInfo(lat, lon));
     setPendingClickLabel('PNT');
-    onAddWaypoint(lat, lon, 'PNT');
-  }, [airportsVisible, navaidsVisible, openAipFeatures, onAddWaypoint, reportingVisible]);
+    onAddWaypoint(lat, lon, 'PNT', undefined, context);
+  }, [airportsVisible, buildLayerInfo, buildWaypointContext, navaidsVisible, openAipFeatures, onAddWaypoint, reportingVisible]);
+
+  const handleLongPress = useCallback((lat: number, lon: number) => {
+    setPendingClickLabel('Layer info');
+    setLayerInfo(buildLayerInfo(lat, lon));
+  }, [buildLayerInfo]);
 
   useEffect(() => {
     if (!mapSettings) return;
+    setSelectedBaseLayer(mapSettings.baseLayer ?? 'light');
     setMasterVisible(mapSettings.showMasterChart ?? true);
     setAirportsVisible(mapSettings.showAirports ?? true);
     setNavaidsVisible(mapSettings.showNavaids ?? true);
     setReportingVisible(mapSettings.showReportingPoints ?? true);
+    setAirspacesVisible(mapSettings.showAirspaces ?? true);
+    setClassEVisible(mapSettings.showClassE ?? true);
+    setClassFVisible(mapSettings.showClassF ?? true);
+    setClassGVisible(mapSettings.showClassG ?? true);
+    setObstaclesVisible(mapSettings.showObstacles ?? false);
+    setMilitaryAreasVisible(mapSettings.showMilitaryAreas ?? true);
+    setTrainingAreasVisible(mapSettings.showTrainingAreas ?? true);
+    setGlidingSectorsVisible(mapSettings.showGlidingSectors ?? true);
+    setHangGlidingVisible(mapSettings.showHangGlidings ?? true);
+    setOnlyActiveAirspace(mapSettings.showOnlyActiveAirspace ?? false);
+    lastPersistedSettingsRef.current = JSON.stringify({
+      baseLayer: mapSettings.baseLayer ?? 'light',
+      showMasterChart: mapSettings.showMasterChart ?? true,
+      showAirports: mapSettings.showAirports ?? true,
+      showNavaids: mapSettings.showNavaids ?? true,
+      showReportingPoints: mapSettings.showReportingPoints ?? true,
+      showAirspaces: mapSettings.showAirspaces ?? true,
+      showClassE: mapSettings.showClassE ?? true,
+      showClassF: mapSettings.showClassF ?? true,
+      showClassG: mapSettings.showClassG ?? true,
+      showObstacles: mapSettings.showObstacles ?? false,
+      showMilitaryAreas: mapSettings.showMilitaryAreas ?? true,
+      showTrainingAreas: mapSettings.showTrainingAreas ?? true,
+      showGlidingSectors: mapSettings.showGlidingSectors ?? true,
+      showHangGlidings: mapSettings.showHangGlidings ?? true,
+      showOnlyActiveAirspace: mapSettings.showOnlyActiveAirspace ?? false,
+    });
+    mapSettingsHydratedRef.current = true;
   }, [mapSettings]);
+
+  useEffect(() => {
+    if (!mapSettingsRef || !mapSettingsHydratedRef.current) return;
+
+    const nextSettings = {
+      id: 'flight-planner-map',
+      baseLayer: selectedBaseLayer,
+      showMasterChart: masterVisible,
+      showAirports: airportsVisible,
+      showNavaids: navaidsVisible,
+      showReportingPoints: reportingVisible,
+      showAirspaces: airspacesVisible,
+      showClassE: classEVisible,
+      showClassF: classFVisible,
+      showClassG: classGVisible,
+      showObstacles: obstaclesVisible,
+      showMilitaryAreas: militaryAreasVisible,
+      showTrainingAreas: trainingAreasVisible,
+      showGlidingSectors: glidingSectorsVisible,
+      showHangGlidings: hangGlidingVisible,
+      showOnlyActiveAirspace: onlyActiveAirspace,
+    };
+    const serialized = JSON.stringify(nextSettings);
+    if (serialized === lastPersistedSettingsRef.current) return;
+
+    lastPersistedSettingsRef.current = serialized;
+    void setDoc(mapSettingsRef, nextSettings, { merge: true });
+  }, [
+    airspacesVisible,
+    airportsVisible,
+    classEVisible,
+    classFVisible,
+    classGVisible,
+    glidingSectorsVisible,
+    hangGlidingVisible,
+    mapSettingsRef,
+    militaryAreasVisible,
+    navaidsVisible,
+    obstaclesVisible,
+    onlyActiveAirspace,
+    reportingVisible,
+    masterVisible,
+    trainingAreasVisible,
+    selectedBaseLayer,
+  ]);
 
   if (!isMounted) return null;
 
@@ -375,14 +1205,14 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
       className="h-full w-full outline-none"
       style={{ background: '#0f172a' }}
     >
-      <LayersControl position="topleft">
-        <LayersControl.BaseLayer checked name="Light (Standard)">
+      <LayersControl position="topleft" collapsed>
+        <LayersControl.BaseLayer checked={selectedBaseLayer === 'light'} name="Light (Standard)">
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
           />
         </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="Satellite (Hybrid)">
+        <LayersControl.BaseLayer checked={selectedBaseLayer === 'satellite'} name="Satellite (Hybrid)">
           <TileLayer
             url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
             attribution="&copy; Google Maps"
@@ -396,11 +1226,288 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
             opacity={0.85}
           />
         </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={airportsVisible} name="OpenAIP Airports">
+          <FeatureGroup>
+            {mapZoom >= 10 && airportFeatures.map((feature) => {
+              const coords = feature.geometry?.coordinates;
+              if (!coords) return null;
+              const [lon, lat] = coords;
+              const identifier = feature.icaoCode || feature.identifier || feature.name;
+              return (
+                <Marker
+                  key={feature._id}
+                  position={[lat, lon]}
+                  icon={airportPointIcon}
+                  eventHandlers={{
+                    mousedown: stopMarkerPress,
+                    click: (event) => {
+                      L.DomEvent.stop(event.originalEvent);
+                      setPendingClickLabel(identifier);
+                      onAddWaypoint(
+                        lat,
+                        lon,
+                        identifier,
+                        formatWaypointFrequencies(feature.frequencies),
+                        buildWaypointContext(buildLayerInfo(lat, lon))
+                      );
+                    },
+                  }}
+                />
+              );
+            })}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={navaidsVisible} name="OpenAIP Navaids">
+          <FeatureGroup>
+            {mapZoom >= 11 && navaidFeatures.map((feature) => {
+              const coords = feature.geometry?.coordinates;
+              if (!coords) return null;
+              const [lon, lat] = coords;
+              const identifier = feature.icaoCode || feature.identifier || feature.name;
+              return (
+                <Marker
+                  key={feature._id}
+                  position={[lat, lon]}
+                  icon={navaidPointIcon}
+                  eventHandlers={{
+                    mousedown: stopMarkerPress,
+                    click: (event) => {
+                      L.DomEvent.stop(event.originalEvent);
+                      setPendingClickLabel(identifier);
+                      onAddWaypoint(
+                        lat,
+                        lon,
+                        identifier,
+                        formatWaypointFrequencies(feature.frequencies),
+                        buildWaypointContext(buildLayerInfo(lat, lon))
+                      );
+                    },
+                  }}
+                />
+              );
+            })}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={reportingVisible} name="OpenAIP Reporting Points">
+          <FeatureGroup>
+            {mapZoom >= 11 && reportingPointFeatures.map((feature) => {
+              const coords = feature.geometry?.coordinates;
+              if (!coords) return null;
+              const [lon, lat] = coords;
+              const identifier = feature.icaoCode || feature.identifier || feature.name;
+              return (
+                <Marker
+                  key={feature._id}
+                  position={[lat, lon]}
+                  icon={reportingPointIcon}
+                  eventHandlers={{
+                    mousedown: stopMarkerPress,
+                    click: (event) => {
+                      L.DomEvent.stop(event.originalEvent);
+                      setPendingClickLabel(identifier);
+                      onAddWaypoint(
+                        lat,
+                        lon,
+                        identifier,
+                        formatWaypointFrequencies(feature.frequencies),
+                        buildWaypointContext(buildLayerInfo(lat, lon))
+                      );
+                    },
+                  }}
+                />
+              );
+            })}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={classEVisible} name="E">
+          <FeatureGroup>
+            {airspaceCollections.classE.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-class-e-${airspaceCollections.classE.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.classE as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={classFVisible} name="F">
+          <FeatureGroup>
+            {airspaceCollections.classF.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-class-f-${airspaceCollections.classF.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.classF as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={classGVisible} name="G">
+          <FeatureGroup>
+            {airspaceCollections.classG.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-class-g-${airspaceCollections.classG.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.classG as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={militaryAreasVisible} name="Military Operations Areas">
+          <FeatureGroup>
+            {airspaceCollections.military.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-military-${airspaceCollections.military.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.military as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={trainingAreasVisible} name="Training Areas">
+          <FeatureGroup>
+            {airspaceCollections.training.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-training-${airspaceCollections.training.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.training as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={glidingSectorsVisible} name="Gliding Sectors">
+          <FeatureGroup>
+            {airspaceCollections.gliding.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-gliding-${airspaceCollections.gliding.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.gliding as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={hangGlidingVisible} name="Hang Glidings">
+          <FeatureGroup>
+            {airspaceCollections.hangGliding.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-hang-${airspaceCollections.hangGliding.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.hangGliding as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={airspacesVisible} name="OpenAIP Airspaces">
+          <FeatureGroup>
+            {airspaceCollections.general.features.length > 0 && (
+              <GeoJSON
+                key={`airspace-general-${airspaceCollections.general.features.length}-${onlyActiveAirspace}`}
+                data={airspaceCollections.general as any}
+                style={airspaceStyle as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay checked={obstaclesVisible} name="OpenAIP Obstacles">
+          <FeatureGroup>
+            {mapZoom >= 11 && obstacleGeoJson.features.length > 0 && (
+              <GeoJSON
+                key={`obstacles-${obstacleGeoJson.features.length}-${obstaclesVisible}-${mapZoom}`}
+                data={obstacleGeoJson as any}
+                pointToLayer={obstaclePointToLayer as any}
+                onEachFeature={(feature, layer) => {
+                  const props = feature.properties as any;
+                  layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Obstacle'}</div>`);
+                }}
+              />
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
       </LayersControl>
 
-      <MapEvents onAddWaypoint={handleMapClick} />
+      <LayerStateSync
+        onBaseLayerChange={setSelectedBaseLayer}
+        onOverlayChange={(name, active) => {
+          if (name === 'OpenAIP Master Chart') setMasterVisible(active);
+          if (name === 'OpenAIP Airports') setAirportsVisible(active);
+          if (name === 'OpenAIP Navaids') setNavaidsVisible(active);
+          if (name === 'OpenAIP Reporting Points') setReportingVisible(active);
+          if (name === 'OpenAIP Airspaces') setAirspacesVisible(active);
+          if (name === 'E') setClassEVisible(active);
+          if (name === 'F') setClassFVisible(active);
+          if (name === 'G') setClassGVisible(active);
+          if (name === 'Military Operations Areas') setMilitaryAreasVisible(active);
+          if (name === 'Training Areas') setTrainingAreasVisible(active);
+          if (name === 'Gliding Sectors') setGlidingSectorsVisible(active);
+          if (name === 'Hang Glidings') setHangGlidingVisible(active);
+          if (name === 'OpenAIP Obstacles') setObstaclesVisible(active);
+        }}
+      />
+
+      <MapEvents onShortPress={handleMapClick} onLongPress={handleLongPress} />
+      <MapZoomState onZoomChange={setMapZoom} />
       <VisiblePointLoader
         onFeaturesLoaded={setViewportFeatures}
+      />
+      <VisibleAirspaceLoader
+        enabled={
+          airspacesVisible ||
+          classEVisible ||
+          classFVisible ||
+          classGVisible ||
+          militaryAreasVisible ||
+          trainingAreasVisible ||
+          glidingSectorsVisible ||
+          hangGlidingVisible
+        }
+        onFeaturesLoaded={setAirspaceFeatures}
+      />
+      <VisibleObstacleLoader
+        enabled={obstaclesVisible}
+        onFeaturesLoaded={setObstacleFeatures}
       />
       <SearchControl
         onAddWaypoint={onAddWaypoint}
@@ -409,51 +1516,55 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
         }}
       />
 
-      <div
-        ref={layersRef}
-        className="absolute bottom-4 left-4 z-[1000] w-[290px] rounded-xl border bg-background/95 p-3 shadow-xl backdrop-blur pointer-events-auto"
-        onPointerDownCapture={stopPropagation}
-        onMouseDownCapture={stopPropagation}
-        onClickCapture={stopPropagation}
-        onDoubleClickCapture={stopPropagation}
-        onWheelCapture={stopPropagation}
-      >
-        <div className="mb-3 flex items-center gap-2">
-          <Layers3 className="h-4 w-4 text-primary" />
-          <p className="text-[10px] font-black uppercase tracking-widest">Map Layers</p>
-        </div>
-        <div className="space-y-2 text-xs font-semibold">
-          <Button variant={masterVisible ? 'default' : 'outline'} className="h-8 w-full justify-start text-[11px] font-black uppercase" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
-            blockMapInteraction(event);
-            setMasterVisible((v) => !v);
-          }}>
-            OpenAIP Master Chart
-          </Button>
-          <Button variant={airportsVisible ? 'default' : 'outline'} className="h-8 w-full justify-start text-[11px] font-black uppercase" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
-            blockMapInteraction(event);
-            setAirportsVisible((v) => !v);
-          }}>
-            Airports Markers
-          </Button>
-          <Button variant={navaidsVisible ? 'default' : 'outline'} className="h-8 w-full justify-start text-[11px] font-black uppercase" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
-            blockMapInteraction(event);
-            setNavaidsVisible((v) => !v);
-          }}>
-            Navaids Markers
-          </Button>
-          <Button variant={reportingVisible ? 'default' : 'outline'} className="h-8 w-full justify-start text-[11px] font-black uppercase" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
-            blockMapInteraction(event);
-            setReportingVisible((v) => !v);
-          }}>
-            Reporting Points Markers
-          </Button>
-        </div>
-      </div>
-
       {pendingClickLabel && (
         <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border bg-background/95 px-3 py-2 text-[10px] font-black uppercase tracking-widest shadow-xl backdrop-blur">
           Last click: {pendingClickLabel}
         </div>
+      )}
+
+      {layerInfo && (
+        <Popup
+          position={[layerInfo.lat, layerInfo.lon]}
+          eventHandlers={{
+            remove: () => setLayerInfo(null),
+          }}
+        >
+          <div className="space-y-3 text-xs">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Layer Information</p>
+              <p className="font-black uppercase">{layerInfo.title}</p>
+              {layerInfo.subtitle && (
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">{layerInfo.subtitle}</p>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                {layerInfo.lat.toFixed(4)}, {layerInfo.lon.toFixed(4)}
+              </p>
+            </div>
+
+            {layerInfo.items.length > 0 ? (
+              <div className="space-y-2">
+                {layerInfo.items.map((item) => (
+                  <div key={`${item.layer}-${item.label}-${item.distanceNm?.toFixed(2)}`} className="rounded-md border bg-muted/30 px-2 py-1">
+                    <p className="font-black uppercase">{item.label}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {item.layer}
+                      {typeof item.distanceNm === 'number' ? ` • ${item.distanceNm.toFixed(1)} NM` : ''}
+                    </p>
+                    {item.detail && (
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{item.detail}</p>
+                    )}
+                    {item.frequencies && (
+                      <p className="text-[10px] text-muted-foreground">{item.frequencies}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">No nearby cached feature found.</p>
+            )}
+
+          </div>
+        </Popup>
       )}
 
       {polylinePositions.length > 1 && (

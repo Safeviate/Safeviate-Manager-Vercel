@@ -11,6 +11,7 @@ type BookingDetailHeaderProps = {
   title: string;
   subtitle: string;
   status?: string | null;
+  details?: ReactNode;
   flightHours?: string | null;
   activeTab: string;
   onTabChange: (value: string) => void;
@@ -21,6 +22,7 @@ export function BookingDetailHeader({
   title,
   subtitle,
   status,
+  details,
   flightHours,
   activeTab,
   onTabChange,
@@ -31,13 +33,13 @@ export function BookingDetailHeader({
   return (
     <>
       {/* Primary Header Section (White background like Bookings History) */}
-      <div className="border-b px-4 md:px-6 py-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
+      <div className="border-b px-4 md:px-6 py-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-0.5">
             <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">
               {title}
             </h1>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               {status ? (
                 <Badge variant={status === 'Approved' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
                   {status}
@@ -58,6 +60,7 @@ export function BookingDetailHeader({
             </div>
           ) : null}
         </div>
+        {details ? <div className="mt-2">{details}</div> : null}
       </div>
 
       {/* Navigation Sub-header (Muted background strip like Filter pins) */}

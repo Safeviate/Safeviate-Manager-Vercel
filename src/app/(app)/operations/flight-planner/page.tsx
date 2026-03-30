@@ -42,8 +42,8 @@ export default function FlightPlannerPage() {
     [arrivalLegId, legs]
   );
 
-  const handleAddWaypoint = (lat: number, lon: number, identifier = 'WP') => {
-    setLegs((current) => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier)]);
+  const handleAddWaypoint = (lat: number, lon: number, identifier = 'WP', frequencies?: string, layerInfo?: string) => {
+    setLegs((current) => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
   };
 
   const handleSetDeparture = (legId: string) => {
@@ -199,6 +199,16 @@ export default function FlightPlannerPage() {
                             <p className="text-[9px] font-mono font-bold text-muted-foreground">
                               {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
                             </p>
+                            {leg.frequencies && (
+                              <p className="text-[9px] font-semibold text-emerald-700">
+                                {leg.frequencies}
+                              </p>
+                            )}
+                            {leg.layerInfo && (
+                              <p className="text-[9px] font-semibold text-primary">
+                                {leg.layerInfo}
+                              </p>
+                            )}
                             <div className="flex flex-wrap gap-1">
                               {departureLegId === leg.id && (
                                 <Badge variant="secondary" className="text-[9px] font-black uppercase">

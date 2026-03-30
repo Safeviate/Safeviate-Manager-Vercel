@@ -21,8 +21,17 @@ export async function GET(request: NextRequest) {
   query.set('apiKey', apiKey);
 
   try {
-    const response = await fetch(`${BASE_URL}/${resource}?${query.toString()}`);
-    const data = await response.json();
+    const response = await fetch(`${BASE_URL}/${resource}?${query.toString()}`, {
+      headers: {
+        'x-openaip-api-key': apiKey,
+      },
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+    const data = contentType.includes('application/json')
+      ? await response.json()
+      : await response.text();
+
     return NextResponse.json(data, { status: response.status });
   } catch (error: any) {
     return NextResponse.json({ error: 'OpenAIP proxy failed', details: error?.message || 'Unknown error' }, { status: 500 });

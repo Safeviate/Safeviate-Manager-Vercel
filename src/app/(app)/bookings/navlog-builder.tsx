@@ -93,6 +93,16 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
                                         <span className="text-[9px] font-mono font-bold text-muted-foreground">
                                             {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
                                         </span>
+                                        {leg.frequencies && (
+                                            <span className="text-[9px] font-semibold text-emerald-700">
+                                                {leg.frequencies}
+                                            </span>
+                                        )}
+                                        {leg.layerInfo && (
+                                            <span className="text-[9px] font-semibold text-primary">
+                                                {leg.layerInfo}
+                                            </span>
+                                        )}
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-center">

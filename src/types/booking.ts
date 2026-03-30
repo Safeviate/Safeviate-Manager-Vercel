@@ -62,6 +62,7 @@ export interface NavlogLeg {
     longitude?: number;
     altitude?: number;
     frequencies?: string;
+    layerInfo?: string;
     notes?: string;
     windDirection?: number;
     windSpeed?: number;

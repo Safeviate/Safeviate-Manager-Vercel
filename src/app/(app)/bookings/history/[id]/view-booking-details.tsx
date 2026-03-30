@@ -70,6 +70,22 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
     }
 };
 
+function stripUndefinedDeep<T>(value: T): T {
+    if (Array.isArray(value)) {
+        return value.map((item) => stripUndefinedDeep(item)).filter((item) => item !== undefined) as T;
+    }
+
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, any>)
+                .filter(([, nested]) => nested !== undefined)
+                .map(([key, nested]) => [key, stripUndefinedDeep(nested)])
+        ) as T;
+    }
+
+    return value;
+}
+
 const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, onHide: () => void }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -266,10 +282,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         setIsSaving(true);
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         try {
+            const sanitizedMassAndBalance = stripUndefinedDeep({
+                takeoffWeight: results.weight,
+                takeoffCg: results.cg,
+                isWithinLimits: results.isSafe,
+                stations
+            });
             await updateDocumentNonBlocking(bookingRef, { 
-                massAndBalance: { takeoffWeight: results.weight, takeoffCg: results.cg, isWithinLimits: results.isSafe, stations },
-                preFlightData: preFlight,
-                postFlightData: postFlight,
+                massAndBalance: sanitizedMassAndBalance,
+                preFlightData: stripUndefinedDeep(preFlight),
+                postFlightData: stripUndefinedDeep(postFlight),
                 preFlight: true,
                 postFlight: postFlight.hobbs > 0
             });
@@ -281,8 +303,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP') => {
-        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier)]);
+    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
     };
 
     const handleCommitRoute = async () => {
@@ -292,14 +314,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         
         try {
+            const sanitizedLegs = stripUndefinedDeep(plannedLegs);
             await updateDocumentNonBlocking(bookingRef, {
-                'navlog.legs': plannedLegs,
+                'navlog.legs': sanitizedLegs,
                 'navlog.departureIcao': depIcao,
                 'navlog.arrivalIcao': arrIcao,
-                'navlog.departureLatitude': parseFloat(depLat),
-                'navlog.departureLongitude': parseFloat(depLon),
-                'navlog.arrivalLatitude': parseFloat(arrLat),
-                'navlog.arrivalLongitude': parseFloat(arrLon)
+                'navlog.departureLatitude': depLat ? parseFloat(depLat) : null,
+                'navlog.departureLongitude': depLon ? parseFloat(depLon) : null,
+                'navlog.arrivalLatitude': arrLat ? parseFloat(arrLat) : null,
+                'navlog.arrivalLongitude': arrLon ? parseFloat(arrLon) : null
             });
             toast({ title: "Route Committed", description: "The navigation log and airport details have been updated." });
         } catch (e: any) {
@@ -347,6 +370,40 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     title={booking.type}
                     subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId}`}
                     status={booking.status}
+                    details={
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 xl:grid-cols-7">
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                                <Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'} className="mt-1 h-5 px-2 text-[9px] font-black uppercase">
+                                    {booking.status}
+                                </Badge>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{aircraft ? aircraft.tailNumber : booking.aircraftId}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Date</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.start, 'PPP')}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Start Time</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.start, 'p')}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">End Time</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.end, 'p')}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Instructor</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{instructorLabel}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Student</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{studentLabel}</p>
+                            </div>
+                        </div>
+                    }
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     tabRowAction={
@@ -384,63 +441,54 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-                            <ScrollArea className="min-h-0 flex-1">
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 pb-20">
-                                    <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
-                                    <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
-                                    <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                                    <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
-                                    <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
-                                    <DetailItem label="Instructor" value={instructorLabel} />
-                                    <DetailItem label="Student" value={studentLabel} />
-                                    <div className="md:col-span-2 lg:col-span-3">
-                                        <p className="text-sm text-muted-foreground">Notes</p>
-                                        <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
-                                    </div>
+                        <ScrollArea className="min-h-0 flex-1">
+                            <CardContent className="pt-6 pb-20 space-y-6">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Notes</p>
+                                    <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
+                                </div>
 
-                                    {/* Planning Inputs in Details Tab */}
-                                    <div className="md:col-span-2 lg:col-span-3 pt-6 border-t mt-4 space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-4">
-                                                <div className="space-y-1.5">
-                                                    <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Departure ICAO</UILabel>
-                                                    <div className="flex gap-2">
-                                                        <Input value={depIcao} onChange={(e) => setDepIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
-                                                        <Button variant="outline" className="h-10 px-3 font-black text-[10px] uppercase gap-2 shrink-0" onClick={() => lookupAirport(depIcao, 'dep')} disabled={isLookingUpDep}>
-                                                            {isLookingUpDep ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radio className="h-3 w-3" />} Lookup
-                                                        </Button>
-                                                    </div>
+                                {/* Planning Inputs in Details Tab */}
+                                <div className="pt-6 border-t space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Departure ICAO</UILabel>
+                                                <div className="flex gap-2">
+                                                    <Input value={depIcao} onChange={(e) => setDepIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
+                                                    <Button variant="outline" className="h-10 px-3 font-black text-[10px] uppercase gap-2 shrink-0" onClick={() => lookupAirport(depIcao, 'dep')} disabled={isLookingUpDep}>
+                                                        {isLookingUpDep ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radio className="h-3 w-3" />} Lookup
+                                                    </Button>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <Input value={depLat} onChange={(e) => setDepLat(e.target.value)} placeholder="Lat" className="h-10 text-xs font-bold" />
-                                                    <Input value={depLon} onChange={(e) => setDepLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
-                                                </div>
-                                                {showDepWeather && <WeatherCard title="Departure Weather" icao={depIcao} onHide={() => setShowDepWeather(false)} />}
-                                                {!showDepWeather && <Button variant="ghost" size="sm" onClick={() => setShowDepWeather(true)} className="text-[10px] font-black uppercase">Show Departure Weather</Button>}
                                             </div>
-                                            <div className="space-y-4">
-                                                <div className="space-y-1.5">
-                                                    <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Arrival ICAO</UILabel>
-                                                    <div className="flex gap-2">
-                                                        <Input value={arrIcao} onChange={(e) => setArrIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
-                                                        <Button variant="outline" className="h-10 px-3 font-black text-[10px] uppercase gap-2 shrink-0" onClick={() => lookupAirport(arrIcao, 'arr')} disabled={isLookingUpArr}>
-                                                            {isLookingUpArr ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radio className="h-3.5 w-3.5" />} Lookup
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <Input value={arrLat} onChange={(e) => setArrLat(e.target.value)} placeholder="Lat" className="h-10 text-xs font-bold" />
-                                                    <Input value={arrLon} onChange={(e) => setArrLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
-                                                </div>
-                                                {showArrWeather && <WeatherCard title="Arrival Weather" icao={arrIcao} onHide={() => setShowArrWeather(false)} />}
-                                                {!showArrWeather && <Button variant="ghost" size="sm" onClick={() => setShowArrWeather(true)} className="text-[10px] font-black uppercase">Show Arrival Weather</Button>}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Input value={depLat} onChange={(e) => setDepLat(e.target.value)} placeholder="Lat" className="h-10 text-xs font-bold" />
+                                                <Input value={depLon} onChange={(e) => setDepLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
                                             </div>
+                                            {showDepWeather && <WeatherCard title="Departure Weather" icao={depIcao} onHide={() => setShowDepWeather(false)} />}
+                                            {!showDepWeather && <Button variant="ghost" size="sm" onClick={() => setShowDepWeather(true)} className="text-[10px] font-black uppercase">Show Departure Weather</Button>}
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Arrival ICAO</UILabel>
+                                                <div className="flex gap-2">
+                                                    <Input value={arrIcao} onChange={(e) => setArrIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
+                                                    <Button variant="outline" className="h-10 px-3 font-black text-[10px] uppercase gap-2 shrink-0" onClick={() => lookupAirport(arrIcao, 'arr')} disabled={isLookingUpArr}>
+                                                        {isLookingUpArr ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radio className="h-3.5 w-3.5" />} Lookup
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Input value={arrLat} onChange={(e) => setArrLat(e.target.value)} placeholder="Lat" className="h-10 text-xs font-bold" />
+                                                <Input value={arrLon} onChange={(e) => setArrLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
+                                            </div>
+                                            {showArrWeather && <WeatherCard title="Arrival Weather" icao={arrIcao} onHide={() => setShowArrWeather(false)} />}
+                                            {!showArrWeather && <Button variant="ghost" size="sm" onClick={() => setShowArrWeather(true)} className="text-[10px] font-black uppercase">Show Arrival Weather</Button>}
                                         </div>
                                     </div>
-                                </CardContent>
-                            </ScrollArea>
-                        </div>
+                                </div>
+                            </CardContent>
+                        </ScrollArea>
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
@@ -465,11 +513,21 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     {plannedLegs.map((leg, i) => (
                                                         <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
                                                             <div className="flex-1 min-w-0">
-                                                                <div className="flex justify-between items-center">
-                                                                    <span className="font-black text-[11px] uppercase truncate">{leg.waypoint}</span>
-                                                                    <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="flex gap-3 mt-1">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-black text-[11px] uppercase truncate">{leg.waypoint}</span>
+                                                        <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+                                                    </div>
+                            {leg.frequencies && (
+                                <p className="mt-1 text-[9px] font-semibold text-emerald-700">
+                                    {leg.frequencies}
+                                </p>
+                            )}
+                            {leg.layerInfo && (
+                                <p className="text-[9px] font-semibold text-primary">
+                                    {leg.layerInfo}
+                                </p>
+                            )}
+                                                    <div className="flex gap-3 mt-1">
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
                                                                         <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>

@@ -92,6 +92,22 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
     }
 };
 
+function stripUndefinedDeep<T>(value: T): T {
+    if (Array.isArray(value)) {
+        return value.map((item) => stripUndefinedDeep(item)).filter((item) => item !== undefined) as T;
+    }
+
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, any>)
+                .filter(([, nested]) => nested !== undefined)
+                .map(([key, nested]) => [key, stripUndefinedDeep(nested)])
+        ) as T;
+    }
+
+    return value;
+}
+
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const firestore = useFirestore();
     const isMobile = useIsMobile();
@@ -169,12 +185,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const handleSaveToBooking = () => {
         if (!firestore || !tenantId) return;
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        updateDocumentNonBlocking(bookingRef, { massAndBalance: { takeoffWeight: results.weight, takeoffCg: results.cg, isWithinLimits: results.isSafe, stations } });
+        updateDocumentNonBlocking(bookingRef, { massAndBalance: stripUndefinedDeep({ takeoffWeight: results.weight, takeoffCg: results.cg, isWithinLimits: results.isSafe, stations }) });
         toast({ title: 'M&B Saved' });
     };
 
-    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP') => {
-        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier)]);
+    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
     };
 
     const handleSetDeparture = (leg: NavlogLeg) => {
@@ -200,14 +216,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         
         try {
+            const sanitizedLegs = stripUndefinedDeep(plannedLegs);
             await updateDocumentNonBlocking(bookingRef, {
-                'navlog.legs': plannedLegs,
+                'navlog.legs': sanitizedLegs,
                 'navlog.departureIcao': depIcao,
                 'navlog.arrivalIcao': arrIcao,
-                'navlog.departureLatitude': parseFloat(depLat),
-                'navlog.departureLongitude': parseFloat(depLon),
-                'navlog.arrivalLatitude': parseFloat(arrLat),
-                'navlog.arrivalLongitude': parseFloat(arrLon)
+                'navlog.departureLatitude': depLat ? parseFloat(depLat) : null,
+                'navlog.departureLongitude': depLon ? parseFloat(depLon) : null,
+                'navlog.arrivalLatitude': arrLat ? parseFloat(arrLat) : null,
+                'navlog.arrivalLongitude': arrLon ? parseFloat(arrLon) : null
             });
             toast({ title: "Route Committed", description: "The navigation log has been updated." });
             setIsPlannerOpen(false);
@@ -237,6 +254,32 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     title={booking.type}
                     subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId}`}
                     status={booking.status}
+                    details={
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 xl:grid-cols-5">
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                                <Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'} className="mt-1 h-5 px-2 text-[9px] font-black uppercase">
+                                    {booking.status}
+                                </Badge>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{aircraft ? aircraft.tailNumber : booking.aircraftId}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Date</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.start, 'PPP')}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Start Time</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.start, 'p')}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">End Time</p>
+                                <p className="truncate text-[10px] font-semibold text-foreground">{formatDateSafe(booking.end, 'p')}</p>
+                            </div>
+                        </div>
+                    }
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     tabRowAction={
@@ -254,17 +297,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-                            <ScrollArea className="min-h-0 flex-1">
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                                    <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
-                                    <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
-                                    <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
-                                    <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
-                                    <DetailItem label="End Time" value={formatDateSafe(booking.end, 'p')} />
-                                </CardContent>
-                            </ScrollArea>
-                        </div>
+                        <ScrollArea className="min-h-0 flex-1">
+                            <CardContent className="pt-6">
+                                <p className="text-sm text-muted-foreground">
+                                    Flight details are summarized in the header.
+                                </p>
+                            </CardContent>
+                        </ScrollArea>
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
@@ -488,11 +527,21 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     {plannedLegs.map((leg, i) => (
                                         <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-black text-[11px] uppercase truncate">{leg.waypoint}</span>
-                                                    <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
-                                                </div>
-                                                <div className="flex gap-3 mt-1">
+      <div className="flex justify-between items-center">
+          <span className="font-black text-[11px] uppercase truncate">{leg.waypoint}</span>
+          <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+      </div>
+         {leg.frequencies && (
+             <p className="mt-1 text-[9px] font-semibold text-emerald-700">
+                 {leg.frequencies}
+             </p>
+         )}
+         {leg.layerInfo && (
+             <p className="mt-1 text-[9px] font-semibold text-primary">
+                 {leg.layerInfo}
+             </p>
+         )}
+         <div className="flex gap-3 mt-1">
                                                     <div className="flex flex-col">
                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
                                                         <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>
