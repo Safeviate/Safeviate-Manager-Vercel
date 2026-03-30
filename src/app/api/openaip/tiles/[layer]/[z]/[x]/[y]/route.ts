@@ -11,8 +11,8 @@ type Params = {
   };
 };
 
-export async function GET(_request: NextRequest, context: Params) {
-  const { layer, z, x, y } = context.params;
+export async function GET(_request: NextRequest, context: { params: Promise<Params['params']> }) {
+  const { layer, z, x, y } = await context.params;
   const apiKey = process.env.OPENAIP_API_KEY || FALLBACK_OPENAIP_KEY;
 
   if (!apiKey) {
@@ -21,7 +21,10 @@ export async function GET(_request: NextRequest, context: Params) {
 
   // All OpenAIP tiles are served from the same endpoint structure.
   // The 'layer' parameter directly maps to the path on the tile server.
-  const upstreamUrl = `https://a.api.tiles.openaip.net/api/data/${layer}/${z}/${x}/${y}.png?apiKey=${apiKey}`;
+  const subdomains = ['a', 'b', 'c'];
+  const subdomainIndex = (Number(z) + Number(x) + Number(y)) % subdomains.length;
+  const subdomain = subdomains[subdomainIndex];
+  const upstreamUrl = `https://${subdomain}.api.tiles.openaip.net/api/data/${layer}/${z}/${x}/${y}.png?apiKey=${apiKey}`;
 
   try {
     const response = await fetch(upstreamUrl, {

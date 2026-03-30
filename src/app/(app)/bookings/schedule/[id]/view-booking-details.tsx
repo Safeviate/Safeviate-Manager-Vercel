@@ -27,7 +27,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
-import { calculateWindTriangle, getDistance, getBearing, getMagneticVariation, calculateEte, calculateFuelRequired } from '@/lib/e6b';
+import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -117,6 +117,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
+    const [departureLegId, setDepartureLegId] = useState<string | null>(booking.navlog?.legs?.[0]?.id || null);
+    const [arrivalLegId, setArrivalLegId] = useState<string | null>(booking.navlog?.legs?.[booking.navlog?.legs.length ? booking.navlog.legs.length - 1 : 0]?.id || null);
+    const [depIcao, setDepIcao] = useState(booking.navlog?.departureIcao || '');
+    const [arrIcao, setArrIcao] = useState(booking.navlog?.arrivalIcao || '');
+    const [depLat, setDepLat] = useState(booking.navlog?.departureLatitude?.toString() || '');
+    const [depLon, setDepLon] = useState(booking.navlog?.departureLongitude?.toString() || '');
+    const [arrLat, setArrLat] = useState(booking.navlog?.arrivalLatitude?.toString() || '');
+    const [arrLon, setArrLon] = useState(booking.navlog?.arrivalLongitude?.toString() || '');
 
     useEffect(() => {
         if (aircraft) {
@@ -165,42 +173,23 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP') => {
-        const lastLeg = plannedLegs[plannedLegs.length - 1];
-        let distance = 0;
-        let trueCourse = 0;
-        let magneticHeading = 0;
-        let variation = getMagneticVariation(lat, lon);
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier)]);
+    };
 
-        if (lastLeg) {
-            const start = { lat: lastLeg.latitude!, lon: lastLeg.longitude! };
-            const end = { lat, lon };
-            distance = getDistance(start, end);
-            trueCourse = getBearing(start, end);
-            
-            const triangle = calculateWindTriangle({
-                trueCourse,
-                trueAirspeed: 100,
-                windDirection: 0,
-                windSpeed: 0
-            });
-            magneticHeading = (triangle.heading - variation + 360) % 360;
-        }
+    const handleSetDeparture = (leg: NavlogLeg) => {
+        setDepartureLegId(leg.id);
+        setArrivalLegId((current) => (current === leg.id ? null : current));
+        setDepIcao(leg.waypoint);
+        setDepLat(leg.latitude?.toString() || '');
+        setDepLon(leg.longitude?.toString() || '');
+    };
 
-        const newLeg: NavlogLeg = {
-            id: uuidv4(),
-            waypoint: `${identifier}-${plannedLegs.length + 1}`,
-            latitude: lat,
-            longitude: lon,
-            distance,
-            trueCourse,
-            magneticHeading,
-            variation,
-            altitude: 3500,
-            ete: lastLeg ? calculateEte(distance, 100) : 0,
-            tripFuel: lastLeg ? calculateFuelRequired(calculateEte(distance, 100), 8.5) : 0
-        };
-
-        setPlannedLegs([...plannedLegs, newLeg]);
+    const handleSetArrival = (leg: NavlogLeg) => {
+        setArrivalLegId(leg.id);
+        setDepartureLegId((current) => (current === leg.id ? null : current));
+        setArrIcao(leg.waypoint);
+        setArrLat(leg.latitude?.toString() || '');
+        setArrLon(leg.longitude?.toString() || '');
     };
 
     const handleCommitRoute = async () => {
@@ -211,7 +200,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         
         try {
             await updateDocumentNonBlocking(bookingRef, {
-                'navlog.legs': plannedLegs
+                'navlog.legs': plannedLegs,
+                'navlog.departureIcao': depIcao,
+                'navlog.arrivalIcao': arrIcao,
+                'navlog.departureLatitude': parseFloat(depLat),
+                'navlog.departureLongitude': parseFloat(depLon),
+                'navlog.arrivalLatitude': parseFloat(arrLat),
+                'navlog.arrivalLongitude': parseFloat(arrLon)
             });
             toast({ title: "Route Committed", description: "The navigation log has been updated." });
         } catch (e: any) {

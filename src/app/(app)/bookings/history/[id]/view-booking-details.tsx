@@ -28,7 +28,7 @@ import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { v4 as uuidv4 } from 'uuid';
-import { calculateWindTriangle, getDistance, getBearing, getMagneticVariation, calculateEte, calculateFuelRequired } from '@/lib/e6b';
+import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -282,42 +282,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP') => {
-        const lastLeg = plannedLegs[plannedLegs.length - 1];
-        let distance = 0;
-        let trueCourse = 0;
-        let magneticHeading = 0;
-        let variation = getMagneticVariation(lat, lon);
-
-        if (lastLeg) {
-            const start = { lat: lastLeg.latitude!, lon: lastLeg.longitude! };
-            const end = { lat, lon };
-            distance = getDistance(start, end);
-            trueCourse = getBearing(start, end);
-            
-            const triangle = calculateWindTriangle({
-                trueCourse,
-                trueAirspeed: 100,
-                windDirection: 0,
-                windSpeed: 0
-            });
-            magneticHeading = (triangle.heading - variation + 360) % 360;
-        }
-
-        const newLeg: NavlogLeg = {
-            id: uuidv4(),
-            waypoint: `${identifier}-${plannedLegs.length + 1}`,
-            latitude: lat,
-            longitude: lon,
-            distance,
-            trueCourse,
-            magneticHeading,
-            variation,
-            altitude: 3500,
-            ete: lastLeg ? calculateEte(distance, 100) : 0,
-            tripFuel: lastLeg ? calculateFuelRequired(calculateEte(distance, 100), 8.5) : 0
-        };
-
-        setPlannedLegs([...plannedLegs, newLeg]);
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier)]);
     };
 
     const handleCommitRoute = async () => {

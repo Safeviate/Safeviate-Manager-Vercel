@@ -27,7 +27,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
-import { calculateWindTriangle, getDistance, getBearing, getMagneticVariation, calculateEte, calculateFuelRequired } from '@/lib/e6b';
+import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -118,6 +118,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
+    const [departureLegId, setDepartureLegId] = useState<string | null>(booking.navlog?.legs?.[0]?.id || null);
+    const [arrivalLegId, setArrivalLegId] = useState<string | null>(booking.navlog?.legs?.[booking.navlog?.legs.length ? booking.navlog.legs.length - 1 : 0]?.id || null);
+    const [depIcao, setDepIcao] = useState(booking.navlog?.departureIcao || '');
+    const [arrIcao, setArrIcao] = useState(booking.navlog?.arrivalIcao || '');
+    const [depLat, setDepLat] = useState(booking.navlog?.departureLatitude?.toString() || '');
+    const [depLon, setDepLon] = useState(booking.navlog?.departureLongitude?.toString() || '');
+    const [arrLat, setArrLat] = useState(booking.navlog?.arrivalLatitude?.toString() || '');
+    const [arrLon, setArrLon] = useState(booking.navlog?.arrivalLongitude?.toString() || '');
 
     useEffect(() => {
         if (aircraft) {
@@ -166,42 +174,23 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP') => {
-        const lastLeg = plannedLegs[plannedLegs.length - 1];
-        let distance = 0;
-        let trueCourse = 0;
-        let magneticHeading = 0;
-        let variation = getMagneticVariation(lat, lon);
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier)]);
+    };
 
-        if (lastLeg) {
-            const start = { lat: lastLeg.latitude!, lon: lastLeg.longitude! };
-            const end = { lat, lon };
-            distance = getDistance(start, end);
-            trueCourse = getBearing(start, end);
-            
-            const triangle = calculateWindTriangle({
-                trueCourse,
-                trueAirspeed: 100,
-                windDirection: 0,
-                windSpeed: 0
-            });
-            magneticHeading = (triangle.heading - variation + 360) % 360;
-        }
+    const handleSetDeparture = (leg: NavlogLeg) => {
+        setDepartureLegId(leg.id);
+        setArrivalLegId((current) => (current === leg.id ? null : current));
+        setDepIcao(leg.waypoint);
+        setDepLat(leg.latitude?.toString() || '');
+        setDepLon(leg.longitude?.toString() || '');
+    };
 
-        const newLeg: NavlogLeg = {
-            id: uuidv4(),
-            waypoint: `${identifier}-${plannedLegs.length + 1}`,
-            latitude: lat,
-            longitude: lon,
-            distance,
-            trueCourse,
-            magneticHeading,
-            variation,
-            altitude: 3500,
-            ete: lastLeg ? calculateEte(distance, 100) : 0,
-            tripFuel: lastLeg ? calculateFuelRequired(calculateEte(distance, 100), 8.5) : 0
-        };
-
-        setPlannedLegs([...plannedLegs, newLeg]);
+    const handleSetArrival = (leg: NavlogLeg) => {
+        setArrivalLegId(leg.id);
+        setDepartureLegId((current) => (current === leg.id ? null : current));
+        setArrIcao(leg.waypoint);
+        setArrLat(leg.latitude?.toString() || '');
+        setArrLon(leg.longitude?.toString() || '');
     };
 
     const handleCommitRoute = async () => {
@@ -212,7 +201,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         
         try {
             await updateDocumentNonBlocking(bookingRef, {
-                'navlog.legs': plannedLegs
+                'navlog.legs': plannedLegs,
+                'navlog.departureIcao': depIcao,
+                'navlog.arrivalIcao': arrIcao,
+                'navlog.departureLatitude': parseFloat(depLat),
+                'navlog.departureLongitude': parseFloat(depLon),
+                'navlog.arrivalLatitude': parseFloat(arrLat),
+                'navlog.arrivalLongitude': parseFloat(arrLon)
             });
             toast({ title: "Route Committed", description: "The navigation log has been updated." });
             setIsPlannerOpen(false);
@@ -284,9 +279,22 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         <CardHeader className="p-4 border-b">
                                             <div className="flex items-center justify-between">
                                                 <CardTitle className="text-xs font-black uppercase tracking-widest">Route Summary</CardTitle>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPlannedLegs([])}>
-                                                    <RotateCcw className="h-3 w-3" />
-                                                </Button>
+                                                <div className="flex items-center gap-1">
+                                                    <Badge variant="secondary" className="text-[9px] font-black uppercase">{plannedLegs.length} WP</Badge>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPlannedLegs([])}>
+                                                        <RotateCcw className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-2 gap-2 text-[9px] font-black uppercase">
+                                                <div className="rounded-lg border bg-muted/20 px-2 py-1.5">
+                                                    <div className="text-muted-foreground">Departure</div>
+                                                    <div className="truncate">{depIcao || 'Not set'}</div>
+                                                </div>
+                                                <div className="rounded-lg border bg-muted/20 px-2 py-1.5 text-right">
+                                                    <div className="text-muted-foreground">Arrival</div>
+                                                    <div className="truncate">{arrIcao || 'Not set'}</div>
+                                                </div>
                                             </div>
                                         </CardHeader>
                                         <ScrollArea className="h-[300px]">
@@ -298,9 +306,21 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                             <p className="text-[10px] font-bold truncate">{leg.waypoint}</p>
                                                             <p className="text-[8px] text-muted-foreground uppercase font-black">{leg.distance?.toFixed(1)} NM @ {leg.magneticHeading?.toFixed(0)}°</p>
                                                         </div>
-                                                        <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100" onClick={() => setPlannedLegs(plannedLegs.filter(l => l.id !== leg.id))}>
-                                                            <Trash2 className="h-3 w-3 text-destructive" />
-                                                        </Button>
+                                                        <div className="flex items-center gap-1">
+                                                            <Button variant={departureLegId === leg.id ? 'default' : 'outline'} size="sm" className="h-6 px-2 text-[9px] font-black uppercase" onClick={() => handleSetDeparture(leg)}>
+                                                                Dep
+                                                            </Button>
+                                                            <Button variant={arrivalLegId === leg.id ? 'default' : 'outline'} size="sm" className="h-6 px-2 text-[9px] font-black uppercase" onClick={() => handleSetArrival(leg)}>
+                                                                Arr
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100" onClick={() => {
+                                                                if (departureLegId === leg.id) setDepartureLegId(null);
+                                                                if (arrivalLegId === leg.id) setArrivalLegId(null);
+                                                                setPlannedLegs(plannedLegs.filter(l => l.id !== leg.id));
+                                                            }}>
+                                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                                 {plannedLegs.length === 0 && <p className="text-[10px] text-center py-8 text-muted-foreground font-bold uppercase italic">No waypoints</p>}
