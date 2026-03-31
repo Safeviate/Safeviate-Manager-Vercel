@@ -122,6 +122,13 @@ const formatAirportRunways = (runways?: OpenAipFeature['runways']) =>
     .map(formatRunwaySummary)
     .filter(Boolean)
     .join(' • ');
+
+const getSearchZoom = (sourceLayer: OpenAipFeature['sourceLayer']) => {
+  if (sourceLayer === 'airports') return 15;
+  if (sourceLayer === 'navaids') return 16;
+  return 15;
+};
+
 type OpenAipAirspace = {
   _id: string;
   name: string;
@@ -699,7 +706,7 @@ const SearchControl = ({
     if (item.geometry?.coordinates) {
       const [lon, lat] = item.geometry.coordinates;
       setSelected({ ...item, geometry: { coordinates: [lon, lat] } });
-      map.flyTo([lat, lon], 12);
+      map.flyTo([lat, lon], getSearchZoom(item.sourceLayer));
       setResults([]);
       setQuery('');
     }
@@ -721,6 +728,12 @@ const SearchControl = ({
           placeholder="Search Airport, Navaid, or Point..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && results[0]) {
+              event.preventDefault();
+              handleSelect(results[0]);
+            }
+          }}
           className="pl-9 h-10 shadow-lg"
         />
       </div>

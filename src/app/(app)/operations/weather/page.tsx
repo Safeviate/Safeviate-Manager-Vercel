@@ -4,15 +4,14 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Wind, Thermometer, Eye, Navigation, CloudLightning, Info, ExternalLink } from 'lucide-react';
+import { Search, Wind, Thermometer, Eye, Navigation, Info, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
 import { MainPageHeader } from '@/components/page-header';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { LayoutGrid, Layers, Map as MapIcon, Settings, Lock, MapPin } from 'lucide-react';
+import { Map as MapIcon, Lock } from 'lucide-react';
 
 export default function WeatherPage() {
   const [icao, setIcao] = useState('');
@@ -21,10 +20,6 @@ export default function WeatherPage() {
   const [tafData, setTafData] = useState<any | null>(null);
   const [avwxData, setAvwxData] = useState<any | null>(null);
   const [checkWxData, setCheckWxData] = useState<any | null>(null);
-  const [mapLayer, setMapLayer] = useState<'radar' | 'satellite' | 'wind' | 'clouds' | 'rain' | 'temp' | 'vfr'>('radar');
-  const [mapModel, setMapModel] = useState<'ecmwf' | 'gfs' | 'icon'>('ecmwf');
-  const [showVfrMap, setShowVfrMap] = useState(false);
-  const [showHeliports, setShowHeliports] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   const { toast } = useToast();
@@ -41,27 +36,8 @@ export default function WeatherPage() {
 
   const windyEmbedUrl = useMemo(() => {
     const { lat, lon } = mapCoords;
-    const overlay = mapLayer;
-    const product = mapModel;
-    const vfrParam = showVfrMap ? '&vfr=1' : '';
-    const heliParam = showHeliports ? '&heliport=1' : '';
-
-    return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=1200&height=600&zoom=8&level=surface&overlay=${overlay}&product=${product}&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1${vfrParam}${heliParam}`;
-  }, [mapCoords, mapLayer, mapModel, showVfrMap, showHeliports]);
-
-  const windyAppUrl = useMemo(() => {
-    const { lat, lon } = mapCoords;
-    return `https://www.windy.com/${mapLayer}/${lat}/${lon}?${lat},${lon},8`;
-  }, [mapCoords, mapLayer]);
-
-  const mapLayerOptions = [
-    { value: 'radar', label: 'Radar' },
-    { value: 'satellite', label: 'Satellite' },
-    { value: 'wind', label: 'Wind' },
-    { value: 'clouds', label: 'Clouds' },
-    { value: 'rain', label: 'Rain' },
-    { value: 'temp', label: 'Temperature' },
-  ] as const;
+    return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=1200&height=600&zoom=8&level=surface&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1`;
+  }, [mapCoords]);
 
   const fetchWeather = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,15 +185,6 @@ export default function WeatherPage() {
         />
         <CardContent className="flex-1 overflow-y-auto min-h-0 p-0 no-scrollbar">
           <div className="flex flex-col min-h-0">
-            {!weatherData && !loading && (
-              <div className="p-4 md:p-6">
-                <Card className="border-dashed h-[300px] flex flex-col items-center justify-center p-6 shadow-none bg-muted/10">
-                  <CloudLightning className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                  <p className="text-muted-foreground font-black uppercase tracking-widest text-center text-sm">Enter an ICAO code above to view current conditions.</p>
-                </Card>
-              </div>
-            )}
-
             {loading && (
               <div className="p-4 md:p-6">
                 <div className="space-y-4">
@@ -448,113 +415,29 @@ export default function WeatherPage() {
               )}
 
               <div className="space-y-4 pt-4 border-t border-dashed">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2">
-                        <div className="space-y-1">
-                            <h4 className="text-sm font-black uppercase tracking-wider text-foreground">Live Operations Map</h4>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-foreground">
-                            Interactive weather layers centered on {weatherData?.icaoId ?? tafData?.icaoId ?? 'Requested Station'}
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            {mapLayerOptions.map((option) => (
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2">
+                            <div className="space-y-1">
+                                <h4 className="text-sm font-black uppercase tracking-wider text-foreground">Live Operations Map</h4>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-foreground">
+                                    Interactive weather centered on {weatherData?.icaoId ?? tafData?.icaoId ?? 'Requested Station'}
+                                </p>
+                            </div>
                             <Button
-                                key={option.value}
                                 type="button"
-                                variant={mapLayer === option.value ? 'default' : 'outline'}
+                                variant="outline"
                                 size="sm"
-                                className={cn(
-                                'h-8 text-[10px] font-black uppercase tracking-widest',
-                                mapLayer === option.value && 'bg-primary text-primary-foreground hover:bg-primary'
-                                )}
-                                onClick={() => setMapLayer(option.value as any)}
+                                onClick={() => setIsSyncDialogOpen(true)}
+                                className="h-8 font-black uppercase tracking-widest border-amber-500/50 hover:bg-amber-500 hover:text-black transition-all bg-amber-500/5 text-amber-500 shadow-sm"
                             >
-                                {option.label}
+                                <Lock className="w-4 h-4 mr-2" />
+                                Sync Premium
                             </Button>
-                            ))}
                         </div>
                     </div>
-
-                    {/* Aviation Control Bar Replicated UI */}
-                    <div className="bg-[#3D3D3D] rounded-2xl p-3 flex flex-col gap-3 shadow-2xl border border-[#4D4D4D]">
-                         <div className="flex items-center justify-center gap-4">
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => setMapLayer('radar')}
-                                className={cn("rounded-full w-10 h-10 transition-colors", mapLayer === 'radar' ? "bg-amber-500 text-white" : "text-white/70 hover:text-white hover:bg-white/10")}
-                             >
-                                <CloudLightning className="w-5 h-5" />
-                             </Button>
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => setMapLayer('wind')}
-                                className={cn("rounded-full w-10 h-10 transition-colors", mapLayer === 'wind' ? "bg-amber-500 text-white" : "text-white/70 hover:text-white hover:bg-white/10")}
-                             >
-                                <Wind className="w-5 h-5" />
-                             </Button>
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => setMapLayer('vfr')}
-                                className={cn("rounded-full w-10 h-10 transition-colors", mapLayer === 'vfr' ? "bg-amber-500 text-white" : "text-white/70 hover:text-white hover:bg-white/10")}
-                             >
-                                <Navigation className="w-5 h-5" />
-                             </Button>
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => setIsSyncDialogOpen(true)}
-                                className="rounded-full w-10 h-10 text-white/70 hover:text-white hover:bg-white/10"
-                             >
-                                <Lock className="w-5 h-5" />
-                             </Button>
-                         </div>
-                         
-                         <div className="flex flex-wrap items-center justify-center gap-6 px-4 py-2 border-t border-white/10">
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                                <div 
-                                    className={cn("w-8 h-4 rounded-full relative transition-colors duration-200", showVfrMap ? "bg-amber-500" : "bg-white/20")}
-                                    onClick={() => setShowVfrMap(!showVfrMap)}
-                                >
-                                    <div className={cn("absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-200", showVfrMap ? "translate-x-4" : "")} />
-                                </div>
-                                <span className="text-[10px] font-black uppercase tracking-wider text-white">VFR Airspaces</span>
-                            </label>
-                            
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                                <div 
-                                    className={cn("w-8 h-4 rounded-full relative transition-colors duration-200", showHeliports ? "bg-amber-500" : "bg-white/20")}
-                                    onClick={() => setShowHeliports(!showHeliports)}
-                                >
-                                    <div className={cn("absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-200", showHeliports ? "translate-x-4" : "")} />
-                                </div>
-                                <span className="text-[10px] font-black uppercase tracking-wider text-white">Display heliports</span>
-                            </label>
-                         </div>
-
-                         <div className="grid grid-cols-3 gap-1 bg-white/5 rounded-xl p-1">
-                            {['ecmwf', 'gfs', 'icon'].map((m) => (
-                                <Button
-                                    key={m}
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setMapModel(m as any)}
-                                    className={cn(
-                                        "h-8 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all",
-                                        mapModel === m ? "bg-amber-500 text-white shadow-lg" : "text-white/50 hover:text-white hover:bg-white/5"
-                                    )}
-                                >
-                                    {m.toUpperCase()}
-                                </Button>
-                            ))}
-                         </div>
-                    </div>
-                  </div>
 
                 <div className="w-full">
-                  <Card className="shadow-none border overflow-hidden bg-slate-900 border-slate-700 relative aspect-video flex-1">
+                  <Card className="shadow-none border overflow-hidden bg-slate-900 border-slate-700 relative h-[72dvh] sm:h-[620px] lg:aspect-video lg:h-auto">
                     <div className="absolute top-4 left-4 z-10 hidden sm:block">
                         <Badge className="bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white font-black uppercase text-[10px] tracking-widest px-3 py-1.5 shadow-xl">
                            Windy Live Operations Layer
