@@ -60,7 +60,6 @@ export const usePermissions = () => {
   const hasPermission = useCallback((permissionId: string) => {
     if (isLoading || !userProfile) return false;
     
-    // Developer role bypass remains for impersonation testing
     const userRole = (userProfile as Personnel).role?.toLowerCase();
     if (userRole === 'dev' || userRole === 'developer') {
         return true;

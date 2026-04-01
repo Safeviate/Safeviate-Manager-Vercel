@@ -101,11 +101,11 @@ export function PersonnelForm({
           firstName,
           lastName,
           email,
-          department: selectedDepartment,
+          department: selectedDepartment || null,
           role: selectedRole,
           organizationId: organizationId === 'internal' ? null : organizationId,
-          isErpIncerfaContact: isIncerfaContact,
-          isErpAlerfaContact: isAlerfaContact,
+          isErpIncerfaContact: !!isIncerfaContact,
+          isErpAlerfaContact: !!isAlerfaContact,
           updatedAt: new Date().toISOString(),
         });
         toast({ title: 'User Updated' });
@@ -119,18 +119,20 @@ export function PersonnelForm({
             lastName,
             email,
             password,
-            userNumber,
-            department: selectedDepartment,
+            userNumber: userNumber || null,
+            department: selectedDepartment || null,
             role: selectedRole,
             userType,
-            organizationId: organizationId === 'internal' ? null : organizationId,
-            isErpIncerfaContact: isIncerfaContact,
-            isErpAlerfaContact: isAlerfaContact,
+            organizationId: organizationId === 'internal' ? null : (organizationId || null),
+            isErpIncerfaContact: !!isIncerfaContact,
+            isErpAlerfaContact: !!isAlerfaContact,
           })
         });
 
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Server error during user creation.');
+        if (!response.ok) {
+          throw new Error(result.error || 'Server error during user creation.');
+        }
 
         toast({ title: 'User Created', description: 'The new account and profile have been established.' });
       }

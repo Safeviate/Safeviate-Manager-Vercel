@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '@/lib/server/firebase-admin';
+import { authenticateAiRequest } from '@/lib/server/ai-auth';
 
 export async function POST(request: Request) {
   try {
+    // 1. Authenticate the administrator
+    const authResult = await authenticateAiRequest(request);
+    if (!authResult.ok) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    // Simple permission check
+    if (!authResult.effectivePermissions.has('users-create') && authResult.userProfile.role?.toLowerCase() !== 'developer') {
+      return NextResponse.json({ error: 'Unauthorized to create users.' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { 
       tenantId, email, password, firstName, lastName, 
@@ -17,7 +29,7 @@ export async function POST(request: Request) {
     const auth = getFirebaseAdminAuth();
     const firestore = getFirebaseAdminFirestore();
 
-    // 1. Create Auth User
+    // 2. Create Auth User
     const userRecord = await auth.createUser({
       email,
       password,
@@ -26,12 +38,12 @@ export async function POST(request: Request) {
 
     const uid = userRecord.uid;
 
-    // 2. Determine target collection
+    // 3. Determine target collection
     const collectionName = userType === 'Instructor' ? 'instructors' : 
                          userType === 'Student' ? 'students' : 
                          userType === 'Private Pilot' ? 'private-pilots' : 'personnel';
 
-    // 3. Create Profile in Firestore
+    // 4. Create Profile in Firestore
     await firestore.doc(`tenants/${tenantId}/${collectionName}/${uid}`).set({
       id: uid,
       firstName,
@@ -48,11 +60,15 @@ export async function POST(request: Request) {
       updatedAt: new Date().toISOString(),
     });
 
-    // 4. Create Global User Link
+    // 5. Create Global User Link
     await firestore.doc(`users/${uid}`).set({
       email,
       profilePath: `tenants/${tenantId}/${collectionName}/${uid}`
     });
+
+    // 6. Generate setup link (optional automatic trigger)
+    // const setupLink = await auth.generatePasswordResetLink(email);
+    // You could call an onboarding email service here.
 
     return NextResponse.json({ ok: true, uid });
   } catch (error: any) {

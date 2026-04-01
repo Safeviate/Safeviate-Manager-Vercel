@@ -31,12 +31,6 @@ const getTenantOverride = () => {
     return window.localStorage.getItem(TENANT_OVERRIDE_STORAGE_KEY);
 };
 
-const canOverrideTenant = (profile: UserProfile | null, isAnonymous: boolean) => {
-    if (isAnonymous) return false;
-    const role = (profile as Personnel | null)?.role?.toLowerCase();
-    return role === 'dev' || role === 'developer';
-};
-
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
     const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -76,7 +70,11 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         if (!userProfileData || !resolvedUserLink?.profilePath) return null;
         const pathParts = resolvedUserLink.profilePath.split('/');
         const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
-        const overrideTenantId = canOverrideTenant(userProfileData, false) ? tenantOverride : null;
+        
+        // Developer role bypass for tenant switching
+        const isDeveloper = userProfileData?.role?.toLowerCase() === 'dev' || userProfileData?.role?.toLowerCase() === 'developer';
+        const overrideTenantId = isDeveloper ? tenantOverride : null;
+        
         return overrideTenantId || profileTenantId;
     }, [userProfileData, resolvedUserLink, tenantOverride]);
 

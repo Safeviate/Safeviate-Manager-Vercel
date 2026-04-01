@@ -13,7 +13,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2, Mail, Loader2 } from 'lucide-react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Personnel, PilotProfile } from './page';
@@ -43,8 +43,10 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const canDelete = hasPermission('users-delete');
+  const canEdit = hasPermission('users-edit');
 
   const handleDeleteUser = () => {
     if (!firestore || !tenantId) return;
@@ -63,10 +65,56 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
     setIsDeleteDialogOpen(false);
   }
 
+  const handleSendWelcomeEmail = async () => {
+    setIsSendingEmail(true);
+    try {
+      const response = await fetch('/api/admin/send-welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send email');
+      }
+
+      toast({
+        title: 'Welcome Email Sent',
+        description: `A setup link has been dispatched to ${user.email}.`
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Email Failed',
+        description: error.message
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-end gap-2">
-        <Button asChild variant="outline" size="sm" className="h-8 gap-2">
+        {canEdit && (
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8 border-slate-300"
+            onClick={handleSendWelcomeEmail}
+            disabled={isSendingEmail}
+            title="Send Welcome Email"
+          >
+            {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+          </Button>
+        )}
+
+        <Button asChild variant="outline" size="sm" className="h-8 gap-2 border-slate-300">
           <Link href={`/users/personnel/${user.id}?type=${user.userType}`}>
             <Eye className="h-4 w-4" />
             View

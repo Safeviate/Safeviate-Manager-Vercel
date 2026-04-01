@@ -7,7 +7,7 @@ import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ListFilter, UserCircle, ClipboardCheck } from 'lucide-react';
+import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ListFilter, UserCircle, ClipboardCheck, Mail, Loader2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -73,6 +73,8 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [hiddenMenus, setHiddenMenus] = useState<string[]>(user.accessOverrides?.hiddenMenus || []);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const firestore = useFirestore();
@@ -137,6 +139,39 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
     handleDocumentUpdate(updatedDocs);
     toast({ title: "Document Deleted" });
+  };
+
+  const handleSendWelcomeEmail = async () => {
+    setIsSendingEmail(true);
+    try {
+      const response = await fetch('/api/admin/send-welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send email');
+      }
+
+      toast({
+        title: 'Welcome Email Sent',
+        description: `A setup link has been dispatched to ${user.email}.`
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Email Failed',
+        description: error.message
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const combinedDocuments = useMemo(() => {
@@ -241,7 +276,23 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
         <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
             <MainPageHeader 
                 title={`${user.firstName} ${user.lastName}`}
-                actions={actions}
+                actions={
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <Button 
+                        variant="outline" 
+                        size={isMobile ? "sm" : "default"}
+                        onClick={handleSendWelcomeEmail}
+                        disabled={isSendingEmail}
+                        className="gap-2 border-slate-300 text-[10px] font-black uppercase"
+                      >
+                        {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 text-primary" />}
+                        {isMobile ? "Email" : "Send Welcome Email"}
+                      </Button>
+                    )}
+                    {actions}
+                  </div>
+                }
             />
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -417,7 +468,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                                             onCheckedChange={(val) => handleToggleMenuOverride(sub.href, !val)}
                                                                             disabled={!canEdit}
                                                                         />
-                                                                        <Label htmlFor={`user-submod-${sub.href}`} className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer">
+                                                                        <Label htmlFor={`user-submod-${sub.href}`} className="text-10 font-bold uppercase text-muted-foreground cursor-pointer">
                                                                             {sub.label}
                                                                         </Label>
                                                                     </div>

@@ -24,13 +24,14 @@ function getFirebaseAdminApp() {
         clientEmail,
         privateKey,
       }),
-    });
+    }, 'admin-app');
   }
 
+  // Fallback for cloud environments with automatic credentials
   return initializeApp({
     credential: applicationDefault(),
     projectId,
-  });
+  }, 'admin-app');
 }
 
 export function getFirebaseAdminAuth() {
