@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useState, useCallback } from 'react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, BookOpen, Layers, ListFilter, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, Layers, MoreHorizontal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { seedComplianceData } from '@/lib/seed-data/part-141';
 import { callAiFlow } from '@/lib/ai-client';
 
 import type { ComplianceRequirement, ExternalOrganization } from '@/types/quality';
@@ -29,12 +28,24 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useTheme } from '@/components/theme-provider';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const REGULATION_TABS = [
+    { value: 'sacaa-cars', label: 'SACAA CARs' },
+    { value: 'sacaa-cats', label: 'SACAA CATs' },
+    { value: 'ohs', label: 'OHS' },
+] as const;
+type RegulationFamily = (typeof REGULATION_TABS)[number]['value'];
 
-function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenantId: string, organizationId: string | null, trigger?: React.ReactNode }) {
+function getItemFamily(item: ComplianceRequirement): RegulationFamily {
+    return item.regulationFamily || 'sacaa-cars';
+}
+
+function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, availableParentHeaders, trigger }: { tenantId: string, organizationId: string | null, regulationFamily: RegulationFamily; availableParentHeaders: { code: string; label: string }[]; trigger?: React.ReactNode }) {
     const { toast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -44,6 +55,8 @@ function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenant
     const [pastedText, setPastedText] = useState('');
     const [stagedImages, setStagedImages] = useState<string[]>([]);
     const [isMultiImageMode, setIsMultiImageMode] = useState(false);
+    const [targetFamily, setTargetFamily] = useState<RegulationFamily>(regulationFamily);
+    const [targetHeader, setTargetHeader] = useState('');
     
     const firestore = useFirestore();
 
@@ -110,6 +123,8 @@ function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenant
                 batch.set(docRef, {
                     ...req,
                     organizationId: organizationId,
+                    regulationFamily: targetFamily,
+                    parentRegulationCode: targetHeader || req.parentRegulationCode || '',
                 });
             });
 
@@ -130,6 +145,8 @@ function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenant
             setStagedImages([]);
             setIsMultiImageMode(false);
             setIsOpen(false);
+            setTargetFamily(regulationFamily);
+            setTargetHeader('');
         }
     };
 
@@ -156,7 +173,10 @@ function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenant
     const canProcess = file || pastedText.trim() || stagedImages.length > 0;
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={(open) => {
+            setIsOpen(open);
+            if (open) setTargetFamily(regulationFamily);
+        }}>
             <DialogTrigger asChild>
                 {trigger || (
                     <Button 
@@ -172,9 +192,39 @@ function UploadRegulationsDialog({ tenantId, organizationId, trigger }: { tenant
                 <DialogHeader>
                     <DialogTitle>Populate Matrix with AI</DialogTitle>
                     <DialogDescription>
-                        Upload a file, paste text, or paste one or more images of regulations. The AI will parse them and add the requirements to the matrix.
+                        Upload a file, paste text, or paste one or more images of regulations. Create the header manually first, then choose the existing header below.
                     </DialogDescription>
                 </DialogHeader>
+                <div className="space-y-2">
+                    <Label htmlFor="target-family">Target category</Label>
+                    <Select value={targetFamily} onValueChange={(value) => setTargetFamily(value as RegulationFamily)}>
+                        <SelectTrigger id="target-family">
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {REGULATION_TABS.map((tab) => (
+                                <SelectItem key={tab.value} value={tab.value}>
+                                    {tab.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="target-header">Target header</Label>
+                    <Select value={targetHeader} onValueChange={setTargetHeader}>
+                        <SelectTrigger id="target-header">
+                            <SelectValue placeholder="Select an existing header" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableParentHeaders.map((header) => (
+                                <SelectItem key={header.code} value={header.code}>
+                                    {header.code} - {header.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <Tabs defaultValue="image">
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="image">Paste Images</TabsTrigger>
@@ -252,15 +302,18 @@ export default function CoherenceMatrixPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
+  const { matrixTheme } = useTheme();
   const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-matrix-manage' });
   const isMobile = useIsMobile();
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
+  const [activeRegulationTab, setActiveRegulationTab] = useState<RegulationFamily>('sacaa-cars');
 
   const canManageAll = hasPermission('quality-matrix-manage');
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
+  const [formMode, setFormMode] = useState<'item' | 'header'>('item');
 
   const complianceQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
@@ -293,20 +346,9 @@ export default function CoherenceMatrixPage() {
     return a.length - b.length;
   };
 
-  const handleSeedData = async (orgId: string | null) => {
-    if (!firestore || !tenantId) return;
-    const batch = writeBatch(firestore);
-    const collectionRef = collection(firestore, `tenants/${tenantId}/compliance-matrix`);
-    seedComplianceData.forEach(item => {
-        const docRef = doc(collectionRef);
-        batch.set(docRef, { ...item, organizationId: orgId });
-    });
-    await batch.commit();
-    toast({ title: "Success", description: "Part 141 regulations have been seeded." });
-  };
-  
-  const handleOpenForm = (item: ComplianceRequirement | null = null) => {
+  const handleOpenForm = (item: ComplianceRequirement | null = null, mode: 'item' | 'header' = 'item') => {
     setEditingItem(item);
+    setFormMode(mode);
     setIsFormOpen(true);
   };
 
@@ -330,10 +372,18 @@ export default function CoherenceMatrixPage() {
       toast({ title: "Section Deleted" });
   }
 
+  const currentOrgItems = (complianceItems || []).filter(item =>
+    (activeOrgTab === 'internal' ? !item.organizationId : item.organizationId === activeOrgTab)
+  );
+  const currentFamilyHeaders = currentOrgItems
+    .filter(item => getItemFamily(item) === activeRegulationTab && !item.parentRegulationCode)
+    .map(item => ({ code: item.regulationCode, label: item.regulationStatement }));
+
   const renderOrgContext = (orgId: string | 'internal') => {
     const contextOrgId = orgId === 'internal' ? null : orgId;
     const filteredItems = (complianceItems || []).filter(item => 
-        orgId === 'internal' ? !item.organizationId : item.organizationId === orgId
+        (orgId === 'internal' ? !item.organizationId : item.organizationId === orgId) &&
+        getItemFamily(item) === activeRegulationTab
     );
     const sortedItems = [...filteredItems].sort((a, b) => naturalSort(a.regulationCode, b.regulationCode));
     const groupedItems = sortedItems.reduce((acc, item) => {
@@ -370,30 +420,33 @@ export default function CoherenceMatrixPage() {
                                 <UploadRegulationsDialog 
                                     tenantId={tenantId!} 
                                     organizationId={contextOrgId} 
+                                    regulationFamily={activeRegulationTab}
+                                    availableParentHeaders={currentFamilyHeaders}
                                     trigger={
                                         <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                             <WandSparkles className="mr-2 h-4 w-4" /> AI Populate
                                         </DropdownMenuItem>
                                     }
                                 />
-                                <DropdownMenuItem onClick={() => handleSeedData(contextOrgId)}>
-                                    <BookOpen className="mr-2 h-4 w-4" /> Seed Part 141
-                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleOpenForm()}>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenForm(null, 'header')}>
+                                    <Layers className="mr-2 h-4 w-4" /> Add Header
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
                         <div className="flex flex-wrap items-center gap-2">
-                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} />
-                            <Button 
-                                variant="outline" 
+                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={currentFamilyHeaders} />
+                            <Button
                                 size="sm"
-                                onClick={() => handleSeedData(contextOrgId)}
+                                variant="outline"
+                                className="shadow-sm gap-2"
+                                onClick={() => handleOpenForm(null, 'header')}
                             >
-                                <BookOpen className="h-3.5 w-3.5" /> 
-                                Seed Part 141
+                                <Layers className="h-4 w-4" />
+                                Add Header
                             </Button>
                             <Button 
                                 size="sm"
@@ -416,12 +469,29 @@ export default function CoherenceMatrixPage() {
                     className="px-4 py-3 border-b bg-muted/5 shrink-0 md:px-6"
                 />
             )}
+
+            <div className="border-b bg-muted/5 px-4 py-3 shrink-0 md:px-6">
+                <Tabs value={activeRegulationTab} onValueChange={(value) => setActiveRegulationTab(value as RegulationFamily)} className="w-full">
+                    <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center gap-2">
+                        {REGULATION_TABS.map((tab) => (
+                            <TabsTrigger key={tab.value} value={tab.value} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-black text-[10px] uppercase shrink-0">
+                                {tab.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </Tabs>
+            </div>
             
             <CardContent className="flex-1 min-h-0 overflow-y-auto p-6">
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => (
-                        <Collapsible key={parentItem.id} className="border rounded-lg" defaultOpen>
-                            <div className="border-b bg-muted/30 p-4">
+                        <Collapsible key={parentItem.id} className="border rounded-lg overflow-hidden" defaultOpen>
+                            <div
+                                className="border-b p-4"
+                                style={{
+                                    backgroundImage: `linear-gradient(90deg, ${matrixTheme['matrix-header-start']}, ${matrixTheme['matrix-header-end']})`,
+                                }}
+                            >
                                 <div className="flex items-start justify-between gap-3">
                                     <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-3 text-left">
                                         <div className="min-w-0 flex-1">
@@ -445,8 +515,13 @@ export default function CoherenceMatrixPage() {
                             </div>
                             <CollapsibleContent className="p-4">
                                 {(groupedItems[parentItem.regulationCode] || []).map(item => (
-                                    <Collapsible key={item.id} className="border rounded-lg mb-2 last:mb-0">
-                                        <div className="p-4">
+                                    <Collapsible key={item.id} className="border rounded-lg mb-2 last:mb-0 overflow-hidden">
+                                        <div
+                                            className="p-4"
+                                            style={{
+                                                backgroundImage: `linear-gradient(90deg, ${matrixTheme['matrix-subheader-start']}, ${matrixTheme['matrix-subheader-end']})`,
+                                            }}
+                                        >
                                             <div className="flex items-start justify-between gap-3">
                                                 <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-3 text-left">
                                                     <div className="min-w-0 flex-1">
@@ -472,10 +547,16 @@ export default function CoherenceMatrixPage() {
                                             </div>
                                         </div>
                                         <CollapsibleContent className="space-y-4 px-10 pb-6 pt-2 border-t bg-muted/5">
-                                            <div className="space-y-2 overflow-hidden">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Technical Standard & Acceptable Means of Compliance</p>
-                                                <p className="text-sm font-medium text-muted-foreground leading-relaxed whitespace-pre-wrap italic break-words">&quot;{item.technicalStandard}&quot;</p>
-                                            </div>
+                                            {item.technicalStandard?.trim() ? (
+                                                <div className="space-y-2 overflow-hidden">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Technical Standard & Acceptable Means of Compliance</p>
+                                                    <p className="text-sm font-medium text-muted-foreground leading-relaxed whitespace-pre-wrap italic break-words">&quot;{item.technicalStandard}&quot;</p>
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs font-medium italic text-muted-foreground/70">
+                                                    Header only
+                                                </p>
+                                            )}
                                         </CollapsibleContent>
                                     </Collapsible>
                                 ))}
@@ -528,16 +609,26 @@ export default function CoherenceMatrixPage() {
             )}
         </div>
 
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-                <DialogTitle className="font-black uppercase tracking-tight">Compliance Requirement</DialogTitle>
+                            <DialogTitle className="font-black uppercase tracking-tight">
+                                {formMode === 'header' ? 'Add Header' : 'Compliance Requirement'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {formMode === 'header'
+                                    ? 'Create the top-level regulation header for the selected category.'
+                                    : 'Add a manual regulation item under an existing header.'}
+                            </DialogDescription>
             </DialogHeader>
             <ComplianceItemForm 
                 personnel={personnel || []}
                 existingItem={editingItem}
                 onFormSubmit={() => setIsFormOpen(false)}
                 tenantId={tenantId!}
+                defaultRegulationFamily={activeRegulationTab}
+                availableParentHeaders={currentFamilyHeaders}
+                mode={formMode}
             />
             </DialogContent>
         </Dialog>

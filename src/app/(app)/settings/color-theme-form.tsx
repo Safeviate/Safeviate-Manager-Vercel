@@ -47,6 +47,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     setHeaderThemeValue,
     swimlaneTheme,
     setSwimlaneThemeValue,
+    matrixTheme,
+    setMatrixThemeValue,
     scale,
     setScale,
     savedThemes,
@@ -119,6 +121,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
             'header-border': headerTheme['header-border'] 
         },
         swimlaneColors: (tenant.theme.swimlane as any) || swimlaneTheme,
+        matrixColors: (tenant.theme.matrix as any) || matrixTheme,
         scale: scale,
     };
 
@@ -145,6 +148,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         sidebarBackgroundImage,
         header: headerTheme,
         swimlane: swimlaneTheme,
+        matrix: matrixTheme,
       }
     };
 
@@ -353,6 +357,18 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                         <div key={name} className="space-y-1.5">
                             <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
                             <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer" />
+                        </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Matrix Hierarchy</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {Object.entries(matrixTheme).map(([name, value]) => (
+                        <div key={name} className="space-y-1.5">
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Input id={name} type="color" value={value} onChange={(e) => setMatrixThemeValue(name as keyof typeof matrixTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer" />
                         </div>
                         ))}
                     </div>

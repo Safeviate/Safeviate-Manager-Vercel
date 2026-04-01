@@ -40,13 +40,20 @@ const prompt = ai.definePrompt({
     prompt: `You are an expert in aviation regulatory compliance. Your task is to analyze the provided document content (which could be text or a sequence of images) and extract each individual compliance requirement.
 
 You must differentiate between the regulation's title (the 'regulationStatement') and its full descriptive text (the 'technicalStandard').
+Preserve the hierarchy exactly: regulation header, sub-regulation, then paragraph items.
 
 For each item you identify, structure it into the following fields:
-- regulationCode: The specific number or code (e.g., '141.01.18' for a main section, or a sub-number like '1.' which you should combine with its parent to form '141.01.18.1').
+- regulationCode: The specific number or code (e.g., '141.01.18' for a regulation header, or a sub-number like '1.' which you should combine with its parent to form '141.01.18.1').
 - regulationStatement: The short, official title of the regulation ONLY. Do not include the detailed text that follows. For example, for "1. Quality policy and strategy", this field should be "Quality policy and strategy".
 - technicalStandard: The full, detailed text body of the regulation. This includes all sub-points like (1), (a), (b), (i), etc., combined into a single string. IMPORTANT: Preserve all original formatting, including line breaks and indentation for lists. For a main heading with no body text, this field can be an empty string.
 - companyReference: A sensible placeholder for where this might be found in a typical airline's Operations Manual (e.g., "Ops Manual, Sec 4.2.1").
-- parentRegulationCode: If it's a sub-regulation (like '1. Quality policy...'), its 'parentRegulationCode' should be the code of the main heading it falls under (e.g., '141.01.18'). For top-level headings, this field should be omitted.
+- parentRegulationCode: If it's a sub-regulation or paragraph (like '1. Quality policy...'), its 'parentRegulationCode' should be the code of the immediate parent heading it falls under (e.g., '141.01.18'). For top-level headings, this field should be omitted.
+
+Rules:
+- If the source includes a regulation header such as '141.01.18 QUALITY ASSURANCE AND QUALITY SYSTEM', output it as a top-level record with no parentRegulationCode.
+- If the source includes numbered sub-regulations under that header, attach them to that header using parentRegulationCode.
+- If sub-regulations contain numbered paragraphs, preserve their order and attach them to the sub-regulation code as parentRegulationCode.
+- Do not flatten the hierarchy.
 
 Example Breakdown:
 Document snippet:

@@ -49,7 +49,11 @@ const LAST_SUBMENU_STORAGE_KEY = 'safeviate:last-submenu-by-parent';
 const getLastSubmenuByParent = (): Record<string, string> => {
     if (typeof window === 'undefined') return {};
     try {
-        return JSON.parse(window.localStorage.getItem(LAST_SUBMENU_STORAGE_KEY) || '{}') as Record<string, string>;
+        const raw = window.localStorage.getItem(LAST_SUBMENU_STORAGE_KEY) || '{}';
+        if (!raw.trim().startsWith('{') && !raw.trim().startsWith('[')) {
+            return {};
+        }
+        return JSON.parse(raw) as Record<string, string>;
     } catch {
         return {};
     }

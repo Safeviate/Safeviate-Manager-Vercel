@@ -22,6 +22,7 @@ export interface AuditScheduleItem {
 
 export interface ComplianceRequirement {
     id: string;
+    regulationFamily?: 'sacaa-cars' | 'sacaa-cats' | 'ohs';
     regulationCode: string;
     parentRegulationCode?: string;
     regulationStatement: string; // The short title/heading
@@ -141,6 +142,7 @@ export interface Tenant {
         sidebarBackgroundImage?: string;
         header?: Record<string, string>;
         swimlane?: Record<string, string>;
+        matrix?: Record<string, string>;
     };
     enabledMenus?: string[];
 }

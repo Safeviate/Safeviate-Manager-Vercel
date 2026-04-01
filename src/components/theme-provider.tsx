@@ -51,6 +51,13 @@ type SwimlaneThemeColors = {
   'swimlane-header-foreground': string;
 };
 
+type MatrixThemeColors = {
+  'matrix-header-start': string;
+  'matrix-header-end': string;
+  'matrix-subheader-start': string;
+  'matrix-subheader-end': string;
+};
+
 export type SavedTheme = {
   name: string;
   colors: ThemeColors;
@@ -61,6 +68,7 @@ export type SavedTheme = {
   headerColors: HeaderThemeColors;
   popoverColors: PopoverThemeColors;
   swimlaneColors: SwimlaneThemeColors;
+  matrixColors: MatrixThemeColors;
   scale?: number;
 };
 
@@ -81,6 +89,8 @@ type ThemeContextType = {
   setHeaderThemeValue: (key: keyof HeaderThemeColors, value: string) => void;
   swimlaneTheme: SwimlaneThemeColors;
   setSwimlaneThemeValue: (key: keyof SwimlaneThemeColors, value: string) => void;
+  matrixTheme: MatrixThemeColors;
+  setMatrixThemeValue: (key: keyof MatrixThemeColors, value: string) => void;
   scale: number;
   setScale: (scale: number) => void;
   savedThemes: SavedTheme[];
@@ -99,6 +109,7 @@ export const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
 export const SIDEBAR_BACKGROUND_IMAGE_KEY = 'safeviate-sidebar-background-image';
 export const HEADER_THEME_KEY = 'safeviate-header-theme';
 export const SWIMLANE_THEME_KEY = 'safeviate-swimlane-theme';
+export const MATRIX_THEME_KEY = 'safeviate-matrix-theme';
 export const SCALE_KEY = 'safeviate-scale';
 export const SAVED_THEMES_KEY = 'safeviate-saved-themes';
 
@@ -143,6 +154,12 @@ const defaultSwimlaneColors: SwimlaneThemeColors = {
     'swimlane-header-background': '#f1f5f9',
     'swimlane-header-foreground': '#475569',
 };
+const defaultMatrixColors: MatrixThemeColors = {
+    'matrix-header-start': '#f8fafc',
+    'matrix-header-end': '#e0f2fe',
+    'matrix-subheader-start': '#ffffff',
+    'matrix-subheader-end': '#f8fafc',
+};
 const defaultScale = 100;
 
 // --- Helper Functions ---
@@ -175,7 +192,11 @@ function getInitialState<T>(key: string, defaultValue: T): T {
         if (item === null) {
             return defaultValue;
         }
-        const stored = JSON.parse(item);
+        const trimmed = item.trim();
+        if (!trimmed.startsWith('{') && !trimmed.startsWith('[') && !trimmed.startsWith('"') && trimmed !== 'null' && trimmed !== 'true' && trimmed !== 'false' && !/^[-\d]/.test(trimmed)) {
+            return defaultValue;
+        }
+        const stored = JSON.parse(trimmed);
 
         // Strict picking: only allow keys that exist in the default definition
         if (typeof defaultValue === 'object' && defaultValue !== null && !Array.isArray(defaultValue)) {
@@ -239,6 +260,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [sidebarBackgroundImage, setSidebarBackgroundImageState] = useState<string>(defaultSidebarBackgroundImage);
   const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(defaultHeaderColors);
   const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(defaultSwimlaneColors);
+  const [matrixTheme, setMatrixTheme] = useState<MatrixThemeColors>(defaultMatrixColors);
   const [scale, setScaleState] = useState<number>(defaultScale);
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([]);
 
@@ -281,6 +303,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       ...(tenant?.theme?.swimlane || {}),
       ...getTenantScopedState(SWIMLANE_THEME_KEY, tenantId, defaultSwimlaneColors),
     };
+    const nextMatrixTheme = {
+      ...defaultMatrixColors,
+      ...(tenant?.theme?.matrix || {}),
+      ...getTenantScopedState(MATRIX_THEME_KEY, tenantId, defaultMatrixColors),
+    };
     const nextSidebarBackgroundImage = getTenantScopedState(
       SIDEBAR_BACKGROUND_IMAGE_KEY,
       tenantId,
@@ -297,6 +324,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarBackgroundImageState(nextSidebarBackgroundImage);
     setHeaderTheme(nextHeaderTheme);
     setSwimlaneTheme(nextSwimlaneTheme);
+    setMatrixTheme(nextMatrixTheme);
     setScaleState(nextScale);
     setSavedThemes(nextSavedThemes);
   }, [tenant?.theme, tenantId]);
@@ -310,8 +338,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applySidebarBackgroundImageToDOM(sidebarBackgroundImage);
     applyColorsToDOM(headerTheme);
     applyColorsToDOM(swimlaneTheme);
+    applyColorsToDOM(matrixTheme);
     applyScaleToDOM(scale);
-  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, sidebarBackgroundImage, headerTheme, swimlaneTheme, scale]);
+  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, sidebarBackgroundImage, headerTheme, swimlaneTheme, matrixTheme, scale]);
   
 
   const updateTheme = <T extends object>(
@@ -345,6 +374,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   };
   const setHeaderThemeValue = (prop: keyof HeaderThemeColors, value: string) => updateTheme(HEADER_THEME_KEY, headerTheme, setHeaderTheme, prop, value);
   const setSwimlaneThemeValue = (prop: keyof SwimlaneThemeColors, value: string) => updateTheme(SWIMLANE_THEME_KEY, swimlaneTheme, setSwimlaneTheme, prop, value);
+  const setMatrixThemeValue = (prop: keyof MatrixThemeColors, value: string) => updateTheme(MATRIX_THEME_KEY, matrixTheme, setMatrixTheme, prop, value);
 
 
   const applySavedTheme = (themeToApply: SavedTheme) => {
@@ -366,6 +396,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
     const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
     const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
+    const newMatrixTheme = { ...defaultMatrixColors, ...themeToApply.matrixColors };
     const newScale = themeToApply.scale || defaultScale;
 
     setTheme(newTheme);
@@ -376,6 +407,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarBackgroundImageState(newSidebarBackgroundImage);
     setHeaderTheme(newHeaderTheme);
     setSwimlaneTheme(newSwimlaneTheme);
+    setMatrixTheme(newMatrixTheme);
     setScaleState(newScale);
     
     applyColorsToDOM(newTheme);
@@ -386,6 +418,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applySidebarBackgroundImageToDOM(newSidebarBackgroundImage);
     applyColorsToDOM(newHeaderTheme);
     applyColorsToDOM(newSwimlaneTheme);
+    applyColorsToDOM(newMatrixTheme);
     applyScaleToDOM(newScale);
 
     setTenantScopedState(THEME_KEY, tenantId, newTheme);
@@ -396,6 +429,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setTenantScopedState(SIDEBAR_BACKGROUND_IMAGE_KEY, tenantId, newSidebarBackgroundImage);
     setTenantScopedState(HEADER_THEME_KEY, tenantId, newHeaderTheme);
     setTenantScopedState(SWIMLANE_THEME_KEY, tenantId, newSwimlaneTheme);
+    setTenantScopedState(MATRIX_THEME_KEY, tenantId, newMatrixTheme);
     setTenantScopedState(SCALE_KEY, tenantId, newScale);
   };
 
@@ -410,6 +444,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       sidebarBackgroundImage,
       headerColors: headerTheme,
       swimlaneColors: swimlaneTheme,
+      matrixColors: matrixTheme,
       scale,
     };
     const updatedSavedThemes = [...savedThemes, newTheme];
@@ -432,6 +467,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     removeTenantScopedState(SIDEBAR_BACKGROUND_IMAGE_KEY, tenantId);
     removeTenantScopedState(HEADER_THEME_KEY, tenantId);
     removeTenantScopedState(SWIMLANE_THEME_KEY, tenantId);
+    removeTenantScopedState(MATRIX_THEME_KEY, tenantId);
     removeTenantScopedState(SCALE_KEY, tenantId);
 
     window.location.reload();
@@ -454,6 +490,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setHeaderThemeValue,
     swimlaneTheme,
     setSwimlaneThemeValue,
+    matrixTheme,
+    setMatrixThemeValue,
     scale,
     setScale,
     savedThemes,
