@@ -104,7 +104,7 @@ export default function PersonnelPage() {
   const firestore = useFirestore();
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
-  const { tenantId } = useUserProfile();
+  const { tenantId, isLoading: isProfileLoading } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
 
   const personnelQuery = useMemoFirebase(
@@ -134,10 +134,20 @@ export default function PersonnelPage() {
     [firestore, tenantId]
   );
   
+  const externalOrgsQuery = useMemoFirebase(
+    () =>
+      firestore
+        && tenantId
+        ? query(collection(firestore, 'tenants', tenantId, 'external-organizations'))
+        : null,
+    [firestore, tenantId]
+  );
+  
 
   const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useCollection<Personnel>(personnelQuery);
   const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
   const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
+  const { data: externalOrgs, isLoading: isLoadingExternalOrgs, error: externalOrgsError } = useCollection<any>(externalOrgsQuery);
 
   const rolesMap = useMemo(() => {
     if (!roles) return new Map<string, string>();
@@ -149,8 +159,8 @@ export default function PersonnelPage() {
     return new Map(departments.map(dept => [dept.id, dept.name]));
   }, [departments]);
 
-  const isLoading = isLoadingPersonnel || isLoadingRoles || isLoadingDepts;
-  const error = personnelError || rolesError || deptsError;
+  const isLoading = isProfileLoading || isLoadingPersonnel || isLoadingRoles || isLoadingDepts || isLoadingExternalOrgs;
+  const error = personnelError || rolesError || deptsError || externalOrgsError;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
@@ -163,9 +173,10 @@ export default function PersonnelPage() {
                 tenantId={tenantId || ''} 
                 roles={roles || []} 
                 departments={departments || []}
+                externalOrganizations={externalOrgs || []}
                 trigger={
                     <Button
-                        disabled={!canCreateUsers}
+                        disabled={!canCreateUsers || isProfileLoading}
                         variant={isMobile ? 'outline' : 'default'}
                         size={isMobile ? 'sm' : 'default'}
                         className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full gap-2 px-6 text-xs font-black uppercase shadow-md sm:w-auto'}

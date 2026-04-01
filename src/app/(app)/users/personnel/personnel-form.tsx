@@ -1,65 +1,40 @@
 'use client';
 
-import { useState } from 'react';
-import { collection, doc, writeBatch, query } from 'firebase/firestore';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronDown, PlusCircle } from 'lucide-react';
-import { useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useToast } from '@/hooks/use-toast';
-import type { Role } from '../../admin/roles/page';
-import type { Department } from '../../admin/department/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Personnel, PilotProfile } from './page';
-import type { ExternalOrganization } from '@/types/quality';
 import { Switch } from '@/components/ui/switch';
-import { useIsMobile } from '@/hooks/use-mobile';
-
-type UserProfile = Personnel | PilotProfile;
-type UserType = UserProfile['userType'];
-
-const determineCollectionName = (userType: UserType | ''): string => {
-    switch(userType) {
-        case 'Personnel': return 'personnel';
-        case 'Instructor': return 'instructors';
-        case 'Student': return 'students';
-        case 'Private Pilot': return 'private-pilots';
-        case 'External': return 'personnel';
-        default: return 'personnel';
-    }
-}
+import { useToast } from '@/hooks/use-toast';
+import { doc, collection, setDoc, updateDoc } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { Personnel, UserType } from '@/app/(app)/users/personnel/page';
+import { Loader2 } from 'lucide-react';
+import type { Role } from '@/app/(app)/admin/roles/page';
+import type { Department } from '@/app/(app)/admin/department/page';
 
 interface PersonnelFormProps {
   tenantId: string;
+  existingPersonnel?: Personnel; // Optional prop for editing
   roles: Role[];
   departments: Department[];
-  trigger?: React.ReactNode;
+  onClose: () => void; // Callback to close the dialog
 }
 
-export function PersonnelForm({ tenantId, roles, departments, trigger }: PersonnelFormProps) {
+export function PersonnelForm({
+  tenantId,
+  existingPersonnel,
+  roles,
+  departments,
+  onClose,
+}: PersonnelFormProps) {
   const firestore = useFirestore();
-  const auth = useAuth();
+  const auth = getAuth();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
-  const [isOpen, setIsOpen] = useState(false);
 
-  const orgsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
   const [userType, setUserType] = useState<UserType | ''>('');
@@ -69,179 +44,185 @@ export function PersonnelForm({ tenantId, roles, departments, trigger }: Personn
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
-  const [selectedOrganization, setSelectedOrganization] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isIncerfaContact, setIsIncerfaContact] = useState(false);
   const [isAlerfaContact, setIsAlerfaContact] = useState(false);
-  
+
+  useEffect(() => {
+    if (existingPersonnel) {
+      setUserType(existingPersonnel.userType || '');
+      setUserNumber(existingPersonnel.userNumber || '');
+      setFirstName(existingPersonnel.firstName);
+      setLastName(existingPersonnel.lastName);
+      setEmail(existingPersonnel.email);
+      setSelectedDepartment(existingPersonnel.department || null);
+      setSelectedRole(roles?.find((r: any) => r.id === existingPersonnel.role) || null);
+      setIsIncerfaContact(existingPersonnel.isErpIncerfaContact || false);
+      setIsAlerfaContact(existingPersonnel.isErpAlerfaContact || false);
+    } else {
+      // Reset form for new user
+      setUserType('');
+      setUserNumber('');
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setPassword('');
+      setSelectedDepartment(null);
+      setSelectedRole(null);
+      setIsIncerfaContact(false);
+      setIsAlerfaContact(false);
+    }
+  }, [existingPersonnel, roles]);
+
   const handleRoleChange = (roleId: string) => {
     const role = roles.find(r => r.id === roleId);
     if (role) {
-        setSelectedRole(role);
-        // Automatically set userType based on role category
-        setUserType(role.category as UserType);
+      setSelectedRole(role);
+      setUserType(role.category as UserType);
     }
   };
 
-  const handleAddUser = async () => {
-    if (!userType || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim() || !selectedRole) {
+  const handleAddOrUpdateUser = async () => {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole || (!existingPersonnel && !password.trim())) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'Name, Email, Password, and Role are all required.',
+        description: 'All required fields must be filled.',
       });
       return;
     }
 
-    if (!firestore || !auth) return;
+    if (!firestore) return;
+    setIsSubmitting(true);
 
     try {
+      if (existingPersonnel) {
+        const userRef = doc(firestore, `tenants/${tenantId}/personnel`, existingPersonnel.id);
+        await updateDoc(userRef, {
+          userType,
+          userNumber: userNumber || null,
+          firstName,
+          lastName,
+          email,
+          department: selectedDepartment,
+          role: selectedRole.id,
+          isErpIncerfaContact: isIncerfaContact,
+          isErpAlerfaContact: isAlerfaContact,
+          updatedAt: new Date(),
+        });
+        toast({ title: 'User Updated' });
+      } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const authUser = userCredential.user;
+        const uid = userCredential.user.uid;
 
-        const batch = writeBatch(firestore);
-
-        const collectionName = determineCollectionName(userType);
-        const profileRef = doc(firestore, 'tenants', tenantId, collectionName, authUser.uid);
-        
-        let profileData: Partial<UserProfile> = {
-            id: authUser.uid,
+        // Create in Firestore using setDoc for new user
+        const personnelRef = doc(firestore, `tenants/${tenantId}/personnel`, uid);
+        await setDoc(personnelRef, {
+            id: uid,
             userType,
-            userNumber: userNumber.trim() || undefined,
+            userNumber: userNumber || null,
             firstName,
             lastName,
             email,
+            department: selectedDepartment,
             role: selectedRole.id,
-            organizationId: selectedOrganization === 'internal' ? null : selectedOrganization,
-            permissions: selectedRole.permissions || [], 
             isErpIncerfaContact: isIncerfaContact,
             isErpAlerfaContact: isAlerfaContact,
-        };
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
 
-        if (userType === 'Personnel' || userType === 'External') {
-            (profileData as Personnel).department = selectedDepartment || undefined;
-        }
-        
-        const userLinkRef = doc(firestore, 'users', authUser.uid);
-        const userLinkData = {
-            id: authUser.uid,
+        // Create user link using setDoc for new user, using the NEW user's UID
+        await setDoc(doc(firestore, 'users', uid), {
             email: email,
-            profilePath: profileRef.path
-        };
+            profilePath: `tenants/${tenantId}/personnel/${uid}`
+        });
 
-        batch.set(profileRef, profileData);
-        batch.set(userLinkRef, userLinkData);
-
-        await batch.commit();
-
-        toast({ title: 'User Created Successfully' });
-        resetForm();
-
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
+        toast({ title: 'User Created' });
+      }
+      onClose(); // Call onClose to close the dialog
+    } catch (error) {
+      console.error('Error adding/updating user:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Operation Failed',
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const resetForm = () => {
-    setUserType('');
-    setUserNumber('');
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setPassword('');
-    setSelectedDepartment(null);
-    setSelectedOrganization(null);
-    setSelectedRole(null);
-    setIsIncerfaContact(false);
-    setIsAlerfaContact(false);
-    setIsOpen(false);
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsOpen(open); }}>
-      {trigger ? (
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button
-            variant={isMobile ? 'outline' : 'default'}
-            size={isMobile ? 'sm' : 'default'}
-            className={isMobile ? 'h-9 w-full justify-between border-border bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-muted/40' : undefined}
-          >
-            <span className="flex items-center gap-2">
-              <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
-              Add User
-            </span>
-            {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-          </Button>
-        </DialogTrigger>
-      )}
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>Create a new user profile and authentication account.</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label htmlFor="userNumber">User Number (Billing)</Label><Input id="userNumber" value={userNumber} onChange={(e) => setUserNumber(e.target.value)} placeholder="e.g., ACC-001" /></div>
-                <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select onValueChange={handleRoleChange} value={selectedRole?.id}>
-                        <SelectTrigger id="role"><SelectValue placeholder="Select a role" /></SelectTrigger>
-                        <SelectContent>{roles.map(role => (<SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>))}</SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-                <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-                <div className="space-y-2 col-span-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                <div className="space-y-2 col-span-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-                
-                <div className="space-y-2">
-                    <Label htmlFor="organization">Organization</Label>
-                    <Select onValueChange={setSelectedOrganization} value={selectedOrganization || ''}>
-                        <SelectTrigger id="organization"><SelectValue placeholder="Select Organization" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="internal">Safeviate (Internal)</SelectItem>
-                            {(organizations || []).map(org => (<SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="col-span-2 grid grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
-                    <Switch 
-                      id="erp-incerfa-new" 
-                      checked={isIncerfaContact} 
-                      onCheckedChange={setIsIncerfaContact} 
-                    />
-                    <Label htmlFor="erp-incerfa-new" className="cursor-pointer text-xs">INCERFA Contact</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
-                    <Switch 
-                      id="erp-alerfa-new" 
-                      checked={isAlerfaContact} 
-                      onCheckedChange={setIsAlerfaContact} 
-                    />
-                    <Label htmlFor="erp-alerfa-new" className="cursor-pointer text-xs">ALERFA Contact</Label>
-                  </div>
-                </div>
-
-                {(userType === 'Personnel' || userType === 'External') && (
-                    <div className="space-y-2 col-span-2">
-                        <Label htmlFor="department">Department</Label>
-                        <Select onValueChange={setSelectedDepartment} value={selectedDepartment || ''}>
-                            <SelectTrigger id="department"><SelectValue placeholder="Select a department" /></SelectTrigger>
-                            <SelectContent>{departments.map(dept => (<SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>))}</SelectContent>
-                        </Select>
-                    </div>
-                )}
-            </div>
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="firstName" className="text-right">First Name</Label>
+        <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="col-span-3" />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="lastName" className="text-right">Last Name</Label>
+        <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="col-span-3" />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="email" className="text-right">Email</Label>
+        <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" />
+      </div>
+      {!existingPersonnel && (
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="password" className="text-right">Password</Label>
+            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="col-span-3" />
         </div>
-        <DialogFooter>
-          <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-          <Button onClick={handleAddUser}>Save User</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="userNumber" className="text-right">User #</Label>
+        <Input id="userNumber" value={userNumber} onChange={(e) => setUserNumber(e.target.value)} className="col-span-3" />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="department" className="text-right">Department</Label>
+        <Select value={selectedDepartment || ''} onValueChange={setSelectedDepartment}>
+          <SelectTrigger className="col-span-3">
+            <SelectValue placeholder="Select Department" />
+          </SelectTrigger>
+          <SelectContent>
+            {departments?.map(dept => (
+              <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="role" className="text-right">Role</Label>
+        <Select value={selectedRole?.id || ''} onValueChange={handleRoleChange}>
+          <SelectTrigger className="col-span-3">
+            <SelectValue placeholder="Select Role" />
+          </SelectTrigger>
+          <SelectContent>
+            {roles?.map((role: any) => (
+              <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label className="text-right">ERP Contact</Label>
+        <div className="col-span-3 flex items-center space-x-4">
+          <div className="flex items-center gap-2">
+            <Switch id="incerfa" checked={isIncerfaContact} onCheckedChange={setIsIncerfaContact} />
+            <Label htmlFor="incerfa" className="text-xs font-normal cursor-pointer">INCERFA</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch id="alerfa" checked={isAlerfaContact} onCheckedChange={setIsAlerfaContact} />
+            <Label htmlFor="alerfa" className="text-xs font-normal cursor-pointer">ALERFA</Label>
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 mt-4">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button onClick={handleAddOrUpdateUser} disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {existingPersonnel ? 'Save Changes' : 'Add Personnel'}
+        </Button>
+      </div>
+    </div>
   );
 }
