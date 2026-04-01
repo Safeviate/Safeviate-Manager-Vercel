@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useAuth } from '@/firebase';
 import { Loader2, PlusCircle, ChevronsUpDown } from 'lucide-react';
 import type { Role } from '@/app/(app)/admin/roles/page';
 import type { Department } from '@/app/(app)/admin/department/page';
@@ -35,6 +35,7 @@ export function PersonnelForm({
   onClose,
 }: PersonnelFormProps) {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,6 +89,8 @@ export function PersonnelForm({
     setIsSubmitting(true);
 
     try {
+      const idToken = await auth.currentUser?.getIdToken();
+
       if (existingPersonnel) {
         if (!firestore) return;
         
@@ -112,7 +115,10 @@ export function PersonnelForm({
       } else {
         const response = await fetch('/api/admin/create-personnel', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+          },
           body: JSON.stringify({
             tenantId,
             firstName,

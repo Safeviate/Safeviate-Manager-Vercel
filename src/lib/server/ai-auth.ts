@@ -18,6 +18,7 @@ type FlowPermissionRule = {
   anyOf: string[];
 };
 
+// Map of AI flows to required permissions
 export const aiFlowPermissions: Record<string, FlowPermissionRule> = {
   analyzeMoc: { anyOf: ['moc-manage'] },
   generateChecklist: { anyOf: ['quality-templates-manage', 'quality-audits-manage'] },
@@ -28,6 +29,8 @@ export const aiFlowPermissions: Record<string, FlowPermissionRule> = {
   summarizeMaintenanceLogs: { anyOf: ['assets-view', 'assets-edit'] },
 };
 
+const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
+
 function extractBearerToken(authorizationHeader: string | null) {
   if (!authorizationHeader?.startsWith('Bearer ')) {
     return null;
@@ -35,6 +38,10 @@ function extractBearerToken(authorizationHeader: string | null) {
   return authorizationHeader.slice('Bearer '.length).trim();
 }
 
+/**
+ * Authenticates an incoming request using the Firebase Admin SDK.
+ * Verifies the ID token and retrieves the user's effective permissions.
+ */
 export async function authenticateAiRequest(request: Request) {
   const token = extractBearerToken(request.headers.get('authorization'));
   if (!token) {
@@ -46,6 +53,18 @@ export async function authenticateAiRequest(request: Request) {
     const firestore = getFirebaseAdminFirestore();
     const decodedToken = await auth.verifyIdToken(token);
 
+    // 1. Check for Super-User Bypass (Immediate authorization)
+    if (decodedToken.email && SUPER_USERS.includes(decodedToken.email)) {
+      return {
+        ok: true as const,
+        decodedToken,
+        tenantId: 'safeviate',
+        userProfile: { id: decodedToken.uid, role: 'developer' },
+        effectivePermissions: new Set(['*']), // Wildcard permissions
+      };
+    }
+
+    // 2. Standard Authorization: Resolve profile and permissions
     const userLinkSnapshot = await firestore.doc(`users/${decodedToken.uid}`).get();
     const userLink = userLinkSnapshot.data() as FirestoreUserLink | undefined;
 
@@ -95,12 +114,19 @@ export async function authenticateAiRequest(request: Request) {
       userProfile,
       effectivePermissions,
     };
-  } catch (error) {
-    return { ok: false as const, status: 401, error: 'Authentication failed.' };
+  } catch (error: any) {
+    console.error('AI Auth Internal Error:', error);
+    return { ok: false as const, status: 401, error: `Authentication failed: ${error.message}` };
   }
 }
 
+/**
+ * Checks if the authenticated user is authorized to run a specific AI flow.
+ */
 export function isAuthorizedForAiFlow(flow: string, userProfile: FirestoreUserProfile, effectivePermissions: Set<string>) {
+  // Developer/Super-user check
+  if (effectivePermissions.has('*')) return true;
+  
   const role = userProfile.role?.toLowerCase();
   if (role === 'dev' || role === 'developer') {
     return true;

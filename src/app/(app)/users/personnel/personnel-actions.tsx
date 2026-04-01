@@ -14,7 +14,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Eye, Trash2, Mail, Loader2 } from 'lucide-react';
-import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useAuth, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Personnel, PilotProfile } from './page';
 import Link from 'next/link';
@@ -40,6 +40,7 @@ const determineCollection = (userType: UserProfile['userType']): string => {
 
 export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -68,9 +69,13 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const handleSendWelcomeEmail = async () => {
     setIsSendingEmail(true);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/send-welcome-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+        },
         body: JSON.stringify({
           userId: user.id,
           email: user.email,
@@ -110,7 +115,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
             disabled={isSendingEmail}
             title="Send Welcome Email"
           >
-            {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 text-primary" />}
           </Button>
         )}
 

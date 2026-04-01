@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { format } from 'date-fns';
 import { DocumentUploader } from '@/components/document-uploader';
-import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useAuth, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -78,6 +78,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const firestore = useFirestore();
+  const auth = useAuth();
   const { hasPermission } = usePermissions();
   const { tenantId } = useUserProfile();
 
@@ -144,9 +145,13 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const handleSendWelcomeEmail = async () => {
     setIsSendingEmail(true);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/send-welcome-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+        },
         body: JSON.stringify({
           userId: user.id,
           email: user.email,
