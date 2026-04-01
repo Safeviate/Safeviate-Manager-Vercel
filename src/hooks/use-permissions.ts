@@ -14,9 +14,6 @@ type Role = {
   permissions?: string[];
 };
 
-/**
- * A custom hook to manage and check user permissions.
- */
 export const usePermissions = () => {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
@@ -60,27 +57,12 @@ export const usePermissions = () => {
     return grantedPermissions;
   }, [role?.permissions, userProfile?.permissions]);
 
-  const findMenuItemByPermission = useCallback((permissionId: string): MenuItem | SubMenuItem | null => {
-    const walk = (items: Array<MenuItem | SubMenuItem>): MenuItem | SubMenuItem | null => {
-      for (const item of items) {
-        if (item.permissionId === permissionId) return item;
-        if ('subItems' in item && item.subItems) {
-          const found = walk(item.subItems);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return walk(menuConfig);
-  }, []);
-
   const hasPermission = useCallback((permissionId: string) => {
     if (isLoading || !userProfile) return false;
-
-    // --- Standard Super-Admin / Developer Bypass ---
-    const role = (userProfile as Personnel).role?.toLowerCase();
-    if (userProfile.id === 'DEVELOPER_MODE' || role === 'dev' || role === 'developer') {
+    
+    // Developer role bypass remains for impersonation testing
+    const userRole = (userProfile as Personnel).role?.toLowerCase();
+    if (userRole === 'dev' || userRole === 'developer') {
         return true;
     }
 
@@ -105,8 +87,8 @@ export const usePermissions = () => {
 
     if (userProfile.accessOverrides?.hiddenMenus?.includes(itemHref)) return false;
 
-    const role = (userProfile as Personnel).role?.toLowerCase();
-    if (userProfile.id === 'DEVELOPER_MODE' || role === 'dev' || role === 'developer') {
+    const userRole = (userProfile as Personnel).role?.toLowerCase();
+    if (userRole === 'dev' || userRole === 'developer') {
       return true;
     }
 
@@ -125,7 +107,6 @@ export const usePermissions = () => {
     permissions: effectivePermissions,
     hasPermission,
     canAccessMenuItem,
-    findMenuItemByPermission,
     isLoading,
   };
 };

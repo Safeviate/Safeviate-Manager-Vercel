@@ -33,7 +33,6 @@ const getTenantOverride = () => {
 
 const canOverrideTenant = (profile: UserProfile | null, isAnonymous: boolean) => {
     if (isAnonymous) return false;
-
     const role = (profile as Personnel | null)?.role?.toLowerCase();
     return role === 'dev' || role === 'developer';
 };
@@ -73,20 +72,13 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const isLoading = isAuthLoading || isUserLinkLoading || isFallbackUserLinkLoading || isProfileDocLoading;
     const error = (userLinkError || fallbackUserLinkError || profileError) ?? null;
 
-    const finalUserProfile = useMemo(() => {
-        if (isLoading || !authUser || authUser.isAnonymous) return null;
-        if (!resolvedUserLink?.profilePath || !userProfileData) return null;
-        return userProfileData;
-    }, [isLoading, authUser, resolvedUserLink, userProfileData]);
-
     const tenantId = useMemo(() => {
-        if (!finalUserProfile || !resolvedUserLink?.profilePath) return null;
-
+        if (!userProfileData || !resolvedUserLink?.profilePath) return null;
         const pathParts = resolvedUserLink.profilePath.split('/');
         const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
-        const overrideTenantId = canOverrideTenant(finalUserProfile, false) ? tenantOverride : null;
+        const overrideTenantId = canOverrideTenant(userProfileData, false) ? tenantOverride : null;
         return overrideTenantId || profileTenantId;
-    }, [finalUserProfile, resolvedUserLink, tenantOverride]);
+    }, [userProfileData, resolvedUserLink, tenantOverride]);
 
     useEffect(() => {
         if (!firestore || !authUser || authUser.isAnonymous || userLink || !resolvedUserLink?.profilePath) {
@@ -106,13 +98,8 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        const handleProfileUpdate = () => {
-            setProfileRefreshToken((current) => current + 1);
-        };
-
-        const syncTenantOverride = () => {
-            setTenantOverride(getTenantOverride());
-        };
+        const handleProfileUpdate = () => setProfileRefreshToken((current) => current + 1);
+        const syncTenantOverride = () => setTenantOverride(getTenantOverride());
 
         syncTenantOverride();
         window.addEventListener('safeviate-profile-updated', handleProfileUpdate);
@@ -127,11 +114,11 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const value = useMemo(() => ({
-        userProfile: finalUserProfile,
+        userProfile: userProfileData || null,
         tenantId,
         isLoading,
         error,
-    }), [finalUserProfile, tenantId, isLoading, error]);
+    }), [userProfileData, tenantId, isLoading, error]);
 
     return (
         <UserProfileContext.Provider value={value}>

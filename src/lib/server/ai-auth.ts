@@ -32,7 +32,6 @@ function extractBearerToken(authorizationHeader: string | null) {
   if (!authorizationHeader?.startsWith('Bearer ')) {
     return null;
   }
-
   return authorizationHeader.slice('Bearer '.length).trim();
 }
 
@@ -51,25 +50,21 @@ export async function authenticateAiRequest(request: Request) {
     const userLink = userLinkSnapshot.data() as FirestoreUserLink | undefined;
 
     if (!userLink?.profilePath) {
-      return { ok: false as const, status: 403, error: 'No Firestore profile is linked to this account.' };
+      return { ok: false as const, status: 403, error: 'No profile is linked to this account.' };
     }
 
     const userProfileSnapshot = await firestore.doc(userLink.profilePath).get();
     const userProfile = userProfileSnapshot.data() as FirestoreUserProfile | undefined;
 
     if (!userProfile) {
-      return { ok: false as const, status: 403, error: 'The linked Firestore profile could not be found.' };
+      return { ok: false as const, status: 403, error: 'The linked profile could not be found.' };
     }
 
     const profilePathParts = userLink.profilePath.split('/');
     const tenantId = profilePathParts[0] === 'tenants' ? profilePathParts[1] ?? null : null;
 
-    if (!tenantId) {
-      return { ok: false as const, status: 403, error: 'The linked Firestore profile is missing tenant context.' };
-    }
-
     const roleId = userProfile.role;
-    const roleSnapshot = roleId
+    const roleSnapshot = roleId && tenantId
       ? await firestore.doc(`tenants/${tenantId}/roles/${roleId}`).get()
       : null;
     const role = roleSnapshot?.data() as FirestoreRole | undefined;
@@ -101,8 +96,7 @@ export async function authenticateAiRequest(request: Request) {
       effectivePermissions,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Authentication failed.';
-    return { ok: false as const, status: 401, error: message };
+    return { ok: false as const, status: 401, error: 'Authentication failed.' };
   }
 }
 
@@ -113,9 +107,7 @@ export function isAuthorizedForAiFlow(flow: string, userProfile: FirestoreUserPr
   }
 
   const rule = aiFlowPermissions[flow];
-  if (!rule) {
-    return false;
-  }
+  if (!rule) return false;
 
   return rule.anyOf.some((permission) => effectivePermissions.has(permission));
 }

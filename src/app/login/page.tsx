@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -8,24 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, initiateEmailSignIn } from '@/firebase';
-import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isUserLoginLoading, setIsUserLoginLoading] = useState(false);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  
-  const handleLogoutFirst = async () => {
-    if (auth.currentUser) {
-      await signOut(auth);
-    }
-    // Clear any previous impersonation state
-    localStorage.removeItem('impersonatedUser');
-  }
 
   const handleUserLogin = async () => {
     if (!email || !password) {
@@ -37,16 +27,14 @@ export default function LoginPage() {
       return;
     }
 
-    setIsUserLoginLoading(true);
+    setIsLoginLoading(true);
     try {
-      // Always sign out first to ensure a clean session.
-      await handleLogoutFirst();
       await initiateEmailSignIn(auth, email, password);
-      // Set the impersonation flag AFTER successful login
+      
       localStorage.setItem('impersonatedUser', email);
       toast({
         title: 'Login Successful',
-        description: `Now logged in as ${email}.`,
+        description: `Welcome back to Safeviate.`,
       });
       router.push('/dashboard');
     } catch (error: any) {
@@ -54,37 +42,37 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'An unknown error occurred.',
+        description: error.message || 'Incorrect email or password.',
       });
     } finally {
-      setIsUserLoginLoading(false);
+      setIsLoginLoading(false);
     }
   };
 
   return (
     <div
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4"
-      style={{ backgroundImage: "url('/safeviate-background.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+      style={{ backgroundImage: "url('https://images.unsplash.com/photo-1597571063304-81f081944ee8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
     >
       <div className="absolute inset-0 bg-slate-950/45" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(15,118,110,0.22),transparent_28%)]" />
 
       <Card className="relative w-full max-w-md border-white/20 bg-white/10 shadow-2xl backdrop-blur-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-white">Welcome to Safeviate</CardTitle>
-          <CardDescription className="text-center text-white/85">Enter your credentials to access your account.</CardDescription>
+          <CardTitle className="text-white">Safeviate Manager</CardTitle>
+          <CardDescription className="text-center text-white/85">Secure access to organization portal.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="block text-center text-white">Email</Label>
+            <Label htmlFor="email" className="block text-center text-white">Email Address</Label>
             <Input
               id="email"
               type="email"
-              placeholder="user@safeviate.com"
+              placeholder="name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isUserLoginLoading}
-              className="bg-white/90"
+              disabled={isLoginLoading}
+              className="bg-white/90 font-bold"
             />
           </div>
           <div className="space-y-2">
@@ -94,14 +82,14 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={isUserLoginLoading}
-              className="bg-white/90"
+              disabled={isLoginLoading}
+              className="bg-white/90 font-bold"
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button className="w-full" onClick={handleUserLogin} disabled={isUserLoginLoading}>
-            {isUserLoginLoading ? 'Logging in...' : 'Login as User'}
+        <CardFooter>
+          <Button className="w-full h-11 text-base font-black uppercase tracking-tight" onClick={handleUserLogin} disabled={isLoginLoading}>
+            {isLoginLoading ? 'Authorizing...' : 'Sign In'}
           </Button>
         </CardFooter>
       </Card>
