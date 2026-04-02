@@ -130,7 +130,7 @@ export default function ActiveFlightPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 p-4 pt-6 md:p-8">
+    <div className="mx-auto flex min-h-full w-full max-w-[1200px] flex-1 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8">
       <Card className="border shadow-none">
         <CardHeader className="border-b bg-muted/20">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -167,7 +167,7 @@ export default function ActiveFlightPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <CardContent className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.2fr_0.8fr]">
           <Card className="border shadow-none">
             <CardHeader>
               <CardTitle className="text-sm font-black uppercase tracking-widest">Session Setup</CardTitle>
@@ -316,7 +316,7 @@ export default function ActiveFlightPage() {
                         {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-lg border bg-muted/10 p-3">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Accuracy</p>
                         <p className="mt-1 font-black">{position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
