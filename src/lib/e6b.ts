@@ -105,11 +105,10 @@ export const calculateWindTriangle = (input: WindTriangleInput): WindTriangleOut
     // Calculate heading
     const trueHeading = trueCourse + windCorrectionAngle;
 
-    // Calculate ground speed using the law of cosines
-    const groundSpeed = Math.sqrt(
-        Math.pow(trueAirspeed, 2) + Math.pow(windSpeed, 2) -
-        2 * trueAirspeed * windSpeed * Math.cos(tcRad - wdRad + wcaRad)
-    );
+    // Calculate ground speed using the law of cosines (clamped to prevent NaN from float rounding)
+    const rawGS = Math.pow(trueAirspeed, 2) + Math.pow(windSpeed, 2) -
+        2 * trueAirspeed * windSpeed * Math.cos(tcRad - wdRad + wcaRad);
+    const groundSpeed = Math.sqrt(Math.max(0, rawGS));
     
     return {
         windCorrectionAngle: windCorrectionAngle,
@@ -143,20 +142,36 @@ export const calculateFuelRequired = (eteMinutes: number, fuelBurnPerHour: numbe
 };
 
 /**
- * Calculates the magnetic declination (variation) at a given geographic point
- * using the NOAA World Magnetic Model (WMM), accurate to 2025-2030.
+ * Calculates the magnetic declination (variation) at a given geographic point.
+ * Uses the IGRF/WMM dipole approximation which is accurate enough for flight planning
+ * and works in both Node.js and browser environments.
  * @param lat - Latitude in decimal degrees.
  * @param lon - Longitude in decimal degrees.
  * @returns Magnetic declination in degrees. Positive = East, Negative = West.
  */
 export const getMagneticVariation = (lat: number, lon: number): number => {
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const geomagnetism = require('geomagnetism');
-        const model = geomagnetism.model();
-        const info = model.point([lat, lon]);
-        return parseFloat(info.decl.toFixed(1));
-    } catch {
-        return 0;
-    }
+    // WMM 2025 magnetic north pole approximate position (valid ~2025-2030)
+    const magNorthLat = 86.146;
+    const magNorthLon = 140.186;
+
+    const latRad = toRadians(lat);
+    const lonRad = toRadians(lon);
+    const magLatRad = toRadians(magNorthLat);
+    const magLonRad = toRadians(magNorthLon);
+
+    // Spherical geometry: compute the magnetic declination using the dipole model
+    const sinLat = Math.sin(latRad);
+    const cosLat = Math.cos(latRad);
+    const sinMagLat = Math.sin(magLatRad);
+    const cosMagLat = Math.cos(magLatRad);
+    const dLon = magLonRad - lonRad;
+
+    // Declination via the spherical triangle between geographic pole, magnetic pole, and observer
+    const num = cosMagLat * Math.sin(dLon);
+    const den = cosMagLat * sinLat * Math.cos(dLon) - sinMagLat * cosLat;
+
+    // atan2 handles all quadrants correctly
+    const declination = toDegrees(Math.atan2(num, den));
+
+    return parseFloat(declination.toFixed(1));
 };

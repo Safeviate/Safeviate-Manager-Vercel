@@ -48,6 +48,11 @@
     --header-border: 23 14% 20%;
     --swimlane-header-background: 147 100% 12%;
     --swimlane-header-foreground: 0 0% 100%;
+    /* Matrix hierarchy colors — also managed by theme-provider.tsx */
+    --matrix-header-background: 204 95% 94%;
+    --matrix-header-foreground: 215 28% 17%;
+    --matrix-subheader-background: 210 40% 98%;
+    --matrix-subheader-foreground: 215 28% 17%;
   }
   .dark {
     --background: 215 28% 17%;
@@ -93,6 +98,11 @@
     --header-border: 215 20% 25%;
     --swimlane-header-background: 215 20% 25%;
     --swimlane-header-foreground: 205 67% 95%;
+    /* Matrix hierarchy colors — also managed by theme-provider.tsx */
+    --matrix-header-background: 215 20% 28%;
+    --matrix-header-foreground: 205 67% 95%;
+    --matrix-subheader-background: 215 20% 22%;
+    --matrix-subheader-foreground: 205 67% 95%;
   }
 }
 

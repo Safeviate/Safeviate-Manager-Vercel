@@ -162,6 +162,13 @@ const CompactRow = ({ label, children, actions, className }: { label: string; ch
     </div>
 );
 
+const SummaryCard = ({ label, value }: { label: string; value: string }) => (
+    <div className="rounded-xl border border-slate-200 bg-background/80 p-4">
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary">{label}</p>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-foreground">{value}</p>
+    </div>
+);
+
 interface RiskAssessmentEditorProps {
     path: string;
     label: string;
@@ -433,7 +440,7 @@ const StepsArray = ({ phaseIndex, personnel, riskMatrixColors }: { phaseIndex: n
                         <div className="flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-sky-50/40 border-b">
                             <div className="flex-1 min-w-0">
                                 <CompactRow 
-                                    label="SUB HEADER"
+                                    label="STEP"
                                     className="border-b-0"
                                     actions={
                                         <div className="flex items-center gap-1">
@@ -564,17 +571,28 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                     title="Implementation Strategy"
                 />
                 <CardContent className="p-0 bg-background flex-1 overflow-y-auto no-scrollbar">
-                    {/* --- CONSOLIDATED METADATA ROWS --- */}
-                    <div className="bg-muted/10 border-b">
-                        <CompactRow label="DETAILED DESCRIPTION">
-                            <p className="text-sm font-medium leading-relaxed">{moc.description}</p>
-                        </CompactRow>
-                        <CompactRow label="REASON FOR CHANGE">
-                            <p className="text-sm font-medium leading-relaxed">{moc.reason}</p>
-                        </CompactRow>
-                        <CompactRow label="SCOPE OF CHANGE">
-                            <p className="text-sm font-medium leading-relaxed">{moc.scope}</p>
-                        </CompactRow>
+                    <div className="border-b bg-muted/10 p-6">
+                        <Card className="overflow-hidden border-slate-200 shadow-none">
+                            <CardHeader className="border-b bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">Title Card</p>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Badge variant="outline" className="border-primary/20 bg-primary/5 text-[10px] font-black uppercase tracking-wide text-primary">
+                                            {moc.mocNumber}
+                                        </Badge>
+                                        <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wide">
+                                            {moc.status}
+                                        </Badge>
+                                    </div>
+                                    <h2 className="text-xl font-black tracking-tight text-foreground">{moc.title}</h2>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="grid gap-4 p-5 md:grid-cols-3">
+                                <SummaryCard label="Detailed Description" value={moc.description} />
+                                <SummaryCard label="Reason For Change" value={moc.reason} />
+                                <SummaryCard label="Scope Of Change" value={moc.scope} />
+                            </CardContent>
+                        </Card>
                     </div>
 
                     {phaseFields.length > 0 ? (
@@ -584,7 +602,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                     <Card className="overflow-hidden border-slate-200 shadow-none bg-white">
                                         <CardHeader className="p-0 border-b border-slate-200">
                                             <CompactRow 
-                                                label="HEADER"
+                                                label={`Header ${index + 1}`}
                                                 className="bg-gradient-to-r from-slate-50 via-white to-sky-50/40 border-b-0"
                                                 actions={
                                                     <div className="flex items-center gap-1">

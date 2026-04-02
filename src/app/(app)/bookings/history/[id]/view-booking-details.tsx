@@ -277,6 +277,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
+    // ── Fuel sync between M&B and NavLog ──
+    const fuelStation = useMemo(() => stations.find(s => s.type === 'fuel'), [stations]);
+    const fuelWeightLbs = fuelStation ? (parseFloat(String(fuelStation.weight)) || 0) : undefined;
+
+    const handleNavlogFuelSync = useCallback((weightLbs: number) => {
+        setStations(prev => prev.map(s => {
+            if (s.type !== 'fuel') return s;
+            return { ...s, weight: weightLbs, gallons: parseFloat((weightLbs / FUEL_WEIGHT_PER_GALLON).toFixed(1)) };
+        }));
+    }, []);
+
     const handleSaveToBooking = async () => {
         if (!firestore || !tenantId) return;
         setIsSaving(true);
@@ -675,7 +686,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
                     <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <div className="min-h-0 flex-1 overflow-hidden">
-                            <NavlogBuilder booking={booking} tenantId={tenantId!} />
+                            <NavlogBuilder booking={booking} tenantId={tenantId!} fuelWeightLbs={fuelWeightLbs} onFuelWeightChange={handleNavlogFuelSync} />
                         </div>
                     </TabsContent>
                 </div>

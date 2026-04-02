@@ -6,14 +6,15 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const RegulationSchema = z.object({
-    regulationCode: z.string().describe("The official code for the regulation (e.g., '141.02.2' or '1.1')."),
-    regulationStatement: z.string().describe("The short, official title or heading of the regulation (e.g., 'Quality policy and strategy')."),
-    technicalStandard: z.string().describe("The full, detailed text body of the regulation, including all sub-points like (a), (b), (i), etc. This should contain the complete description of what the regulation requires."),
+    regulationCode: z.string().describe("The full code for the extracted item, derived from the selected parent section and the source numbering marker."),
+    regulationStatement: z.string().describe("The short, official title or heading of the extracted item only."),
+    technicalStandard: z.string().describe("The detailed text body for that specific extracted item only. When a heading contains subordinate numbered or lettered lines, keep those subordinate lines together in this field for the same card."),
     companyReference: z.string().describe("A suggested reference to an internal manual (e.g., 'Ops Manual, Sec 4.2.1'). Provide a sensible placeholder if not obvious."),
-    parentRegulationCode: z.string().optional().describe("The code of the parent regulation if this is a sub-regulation (e.g., '141.01.18' would be the parent of '141.01.18.1'). Leave empty for top-level regulations."),
+    parentRegulationCode: z.string().optional().describe("The parent item code for this extracted item. For extracted paragraph cards, this is the selected parent section code."),
 });
 
 export const SummarizeDocumentInputSchema = z.object({
+  targetParentCode: z.string().optional().describe('The code of the selected manual parent item that these extracted items should sit under.'),
   document: z.object({
     text: z.string().optional().describe('The full text content of the regulations document.'),
     images: z.array(z.string()).optional().describe("A sequence of photos of the regulations document, as data URIs. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -40,44 +41,45 @@ const prompt = ai.definePrompt({
     prompt: `You are an expert in aviation regulatory compliance. Your task is to analyze the provided document content (which could be text or a sequence of images) and extract each individual compliance requirement.
 
 You must differentiate between the regulation's title (the 'regulationStatement') and its full descriptive text (the 'technicalStandard').
-Preserve the hierarchy exactly: regulation header, sub-regulation, then paragraph items.
+Only extract items that belong under the selected manual parent section. Do not output the higher-level header or sub-regulation row itself.
 
 For each item you identify, structure it into the following fields:
-- regulationCode: The specific number or code (e.g., '141.01.18' for a regulation header, or a sub-number like '1.' which you should combine with its parent to form '141.01.18.1').
-- regulationStatement: The short, official title of the regulation ONLY. Do not include the detailed text that follows. For example, for "1. Quality policy and strategy", this field should be "Quality policy and strategy".
-- technicalStandard: The full, detailed text body of the regulation. This includes all sub-points like (1), (a), (b), (i), etc., combined into a single string. IMPORTANT: Preserve all original formatting, including line breaks and indentation for lists. For a main heading with no body text, this field can be an empty string.
+- regulationCode: Preserve the source numbering structure using the selected parent code as the base. Examples:
+  - If targetParentCode is '141.01.18' and the source items are '1.', '2.', '3.', output '141.01.18.1', '141.01.18.2', '141.01.18.3'.
+- regulationStatement: The short, official title of the extracted item ONLY. Do not include the detailed text that follows. If the source has a heading like '1. Quality policy and strategy' followed by sub-lines '(1)...(2)...', then the heading text 'Quality policy and strategy' is the regulationStatement for the card.
+- technicalStandard: The detailed text body for that exact item. Preserve original wording, line breaks, and indentation where possible. If the heading is followed by subordinate numbered or lettered lines, include all of those subordinate lines in this same field in source order.
 - companyReference: A sensible placeholder for where this might be found in a typical airline's Operations Manual (e.g., "Ops Manual, Sec 4.2.1").
-- parentRegulationCode: If it's a sub-regulation or paragraph (like '1. Quality policy...'), its 'parentRegulationCode' should be the code of the immediate parent heading it falls under (e.g., '141.01.18'). For top-level headings, this field should be omitted.
+- parentRegulationCode: Use targetParentCode for extracted paragraph cards.
 
 Rules:
-- If the source includes a regulation header such as '141.01.18 QUALITY ASSURANCE AND QUALITY SYSTEM', output it as a top-level record with no parentRegulationCode.
-- If the source includes numbered sub-regulations under that header, attach them to that header using parentRegulationCode.
-- If sub-regulations contain numbered paragraphs, preserve their order and attach them to the sub-regulation code as parentRegulationCode.
-- Do not flatten the hierarchy.
+- The user has already created the parent section manually. Use targetParentCode as the base parent.
+- Preserve the original source numbering structure. Do not invent replacement schemes such as 'ATO.CERT.01.1' unless that genuinely follows from targetParentCode plus the source numbering marker.
+- Keep the paragraph order exactly as shown in the source.
+- Create one card per top-level numbered heading under the selected parent section.
+- If a top-level numbered heading contains subordinate numbered or lettered sub-lines, keep those sub-lines inside the same card's technicalStandard instead of creating separate child items.
+- Do not use the first subordinate sentence as the card title when the source clearly provides a heading for the numbered item.
+- Do not duplicate the numbering marker in both regulationCode and regulationStatement.
+- Do not output the selected parent row itself.
 
 Example Breakdown:
 Document snippet:
 "
-141.01.18 QUALITY ASSURANCE AND QUALITY SYSTEM
-An approved training organisation must establish a quality assurance programme and a quality system that includes:
-(1) a quality policy and strategy; and
-(2) a quality procedures; and
-(3) a quality manager.
-1. Quality policy and strategy
-The quality policy and strategy must be defined in writing...
+Target parent code: 141.01.18
+2. Quality assurance
+(1) The term quality assurance (QA) is frequently misunderstood to mean the testing and checking of products and services.
+(2) An ATO that only do checking and testing activities is applying 'quality control' measures...
+(3) Quality control, by itself, provides limited value without the suite of complementary activities that comprise QA.
+(4) QA, on the other hand, attempts to improve and stabilise the training process...
+(5) A quality assurance plan for an ATO shall encompass well-designed and documented policies, processes and procedures necessary to -
+(a) monitor training services and process controls;
+(b) monitor assessment and testing methods;
 "
 
 Expected Output Objects:
 1. {
-     regulationCode: '141.01.18',
-     regulationStatement: 'QUALITY ASSURANCE AND QUALITY SYSTEM',
-     technicalStandard: 'An approved training organisation must establish a quality assurance programme and a quality system that includes:\\n(1) a quality policy and strategy; and\\n(2) quality procedures; and\\n(3) a quality manager.',
-     companyReference: '...'
-   }
-2. {
-     regulationCode: '141.01.18.1',
-     regulationStatement: 'Quality policy and strategy',
-     technicalStandard: 'The quality policy and strategy must be defined in writing...',
+     regulationCode: '141.01.18.2',
+     regulationStatement: 'Quality assurance',
+     technicalStandard: '(1) The term quality assurance (QA) is frequently misunderstood to mean the testing and checking of products and services.\n\n(2) An ATO that only do checking and testing activities is applying ''quality control'' measures...\n\n(3) Quality control, by itself, provides limited value without the suite of complementary activities that comprise QA.\n\n(4) QA, on the other hand, attempts to improve and stabilise the training process...\n\n(5) A quality assurance plan for an ATO shall encompass well-designed and documented policies, processes and procedures necessary to -\n(a) monitor training services and process controls;\n(b) monitor assessment and testing methods;',
      parentRegulationCode: '141.01.18',
      companyReference: '...'
    }
@@ -87,6 +89,9 @@ You will be given a sequence of images. Treat them as pages of a single document
 {{/if}}
 
 Analyze the following document and extract all requirements:
+
+Selected Parent Code:
+{{targetParentCode}}
 
 {{#if document.text}}
 Document Content:

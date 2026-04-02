@@ -95,7 +95,7 @@ export interface Navlog {
     globalVariation?: number;
     globalFuelBurn?: number;
     globalFuelBurnUnit?: 'GPH' | 'LPH';
-    fuelEnduranceHours?: number;
+    globalFuelOnBoard?: number;
 }
 
 export interface Booking {

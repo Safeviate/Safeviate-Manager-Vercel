@@ -1,23 +1,118 @@
 'use client';
 
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Booking } from '@/types/booking';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { Booking, NavlogLeg } from '@/types/booking';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, Navigation, Clock, Ruler } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Trash2, Navigation, Wind, Gauge, Fuel, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { recalculateNavlogLegs, calculateRouteTotals, DEFAULT_FLIGHT_PARAMS } from '@/lib/flight-planner';
+import type { FlightParams } from '@/lib/flight-planner';
+
+/** Weight of AVGAS per gallon in lbs */
+const FUEL_WEIGHT_PER_GALLON = 6;
 
 interface NavlogBuilderProps {
     booking: Booking;
     tenantId: string;
+    /** Fuel weight in lbs from the M&B fuel station (for bi-directional sync) */
+    fuelWeightLbs?: number;
+    /** Callback when endurance changes — parent updates the M&B fuel station */
+    onFuelWeightChange?: (weightLbs: number) => void;
 }
 
-export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
+/** Compact inline number input for per-leg overrides */
+function InlineInput({
+    value,
+    onChange,
+    placeholder,
+    className = '',
+    width = 'w-14',
+}: {
+    value: number | undefined;
+    onChange: (v: number | undefined) => void;
+    placeholder?: string;
+    className?: string;
+    width?: string;
+}) {
+    return (
+        <Input
+            type="number"
+            value={value ?? ''}
+            onChange={(e) => {
+                const raw = e.target.value;
+                onChange(raw === '' ? undefined : parseFloat(raw));
+            }}
+            placeholder={placeholder}
+            className={`h-6 px-1 text-[10px] font-bold text-center border-dashed ${width} ${className}`}
+        />
+    );
+}
+
+export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightChange }: NavlogBuilderProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const legs = booking.navlog?.legs || [];
+
+    // Global flight parameters (initialize from saved navlog or defaults)
+    const [params, setParams] = useState<FlightParams>({
+        tas: booking.navlog?.globalTas ?? DEFAULT_FLIGHT_PARAMS.tas,
+        windDirection: booking.navlog?.globalWindDirection ?? DEFAULT_FLIGHT_PARAMS.windDirection,
+        windSpeed: booking.navlog?.globalWindSpeed ?? DEFAULT_FLIGHT_PARAMS.windSpeed,
+        fuelBurnPerHour: booking.navlog?.globalFuelBurn ?? DEFAULT_FLIGHT_PARAMS.fuelBurnPerHour,
+        fuelOnBoard: booking.navlog?.globalFuelOnBoard ?? DEFAULT_FLIGHT_PARAMS.fuelOnBoard,
+    });
+    const [fuelUnit, setFuelUnit] = useState<'GPH' | 'LPH'>(booking.navlog?.globalFuelBurnUnit ?? 'GPH');
+    const [showPerLegWind, setShowPerLegWind] = useState(false);
+
+    // ── Bi-directional fuel sync with M&B ──
+    const syncSourceRef = useRef<'navlog' | 'mb' | null>(null);
+
+    // When M&B fuel weight changes → update FOB in gallons
+    useEffect(() => {
+        if (fuelWeightLbs === undefined || syncSourceRef.current === 'navlog') {
+            syncSourceRef.current = null;
+            return;
+        }
+        const gallons = parseFloat((fuelWeightLbs / FUEL_WEIGHT_PER_GALLON).toFixed(1));
+        if (Math.abs(gallons - params.fuelOnBoard) > 0.05) {
+            syncSourceRef.current = 'mb';
+            setParams(prev => ({ ...prev, fuelOnBoard: gallons }));
+        }
+    }, [fuelWeightLbs]);
+
+    // When FOB changes → push fuel weight to M&B
+    useEffect(() => {
+        if (!onFuelWeightChange || syncSourceRef.current === 'mb') {
+            syncSourceRef.current = null;
+            return;
+        }
+        const weightLbs = parseFloat((params.fuelOnBoard * FUEL_WEIGHT_PER_GALLON).toFixed(1));
+        syncSourceRef.current = 'navlog';
+        onFuelWeightChange(weightLbs);
+    }, [params.fuelOnBoard, onFuelWeightChange]);
+
+    // Full E6B recalculation
+    const calculatedLegs = useMemo(
+        () => recalculateNavlogLegs(legs, params),
+        [legs, params]
+    );
+    const totals = useMemo(
+        () => calculateRouteTotals(calculatedLegs, params),
+        [calculatedLegs, params]
+    );
+
+    const formatMinutes = (minutes: number): string => {
+        if (!isFinite(minutes) || minutes <= 0) return '-';
+        const h = Math.floor(minutes / 60);
+        const m = Math.round(minutes % 60);
+        return h > 0 ? `${h}:${m.toString().padStart(2, '0')}` : `${m}`;
+    };
 
     const handleRemoveLeg = async (legId: string) => {
         if (!firestore) return;
@@ -31,6 +126,35 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
             toast({ title: 'Leg Removed' });
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
+        }
+    };
+
+    const handleUpdateLeg = useCallback(async (legId: string, updates: Partial<NavlogLeg>) => {
+        if (!firestore) return;
+        const updatedLegs = legs.map((l) => (l.id === legId ? { ...l, ...updates } : l));
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
+        try {
+            await updateDoc(bookingRef, { 'navlog.legs': updatedLegs });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
+        }
+    }, [firestore, legs, tenantId, booking.id, toast]);
+
+    const handleSaveParams = async () => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
+        try {
+            await updateDoc(bookingRef, {
+                'navlog.globalTas': params.tas,
+                'navlog.globalWindDirection': params.windDirection,
+                'navlog.globalWindSpeed': params.windSpeed,
+                'navlog.globalFuelBurn': params.fuelBurnPerHour,
+                'navlog.globalFuelBurnUnit': fuelUnit,
+                'navlog.globalFuelOnBoard': params.fuelOnBoard,
+            });
+            toast({ title: 'Flight Parameters Saved' });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
         }
     };
 
@@ -54,100 +178,309 @@ export function NavlogBuilder({ booking, tenantId }: NavlogBuilderProps) {
 
     return (
         <div className="flex-1 flex flex-col min-h-0 h-full bg-background overflow-hidden">
-            <div className="shrink-0 bg-muted/30 border-b px-6 py-2">
-                <div className="flex items-center gap-6">
+            {/* ── Global Flight Parameters Bar ── */}
+            <div className="shrink-0 border-b bg-muted/20 px-4 py-3 space-y-3">
+                <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <Settings2 className="h-3.5 w-3.5" /> Flight Parameters
+                    </p>
                     <div className="flex items-center gap-2">
-                        <Ruler className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-[10px] font-black uppercase text-muted-foreground">Total Dist:</span>
-                        <span className="text-xs font-black text-foreground">
-                            {legs.reduce((acc, l) => acc + (l.distance || 0), 0).toFixed(1)} NM
-                        </span>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-[9px] font-black uppercase"
+                            onClick={() => setShowPerLegWind(!showPerLegWind)}
+                        >
+                            {showPerLegWind ? 'Hide Per-Leg Wind' : 'Per-Leg Wind'}
+                        </Button>
+                        <Separator orientation="vertical" className="h-4" />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-[9px] font-black uppercase"
+                            onClick={() => setFuelUnit(fuelUnit === 'GPH' ? 'LPH' : 'GPH')}
+                        >
+                            {fuelUnit}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 text-[9px] font-black uppercase"
+                            onClick={handleSaveParams}
+                        >
+                            Save
+                        </Button>
                     </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-[10px] font-black uppercase text-muted-foreground">Total ETE:</span>
-                        <span className="text-xs font-black text-foreground">
-                            {legs.reduce((acc, l) => acc + (l.ete || 0), 0).toFixed(0)} MIN
-                        </span>
+                        <Gauge className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-[9px] font-black uppercase text-muted-foreground">TAS</span>
+                        <Input
+                            type="number"
+                            value={params.tas}
+                            onChange={(e) => setParams({ ...params, tas: parseFloat(e.target.value) || 0 })}
+                            className="h-7 w-16 text-xs font-bold text-center"
+                        />
+                        <span className="text-[9px] font-bold text-muted-foreground">KTS</span>
                     </div>
+                    <Separator orientation="vertical" className="h-5" />
+                    <div className="flex items-center gap-2">
+                        <Wind className="h-3.5 w-3.5 text-sky-500" />
+                        <span className="text-[9px] font-black uppercase text-muted-foreground">Wind</span>
+                        <Input
+                            type="number"
+                            value={params.windDirection}
+                            onChange={(e) => setParams({ ...params, windDirection: parseFloat(e.target.value) || 0 })}
+                            className="h-7 w-14 text-xs font-bold text-center"
+                        />
+                        <span className="text-[9px] font-bold text-muted-foreground">° /</span>
+                        <Input
+                            type="number"
+                            value={params.windSpeed}
+                            onChange={(e) => setParams({ ...params, windSpeed: parseFloat(e.target.value) || 0 })}
+                            className="h-7 w-14 text-xs font-bold text-center"
+                        />
+                        <span className="text-[9px] font-bold text-muted-foreground">KTS</span>
+                    </div>
+                    <Separator orientation="vertical" className="h-5" />
+                    <div className="flex items-center gap-2">
+                        <Fuel className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-[9px] font-black uppercase text-muted-foreground">Burn</span>
+                        <Input
+                            type="number"
+                            step="0.1"
+                            value={params.fuelBurnPerHour}
+                            onChange={(e) => setParams({ ...params, fuelBurnPerHour: parseFloat(e.target.value) || 0 })}
+                            className="h-7 w-16 text-xs font-bold text-center"
+                        />
+                        <span className="text-[9px] font-bold text-muted-foreground">{fuelUnit}</span>
+                    </div>
+                    <Separator orientation="vertical" className="h-5" />
+                    <div className="flex items-center gap-2">
+                        <Fuel className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="text-[9px] font-black uppercase text-muted-foreground">FOB</span>
+                        <Input
+                            type="number"
+                            step="0.1"
+                            value={params.fuelOnBoard}
+                            onChange={(e) => setParams({ ...params, fuelOnBoard: parseFloat(e.target.value) || 0 })}
+                            className="h-7 w-16 text-xs font-bold text-center"
+                        />
+                        <span className="text-[9px] font-bold text-muted-foreground">{fuelUnit === 'GPH' ? 'GAL' : 'L'}</span>
+                    </div>
+                </div>
+                {/* Derived endurance & reserve summary */}
+                <div className="flex items-center gap-4 text-[10px] font-black uppercase">
+                    <span className="text-muted-foreground">
+                        Endurance: <span className="text-foreground">{params.fuelBurnPerHour > 0 ? (params.fuelOnBoard / params.fuelBurnPerHour).toFixed(1) : '∞'} hrs</span>
+                    </span>
+                    <span className="text-muted-foreground">
+                        Reserve: <span className={totals.fuelRemaining < 0 ? 'text-destructive' : 'text-emerald-600'}>{totals.enduranceRemaining.toFixed(1)} hrs ({totals.fuelRemaining.toFixed(1)} {fuelUnit === 'GPH' ? 'GAL' : 'L'})</span>
+                    </span>
                 </div>
             </div>
 
-            <div className="w-full overflow-x-auto">
-                <Table className="min-w-[1200px]">
-                        <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                            <TableRow className="whitespace-nowrap">
-                                <TableHead className="w-12 text-[10px] uppercase font-black px-6 whitespace-nowrap">Leg</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black whitespace-nowrap">Waypoint</TableHead>
-                                <TableHead className="text-center text-[10px] uppercase font-black whitespace-nowrap">ALT</TableHead>
-                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">TC°</TableHead>
-                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">MH°</TableHead>
-                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">DIST (NM)</TableHead>
-                                <TableHead className="text-right text-[10px] uppercase font-black whitespace-nowrap">ETE (M)</TableHead>
-                                <TableHead className="text-right text-[10px] uppercase font-black px-6 no-print whitespace-nowrap">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {legs.map((leg, index) => (
+            {/* ── NavLog Table ── */}
+            <div className="w-full overflow-x-auto flex-1">
+                <Table className="min-w-[1400px]">
+                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                        <TableRow className="whitespace-nowrap">
+                            <TableHead className="w-10 text-[9px] uppercase font-black px-3 whitespace-nowrap">#</TableHead>
+                            <TableHead className="text-[9px] uppercase font-black whitespace-nowrap min-w-[180px]">Waypoint</TableHead>
+                            <TableHead className="text-center text-[9px] uppercase font-black whitespace-nowrap w-16">ALT</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">TC°</TableHead>
+                            {showPerLegWind && (
+                                <>
+                                    <TableHead className="text-center text-[9px] uppercase font-black whitespace-nowrap w-20">W/V</TableHead>
+                                </>
+                            )}
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">WCA</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">TH°</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">VAR</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">
+                                <span className="text-primary">MH°</span>
+                            </TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-14">DIST</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">GS</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">ETE</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-14">CUM</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">FUEL</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-14">REM</TableHead>
+                            <TableHead className="text-right text-[9px] uppercase font-black px-3 no-print whitespace-nowrap w-10"></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {calculatedLegs.map((leg, index) => {
+                            const isFirstLeg = index === 0 && (leg.distance === undefined || leg.distance === 0);
+                            const fuelRem = params.fuelOnBoard - calculatedLegs.slice(0, index + 1).reduce((s, l) => s + (l.tripFuel || 0), 0);
+                            const lowFuel = fuelRem < (params.fuelBurnPerHour * 0.75); // 45 min reserve warning
+
+                            return (
                                 <TableRow
                                     key={leg.id}
                                     className="hover:bg-muted/5 transition-colors border-b last:border-b-0 whitespace-nowrap"
                                 >
-                                    <TableCell className="font-black text-xs text-muted-foreground px-6 whitespace-nowrap">
+                                    {/* # */}
+                                    <TableCell className="font-black text-[10px] text-muted-foreground px-3">
                                         {index + 1}
                                     </TableCell>
-                                    <TableCell className="min-w-[420px] whitespace-nowrap align-top">
-                                        <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
-                                            <span className="font-black text-sm uppercase text-foreground whitespace-nowrap">
+
+                                    {/* Waypoint */}
+                                    <TableCell className="whitespace-nowrap align-top">
+                                        <div className="flex flex-col items-start gap-0.5">
+                                            <span className="font-black text-xs uppercase text-foreground">
                                                 {leg.waypoint}
                                             </span>
-                                            <span className="text-[9px] font-mono font-bold text-muted-foreground whitespace-nowrap">
+                                            <span className="text-[8px] font-mono font-bold text-muted-foreground">
                                                 {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
                                             </span>
                                             {leg.frequencies && (
-                                                <span className="text-[9px] font-semibold text-emerald-700 whitespace-nowrap">
+                                                <span className="text-[8px] font-semibold text-emerald-700">
                                                     {leg.frequencies}
-                                                </span>
-                                            )}
-                                            {leg.layerInfo && (
-                                                <span className="text-[9px] font-semibold text-primary whitespace-nowrap">
-                                                    {leg.layerInfo}
                                                 </span>
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-center whitespace-nowrap">
-                                        <Badge variant="outline" className="font-mono text-xs font-bold border-slate-300 whitespace-nowrap">
-                                            {leg.altitude || '-'}
-                                        </Badge>
+
+                                    {/* ALT (editable) */}
+                                    <TableCell className="text-center">
+                                        <InlineInput
+                                            value={leg.altitude}
+                                            onChange={(v) => handleUpdateLeg(leg.id, { altitude: v })}
+                                            placeholder="FL"
+                                            width="w-16"
+                                        />
                                     </TableCell>
-                                    <TableCell className="text-right font-mono text-xs font-bold text-muted-foreground whitespace-nowrap">
-                                        {leg.trueCourse?.toFixed(0)}°
+
+                                    {/* TC° */}
+                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
+                                        {isFirstLeg ? '-' : `${(leg.trueCourse ?? 0).toFixed(0)}°`}
                                     </TableCell>
-                                    <TableCell className="text-right whitespace-nowrap">
-                                        <span className="font-mono text-sm font-black text-primary whitespace-nowrap">
-                                            {leg.magneticHeading?.toFixed(0)}°
+
+                                    {/* Per-leg Wind Override */}
+                                    {showPerLegWind && (
+                                        <TableCell className="text-center">
+                                            <div className="flex items-center gap-0.5 justify-center">
+                                                <InlineInput
+                                                    value={legs[index]?.windDirection}
+                                                    onChange={(v) => handleUpdateLeg(leg.id, { windDirection: v })}
+                                                    placeholder={`${params.windDirection}`}
+                                                    width="w-10"
+                                                />
+                                                <span className="text-[8px] text-muted-foreground">/</span>
+                                                <InlineInput
+                                                    value={legs[index]?.windSpeed}
+                                                    onChange={(v) => handleUpdateLeg(leg.id, { windSpeed: v })}
+                                                    placeholder={`${params.windSpeed}`}
+                                                    width="w-10"
+                                                />
+                                            </div>
+                                        </TableCell>
+                                    )}
+
+                                    {/* WCA */}
+                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
+                                        {isFirstLeg ? '-' : `${(leg.wca ?? 0) >= 0 ? '+' : ''}${(leg.wca ?? 0).toFixed(0)}°`}
+                                    </TableCell>
+
+                                    {/* TH° */}
+                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
+                                        {isFirstLeg ? '-' : `${(leg.trueHeading ?? 0).toFixed(0)}°`}
+                                    </TableCell>
+
+                                    {/* VAR */}
+                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
+                                        {(leg.variation ?? 0) >= 0 ? `${(leg.variation ?? 0).toFixed(0)}°E` : `${Math.abs(leg.variation ?? 0).toFixed(0)}°W`}
+                                    </TableCell>
+
+                                    {/* MH° (primary — highlighted) */}
+                                    <TableCell className="text-right">
+                                        <span className="font-mono text-sm font-black text-primary">
+                                            {isFirstLeg ? '-' : `${(leg.magneticHeading ?? 0).toFixed(0)}°`}
                                         </span>
                                     </TableCell>
-                                    <TableCell className="text-right font-mono text-xs font-black whitespace-nowrap">
-                                        {leg.distance?.toFixed(1)}
+
+                                    {/* DIST */}
+                                    <TableCell className="text-right font-mono text-[10px] font-black">
+                                        {isFirstLeg ? '-' : (leg.distance ?? 0).toFixed(1)}
                                     </TableCell>
-                                    <TableCell className="text-right font-mono text-xs font-black whitespace-nowrap">
-                                        {leg.ete?.toFixed(0)}
+
+                                    {/* GS */}
+                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
+                                        {isFirstLeg ? '-' : `${(leg.groundSpeed ?? 0).toFixed(0)}`}
                                     </TableCell>
-                                    <TableCell className="text-right px-6 no-print whitespace-nowrap">
+
+                                    {/* ETE */}
+                                    <TableCell className="text-right font-mono text-[10px] font-black">
+                                        {isFirstLeg ? '-' : formatMinutes(leg.ete ?? 0)}
+                                    </TableCell>
+
+                                    {/* Cumulative ETE */}
+                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
+                                        {isFirstLeg ? '-' : formatMinutes(leg.cumulativeEte ?? 0)}
+                                    </TableCell>
+
+                                    {/* Fuel per leg */}
+                                    <TableCell className="text-right font-mono text-[10px] font-black">
+                                        {isFirstLeg ? '-' : (leg.tripFuel ?? 0).toFixed(1)}
+                                    </TableCell>
+
+                                    {/* Fuel Remaining */}
+                                    <TableCell className={`text-right font-mono text-[10px] font-black ${lowFuel ? 'text-destructive' : ''}`}>
+                                        {fuelRem.toFixed(1)}
+                                    </TableCell>
+
+                                    {/* Actions */}
+                                    <TableCell className="text-right px-3 no-print">
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
                                             onClick={() => handleRemoveLeg(leg.id)}
                                         >
-                                            <Trash2 className="h-4 w-4" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
+                            );
+                        })}
+                    </TableBody>
+                    <TableFooter className="bg-muted/20 border-t-2">
+                        <TableRow className="whitespace-nowrap font-black">
+                            <TableCell colSpan={showPerLegWind ? 5 : 4} className="text-[10px] uppercase tracking-widest px-3">
+                                Totals
+                            </TableCell>
+                            {/* WCA, TH, VAR, MH — empty */}
+                            <TableCell />
+                            <TableCell />
+                            <TableCell />
+                            <TableCell />
+                            {/* DIST total */}
+                            <TableCell className="text-right font-mono text-[10px]">
+                                {totals.distance.toFixed(1)} NM
+                            </TableCell>
+                            {/* Avg GS */}
+                            <TableCell className="text-right font-mono text-[10px] text-muted-foreground">
+                                {totals.groundSpeed > 0 ? `${totals.groundSpeed.toFixed(0)}` : '-'}
+                            </TableCell>
+                            {/* Total ETE */}
+                            <TableCell className="text-right font-mono text-[10px]">
+                                {formatMinutes(totals.ete)}
+                            </TableCell>
+                            {/* Cumulative = same as total */}
+                            <TableCell />
+                            {/* Total Fuel */}
+                            <TableCell className="text-right font-mono text-[10px]">
+                                {totals.fuel.toFixed(1)}
+                            </TableCell>
+                            {/* Reserve */}
+                            <TableCell className={`text-right font-mono text-[10px] ${totals.fuelRemaining < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                                {totals.fuelRemaining.toFixed(1)}
+                            </TableCell>
+                            <TableCell className="no-print" />
+                        </TableRow>
+                    </TableFooter>
                 </Table>
             </div>
         </div>

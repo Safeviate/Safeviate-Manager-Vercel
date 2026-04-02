@@ -9,3 +9,5 @@ secrets:
     secret: GOOGLE_MAPS_API_KEY
   - variable: GOOGLE_API_KEY  # This is the "nickname"
     secret: GOOGLE_GENAI_API_KEY
+  - variable: OPENAIP_API_KEY
+    secret: OPENAIP_API_KEY

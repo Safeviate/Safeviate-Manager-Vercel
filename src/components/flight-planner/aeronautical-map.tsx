@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON, FeatureGroup, useMapEvents, LayersControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -124,9 +124,9 @@ const formatAirportRunways = (runways?: OpenAipFeature['runways']) =>
     .join(' • ');
 
 const getSearchZoom = (sourceLayer: OpenAipFeature['sourceLayer']) => {
-  if (sourceLayer === 'airports') return 15;
-  if (sourceLayer === 'navaids') return 16;
-  return 15;
+  if (sourceLayer === 'airports') return 13;
+  if (sourceLayer === 'navaids') return 14;
+  return 13; // reporting-points
 };
 
 type OpenAipAirspace = {
@@ -229,52 +229,123 @@ function MapEvents({
     pressRef.current = null;
   }, []);
 
+  const startPress = useCallback((latlng: L.LatLng) => {
+    clearPress();
+    pressRef.current = {
+      latlng,
+      longTriggered: false,
+      timer: window.setTimeout(() => {
+        const currentPress = pressRef.current;
+        if (!currentPress) return;
+        currentPress.longTriggered = true;
+        onLongPress(currentPress.latlng.lat, currentPress.latlng.lng);
+      }, LONG_PRESS_MS),
+    };
+  }, [clearPress, onLongPress]);
+
+  const endPress = useCallback((endLatlng: L.LatLng) => {
+    const press = pressRef.current;
+    if (!press) return;
+    if (press.timer !== null) {
+      window.clearTimeout(press.timer);
+    }
+
+    const movedMeters = map.distance(press.latlng, endLatlng);
+    const wasLongPress = press.longTriggered;
+    const lat = press.latlng.lat;
+    const lon = press.latlng.lng;
+    pressRef.current = null;
+
+    if (!wasLongPress && movedMeters <= CLICK_MOVE_TOLERANCE_METERS) {
+      onShortPress(lat, lon);
+    }
+  }, [map, onShortPress]);
+
+  // Mouse events via Leaflet's useMapEvents
   useMapEvents({
     mousedown(e) {
       if ((e.originalEvent as MouseEvent).button !== 0) return;
-      clearPress();
-      pressRef.current = {
-        latlng: e.latlng,
-        longTriggered: false,
-        timer: window.setTimeout(() => {
-          const currentPress = pressRef.current;
-          if (!currentPress) return;
-          currentPress.longTriggered = true;
-          onLongPress(currentPress.latlng.lat, currentPress.latlng.lng);
-        }, LONG_PRESS_MS),
-      };
+      startPress(e.latlng);
     },
     mouseup(e) {
-      const press = pressRef.current;
-      if (!press) return;
-      if (press.timer !== null) {
-        window.clearTimeout(press.timer);
-      }
-
-      const movedMeters = map.distance(press.latlng, e.latlng);
-      const wasLongPress = press.longTriggered;
-      const lat = press.latlng.lat;
-      const lon = press.latlng.lng;
-      pressRef.current = null;
-
-      if (!wasLongPress && movedMeters <= CLICK_MOVE_TOLERANCE_METERS) {
-        onShortPress(lat, lon);
-      }
+      endPress(e.latlng);
     },
     dragstart: clearPress,
     contextmenu: clearPress,
   });
+
+  // Touch events via native DOM listeners (Leaflet doesn't forward touch events reliably)
+  useEffect(() => {
+    const container = map.getContainer();
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) { clearPress(); return; }
+      const touch = e.touches[0];
+      const latlng = map.containerPointToLatLng(L.point(touch.clientX - container.getBoundingClientRect().left, touch.clientY - container.getBoundingClientRect().top));
+      startPress(latlng);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!pressRef.current || e.touches.length !== 1) { clearPress(); return; }
+      const touch = e.touches[0];
+      const rect = container.getBoundingClientRect();
+      const moveLatlng = map.containerPointToLatLng(L.point(touch.clientX - rect.left, touch.clientY - rect.top));
+      const movedMeters = map.distance(pressRef.current.latlng, moveLatlng);
+      if (movedMeters > CLICK_MOVE_TOLERANCE_METERS) {
+        clearPress();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const press = pressRef.current;
+      if (!press) return;
+      // Use the original press position for the end (changedTouches may not give a reliable final position)
+      endPress(press.latlng);
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', clearPress, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', clearPress);
+    };
+  }, [map, startPress, endPress, clearPress]);
 
   useEffect(() => clearPress, [clearPress]);
 
   return null;
 }
 
-function VisiblePointLoader({ onFeaturesLoaded }: { onFeaturesLoaded: (features: OpenAipFeature[]) => void }) {
+function VisiblePointLoader({
+  airportsEnabled,
+  navaidsEnabled,
+  reportingEnabled,
+  onFeaturesLoaded,
+}: {
+  airportsEnabled: boolean;
+  navaidsEnabled: boolean;
+  reportingEnabled: boolean;
+  onFeaturesLoaded: (features: OpenAipFeature[]) => void;
+}) {
   const map = useMap();
   const requestSeq = useRef(0);
 
+  const activeResources = useMemo(() => {
+    const resources: Array<typeof OPENAIP_POINT_RESOURCES[number]> = [];
+    if (airportsEnabled) resources.push('airports');
+    if (navaidsEnabled) resources.push('navaids');
+    if (reportingEnabled) resources.push('reporting-points');
+    return resources;
+  }, [airportsEnabled, navaidsEnabled, reportingEnabled]);
+
   const loadVisiblePoints = useCallback(async () => {
+    if (activeResources.length === 0) return;
+
     const bounds = map.getBounds().pad(0.25);
     const bbox = [
       bounds.getWest().toFixed(6),
@@ -286,7 +357,7 @@ function VisiblePointLoader({ onFeaturesLoaded }: { onFeaturesLoaded: (features:
 
     try {
       const responses = await Promise.all(
-        OPENAIP_POINT_RESOURCES.map(async (resource) => {
+        activeResources.map(async (resource) => {
           const response = await fetch(`/api/openaip?resource=${resource}&bbox=${bbox}`);
           const data = await response.json();
           return { resource, data };
@@ -302,7 +373,7 @@ function VisiblePointLoader({ onFeaturesLoaded }: { onFeaturesLoaded: (features:
     } catch (error) {
       console.error('Viewport OpenAIP load failed', error);
     }
-  }, [map, onFeaturesLoaded]);
+  }, [map, onFeaturesLoaded, activeResources]);
 
   useEffect(() => {
     loadVisiblePoints();
@@ -675,7 +746,7 @@ const SearchControl = ({
   }, []);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
-    if (searchQuery.length < 3) {
+    if (searchQuery.length < 2) {
       setResults([]);
       onResultsChangeRef.current([]);
       return;
@@ -684,13 +755,19 @@ const SearchControl = ({
     const resources = ['airports', 'navaids', 'reporting-points'] as const;
     try {
       const searchPromises = resources.map(resource =>
-        fetch(`/api/openaip?resource=${resource}&search=${searchQuery}`).then(res => res.json())
+        // Use basic search parameter directly as used previously successfully by the component.
+        fetch(`/api/openaip?resource=${resource}&search=${encodeURIComponent(searchQuery)}`)
+          .then(res => res.ok ? res.json() : [])
+          .catch(() => [])
       );
+      
       const searchResults = await Promise.all(searchPromises);
       const combinedResults = searchResults.flatMap((result, index) => {
         const sourceLayer = resources[index];
-        return (result.items || []).map((item: any) => ({ ...item, sourceLayer }));
+        const items = Array.isArray(result) ? result : (result.items || result.data || []);
+        return items.map((item: any) => ({ ...item, sourceLayer }));
       });
+      
       setResults(combinedResults);
       onResultsChangeRef.current(combinedResults);
     } catch (error) {
@@ -702,25 +779,41 @@ const SearchControl = ({
     handleSearch(debouncedQuery);
   }, [debouncedQuery, handleSearch]);
 
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setQuery('');
+        setResults([]);
+        onResultsChangeRef.current([]);
+      }
+    };
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
   const handleSelect = (item: OpenAipFeature) => {
-    if (item.geometry?.coordinates) {
-      const [lon, lat] = item.geometry.coordinates;
-      setSelected({ ...item, geometry: { coordinates: [lon, lat] } });
-      map.flyTo([lat, lon], getSearchZoom(item.sourceLayer));
-      setResults([]);
-      setQuery('');
-    }
+    // Extract coordinates robustly — OpenAIP may return nested geometry
+    const coords = item.geometry?.coordinates;
+    if (!coords || coords.length < 2) return;
+    const [lon, lat] = coords;
+    if (!isFinite(lat) || !isFinite(lon)) return;
+
+    setSelected({ ...item, geometry: { coordinates: [lon, lat] } });
+    
+    // Jump to result
+    map.flyTo([lat, lon], getSearchZoom(item.sourceLayer), {
+      animate: true,
+      duration: 1.5,
+    });
+    
+    setResults([]);
+    setQuery('');
   };
 
   return (
     <div
       ref={containerRef}
       className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-sm pointer-events-auto"
-      onPointerDownCapture={stopPropagation}
-      onMouseDownCapture={stopPropagation}
-      onClickCapture={stopPropagation}
-      onDoubleClickCapture={stopPropagation}
-      onWheelCapture={stopPropagation}
     >
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -729,13 +822,32 @@ const SearchControl = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && results[0]) {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              setQuery('');
+              setResults([]);
+              onResultsChangeRef.current([]);
+            } else if (event.key === 'Enter' && results[0]) {
               event.preventDefault();
               handleSelect(results[0]);
             }
           }}
-          className="pl-9 h-10 shadow-lg"
+          className="pl-9 pr-9 h-10 shadow-lg"
         />
+        {query && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setQuery('');
+              setResults([]);
+              onResultsChangeRef.current([]);
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {results.length > 0 && (
@@ -759,7 +871,16 @@ const SearchControl = ({
       )}
 
       {selected && selected.geometry?.coordinates && (
-        <Popup position={[selected.geometry.coordinates[1], selected.geometry.coordinates[0]]}>
+        <Popup
+          position={[selected.geometry.coordinates[1], selected.geometry.coordinates[0]]}
+          eventHandlers={{
+            remove: () => {
+              // Fired when Leaflet's native × button closes the popup
+              setSelected(null);
+              onResultsChangeRef.current([]);
+            },
+          }}
+        >
           <div className="text-sm space-y-2 w-48">
             <p className="font-bold text-base">{selected.name}</p>
             <p className="text-xs text-muted-foreground">{selected.sourceLayer}</p>
@@ -818,12 +939,14 @@ const SearchControl = ({
                       : 'OpenAIP Reporting Points'
                 );
                 setSelected(null);
+                onResultsChangeRef.current([]);
               }}>
                 <Plus className="h-4 w-4 mr-2" /> Add
               </Button>
               <Button size="sm" variant="ghost" className="w-full" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
                 blockMapInteraction(event);
                 setSelected(null);
+                onResultsChangeRef.current([]);
               }}>
                 <X className="h-4 w-4 mr-2" /> Close
               </Button>
@@ -1163,11 +1286,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
     }
 
     if (nearest && nearestDistance <= CLICK_SNAP_THRESHOLD_NM) {
+      const [featureLon, featureLat] = nearest.geometry!.coordinates!;
       const identifier = nearest.icaoCode || nearest.identifier || nearest.name;
       const frequencies = formatWaypointFrequencies(nearest.frequencies);
-      const context = buildWaypointContext(buildLayerInfo(lat, lon));
+      const context = buildWaypointContext(buildLayerInfo(featureLat, featureLon));
       setPendingClickLabel(identifier);
-      onAddWaypoint(lat, lon, identifier, frequencies, context);
+      onAddWaypoint(featureLat, featureLon, identifier, frequencies, context);
       return;
     }
 
@@ -1398,7 +1522,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
           </FeatureGroup>
         </LayersControl.Overlay>
 
-        <LayersControl.Overlay checked={classEVisible} name="E">
+        <LayersControl.Overlay checked={classEVisible} name="Class E">
           <FeatureGroup>
             {airspaceCollections.classE.features.length > 0 && (
               <GeoJSON
@@ -1414,7 +1538,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
           </FeatureGroup>
         </LayersControl.Overlay>
 
-        <LayersControl.Overlay checked={classFVisible} name="F">
+        <LayersControl.Overlay checked={classFVisible} name="Class F">
           <FeatureGroup>
             {airspaceCollections.classF.features.length > 0 && (
               <GeoJSON
@@ -1430,7 +1554,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
           </FeatureGroup>
         </LayersControl.Overlay>
 
-        <LayersControl.Overlay checked={classGVisible} name="G">
+        <LayersControl.Overlay checked={classGVisible} name="Class G">
           <FeatureGroup>
             {airspaceCollections.classG.features.length > 0 && (
               <GeoJSON
@@ -1551,9 +1675,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
           if (name === 'OpenAIP Navaids') setNavaidsVisible(active);
           if (name === 'OpenAIP Reporting Points') setReportingVisible(active);
           if (name === 'OpenAIP Airspaces') setAirspacesVisible(active);
-          if (name === 'E') setClassEVisible(active);
-          if (name === 'F') setClassFVisible(active);
-          if (name === 'G') setClassGVisible(active);
+          if (name === 'Class E') setClassEVisible(active);
+          if (name === 'Class F') setClassFVisible(active);
+          if (name === 'Class G') setClassGVisible(active);
           if (name === 'Military Operations Areas') setMilitaryAreasVisible(active);
           if (name === 'Training Areas') setTrainingAreasVisible(active);
           if (name === 'Gliding Sectors') setGlidingSectorsVisible(active);
@@ -1565,6 +1689,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
       <MapEvents onShortPress={handleMapClick} onLongPress={handleLongPress} />
       <MapZoomState onZoomChange={setMapZoom} />
       <VisiblePointLoader
+        airportsEnabled={airportsVisible}
+        navaidsEnabled={navaidsVisible}
+        reportingEnabled={reportingVisible}
         onFeaturesLoaded={setViewportFeatures}
       />
       <VisibleAirspaceLoader

@@ -249,22 +249,38 @@ export default function FlightPlannerPage() {
                             </Button>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase">
+                        <div className="grid grid-cols-4 gap-1.5 text-[10px] font-black uppercase">
                           <div className="rounded-lg bg-muted/20 px-2 py-1.5">
-                            <span className="text-muted-foreground">Dist</span>
-                            <span className="ml-2">{leg.distance?.toFixed(1) || '-'}</span>
+                            <span className="text-muted-foreground">TC</span>
+                            <span className="ml-1">{leg.trueCourse?.toFixed(0) || '-'}°</span>
                           </div>
                           <div className="rounded-lg bg-muted/20 px-2 py-1.5">
-                            <span className="text-muted-foreground">HDG</span>
-                            <span className="ml-2">{leg.magneticHeading?.toFixed(0) || '-'}</span>
+                            <span className="text-muted-foreground">WCA</span>
+                            <span className="ml-1">{leg.wca !== undefined ? `${leg.wca >= 0 ? '+' : ''}${leg.wca.toFixed(0)}°` : '-'}</span>
+                          </div>
+                          <div className="rounded-lg bg-muted/20 px-2 py-1.5">
+                            <span className="text-muted-foreground">VAR</span>
+                            <span className="ml-1">{leg.variation !== undefined ? `${leg.variation >= 0 ? `${leg.variation.toFixed(0)}E` : `${Math.abs(leg.variation).toFixed(0)}W`}` : '-'}</span>
+                          </div>
+                          <div className="rounded-lg bg-primary/10 px-2 py-1.5">
+                            <span className="text-primary">MH</span>
+                            <span className="ml-1 text-primary">{leg.magneticHeading?.toFixed(0) || '-'}°</span>
+                          </div>
+                          <div className="rounded-lg bg-muted/20 px-2 py-1.5">
+                            <span className="text-muted-foreground">Dist</span>
+                            <span className="ml-1">{leg.distance?.toFixed(1) || '-'}</span>
+                          </div>
+                          <div className="rounded-lg bg-muted/20 px-2 py-1.5">
+                            <span className="text-muted-foreground">GS</span>
+                            <span className="ml-1">{leg.groundSpeed?.toFixed(0) || '-'}</span>
                           </div>
                           <div className="rounded-lg bg-muted/20 px-2 py-1.5">
                             <span className="text-muted-foreground">ETE</span>
-                            <span className="ml-2">{leg.ete?.toFixed(0) || '-'}m</span>
+                            <span className="ml-1">{leg.ete?.toFixed(0) || '-'}m</span>
                           </div>
                           <div className="rounded-lg bg-muted/20 px-2 py-1.5">
                             <span className="text-muted-foreground">Fuel</span>
-                            <span className="ml-2">{leg.tripFuel?.toFixed(1) || '-'}</span>
+                            <span className="ml-1">{leg.tripFuel?.toFixed(1) || '-'}</span>
                           </div>
                         </div>
                       </div>

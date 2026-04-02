@@ -20,19 +20,36 @@ export default function WeatherPage() {
   const [tafData, setTafData] = useState<any | null>(null);
   const [avwxData, setAvwxData] = useState<any | null>(null);
   const [checkWxData, setCheckWxData] = useState<any | null>(null);
+  const [vatsimData, setVatsimData] = useState<any | null>(null);
+  const [openMeteoData, setOpenMeteoData] = useState<any | null>(null);
+  const [metNorwayData, setMetNorwayData] = useState<any | null>(null);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
   const mapCoords = useMemo(() => {
-    // Priority: METAR -> TAF -> Default (NYC)
-    const lat = Number(weatherData?.lat ?? weatherData?.latitude ?? tafData?.lat ?? -25.9); // FALA approx
-    const lon = Number(weatherData?.lon ?? weatherData?.longitude ?? tafData?.lon ?? 27.9);
+    // Priority: METAR -> TAF -> CheckWX -> Open-Meteo -> Default (FALA approx)
+    const lat = Number(
+      weatherData?.lat ?? 
+      weatherData?.latitude ?? 
+      tafData?.lat ?? 
+      checkWxData?.latitude ?? 
+      openMeteoData?.latitude ?? 
+      -25.9231
+    );
+    const lon = Number(
+      weatherData?.lon ?? 
+      weatherData?.longitude ?? 
+      tafData?.lon ?? 
+      checkWxData?.longitude ?? 
+      openMeteoData?.longitude ?? 
+      27.9242
+    );
     return {
-      lat: Number.isFinite(lat) ? lat : -25.9,
-      lon: Number.isFinite(lon) ? lon : 27.9,
+      lat: Number.isFinite(lat) ? lat : -25.9231,
+      lon: Number.isFinite(lon) ? lon : 27.9242,
     };
-  }, [weatherData, tafData]);
+  }, [weatherData, tafData, checkWxData, openMeteoData]);
 
   const windyEmbedUrl = useMemo(() => {
     const { lat, lon } = mapCoords;
@@ -47,74 +64,112 @@ export default function WeatherPage() {
     setLoading(true);
 
     try {
-      let noaaJson: any[] = [];
-      let tafJson: any[] = [];
+      // 1. Parallel Fetch for Aviation Sources
+      const [mainRes, avwxRes, checkWxRes, vatsimRes] = await Promise.all([
+        fetch(`/api/weather?ids=${station}`).catch(() => null),
+        fetch(`/api/weather/avwx?icao=${station}`).catch(() => null),
+        fetch(`/api/weather/check-wx?icao=${station}`).catch(() => null),
+        fetch(`/api/weather/vatsim?icao=${station}`).catch(() => null)
+      ]);
 
-      try {
-        const noaaRes = await fetch(`/api/weather?ids=${station}`);
-        noaaJson = await noaaRes.json();
-      } catch (err) {
-        console.error("METAR fetch error", err);
+      const mainJson = mainRes?.ok ? await mainRes.json() : null;
+      const avwxJson = avwxRes?.ok ? await avwxRes.json() : null;
+      const checkWxJson = checkWxRes?.ok ? await checkWxRes.json() : null;
+      const vatsimJson = vatsimRes?.ok ? await vatsimRes.json() : null;
+
+      setWeatherData(mainJson?.metar || null);
+      setTafData(mainJson?.taf || null);
+      setAvwxData(avwxJson);
+      setCheckWxData(checkWxJson?.data?.[0] || checkWxJson); // Handle varying formats
+      setVatsimData(vatsimJson);
+
+      // 2. Secondary Coordinate-based Sources
+      const lat = mainJson?.metar?.lat ?? mainJson?.taf?.lat ?? checkWxJson?.latitude;
+      const lon = mainJson?.metar?.lon ?? mainJson?.taf?.lon ?? checkWxJson?.longitude;
+
+      if (lat && lon) {
+        const [omRes, mnRes] = await Promise.all([
+          fetch(`/api/weather/open-meteo?lat=${lat}&lon=${lon}`).catch(() => null),
+          fetch(`/api/weather/met-norway?lat=${lat}&lon=${lon}`).catch(() => null)
+        ]);
+        if (omRes?.ok) setOpenMeteoData(await omRes.json());
+        if (mnRes?.ok) setMetNorwayData(await mnRes.json());
+      } else {
+        setOpenMeteoData(null);
+        setMetNorwayData(null);
       }
-      
-      try {
-        const tafRes = await fetch(`/api/weather/taf?ids=${station}`);
-        tafJson = await tafRes.json();
-      } catch (err) {
-        console.error("TAF fetch error", err);
-      }
 
-      try {
-        const avwxRes = await fetch(`/api/weather/avwx?icao=${station}`);
-        if (avwxRes.ok) setAvwxData(await avwxRes.json()); else setAvwxData(null);
-      } catch {
-        setAvwxData(null);
-      }
-
-      try {
-        const checkWxRes = await fetch(`/api/weather/check-wx?icao=${station}`);
-        if (checkWxRes.ok) {
-          const json = await checkWxRes.json();
-          if (json.data && json.data.length > 0) setCheckWxData(json.data[0]); else setCheckWxData(null);
-        } else {
-          setCheckWxData(null);
-        }
-      } catch {
-        setCheckWxData(null);
-      }
-
-      // Determine if we have any primary data (METAR or TAF)
-      const hasMetar = noaaJson && noaaJson.length > 0;
-      const hasTaf = tafJson && tafJson.length > 0;
-
-      if (!hasMetar && !hasTaf) {
+      // Check if we got anything
+      if (!mainJson?.metar && !mainJson?.taf && !checkWxJson && !avwxJson && !vatsimJson) {
         toast({ 
           variant: 'destructive', 
           title: 'Station Not Found', 
-          description: `No current METAR or TAF data available for ${station}.` 
+          description: `No aviation weather data available for ${station}.` 
         });
-        setWeatherData(null);
-        setTafData(null);
-        setAvwxData(null);
-        setCheckWxData(null);
-        return;
+      } else {
+        toast({ 
+          title: 'Weather Updated', 
+          description: `Multi-source data synchronized for ${station}.` 
+        });
       }
-
-      // Set the data
-      if (hasMetar) setWeatherData(noaaJson[0]); else setWeatherData(null);
-      if (hasTaf) setTafData(tafJson[0]); else setTafData(null);
-
-      toast({ 
-        title: 'Weather Updated', 
-        description: `Data retrieved for ${station}${!hasMetar ? ' (Forecast Only)' : ''}` 
-      });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error Fetching Data', description: error.message });
-      setWeatherData(null);
     } finally {
       setLoading(false);
     }
   };
+
+  // Aggregated data for the summary cards
+  const unifiedObservation = useMemo(() => {
+    const omCurrent = openMeteoData?.current;
+    
+    // 1. Identify raw values from all sources
+    const officialAlt = weatherData?.altim ?? checkWxData?.barometer?.hg;
+    const officialHpa = checkWxData?.barometer?.hpa;
+    const groundHpa = omCurrent?.surface_pressure;
+
+    // 2. Select best source (Official > Ground)
+    let altVal = officialAlt ?? (groundHpa ? (groundHpa * 0.02953).toFixed(2) : null);
+    let hpaVal = officialHpa ?? groundHpa ?? (officialAlt ? (officialAlt * 33.8639) : null);
+
+    // 3. Normalize: If altimeter > 50, it was provided as hPa.
+    if (altVal && Number(altVal) > 50) {
+      altVal = (Number(altVal) * 0.02953).toFixed(2);
+    }
+
+    // 4. Normalize: If hPa < 50, it was provided as inHg.
+    if (hpaVal && Number(hpaVal) < 50) {
+      hpaVal = Math.round(Number(hpaVal) * 33.8639);
+    } else if (hpaVal) {
+      hpaVal = Math.round(Number(hpaVal));
+    }
+
+    const obs: any = {
+      wdir: weatherData?.wdir ?? checkWxData?.wind?.degrees ?? omCurrent?.wind_direction_10m ?? null,
+      wspd: weatherData?.wspd ?? checkWxData?.wind?.speed_kts ?? omCurrent?.wind_speed_10m ?? null,
+      wgst: weatherData?.wgst ?? checkWxData?.wind?.gust_kts ?? null,
+      visib: weatherData?.visib ?? checkWxData?.visibility?.miles ?? (omCurrent?.visibility ? (omCurrent.visibility / 1609.34).toFixed(1) : null), // m to sm
+      temp: weatherData?.temp ?? checkWxData?.temperature?.celsius ?? omCurrent?.temperature_2m ?? null,
+      dewp: weatherData?.dewp ?? checkWxData?.dewpoint?.celsius ?? null,
+      altim: altVal,
+      altimHpa: hpaVal, 
+      icaoId: weatherData?.icaoId ?? checkWxData?.icao ?? vatsimData?.raw?.substring(0, 4) ?? icao.toUpperCase(),
+      name: weatherData?.name ?? checkWxData?.station?.name ?? null,
+      obsTime: weatherData?.obsTime ?? checkWxData?.timestamp ?? vatsimData?.timestamp ?? omCurrent?.time ?? null,
+      rawOb: weatherData?.rawOb ?? vatsimData?.raw ?? checkWxData?.raw_text ?? null,
+      fltcat: weatherData?.fltcat ?? checkWxData?.flight_category ?? null
+    };
+
+    // If METAR fields are missing, try to fill from the current TAF period
+    if (tafData?.fcsts?.[0]) {
+      const f = tafData.fcsts[0];
+      if (obs.wdir === null) obs.wdir = f.wdir;
+      if (obs.wspd === null) obs.wspd = f.wspd;
+      if (obs.visib === null) obs.visib = f.visib;
+    }
+
+    return obs;
+  }, [weatherData, checkWxData, vatsimData, openMeteoData, tafData, icao]);
 
   // Helper to calculate Flight Category if API doesn't provide it
   const calculateFlightCategory = (data: any) => {
@@ -198,14 +253,17 @@ export default function WeatherPage() {
               </div>
             )}
 
-            {(weatherData || tafData) && !loading && (
-                <Tabs defaultValue={weatherData ? "overview" : "taf"} className="flex flex-col space-y-6 p-4 md:p-6">
+            {unifiedObservation.icaoId && !loading && (
+                <Tabs defaultValue="overview" className="flex flex-col space-y-6 p-4 md:p-6">
                   <div className="flex items-center gap-2">
                     <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest text-foreground">Multi-Source</p>
                     {weatherData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">NOAA</Badge>}
                     {tafData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">TAF</Badge>}
+                    {vatsimData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">VATSIM</Badge>}
                     {avwxData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">AVWX</Badge>}
                     {checkWxData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">CheckWX</Badge>}
+                    {openMeteoData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">Open-Meteo</Badge>}
+                    {metNorwayData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">MET-Norway</Badge>}
                   </div>
 
                   <div className="space-y-6 pt-2">
@@ -213,70 +271,123 @@ export default function WeatherPage() {
                       <div className="p-4 flex flex-col items-center justify-center text-center">
                         <Wind className="w-5 h-5 text-blue-500 mb-2" />
                         <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Wind</span>
-                        <p className="text-sm md:text-base font-black">{weatherData?.wdir === 'VRB' ? 'VRB' : weatherData?.wdir ? `${weatherData.wdir}°` : 'CALM'} {weatherData?.wspd ? `@ ${weatherData.wspd}kt` : ''}</p>
-                        {weatherData?.wgst && <p className="text-[10px] font-bold text-destructive uppercase">Gusts {weatherData.wgst}kt</p>}
+                        <p className="text-sm md:text-base font-black">{unifiedObservation.wdir === 'VRB' ? 'VRB' : unifiedObservation.wdir ? `${unifiedObservation.wdir}°` : 'CALM'} {unifiedObservation.wspd ? `@ ${unifiedObservation.wspd}kt` : ''}</p>
+                        {unifiedObservation.wgst && <p className="text-[10px] font-bold text-destructive uppercase">Gusts {unifiedObservation.wgst}kt</p>}
                       </div>
                       <div className="p-4 flex flex-col items-center justify-center text-center border-l">
                         <Eye className="w-5 h-5 text-amber-500 mb-2" />
                         <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Visibility</span>
-                        <p className="text-sm md:text-base font-black">{weatherData?.visib != null ? `${weatherData.visib} SM` : 'N/A'}</p>
+                        <p className="text-sm md:text-base font-black">{unifiedObservation.visib != null ? `${unifiedObservation.visib} SM` : 'N/A'}</p>
                       </div>
                       <div className="p-4 flex flex-col items-center justify-center text-center border-t md:border-t-0 md:border-l">
                         <Thermometer className="w-5 h-5 text-orange-500 mb-2" />
                         <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Temp / Dew</span>
-                        <p className="text-sm md:text-base font-black">{weatherData?.temp != null ? `${weatherData.temp}°C` : 'N/A'} / {weatherData?.dewp != null ? `${weatherData.dewp}°C` : 'N/A'}</p>
+                        <p className="text-sm md:text-base font-black">{unifiedObservation.temp != null ? `${unifiedObservation.temp}°C` : 'N/A'} / {unifiedObservation.dewp != null ? `${unifiedObservation.dewp}°C` : 'N/A'}</p>
                       </div>
                       <div className="p-4 flex flex-col items-center justify-center text-center border-l border-t md:border-t-0">
                         <Info className="w-5 h-5 text-purple-500 mb-2" />
                         <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Altimeter</span>
-                        <p className="text-sm md:text-base font-black">{weatherData?.altim != null ? `${weatherData.altim.toFixed(2)} inHg` : 'N/A'}</p>
+                        <p className="text-sm md:text-base font-black">{unifiedObservation.altim != null ? `${Number(unifiedObservation.altim).toFixed(2)} inHg` : 'N/A'}</p>
+                        {unifiedObservation.altimHpa && <p className="text-[10px] font-bold text-muted-foreground uppercase">{unifiedObservation.altimHpa} hPa</p>}
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center bg-muted/20 p-1 rounded-xl border border-card-border shadow-sm overflow-x-auto no-scrollbar">
                       <TabsList className="bg-transparent border-none">
-                        <TabsTrigger value="overview" disabled={!weatherData} className="px-6 font-black uppercase text-[10px] tracking-widest text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Overview</TabsTrigger>
+                        <TabsTrigger value="overview" className="px-6 font-black uppercase text-[10px] tracking-widest text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Current Condition</TabsTrigger>
                         {tafData && <TabsTrigger value="taf" className="px-6 font-black uppercase text-[10px] tracking-widest text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Forecast (TAF)</TabsTrigger>}
                         {avwxData && <TabsTrigger value="translated" className="px-6 font-black uppercase text-[10px] tracking-widest text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Translated (AVWX)</TabsTrigger>}
                         {checkWxData && <TabsTrigger value="checkwx" className="px-6 font-black uppercase text-[10px] tracking-widest text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Decoded (CheckWX)</TabsTrigger>}
+                        {openMeteoData && <TabsTrigger value="ground" className="px-6 font-black uppercase text-[10px] tracking-widest text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">Ground Context</TabsTrigger>}
                       </TabsList>
                     </div>
                   </div>
 
-                  {weatherData && (
-                    <TabsContent value="overview" className="m-0 space-y-6 pt-2">
-                      <Card className="border-l-4 border-l-primary overflow-hidden shadow-sm">
+                  <TabsContent value="overview" className="m-0 space-y-6 pt-2">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <Card className="lg:col-span-2 border-l-4 border-l-primary overflow-hidden shadow-sm">
                         <div className="p-6 pb-4 border-b bg-muted/5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                           <div>
-                            <h3 className="text-4xl font-black tracking-tighter uppercase">{weatherData.icaoId}</h3>
+                            <h3 className="text-4xl font-black tracking-tighter uppercase">{unifiedObservation.icaoId}</h3>
                             <p className="text-muted-foreground font-bold text-sm tracking-wider uppercase flex items-center gap-2 mt-1 text-foreground">
                               <Navigation className="w-3.5 h-3.5" />
-                              {weatherData.name || 'Station'} METAR
+                              {unifiedObservation.name || 'Station'} {unifiedObservation.rawOb ? 'METAR' : 'Current Data'}
                             </p>
                           </div>
                           <div className="flex flex-col items-end gap-2 text-right">
-                            <Badge className={`text-base font-black px-4 py-1 uppercase tracking-widest shadow-sm ${getFlightCategoryColor(calculateFlightCategory(weatherData))}`}>
-                              {calculateFlightCategory(weatherData)}
+                            <Badge className={`text-base font-black px-4 py-1 uppercase tracking-widest shadow-sm ${getFlightCategoryColor(calculateFlightCategory(unifiedObservation))}`}>
+                              {calculateFlightCategory(unifiedObservation)}
                             </Badge>
                             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">
-                              OBS: {typeof weatherData.obsTime === 'number'
-                                ? new Date(weatherData.obsTime * 1000).toLocaleString()
-                                : new Date(weatherData.obsTime).toLocaleString()}
+                              OBS: {unifiedObservation.obsTime 
+                                ? (typeof unifiedObservation.obsTime === 'number'
+                                  ? new Date(unifiedObservation.obsTime * 1000).toLocaleString()
+                                  : new Date(unifiedObservation.obsTime).toLocaleString())
+                                : 'Live Data Stream'}
                             </span>
                           </div>
                         </div>
 
                         <CardContent className="p-0">
                           <div className="p-6 bg-muted/10">
-                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5 mb-2 text-foreground">RAW METAR</span>
+                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5 mb-2 text-foreground">
+                              {unifiedObservation.rawOb ? 'RAW OBSERVATION' : 'AUTOMATED DATA SUMMARY'}
+                            </span>
                             <p className="font-mono text-sm font-medium p-4 bg-background border rounded-lg shadow-inner break-words leading-relaxed text-foreground">
-                              {weatherData.rawOb}
+                              {unifiedObservation.rawOb || 'No raw METAR string available. Using multi-source automated sensor data.'}
                             </p>
                           </div>
                         </CardContent>
                       </Card>
-                    </TabsContent>
-                  )}
+
+                      <Card className="border-l-4 border-l-orange-500 overflow-hidden shadow-sm bg-orange-50/5">
+                        <CardHeader className="pb-2 border-b bg-orange-50/10">
+                          <span className="text-[10px] font-black uppercase text-orange-800 tracking-widest">Station Info</span>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4 pt-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Latitude</span>
+                            <p className="text-sm font-bold font-mono">{mapCoords.lat.toFixed(4)}°</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Longitude</span>
+                            <p className="text-sm font-bold font-mono">{mapCoords.lon.toFixed(4)}°</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Pressure (QNH)</span>
+                            <p className="text-sm font-bold font-mono">
+                               {unifiedObservation.altimHpa ? `Q${unifiedObservation.altimHpa}` : 'N/A'}
+                            </p>
+                          </div>
+                          <div className="pt-2">
+                             <Badge variant="outline" className="w-full justify-center py-2 border-dashed border-primary/40 font-black text-[10px] uppercase tracking-widest text-primary">
+                                Operational Status: Active
+                             </Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {tafData && (
+                      <div className="flex flex-col gap-2 pt-4">
+                         <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Integrated Forecast Summary</span>
+                         <Card className="border shadow-none bg-muted/5 transition-all hover:bg-muted/10">
+                            <CardContent className="p-4 flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                     <Info className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                     <p className="text-sm font-black uppercase tracking-tight">Active Terminal Forecast (TAF)</p>
+                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">{tafData.fcsts?.length || 0} forecast periods available for flight planning.</p>
+                                  </div>
+                               </div>
+                               <Badge className="bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest">Live</Badge>
+                            </CardContent>
+                         </Card>
+                      </div>
+                    )}
+                  </TabsContent>
 
               {tafData && (
                 <TabsContent value="taf" className="m-0 space-y-6">
@@ -346,6 +457,70 @@ export default function WeatherPage() {
                 </TabsContent>
               )}
 
+              {openMeteoData && (
+                <TabsContent value="ground" className="m-0 space-y-6">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card className="border shadow-none">
+                         <CardHeader className="bg-blue-50/20 border-b">
+                            <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
+                               <Wind className="w-4 h-4 text-blue-600" />
+                               Open-Meteo Ground Sensors
+                            </CardTitle>
+                         </CardHeader>
+                         <CardContent className="p-6 space-y-4">
+                            <div className="flex justify-between items-center border-b pb-2">
+                               <span className="text-xs font-bold text-muted-foreground uppercase">Surface Pressure</span>
+                               <div className="flex flex-col items-end">
+                                  <span className="text-sm font-black">{unifiedObservation.altim ?? 'N/A'} inHg</span>
+                                  {unifiedObservation.altimHpa && <span className="text-[10px] font-bold text-muted-foreground">{unifiedObservation.altimHpa} hPa</span>}
+                               </div>
+                            </div>
+                            <div className="flex justify-between items-center border-b pb-2">
+                               <span className="text-xs font-bold text-muted-foreground uppercase">Ground Temperature</span>
+                               <span className="text-sm font-black">{openMeteoData.current?.temperature_2m}°C</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b pb-2">
+                               <span className="text-xs font-bold text-muted-foreground uppercase">Relative Humidity</span>
+                               <span className="text-sm font-black">{openMeteoData.current?.relative_humidity_2m}%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-xs font-bold text-muted-foreground uppercase">Visibility (Ground)</span>
+                               <span className="text-sm font-black">{unifiedObservation.visib} SM</span>
+                            </div>
+                         </CardContent>
+                      </Card>
+
+                      {metNorwayData && (
+                        <Card className="border shadow-none">
+                          <CardHeader className="bg-emerald-50/20 border-b">
+                             <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
+                                <Navigation className="w-4 h-4 text-emerald-600" />
+                                MET Norway Forecast
+                             </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-6">
+                             <div className="space-y-4">
+                                <p className="text-xs font-medium text-muted-foreground italic leading-relaxed">
+                                   High-precision atmospheric modeling data for the next hour.
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                   <div className="p-3 bg-muted/20 rounded-lg">
+                                      <span className="text-[10px] font-black uppercase text-muted-foreground block mb-1">Precipitation</span>
+                                      <span className="text-sm font-black">{metNorwayData.properties?.timeseries?.[0]?.data?.next_1_hours?.details?.precipitation_amount ?? 0} mm</span>
+                                   </div>
+                                   <div className="p-3 bg-muted/20 rounded-lg">
+                                      <span className="text-[10px] font-black uppercase text-muted-foreground block mb-1">Cloud Cover</span>
+                                      <span className="text-sm font-black font-mono">{metNorwayData.properties?.timeseries?.[0]?.data?.instant?.details?.cloud_area_fraction ?? 0}%</span>
+                                   </div>
+                                </div>
+                             </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                   </div>
+                </TabsContent>
+              )}
+
               {checkWxData && (
                 <TabsContent value="checkwx" className="m-0 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -389,8 +564,8 @@ export default function WeatherPage() {
                           <span className="p-1 font-mono uppercase bg-orange-100/40 rounded">{checkWxData.barometer?.hg || 'N/A'} hg</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">hPa / mb</span>
-                          <span className="p-1 font-mono uppercase bg-orange-100/40 rounded">{checkWxData.barometer?.hpa || 'N/A'} mb</span>
+                          <span className="text-muted-foreground">hPa</span>
+                          <span className="p-1 font-mono uppercase bg-orange-100/40 rounded">{checkWxData.barometer?.hpa || 'N/A'} hPa</span>
                         </div>
                       </CardContent>
                     </Card>

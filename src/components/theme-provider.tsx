@@ -52,10 +52,10 @@ type SwimlaneThemeColors = {
 };
 
 type MatrixThemeColors = {
-  'matrix-header-start': string;
-  'matrix-header-end': string;
-  'matrix-subheader-start': string;
-  'matrix-subheader-end': string;
+  'matrix-header-background': string;
+  'matrix-header-foreground': string;
+  'matrix-subheader-background': string;
+  'matrix-subheader-foreground': string;
 };
 
 export type SavedTheme = {
@@ -155,10 +155,10 @@ const defaultSwimlaneColors: SwimlaneThemeColors = {
     'swimlane-header-foreground': '#475569',
 };
 const defaultMatrixColors: MatrixThemeColors = {
-    'matrix-header-start': '#f8fafc',
-    'matrix-header-end': '#e0f2fe',
-    'matrix-subheader-start': '#ffffff',
-    'matrix-subheader-end': '#f8fafc',
+    'matrix-header-background': '#e0f2fe',
+    'matrix-header-foreground': '#1e293b',
+    'matrix-subheader-background': '#f8fafc',
+    'matrix-subheader-foreground': '#1e293b',
 };
 const defaultScale = 100;
 
@@ -266,6 +266,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const { tenant, tenantId } = useTenantConfig();
 
+  const normalizeMatrixTheme = (source: Record<string, string> | undefined | null): MatrixThemeColors => ({
+    ...defaultMatrixColors,
+    'matrix-header-background': source?.['matrix-header-background'] || source?.['matrix-header-start'] || defaultMatrixColors['matrix-header-background'],
+    'matrix-header-foreground': source?.['matrix-header-foreground'] || defaultMatrixColors['matrix-header-foreground'],
+    'matrix-subheader-background': source?.['matrix-subheader-background'] || source?.['matrix-subheader-start'] || defaultMatrixColors['matrix-subheader-background'],
+    'matrix-subheader-foreground': source?.['matrix-subheader-foreground'] || defaultMatrixColors['matrix-subheader-foreground'],
+  });
+
   // --- Auto-sync with Tenant configuration ---
   useEffect(() => {
     const nextTheme = {
@@ -303,11 +311,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       ...(tenant?.theme?.swimlane || {}),
       ...getTenantScopedState(SWIMLANE_THEME_KEY, tenantId, defaultSwimlaneColors),
     };
-    const nextMatrixTheme = {
-      ...defaultMatrixColors,
+    const nextMatrixTheme = normalizeMatrixTheme({
       ...(tenant?.theme?.matrix || {}),
       ...getTenantScopedState(MATRIX_THEME_KEY, tenantId, defaultMatrixColors),
-    };
+    });
     const nextSidebarBackgroundImage = getTenantScopedState(
       SIDEBAR_BACKGROUND_IMAGE_KEY,
       tenantId,
@@ -396,7 +403,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
     const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
     const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
-    const newMatrixTheme = { ...defaultMatrixColors, ...themeToApply.matrixColors };
+    const newMatrixTheme = normalizeMatrixTheme(themeToApply.matrixColors as Record<string, string>);
     const newScale = themeToApply.scale || defaultScale;
 
     setTheme(newTheme);

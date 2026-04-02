@@ -41,6 +41,73 @@ const REGULATION_TABS = [
 ] as const;
 type RegulationFamily = (typeof REGULATION_TABS)[number]['value'];
 
+function formatParentOptionLabel(option: { code: string; label: string }) {
+    const code = option.code.trim();
+    const label = option.label.trim();
+    return label && label !== code
+        ? `${code} - ${label}`
+        : code;
+}
+
+function shouldShowSingleLineLabel(item: ComplianceRequirement) {
+    return item.regulationStatement?.trim() === item.regulationCode.trim();
+}
+
+function normalizeRegulationCode(value?: string | null) {
+    return value?.trim() || '';
+}
+
+function getInlineMarker(parentCode: string, childCode: string) {
+    const normalizedParent = normalizeRegulationCode(parentCode);
+    const normalizedChild = normalizeRegulationCode(childCode);
+
+    if (!normalizedParent || !normalizedChild.startsWith(`${normalizedParent}.`)) {
+        return null;
+    }
+
+    const suffix = normalizedChild.slice(normalizedParent.length + 1);
+    if (!suffix || suffix.includes('.')) return null;
+
+    return `(${suffix})`;
+}
+
+function formatStructuredTechnicalStandard(value?: string | null) {
+    const text = value?.trim() || '';
+    if (!text) return '';
+
+    return text
+        .replace(/\s+\((\d+)\)\s+/g, '\n($1) ')
+        .replace(/\s+\(([a-z])\)\s+/gi, '\n($1) ')
+        .replace(/\s+(Note:)\s+/gi, '\n$1 ')
+        .trim();
+}
+
+function getStructuredTechnicalLines(value?: string | null) {
+    return formatStructuredTechnicalStandard(value)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+            const markerMatch = line.match(/^(\(\d+\)|\([a-z]\)|Note:)\s*(.*)$/i);
+            const marker = markerMatch?.[1] || '';
+            const content = markerMatch?.[2] || line;
+
+            if (/^\([a-z]\)/i.test(line)) {
+                return { marker, content, className: 'pl-10', markerClassName: 'w-8' };
+            }
+
+            if (/^Note:/i.test(line)) {
+                return { marker, content, className: 'pl-10 italic', markerClassName: 'w-12' };
+            }
+
+            if (/^\(\d+\)/.test(line)) {
+                return { marker, content, className: 'pl-3', markerClassName: 'w-8' };
+            }
+
+            return { marker: '', content: line, className: '', markerClassName: 'w-0' };
+        });
+}
+
 function getItemFamily(item: ComplianceRequirement): RegulationFamily {
     return item.regulationFamily || 'sacaa-cars';
 }
@@ -124,7 +191,9 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                     ...req,
                     organizationId: organizationId,
                     regulationFamily: targetFamily,
-                    parentRegulationCode: targetHeader || req.parentRegulationCode || '',
+                    regulationCode: normalizeRegulationCode(req.regulationCode),
+                    parentRegulationCode: normalizeRegulationCode(req.parentRegulationCode) || normalizeRegulationCode(targetHeader),
+                    regulationStatement: req.regulationStatement?.trim() || normalizeRegulationCode(req.regulationCode),
                 });
             });
 
@@ -151,7 +220,12 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
     };
 
     const handleProcess = async () => {
-        let input: SummarizeDocumentInput = { document: {} };
+        if (!targetHeader.trim()) {
+            toast({ variant: 'destructive', title: 'Select a sub-regulation first', description: 'Create the header and sub-regulation manually, then choose the sub-regulation before running AI import.' });
+            return;
+        }
+
+        let input: SummarizeDocumentInput = { targetParentCode: targetHeader, document: {} };
         
         if (file) {
             const reader = new FileReader();
@@ -170,7 +244,7 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
         }
     };
 
-    const canProcess = file || pastedText.trim() || stagedImages.length > 0;
+    const canProcess = !!targetHeader.trim() && (file || pastedText.trim() || stagedImages.length > 0);
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => {
@@ -189,10 +263,10 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                 )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl">
-                <DialogHeader>
+                    <DialogHeader>
                     <DialogTitle>Populate Matrix with AI</DialogTitle>
                     <DialogDescription>
-                        Upload a file, paste text, or paste one or more images of regulations. Create the header manually first, then choose the existing header below.
+                        Upload a file, paste text, or paste one or more images of regulations. Create the header and sub-regulation manually first, then choose the sub-regulation below so AI only adds the paragraph cards beneath it.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2">
@@ -211,15 +285,15 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="target-header">Target header</Label>
+                    <Label htmlFor="target-header">Target sub-regulation</Label>
                     <Select value={targetHeader} onValueChange={setTargetHeader}>
                         <SelectTrigger id="target-header">
-                            <SelectValue placeholder="Select an existing header" />
+                            <SelectValue placeholder="Select a sub-regulation" />
                         </SelectTrigger>
                         <SelectContent>
                             {availableParentHeaders.map((header) => (
                                 <SelectItem key={header.code} value={header.code}>
-                                    {header.code} - {header.label}
+                                    {formatParentOptionLabel(header)}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -309,11 +383,12 @@ export default function CoherenceMatrixPage() {
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
   const [activeRegulationTab, setActiveRegulationTab] = useState<RegulationFamily>('sacaa-cars');
 
-  const canManageAll = hasPermission('quality-matrix-manage');
+  const canViewMatrix = hasPermission('quality-matrix-view') || hasPermission('quality-matrix-manage');
+  const canManageMatrix = hasPermission('quality-matrix-manage');
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
-  const [formMode, setFormMode] = useState<'item' | 'header'>('item');
+  const [formMode, setFormMode] = useState<'item' | 'header' | 'subheader'>('item');
 
   const complianceQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
   const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
@@ -346,16 +421,47 @@ export default function CoherenceMatrixPage() {
     return a.length - b.length;
   };
 
-  const handleOpenForm = (item: ComplianceRequirement | null = null, mode: 'item' | 'header' = 'item') => {
+  const handleOpenForm = (item: ComplianceRequirement | null = null, mode: 'item' | 'header' | 'subheader' = 'item') => {
     setEditingItem(item);
     setFormMode(mode);
     setIsFormOpen(true);
   };
 
-  const handleDeleteItem = async (itemId: string) => {
-    if (!firestore || !tenantId) return;
-    await deleteDoc(doc(firestore, `tenants/${tenantId}/compliance-matrix`, itemId));
+  const handleDeleteItem = async (item: ComplianceRequirement) => {
+    if (!firestore || !tenantId || !complianceItems) return;
+
+    const batch = writeBatch(firestore);
+    const idsToDelete = new Set<string>([
+      item.id,
+      ...collectDescendantIds(item.regulationCode, complianceItems),
+    ]);
+
+    idsToDelete.forEach((id) => {
+      batch.delete(doc(firestore, `tenants/${tenantId}/compliance-matrix`, id));
+    });
+
+    await batch.commit();
     toast({ title: "Success", description: "Compliance item has been deleted." });
+  };
+
+  const collectDescendantIds = (
+      parentCode: string,
+      items: ComplianceRequirement[],
+      visitedCodes = new Set<string>()
+  ): string[] => {
+      const normalizedParentCode = normalizeRegulationCode(parentCode);
+      if (!normalizedParentCode || visitedCodes.has(normalizedParentCode)) return [];
+
+      const nextVisited = new Set(visitedCodes);
+      nextVisited.add(normalizedParentCode);
+
+      const directChildren = items.filter(
+          item => normalizeRegulationCode(item.parentRegulationCode) === normalizedParentCode
+      );
+      return directChildren.flatMap(child => [
+          child.id,
+          ...collectDescendantIds(child.regulationCode, items, nextVisited),
+      ]);
   };
   
   const handleDeleteSection = async (parentItem: ComplianceRequirement) => {
@@ -363,9 +469,8 @@ export default function CoherenceMatrixPage() {
       const batch = writeBatch(firestore);
       const parentRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, parentItem.id);
       batch.delete(parentRef);
-      const childrenToDelete = complianceItems.filter(item => item.parentRegulationCode === parentItem.regulationCode);
-      childrenToDelete.forEach(child => {
-          const childRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, child.id);
+      collectDescendantIds(parentItem.regulationCode, complianceItems).forEach((id) => {
+          const childRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, id);
           batch.delete(childRef);
       });
       await batch.commit();
@@ -376,8 +481,43 @@ export default function CoherenceMatrixPage() {
     (activeOrgTab === 'internal' ? !item.organizationId : item.organizationId === activeOrgTab)
   );
   const currentFamilyHeaders = currentOrgItems
-    .filter(item => getItemFamily(item) === activeRegulationTab && !item.parentRegulationCode)
-    .map(item => ({ code: item.regulationCode, label: item.regulationStatement }));
+    .filter(item => getItemFamily(item) === activeRegulationTab)
+    .filter(item => !item.technicalStandard?.trim())
+    .sort((a, b) => naturalSort(a.regulationCode, b.regulationCode))
+    .reduce((acc, item) => {
+        const normalizedCode = normalizeRegulationCode(item.regulationCode);
+        const normalizedLabel = (item.regulationStatement || item.regulationCode).trim();
+        if (!acc.some(existing => existing.code === normalizedCode)) {
+            acc.push({ code: normalizedCode, label: normalizedLabel });
+        }
+        return acc;
+    }, [] as { code: string; label: string }[]);
+  const currentFamilyTopLevelHeaders = currentOrgItems
+    .filter(item => getItemFamily(item) === activeRegulationTab)
+    .filter(item => !item.technicalStandard?.trim())
+    .filter(item => !normalizeRegulationCode(item.parentRegulationCode))
+    .sort((a, b) => naturalSort(a.regulationCode, b.regulationCode))
+    .reduce((acc, item) => {
+        const normalizedCode = normalizeRegulationCode(item.regulationCode);
+        const normalizedLabel = (item.regulationStatement || item.regulationCode).trim();
+        if (!acc.some(existing => existing.code === normalizedCode)) {
+            acc.push({ code: normalizedCode, label: normalizedLabel });
+        }
+        return acc;
+    }, [] as { code: string; label: string }[]);
+  const currentFamilySubheaders = currentOrgItems
+    .filter(item => getItemFamily(item) === activeRegulationTab)
+    .filter(item => !item.technicalStandard?.trim())
+    .filter(item => !!normalizeRegulationCode(item.parentRegulationCode))
+    .sort((a, b) => naturalSort(a.regulationCode, b.regulationCode))
+    .reduce((acc, item) => {
+        const normalizedCode = normalizeRegulationCode(item.regulationCode);
+        const normalizedLabel = (item.regulationStatement || item.regulationCode).trim();
+        if (!acc.some(existing => existing.code === normalizedCode)) {
+            acc.push({ code: normalizedCode, label: normalizedLabel });
+        }
+        return acc;
+    }, [] as { code: string; label: string }[]);
 
   const renderOrgContext = (orgId: string | 'internal') => {
     const contextOrgId = orgId === 'internal' ? null : orgId;
@@ -387,7 +527,7 @@ export default function CoherenceMatrixPage() {
     );
     const sortedItems = [...filteredItems].sort((a, b) => naturalSort(a.regulationCode, b.regulationCode));
     const groupedItems = sortedItems.reduce((acc, item) => {
-        const parentCode = item.parentRegulationCode;
+        const parentCode = normalizeRegulationCode(item.parentRegulationCode);
         if (parentCode) {
             if (!acc[parentCode]) acc[parentCode] = [];
             acc[parentCode].push(item);
@@ -395,12 +535,260 @@ export default function CoherenceMatrixPage() {
         return acc;
     }, {} as Record<string, ComplianceRequirement[]>);
     const topLevelItems = sortedItems.filter(item => !item.parentRegulationCode);
+    const renderInlineClauseLines = (parentCode: string, items: ComplianceRequirement[], ancestors: string[]) => {
+        return (
+            <div className="rounded-md border border-slate-200 bg-background/60">
+                {items.map((child) => {
+                    const normalizedChildCode = normalizeRegulationCode(child.regulationCode);
+                    if (ancestors.includes(normalizedChildCode)) return null;
+
+                    const grandChildren = groupedItems[normalizedChildCode] || [];
+                    const marker = getInlineMarker(parentCode, normalizedChildCode);
+                    const lineText = child.technicalStandard?.trim() || child.regulationStatement?.trim();
+
+                    return (
+                        <div key={child.id} className="border-b border-slate-200 px-4 py-3 last:border-b-0">
+                            <p className="text-sm leading-6 text-foreground">
+                                {marker ? <span className="mr-2 font-semibold">{marker}</span> : null}
+                                <span>{lineText}</span>
+                            </p>
+                            {grandChildren.length > 0 ? (
+                                <div className="mt-3 space-y-2 border-t pt-3">
+                                    {renderInlineClauseLines(normalizedChildCode, grandChildren, [...ancestors, normalizedChildCode])}
+                                </div>
+                            ) : null}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const renderTechnicalStandardText = (value?: string | null) => {
+        const lines = getStructuredTechnicalLines(value);
+        if (lines.length === 0) return null;
+
+        return (
+            <div className="space-y-1">
+                {lines.map((line, index) => (
+                    <div
+                        key={`${line.marker}-${line.content}-${index}`}
+                        className={cn(
+                            'flex items-start text-sm font-medium leading-relaxed text-muted-foreground',
+                            line.className
+                        )}
+                    >
+                        {line.marker ? (
+                            <span className={cn('shrink-0', line.markerClassName)}>
+                                {line.marker}
+                            </span>
+                        ) : null}
+                        <span className="min-w-0 flex-1 break-words">
+                            {line.content}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    const renderInlineParagraphChildren = (items: ComplianceRequirement[], ancestors: string[]) => {
+        return (
+            <div className="space-y-3">
+                {items.map((child) => {
+                    const normalizedChildCode = normalizeRegulationCode(child.regulationCode);
+                    if (ancestors.includes(normalizedChildCode)) return null;
+                    const grandChildren = groupedItems[normalizedChildCode] || [];
+                    const hasNestedChildren = grandChildren.length > 0;
+
+                    return (
+                        <Collapsible key={child.id} className="overflow-hidden rounded-md border bg-background/70" defaultOpen>
+                            <div className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-3 text-left">
+                                        <div className="min-w-0 flex-1">
+                                            {shouldShowSingleLineLabel(child) ? (
+                                                <p className="text-sm font-semibold leading-5 text-foreground">
+                                                    {child.regulationCode}
+                                                </p>
+                                            ) : (
+                                                <>
+                                                    <p className="text-[11px] font-bold tracking-wide text-foreground/80">
+                                                        {child.regulationCode}
+                                                    </p>
+                                                    <p className="mt-1 text-sm font-medium leading-5 text-foreground">
+                                                        {child.regulationStatement}
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-muted-foreground">
+                                            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                                        </div>
+                                    </CollapsibleTrigger>
+                                    <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                                        {canManageMatrix ? (
+                                            <>
+                                                <Button variant="outline" size="icon" className="h-8 w-8 border-slate-300" onClick={() => handleOpenForm(child)}>
+                                                    <Edit className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteItem(child)}>
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </div>
+                            <CollapsibleContent className="space-y-4 border-t bg-muted/5 px-4 pb-4 pt-3">
+                                {child.technicalStandard?.trim() ? (
+                                    <div className="space-y-2 overflow-hidden">
+                                        <div className="rounded-md border border-slate-200 bg-background/60 px-4 py-3">
+                                            {renderTechnicalStandardText(child.technicalStandard)}
+                                        </div>
+                                    </div>
+                                ) : null}
+                                {hasNestedChildren ? (
+                                    <div className="space-y-2 border-t pt-4">
+                                        {renderInlineClauseLines(normalizedChildCode, grandChildren, [...ancestors, normalizedChildCode])}
+                                    </div>
+                                ) : null}
+                            </CollapsibleContent>
+                        </Collapsible>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const renderMatrixNode = (item: ComplianceRequirement, depth = 0, ancestors: string[] = []) => {
+        const normalizedItemCode = normalizeRegulationCode(item.regulationCode);
+        if (ancestors.includes(normalizedItemCode)) return null;
+        const childItems = groupedItems[normalizedItemCode] || [];
+        const hasChildren = childItems.length > 0;
+        const renderChildrenInline = depth === 1;
+        const nodeStyle = depth === 0
+            ? {
+                backgroundColor: matrixTheme['matrix-header-background'],
+                color: matrixTheme['matrix-header-foreground'],
+            }
+            : depth === 1 && hasChildren
+                ? {
+                    backgroundColor: matrixTheme['matrix-subheader-background'],
+                    color: matrixTheme['matrix-subheader-foreground'],
+                }
+                : undefined;
+        const nodeTextClassName = depth === 0 || (depth === 1 && hasChildren) ? 'text-inherit' : 'text-foreground';
+        const nodeMutedTextStyle = depth === 0
+            ? { color: matrixTheme['matrix-header-foreground'] }
+            : depth === 1 && hasChildren
+                ? { color: matrixTheme['matrix-subheader-foreground'] }
+                : undefined;
+
+        return (
+            <Collapsible
+                key={item.id}
+                className={cn(
+                    "border rounded-lg overflow-hidden"
+                )}
+                defaultOpen
+            >
+                <div
+                    className={cn(
+                        "p-4",
+                        hasChildren && "border-b"
+                    )}
+                    style={nodeStyle}
+                >
+                    <div className="flex items-center justify-between gap-3">
+                        <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                            <div className="min-w-0 flex-1">
+                                {depth === 0 ? (
+                                    shouldShowSingleLineLabel(item) ? (
+                                        <p className={cn("text-[11px] font-black tracking-wide", nodeTextClassName)} style={nodeMutedTextStyle}>
+                                            {item.regulationCode}
+                                        </p>
+                                    ) : (
+                                        <p className={cn("flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm font-semibold leading-5", nodeTextClassName)}>
+                                            <span className="text-[11px] font-black tracking-wide" style={nodeMutedTextStyle}>
+                                                {item.regulationCode}
+                                            </span>
+                                            <span>{item.regulationStatement}</span>
+                                        </p>
+                                    )
+                                ) : (
+                                    <>
+                                        {shouldShowSingleLineLabel(item) ? (
+                                            <p className={cn("text-sm font-semibold leading-5", nodeTextClassName)}>
+                                                {item.regulationCode}
+                                            </p>
+                                        ) : (
+                                            <>
+                                                <p className={cn("text-[11px] font-bold tracking-wide", nodeTextClassName)} style={nodeMutedTextStyle}>
+                                                    {item.regulationCode}
+                                                </p>
+                                                <p className={cn("mt-1 line-clamp-2 text-sm font-medium leading-5", nodeTextClassName)}>
+                                                    {item.regulationStatement}
+                                                </p>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-muted-foreground">
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                            </div>
+                        </CollapsibleTrigger>
+                        <div className="flex shrink-0 items-center gap-2">
+                            {depth === 0 && canManageMatrix ? (
+                                <>
+                                    <Button variant="outline" size="icon" className="h-8 w-8 border-slate-300" onClick={() => handleOpenForm(item, 'header')}>
+                                        <Edit className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteSection(item)}>
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                </>
+                            ) : depth !== 0 && canManageMatrix ? (
+                                <>
+                                    <Button variant="outline" size="icon" className="h-8 w-8 border-slate-300" onClick={() => handleOpenForm(item)}>
+                                        <Edit className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteItem(item)}>
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                </>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+                <CollapsibleContent className={cn(
+                    "space-y-4 border-t bg-muted/5",
+                    depth === 0 ? "p-4" : "px-6 pb-5 pt-3"
+                )}>
+                    {item.technicalStandard?.trim() ? (
+                        <div className="space-y-2 overflow-hidden">
+                            {renderTechnicalStandardText(item.technicalStandard)}
+                        </div>
+                    ) : null}
+                    {childItems.length > 0 && (
+                        <div className="space-y-2">
+                            {renderChildrenInline
+                                ? renderInlineParagraphChildren(childItems, [...ancestors, normalizedItemCode])
+                                : childItems.map((child) => renderMatrixNode(child, depth + 1, [...ancestors, normalizedItemCode]))}
+                        </div>
+                    )}
+                </CollapsibleContent>
+            </Collapsible>
+        );
+    };
 
     return (
         <Card className="h-full min-h-0 flex flex-col overflow-hidden shadow-none border">
             <MainPageHeader 
                 title="Coherence Matrix"
                 actions={
+                    canManageMatrix ? (
                     isMobile ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -421,7 +809,7 @@ export default function CoherenceMatrixPage() {
                                     tenantId={tenantId!} 
                                     organizationId={contextOrgId} 
                                     regulationFamily={activeRegulationTab}
-                                    availableParentHeaders={currentFamilyHeaders}
+                                    availableParentHeaders={currentFamilySubheaders}
                                     trigger={
                                         <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                             <WandSparkles className="mr-2 h-4 w-4" /> AI Populate
@@ -434,11 +822,14 @@ export default function CoherenceMatrixPage() {
                                 <DropdownMenuItem onClick={() => handleOpenForm(null, 'header')}>
                                     <Layers className="mr-2 h-4 w-4" /> Add Header
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenForm(null, 'subheader')}>
+                                    <Layers className="mr-2 h-4 w-4" /> Add Subheader
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
                         <div className="flex flex-wrap items-center gap-2">
-                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={currentFamilyHeaders} />
+                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={currentFamilySubheaders} />
                             <Button
                                 size="sm"
                                 variant="outline"
@@ -447,6 +838,15 @@ export default function CoherenceMatrixPage() {
                             >
                                 <Layers className="h-4 w-4" />
                                 Add Header
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="shadow-sm gap-2"
+                                onClick={() => handleOpenForm(null, 'subheader')}
+                            >
+                                <Layers className="h-4 w-4" />
+                                Add Subheader
                             </Button>
                             <Button 
                                 size="sm"
@@ -457,7 +857,7 @@ export default function CoherenceMatrixPage() {
                                 Add Item
                             </Button>
                         </div>
-                    )
+                    )) : undefined
                 }
             />
             
@@ -484,88 +884,7 @@ export default function CoherenceMatrixPage() {
             
             <CardContent className="flex-1 min-h-0 overflow-y-auto p-6">
                 <div className="space-y-4">
-                    {topLevelItems.map(parentItem => (
-                        <Collapsible key={parentItem.id} className="border rounded-lg overflow-hidden" defaultOpen>
-                            <div
-                                className="border-b p-4"
-                                style={{
-                                    backgroundImage: `linear-gradient(90deg, ${matrixTheme['matrix-header-start']}, ${matrixTheme['matrix-header-end']})`,
-                                }}
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-3 text-left">
-                                        <div className="min-w-0 flex-1">
-                                            <p className="font-mono text-[11px] font-black tracking-wide text-foreground/80">
-                                                {parentItem.regulationCode}
-                                            </p>
-                                            <p className="mt-1 text-sm font-semibold leading-5 text-foreground">
-                                                {parentItem.regulationStatement}
-                                            </p>
-                                        </div>
-                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-muted-foreground">
-                                            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                                        </div>
-                                    </CollapsibleTrigger>
-                                    <div className="flex shrink-0 items-center gap-2 pt-0.5">
-                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteSection(parentItem)}>
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                            <CollapsibleContent className="p-4">
-                                {(groupedItems[parentItem.regulationCode] || []).map(item => (
-                                    <Collapsible key={item.id} className="border rounded-lg mb-2 last:mb-0 overflow-hidden">
-                                        <div
-                                            className="p-4"
-                                            style={{
-                                                backgroundImage: `linear-gradient(90deg, ${matrixTheme['matrix-subheader-start']}, ${matrixTheme['matrix-subheader-end']})`,
-                                            }}
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-3 text-left">
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="font-mono text-[11px] font-black tracking-wide text-foreground/80">
-                                                            {item.regulationCode}
-                                                        </p>
-                                                        <p className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-foreground">
-                                                            {item.regulationStatement}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-muted-foreground">
-                                                        <ChevronDown className="h-4 w-4" />
-                                                    </div>
-                                                </CollapsibleTrigger>
-                                                <div className="flex shrink-0 items-center gap-2 pt-0.5">
-                                                    <Button variant="outline" size="icon" className="h-8 w-8 border-slate-300" onClick={() => handleOpenForm(item)}>
-                                                        <Edit className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteItem(item.id)}>
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <CollapsibleContent className="space-y-4 px-10 pb-6 pt-2 border-t bg-muted/5">
-                                            {item.technicalStandard?.trim() ? (
-                                                <div className="space-y-2 overflow-hidden">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Technical Standard & Acceptable Means of Compliance</p>
-                                                    <p className="text-sm font-medium text-muted-foreground leading-relaxed whitespace-pre-wrap italic break-words">&quot;{item.technicalStandard}&quot;</p>
-                                                </div>
-                                            ) : (
-                                                <p className="text-xs font-medium italic text-muted-foreground/70">
-                                                    Header only
-                                                </p>
-                                            )}
-                                        </CollapsibleContent>
-                                    </Collapsible>
-                                ))}
-                                {(groupedItems[parentItem.regulationCode] || []).length === 0 && (
-                                    <p className="text-center py-6 text-xs font-medium text-muted-foreground italic">No detailed requirements defined for this section.</p>
-                                )}
-                            </CollapsibleContent>
-                        </Collapsible>
-                    ))}
+                    {topLevelItems.map(parentItem => renderMatrixNode(parentItem, 0))}
                     {topLevelItems.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-24 text-center opacity-30">
                             <Layers className="h-16 w-16 mb-4" />
@@ -584,6 +903,19 @@ export default function CoherenceMatrixPage() {
         <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-[600px] w-full" />
+        </div>
+    );
+  }
+
+  if (!canViewMatrix) {
+    return (
+        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+            <Card className="border shadow-none">
+                <CardContent className="py-16 text-center">
+                    <p className="text-sm font-black uppercase tracking-widest">No Access</p>
+                    <p className="mt-2 text-sm text-muted-foreground">You do not have permission to view the coherence matrix.</p>
+                </CardContent>
+            </Card>
         </div>
     );
   }
@@ -613,11 +945,13 @@ export default function CoherenceMatrixPage() {
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
                             <DialogTitle className="font-black uppercase tracking-tight">
-                                {formMode === 'header' ? 'Add Header' : 'Compliance Requirement'}
+                                {formMode === 'header' ? 'Add Header' : formMode === 'subheader' ? 'Add Subheader' : 'Compliance Requirement'}
                             </DialogTitle>
                             <DialogDescription>
                                 {formMode === 'header'
                                     ? 'Create the top-level regulation header for the selected category.'
+                                    : formMode === 'subheader'
+                                    ? 'Create a child row under a selected header.'
                                     : 'Add a manual regulation item under an existing header.'}
                             </DialogDescription>
             </DialogHeader>
@@ -627,7 +961,7 @@ export default function CoherenceMatrixPage() {
                 onFormSubmit={() => setIsFormOpen(false)}
                 tenantId={tenantId!}
                 defaultRegulationFamily={activeRegulationTab}
-                availableParentHeaders={currentFamilyHeaders}
+                availableParentHeaders={formMode === 'subheader' ? currentFamilyTopLevelHeaders : currentFamilyHeaders}
                 mode={formMode}
             />
             </DialogContent>

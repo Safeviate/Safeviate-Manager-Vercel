@@ -20,6 +20,7 @@ import {
   FileEdit,
   Library,
   BookOpen,
+  Wrench,
 } from 'lucide-react';
 
 export type SubMenuItem = {
@@ -111,6 +112,18 @@ export const menuConfig: MenuItem[] = [
         description: 'View aviation weather reports and forecasts.',
         permissionId: 'operations-view',
       },
+      {
+        href: '/operations/active-flight',
+        label: 'Active Flight',
+        description: 'Launch the pilot moving map and live flight tracking workspace.',
+        permissionId: 'operations-view',
+      },
+      {
+        href: '/operations/fleet-tracker',
+        label: 'Fleet Tracker',
+        description: 'Monitor all active aircraft positions and live school flight sessions.',
+        permissionId: 'operations-view',
+      },
     ],
   },
   {
@@ -179,7 +192,7 @@ export const menuConfig: MenuItem[] = [
         href: '/quality/coherence-matrix',
         label: 'Coherence Matrix',
         description: 'Ensure regulatory coherence.',
-        permissionId: 'quality-matrix-manage',
+        permissionId: 'quality-matrix-view',
       },
       {
         href: '/quality/risk-plan',
@@ -238,6 +251,44 @@ export const menuConfig: MenuItem[] = [
         label: 'Vehicles',
         description: 'Manage company vehicles and ground assets.',
         permissionId: 'assets-view',
+      },
+      {
+        href: '/assets/tools',
+        label: 'Tools',
+        description: 'Manage specialized tools and equipment.',
+        permissionId: 'assets-view',
+      },
+    ],
+  },
+  {
+    href: '/maintenance',
+    label: 'Maintenance',
+    icon: Wrench,
+    permissionId: 'maintenance-view',
+    subItems: [
+      {
+        href: '/maintenance/workpacks',
+        label: 'Workpacks',
+        description: 'Manage aircraft maintenance workpacks and job cards.',
+        permissionId: 'maintenance-workpacks-view',
+      },
+      {
+        href: '/maintenance/defects',
+        label: 'Defect Reports',
+        description: 'Track and clear aircraft defects and snags.',
+        permissionId: 'maintenance-defects-view',
+      },
+      {
+        href: '/maintenance/schedule',
+        label: 'Maintenance Schedule',
+        description: 'View upcoming required maintenance events.',
+        permissionId: 'maintenance-schedule-view',
+      },
+      {
+        href: '/maintenance/tools',
+        label: 'Tools',
+        description: 'Manage specialized tools and equipment.',
+        permissionId: 'maintenance-view',
       },
     ],
   },

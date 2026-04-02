@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronsUpDown, PlusCircle, FileEdit, MoreHorizontal } from 'lucide-react';
+import { ChevronsUpDown, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -55,13 +55,13 @@ export default function ManagementOfChangePage() {
     const isLoading = isLoadingMocs || isLoadingOrgs;
 
     const renderOrgCard = (orgId: string | 'internal') => {
-        const filteredMocs = (mocs || []).filter(moc => 
+        const filteredMocs = (mocs || []).filter(moc =>
             orgId === 'internal' ? !moc.organizationId : moc.organizationId === orgId
         );
 
         return (
             <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-                <MainPageHeader 
+                <MainPageHeader
                     title="Management of Change"
                     description="Formal process for evaluating and managing changes to operations or procedures."
                     actions={
@@ -108,7 +108,7 @@ export default function ManagementOfChangePage() {
                 {shouldShowOrganizationTabs && (
                     <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />
                 )}
-                
+
                 <CardContent className="flex-1 p-0 overflow-auto bg-background">
                     <Table>
                         <TableHeader className="bg-muted/30 sticky top-0 z-10">
@@ -176,7 +176,7 @@ export default function ManagementOfChangePage() {
                         <TabsContent value="internal" className="m-0 p-0 h-full">
                             {renderOrgCard('internal')}
                         </TabsContent>
-                        
+
                         {(organizations || []).map(org => (
                             <TabsContent key={org.id} value={org.id} className="m-0 p-0 h-full">
                                 {renderOrgCard(org.id)}

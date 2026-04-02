@@ -20,6 +20,35 @@ import { format } from 'date-fns';
 import type { Personnel } from '../../users/personnel/page';
 import type { ComplianceRequirement } from '@/types/quality';
 
+function formatParentOptionLabel(option: { code: string; label: string }) {
+    const code = option.code.trim();
+    const label = option.label.trim();
+    return label && label !== code
+        ? `${code} - ${label}`
+        : code;
+}
+
+function normalizeRegulationCode(value?: string | null) {
+    return value?.trim() || '';
+}
+
+function splitCompositeRegulationInput(value?: string | null) {
+    const raw = value?.trim() || '';
+    const match = raw.match(/^([A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+)\s+(.+)$/);
+
+    if (!match) {
+        return {
+            regulationCode: raw,
+            regulationStatement: raw,
+        };
+    }
+
+    return {
+        regulationCode: match[1].trim(),
+        regulationStatement: match[2].trim(),
+    };
+}
+
 const formSchema = z.object({
     regulationFamily: z.enum(['sacaa-cars', 'sacaa-cats', 'ohs']).optional(),
     parentRegulationCode: z.string().optional(),
@@ -35,10 +64,15 @@ const formSchema = z.object({
 const headerFormSchema = z.object({
     regulationFamily: z.enum(['sacaa-cars', 'sacaa-cats', 'ohs']),
     regulationCode: z.string().min(1, 'Code is required.'),
+    regulationStatement: z.string().min(1, 'Title is required.'),
 });
 
-type FormValues = z.infer<typeof formSchema>;
-type HeaderFormValues = z.infer<typeof headerFormSchema>;
+const subheaderFormSchema = z.object({
+    regulationFamily: z.enum(['sacaa-cars', 'sacaa-cats', 'ohs']),
+    parentRegulationCode: z.string().min(1, 'Parent header is required.'),
+    regulationCode: z.string().min(1, 'Code is required.'),
+    regulationStatement: z.string().min(1, 'Title is required.'),
+});
 
 interface ComplianceItemFormProps {
     personnel: Personnel[];
@@ -47,7 +81,7 @@ interface ComplianceItemFormProps {
     tenantId: string;
     defaultRegulationFamily?: 'sacaa-cars' | 'sacaa-cats' | 'ohs';
     availableParentHeaders?: { code: string; label: string }[];
-    mode?: 'item' | 'header';
+    mode?: 'item' | 'header' | 'subheader';
 }
 
 export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tenantId, defaultRegulationFamily, availableParentHeaders = [], mode = 'item' }: ComplianceItemFormProps) {
@@ -55,8 +89,14 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
     const { toast } = useToast();
     const topLevelHeaderValue = '__top_level__';
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(mode === 'header' ? headerFormSchema : formSchema),
+    const form = useForm<any>({
+        resolver: zodResolver(
+            mode === 'header'
+                ? headerFormSchema
+                : mode === 'subheader'
+                ? subheaderFormSchema
+                : formSchema
+        ),
         defaultValues: {
             regulationFamily: existingItem?.regulationFamily || defaultRegulationFamily || 'sacaa-cars',
             parentRegulationCode: existingItem?.parentRegulationCode || '',
@@ -70,15 +110,29 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
         },
     });
 
-    const onSubmit = async (values: FormValues) => {
+    const onSubmit = async (values: any) => {
         if (!firestore) return;
+        const normalizedCode = normalizeRegulationCode(values.regulationCode);
+        const splitInput = splitCompositeRegulationInput(values.regulationCode);
         
         const dataToSave = mode === 'header'
             ? {
                 regulationFamily: values.regulationFamily,
                 parentRegulationCode: '',
-                regulationCode: values.regulationCode,
-                regulationStatement: values.regulationCode,
+                regulationCode: normalizedCode,
+                regulationStatement: values.regulationStatement.trim(),
+                technicalStandard: '',
+                companyReference: '',
+                responsibleManagerId: '',
+                nextAuditDate: null,
+                organizationId: null,
+            }
+            : mode === 'subheader'
+            ? {
+                regulationFamily: values.regulationFamily,
+                parentRegulationCode: normalizeRegulationCode(values.parentRegulationCode),
+                regulationCode: normalizeRegulationCode(values.regulationCode) || splitInput.regulationCode,
+                regulationStatement: values.regulationStatement.trim() || splitInput.regulationStatement,
                 technicalStandard: '',
                 companyReference: '',
                 responsibleManagerId: '',
@@ -87,6 +141,9 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
             }
             : {
                 ...values,
+                regulationCode: normalizeRegulationCode(values.regulationCode),
+                parentRegulationCode: normalizeRegulationCode(values.parentRegulationCode),
+                regulationStatement: values.regulationStatement.trim(),
                 nextAuditDate: values.nextAuditDate ? values.nextAuditDate.toISOString() : null,
             };
 
@@ -142,7 +199,7 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
                                         <SelectItem value={topLevelHeaderValue}>Top-level header</SelectItem>
                                         {availableParentHeaders.map((header) => (
                                             <SelectItem key={header.code} value={header.code}>
-                                                {header.code} - {header.label}
+                                                {formatParentOptionLabel(header)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -157,25 +214,87 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
                         <FormField control={form.control} name="nextAuditDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Next Audit Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                     </>
                 ) : null}
-                {mode === 'header' ? (
-                    <FormField control={form.control} name="regulationFamily" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value || defaultRegulationFamily || 'sacaa-cars'}>
+                {mode === 'subheader' ? (
+                    <>
+                        <FormField control={form.control} name="regulationFamily" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Category</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value || defaultRegulationFamily || 'sacaa-cars'}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select category" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="sacaa-cars">SACAA CARs</SelectItem>
+                                        <SelectItem value="sacaa-cats">SACAA CATs</SelectItem>
+                                        <SelectItem value="ohs">OHS</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="parentRegulationCode" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Parent Header</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a header" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {availableParentHeaders.map((header) => (
+                                            <SelectItem key={header.code} value={header.code}>
+                                                {formatParentOptionLabel(header)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="regulationStatement" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Subheader Title</FormLabel>
                                 <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
+                                    <Input placeholder="e.g., QUALITY ASSURANCE AND QUALITY SYSTEM" {...field} />
                                 </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="sacaa-cars">SACAA CARs</SelectItem>
-                                    <SelectItem value="sacaa-cats">SACAA CATs</SelectItem>
-                                    <SelectItem value="ohs">OHS</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </>
+                ) : null}
+                {mode === 'header' ? (
+                    <>
+                        <FormField control={form.control} name="regulationFamily" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Category</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value || defaultRegulationFamily || 'sacaa-cars'}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select category" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="sacaa-cars">SACAA CARs</SelectItem>
+                                        <SelectItem value="sacaa-cats">SACAA CATs</SelectItem>
+                                        <SelectItem value="ohs">OHS</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="regulationStatement" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Header Title</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., SA-CATS 141 Aviation Training Organisations" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </>
                 ) : null}
                 <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={onFormSubmit}>Cancel</Button>
