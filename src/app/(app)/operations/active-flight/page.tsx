@@ -61,9 +61,9 @@ export default function ActiveFlightPage() {
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), [savedDeviceLabel]);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const sessionRef = useMemoFirebase(() => {
-    if (!firestore || !tenantId || !user) return null;
-    return doc(firestore, `tenants/${tenantId}/flightSessions`, user.uid);
-  }, [firestore, tenantId, user]);
+    if (!firestore || !tenantId || !deviceBinding?.deviceId) return null;
+    return doc(firestore, `tenants/${tenantId}/flightSessions`, deviceBinding.deviceId);
+  }, [deviceBinding?.deviceId, firestore, tenantId]);
 
   useEffect(() => {
     if (!isTrackingActive || !position || !selectedAircraft || !deviceBinding || !sessionRef) return;
