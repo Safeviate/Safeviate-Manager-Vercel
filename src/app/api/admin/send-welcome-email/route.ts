@@ -39,14 +39,13 @@ export async function POST(request: Request) {
     // Dispatch the actual email
     const result = await sendWelcomeEmail({ email, name, setupLink });
 
-    if (!result.success && result.error !== 'API Key missing') {
+    if (!result.success) {
       throw new Error(result.error);
     }
 
     return NextResponse.json({ 
         ok: true, 
-        message: 'Welcome email dispatched.',
-        simulated: result.error === 'API Key missing' 
+        message: 'Welcome email dispatched.'
     });
   } catch (error: any) {
     console.error('Onboarding dispatch failed:', error);

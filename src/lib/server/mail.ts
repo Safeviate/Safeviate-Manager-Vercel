@@ -1,5 +1,3 @@
-import { getFirebaseAdminAuth } from './firebase-admin';
-
 /**
  * Interface for standard welcome email inputs
  */
@@ -15,12 +13,18 @@ interface WelcomeEmailOptions {
  */
 export async function sendWelcomeEmail({ email, name, setupLink }: WelcomeEmailOptions) {
   const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.MAIL_FROM || 'onboarding@safeviate.com';
+  const fromEmail = process.env.MAIL_FROM;
 
   if (!apiKey) {
     console.warn(`[MAIL] Skipping dispatch to ${email}. RESEND_API_KEY is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
     return { success: false, error: 'API Key missing' };
+  }
+
+  if (!fromEmail) {
+    console.warn(`[MAIL] Skipping dispatch to ${email}. MAIL_FROM is not configured.`);
+    console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
+    return { success: false, error: 'MAIL_FROM missing' };
   }
 
   const html = `
@@ -119,19 +123,30 @@ export async function sendWelcomeEmail({ email, name, setupLink }: WelcomeEmailO
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         from: `Safeviate <${fromEmail}>`,
         to: [email],
-        subject: 'Welcome to Safeviate — Account Setup Required',
-        html: html,
+        subject: 'Welcome to Safeviate - Account Setup Required',
+        html,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to send email via Resend');
+      const responseText = await response.text();
+      let errorMessage = responseText;
+
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || errorData.error || responseText;
+      } catch {
+        // Keep raw response text when Resend does not return JSON.
+      }
+
+      throw new Error(
+        `Resend rejected the message (${response.status} ${response.statusText}): ${errorMessage}`
+      );
     }
 
     return { success: true };
