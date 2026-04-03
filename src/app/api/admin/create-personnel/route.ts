@@ -17,12 +17,15 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { 
-      tenantId, email, password, firstName, lastName, 
+      tenantId, email, firstName, lastName, 
       userType, role, department, userNumber, 
       organizationId, isErpIncerfaContact, isErpAlerfaContact 
     } = body;
 
-    if (!tenantId || !email || !password || !firstName || !lastName || !role) {
+    // Password is now optional (we generate a secure random one if not provided)
+    const password = body.password || Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+
+    if (!tenantId || !email || !firstName || !lastName || !role) {
       return NextResponse.json({ error: 'Missing required user information.' }, { status: 400 });
     }
 

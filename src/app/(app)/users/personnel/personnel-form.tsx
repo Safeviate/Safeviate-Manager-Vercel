@@ -13,11 +13,11 @@ import { Loader2, PlusCircle, ChevronsUpDown } from 'lucide-react';
 import type { Role } from '@/app/(app)/admin/roles/page';
 import type { Department } from '@/app/(app)/admin/department/page';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import type { Personnel } from './page';
+import type { Personnel, PilotProfile } from './page';
 
 interface PersonnelFormProps {
   tenantId: string;
-  existingPersonnel?: Personnel;
+  existingPersonnel?: Personnel | PilotProfile;
   roles: Role[];
   departments: Department[];
   externalOrganizations?: any[];
@@ -46,7 +46,6 @@ export function PersonnelForm({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [organizationId, setOrganizationId] = useState<string | null>(null);
@@ -60,7 +59,7 @@ export function PersonnelForm({
       setFirstName(existingPersonnel.firstName);
       setLastName(existingPersonnel.lastName);
       setEmail(existingPersonnel.email);
-      setSelectedDepartment(existingPersonnel.department || null);
+      setSelectedDepartment(('department' in existingPersonnel ? (existingPersonnel as Personnel).department : null) || null);
       setSelectedRole(existingPersonnel.role);
       setOrganizationId(existingPersonnel.organizationId || null);
       setIsIncerfaContact(existingPersonnel.isErpIncerfaContact || false);
@@ -77,7 +76,7 @@ export function PersonnelForm({
   };
 
   const handleAddOrUpdateUser = async () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole || (!existingPersonnel && !password.trim())) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
@@ -124,7 +123,7 @@ export function PersonnelForm({
             firstName,
             lastName,
             email,
-            password,
+            email,
             userNumber: userNumber || null,
             department: selectedDepartment || null,
             role: selectedRole,
@@ -171,12 +170,6 @@ export function PersonnelForm({
         <Label htmlFor="email" className="text-right">Email</Label>
         <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" />
       </div>
-      {!existingPersonnel && (
-        <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="password" className="text-right">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="col-span-3" />
-        </div>
-      )}
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="userNumber" className="text-right">User #</Label>
         <Input id="userNumber" value={userNumber} onChange={(e) => setUserNumber(e.target.value)} className="col-span-3" placeholder="e.g. BARRY-01" />
