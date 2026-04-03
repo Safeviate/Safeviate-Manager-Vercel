@@ -39,8 +39,13 @@ export interface FlightSession {
 
 export interface ActiveLegState {
   activeLegIndex: number;
+  fromWaypoint?: string;
+  toWaypoint?: string;
   distanceToNextNm?: number;
   bearingToNext?: number;
   etaToNextMinutes?: number;
   groundSpeedKt?: number;
+  crossTrackErrorNm?: number;
+  onCourse?: boolean;
+  hasArrived?: boolean;
 }

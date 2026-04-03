@@ -11,3 +11,7 @@ secrets:
     secret: GOOGLE_GENAI_API_KEY
   - variable: OPENAIP_API_KEY
     secret: OPENAIP_API_KEY
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+  - variable: MAIL_FROM
+    secret: MAIL_FROM

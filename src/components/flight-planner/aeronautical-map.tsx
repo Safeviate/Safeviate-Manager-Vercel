@@ -3,7 +3,7 @@
 import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON, FeatureGroup, useMapEvents, LayersControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { NavlogLeg } from '@/types/booking';
+import type { NavlogLeg, Hazard } from '@/types/booking';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,16 @@ const RouteWaypointIcon = L.divIcon({
 interface AeronauticalMapProps {
   legs: NavlogLeg[];
   onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
+  hazards?: Hazard[];
+  onAddHazard?: (lat: number, lng: number) => void;
 }
+
+const HazardIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px rgba(239,68,68,0.35);color:#fff;font-size:14px;font-weight:900;">!</div>',
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
 
 type LayerInfoItem = {
   label: string;
@@ -958,7 +967,7 @@ const SearchControl = ({
   );
 };
 
-export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMapProps) {
+export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onAddHazard }: AeronauticalMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [searchFeatures, setSearchFeatures] = useState<OpenAipFeature[]>([]);
   const [viewportFeatures, setViewportFeatures] = useState<OpenAipFeature[]>([]);
@@ -1750,7 +1759,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
                     <p className="font-black uppercase">{item.label}</p>
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                       {item.layer}
-                      {typeof item.distanceNm === 'number' ? ` â€¢ ${item.distanceNm.toFixed(1)} NM` : ''}
+                      {typeof item.distanceNm === 'number' ? ` • ${item.distanceNm.toFixed(1)} NM` : ''}
                     </p>
                     {item.detail && (
                       <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{item.detail}</p>
@@ -1765,9 +1774,49 @@ export default function AeronauticalMap({ legs, onAddWaypoint }: AeronauticalMap
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">No nearby cached feature found.</p>
             )}
 
+            <div className="flex flex-col gap-2 pt-2 border-t mt-4">
+              <Button 
+                className="h-8 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[10px] w-full"
+                onClick={() => {
+                  onAddWaypoint(layerInfo.lat, layerInfo.lon, layerInfo.title);
+                }}
+              >
+                Add to Route
+              </Button>
+              {onAddHazard && (
+                <Button 
+                  variant="outline"
+                  className="h-8 border-destructive/20 text-destructive hover:bg-destructive/10 font-black uppercase text-[10px] w-full"
+                  onClick={() => {
+                    onAddHazard(layerInfo.lat, layerInfo.lon);
+                  }}
+                >
+                  Mark Hazard
+                </Button>
+              )}
+            </div>
+
           </div>
         </Popup>
       )}
+
+      {hazards && hazards.map((h) => (
+        <Marker key={h.id} position={[h.lat, h.lng]} icon={HazardIcon}>
+          <Popup className="hazard-popup">
+            <div className="p-2 space-y-2 min-w-[150px]">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-destructive" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Safety Hazard</span>
+              </div>
+              <p className="text-xs font-bold leading-relaxed">{h.note || 'No description provided.'}</p>
+              <div className="pt-1 flex items-center justify-between border-t border-muted">
+                 <span className="text-[8px] text-muted-foreground uppercase font-black">Coordinates</span>
+                 <span className="text-[8px] font-mono font-bold text-muted-foreground">{h.lat.toFixed(4)}, {h.lng.toFixed(4)}</span>
+              </div>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
 
       {polylinePositions.length > 1 && (
         <Polyline

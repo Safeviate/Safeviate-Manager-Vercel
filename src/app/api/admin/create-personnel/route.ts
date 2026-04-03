@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       userNumber: userNumber || null,
       organizationId: organizationId || null,
       isErpIncerfaContact: !!isErpIncerfaContact,
-      isErpAlerfaContact: !!isAlerfaContact,
+      isErpAlerfaContact: !!isErpAlerfaContact,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -66,9 +66,8 @@ export async function POST(request: Request) {
       profilePath: `tenants/${tenantId}/${collectionName}/${uid}`
     });
 
-    // 6. Generate setup link (optional automatic trigger)
+    // 6. Manual onboarding trigger handled by UI
     // const setupLink = await auth.generatePasswordResetLink(email);
-    // You could call an onboarding email service here.
 
     return NextResponse.json({ ok: true, uid });
   } catch (error: any) {

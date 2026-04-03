@@ -12,11 +12,16 @@ import type { Department } from '../../admin/department/page';
 import { usePermissions } from '@/hooks/use-permissions';
 import { MainPageHeader } from '@/components/page-header';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, PlusCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
+  const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
-  const { tenantId } = useUserProfile();
+  const { tenantId, isLoading: isProfileLoading } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
 
   const studentsQuery = useMemoFirebase(
@@ -52,7 +57,7 @@ export default function StudentsPage() {
   const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
 
 
-  const isLoading = isLoadingStudents || isLoadingRoles || isLoadingDepts;
+  const isLoading = isProfileLoading || isLoadingStudents || isLoadingRoles || isLoadingDepts;
   const error = studentsError || rolesError || deptsError;
 
   return (
@@ -67,18 +72,34 @@ export default function StudentsPage() {
                 tenantId={tenantId || ''} 
                 roles={roles || []} 
                 departments={departments || []} 
+                trigger={
+                   <Button
+                       disabled={!canCreateUsers || isProfileLoading}
+                       variant={isMobile ? 'outline' : 'default'}
+                       size={isMobile ? 'sm' : 'default'}
+                       className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full gap-2 px-6 text-xs font-black uppercase shadow-md sm:w-auto'}
+                   >
+                       <span className="flex items-center gap-2">
+                           <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                           Add User
+                       </span>
+                       {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+                   </Button>
+                }
               />
             )
           }
         />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-            {isLoading && (
-                <div className="text-center p-8 text-muted-foreground">Loading students...</div>
-            )}
-            {!isLoading && error && (
+           {isLoading ? (
+                <div className="p-8 space-y-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+            ) : error ? (
                 <div className="text-center p-8 text-destructive font-semibold">Error: {error.message}</div>
-            )}
-            {!isLoading && !error && students && (
+            ) : students && (
                 <StudentsTable data={students} tenantId={tenantId || ''} />
             )}
         </CardContent>

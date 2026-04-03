@@ -1,9 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { collection, doc } from 'firebase/firestore';
-import { MapPinned, Navigation, PlaneTakeoff, Radio, Smartphone, TimerReset } from 'lucide-react';
+import { Loader2, MapPinned, Navigation, PlaneTakeoff, Radio, Smartphone, TimerReset } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,19 +12,40 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { setDocumentNonBlocking } from '@/firebase';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Aircraft } from '@/types/aircraft';
+import type { Booking } from '@/types/booking';
 import { getOrCreateDeviceBinding, setDeviceLabel } from '@/lib/flight-session';
 import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
+import { getActiveLegState } from '@/lib/active-flight';
+
+const ActiveFlightLiveMap = dynamic(
+  () => import('@/components/active-flight/active-flight-live-map').then((module) => module.ActiveFlightLiveMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-slate-950 px-6 py-12 text-center text-slate-100">
+        <div className="space-y-4">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-sky-400" />
+          <p className="text-sm font-black uppercase tracking-widest">Loading Pilot Map</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 export default function ActiveFlightPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
   const { tenantId, userProfile, isLoading: isUserLoading } = useUserProfile();
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>('');
+  const [selectedBookingId, setSelectedBookingId] = useState<string>('');
   const [deviceLabelInput, setDeviceLabelInput] = useState('');
   const [savedDeviceLabel, setSavedDeviceLabel] = useState<string>('');
   const [isTrackingActive, setIsTrackingActive] = useState(false);
+  const [manualLegIndex, setManualLegIndex] = useState<number>(0);
   const lastWriteRef = useRef<number>(0);
   const {
     position,
@@ -40,6 +62,20 @@ export default function ActiveFlightPage() {
   }, [firestore, tenantId]);
 
   const { data: aircrafts, isLoading: isAircraftLoading } = useCollection<Aircraft>(aircraftQuery);
+
+  const bookingsQuery = useMemoFirebase(() => {
+    if (!firestore || !tenantId) return null;
+    return collection(firestore, `tenants/${tenantId}/bookings`);
+  }, [firestore, tenantId]);
+
+  const { data: bookings } = useCollection<Booking>(bookingsQuery);
+
+  const flightSessionsQuery = useMemoFirebase(() => {
+    if (!firestore || !tenantId) return null;
+    return collection(firestore, `tenants/${tenantId}/flightSessions`);
+  }, [firestore, tenantId]);
+
+  const { data: flightSessions } = useCollection<any>(flightSessionsQuery);
 
   useEffect(() => {
     const binding = getOrCreateDeviceBinding();
@@ -58,12 +94,52 @@ export default function ActiveFlightPage() {
     [selectedAircraftId, sortedAircraft]
   );
 
+  const candidateBookings = useMemo(() => {
+    return (bookings || [])
+      .filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId)
+      .filter((booking) => (booking.navlog?.legs?.length || 0) > 0)
+      .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
+  }, [bookings, selectedAircraftId]);
+
+  const selectedBooking = useMemo(
+    () => candidateBookings.find((booking) => booking.id === selectedBookingId) || null,
+    [candidateBookings, selectedBookingId]
+  );
+
+  const selectedLegs = selectedBooking?.navlog?.legs || [];
+  const activeLegState = useMemo(
+    () => getActiveLegState(selectedLegs, position, manualLegIndex),
+    [selectedLegs, position, manualLegIndex]
+  );
+
+  useEffect(() => {
+    setManualLegIndex(0);
+  }, [selectedBookingId]);
+
+  useEffect(() => {
+    if (!activeLegState) return;
+    if (activeLegState.activeLegIndex !== manualLegIndex) {
+      setManualLegIndex(activeLegState.activeLegIndex);
+    }
+  }, [activeLegState, manualLegIndex]);
+
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), [savedDeviceLabel]);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const sessionRef = useMemoFirebase(() => {
     if (!firestore || !tenantId || !deviceBinding?.deviceId) return null;
     return doc(firestore, `tenants/${tenantId}/flightSessions`, deviceBinding.deviceId);
   }, [deviceBinding?.deviceId, firestore, tenantId]);
+
+  const conflictingAircraftSession = useMemo(() => {
+    if (!selectedAircraft || !deviceBinding?.deviceId) return null;
+
+    return (flightSessions || []).find(
+      (session) =>
+        session.status === 'active' &&
+        session.aircraftId === selectedAircraft.id &&
+        session.deviceId !== deviceBinding.deviceId
+    );
+  }, [deviceBinding?.deviceId, flightSessions, selectedAircraft]);
 
   useEffect(() => {
     if (!isTrackingActive || !position || !selectedAircraft || !deviceBinding || !sessionRef) return;
@@ -79,19 +155,34 @@ export default function ActiveFlightPage() {
         pilotName,
         aircraftId: selectedAircraft.id,
         aircraftRegistration: selectedAircraft.tailNumber,
+        bookingId: selectedBooking?.id || '',
         status: 'active',
         deviceId: deviceBinding.deviceId,
         deviceLabel: savedDeviceLabel || deviceBinding.deviceLabel || '',
+        activeLegIndex: activeLegState?.activeLegIndex ?? null,
         updatedAt: new Date().toISOString(),
         lastPosition: position,
-        groundSpeedKt: position.speedKt ?? null,
+        distanceToNextNm: activeLegState?.distanceToNextNm ?? null,
+        bearingToNext: activeLegState?.bearingToNext ?? null,
+        etaToNextMinutes: activeLegState?.etaToNextMinutes ?? null,
+        crossTrackErrorNm: activeLegState?.crossTrackErrorNm ?? null,
+        onCourse: activeLegState?.onCourse ?? null,
+        groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? null,
       },
       { merge: true }
     );
-  }, [deviceBinding, pilotName, position, savedDeviceLabel, selectedAircraft, sessionRef, user?.uid, isTrackingActive]);
+  }, [activeLegState?.activeLegIndex, activeLegState?.bearingToNext, activeLegState?.crossTrackErrorNm, activeLegState?.distanceToNextNm, activeLegState?.etaToNextMinutes, activeLegState?.groundSpeedKt, activeLegState?.onCourse, deviceBinding, pilotName, position, savedDeviceLabel, selectedAircraft, selectedBooking?.id, sessionRef, user?.uid, isTrackingActive]);
 
   const startTracking = () => {
     if (!selectedAircraft || !sessionRef || !deviceBinding || !user) return;
+    if (conflictingAircraftSession) {
+      toast({
+        variant: 'destructive',
+        title: 'Aircraft Already In Use',
+        description: `${selectedAircraft.tailNumber} is already being broadcast by ${conflictingAircraftSession.pilotName || 'another device'}. Stop that session first or choose another registration.`,
+      });
+      return;
+    }
 
     setIsTrackingActive(true);
     lastWriteRef.current = 0;
@@ -102,9 +193,11 @@ export default function ActiveFlightPage() {
         pilotName,
         aircraftId: selectedAircraft.id,
         aircraftRegistration: selectedAircraft.tailNumber,
+        bookingId: selectedBooking?.id || '',
         status: 'active',
         deviceId: deviceBinding.deviceId,
         deviceLabel: savedDeviceLabel || deviceBinding.deviceLabel || '',
+        activeLegIndex: activeLegState?.activeLegIndex ?? null,
         startedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -246,6 +339,27 @@ export default function ActiveFlightPage() {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  Booking / Navlog Route
+                </label>
+                <Select value={selectedBookingId} onValueChange={setSelectedBookingId}>
+                  <SelectTrigger className="font-semibold">
+                    <SelectValue placeholder="Select a booking with a navlog" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {candidateBookings.map((booking) => (
+                      <SelectItem key={booking.id} value={booking.id}>
+                        #{booking.bookingNumber} • {booking.date} • {(booking.navlog?.legs?.length || 0)} legs
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  Optional for now, but selecting a booking will draw its navlog route on the live pilot map.
+                </p>
+              </div>
+
               <div className="rounded-xl border border-dashed bg-background p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Next Wiring Step</p>
                 <p className="mt-2 text-sm font-medium">
@@ -254,8 +368,20 @@ export default function ActiveFlightPage() {
                 </p>
               </div>
 
+              {conflictingAircraftSession && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+                  {selectedAircraft?.tailNumber} is already active on another device for{' '}
+                  <span className="font-black">{conflictingAircraftSession.pilotName || 'another pilot'}</span>.
+                  Stop that session first or choose another aircraft.
+                </div>
+              )}
+
               <div className="grid gap-3 md:grid-cols-2">
-                <Button className="w-full font-black uppercase" disabled={!selectedAircraft || !user} onClick={startTracking}>
+                <Button
+                  className="w-full font-black uppercase"
+                  disabled={!selectedAircraft || !user || !!conflictingAircraftSession}
+                  onClick={startTracking}
+                >
                   <PlaneTakeoff className="mr-2 h-4 w-4" />
                   Start Tracking As {selectedAircraft?.tailNumber || 'Selected Aircraft'}
                 </Button>
@@ -287,6 +413,15 @@ export default function ActiveFlightPage() {
                   <p className="mt-1 font-black uppercase">{selectedAircraft?.tailNumber || 'Not selected yet'}</p>
                 </div>
                 <div className="rounded-lg border bg-muted/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking Route</p>
+                  <p className="mt-1 font-black uppercase">
+                    {selectedBooking ? `#${selectedBooking.bookingNumber}` : 'No route selected'}
+                  </p>
+                  <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+                    {selectedLegs.length > 0 ? `${selectedLegs.length} navlog legs ready for overlay` : 'Select a booking to draw the route'}
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-muted/10 p-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Device Label</p>
                   <p className="mt-1 font-black">{savedDeviceLabel || 'Unnamed device'}</p>
                 </div>
@@ -299,6 +434,125 @@ export default function ActiveFlightPage() {
                     Permission: {permissionState}
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-none">
+              <CardHeader>
+                <CardTitle className="text-sm font-black uppercase tracking-widest">Pilot Live Map</CardTitle>
+                <CardDescription>
+                  Live ownship position with the selected booking route overlaid from navlog legs.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ActiveFlightLiveMap
+                  booking={selectedBooking}
+                  legs={selectedLegs}
+                  position={position}
+                  aircraftRegistration={selectedAircraft?.tailNumber}
+                  activeLegIndex={activeLegState?.activeLegIndex}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-none">
+              <CardHeader>
+                <CardTitle className="text-sm font-black uppercase tracking-widest">Active Leg Status</CardTitle>
+                <CardDescription>
+                  Live next-waypoint guidance derived from the selected booking route and this device position.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {activeLegState ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Leg</p>
+                        <p className="mt-1 font-black uppercase">
+                          {activeLegState.fromWaypoint || 'Origin'} to {activeLegState.toWaypoint || 'Next'}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Leg State</p>
+                        <p className="mt-1 font-black uppercase">
+                          {activeLegState.hasArrived ? 'At Waypoint' : `Leg ${activeLegState.activeLegIndex + 1}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Distance To Next</p>
+                        <p className="mt-1 font-black">
+                          {activeLegState.distanceToNextNm != null ? `${activeLegState.distanceToNextNm.toFixed(1)} NM` : 'Unavailable'}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bearing To Next</p>
+                        <p className="mt-1 font-black">
+                          {activeLegState.bearingToNext != null ? `${activeLegState.bearingToNext.toFixed(0)}°` : 'Unavailable'}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">ETA To Next</p>
+                        <p className="mt-1 font-black">
+                          {activeLegState.etaToNextMinutes != null ? `${activeLegState.etaToNextMinutes.toFixed(0)} min` : 'Unavailable'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cross Track Error</p>
+                        <p className="mt-1 font-black">
+                          {activeLegState.crossTrackErrorNm != null ? `${activeLegState.crossTrackErrorNm.toFixed(2)} NM` : 'Unavailable'}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course Status</p>
+                        <p
+                          className={`mt-1 font-black uppercase ${
+                            activeLegState.onCourse === undefined
+                              ? ''
+                              : activeLegState.onCourse
+                                ? 'text-emerald-600'
+                                : 'text-destructive'
+                          }`}
+                        >
+                          {activeLegState.onCourse === undefined
+                            ? 'Unavailable'
+                            : activeLegState.onCourse
+                              ? 'On Course'
+                              : 'Off Course'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="font-black uppercase"
+                        disabled={manualLegIndex <= 0}
+                        onClick={() => setManualLegIndex((current) => Math.max(0, current - 1))}
+                      >
+                        Previous Leg
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="font-black uppercase"
+                        disabled={manualLegIndex >= Math.max(0, selectedLegs.length - 2)}
+                        onClick={() =>
+                          setManualLegIndex((current) => Math.min(Math.max(0, selectedLegs.length - 2), current + 1))
+                        }
+                      >
+                        Next Leg
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground">
+                    Select a booking with navlog legs and start tracking to compute the active leg.
+                  </div>
+                )}
               </CardContent>
             </Card>
 

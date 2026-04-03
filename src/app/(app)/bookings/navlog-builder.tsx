@@ -13,6 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { recalculateNavlogLegs, calculateRouteTotals, DEFAULT_FLIGHT_PARAMS } from '@/lib/flight-planner';
 import type { FlightParams } from '@/lib/flight-planner';
+import { collection } from 'firebase/firestore';
+import { useCollection, useMemoFirebase } from '@/firebase';
+import type { TrainingRoute } from '@/types/booking';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Library, Search } from 'lucide-react';
 
 /** Weight of AVGAS per gallon in lbs */
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -69,6 +74,28 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
     });
     const [fuelUnit, setFuelUnit] = useState<'GPH' | 'LPH'>(booking.navlog?.globalFuelBurnUnit ?? 'GPH');
     const [showPerLegWind, setShowPerLegWind] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
+    const [searchRoute, setSearchRoute] = useState('');
+
+    const routesQuery = useMemoFirebase(() => (
+        firestore && tenantId ? collection(firestore, `tenants/${tenantId}/trainingRoutes`) : null
+    ), [firestore, tenantId]);
+    const { data: trainingRoutes } = useCollection<TrainingRoute>(routesQuery);
+
+    const handleImportRoute = async (route: TrainingRoute) => {
+        if (!firestore) return;
+        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
+        try {
+            await updateDoc(bookingRef, {
+                'navlog.legs': route.legs,
+                'navlog.hazards': route.hazards
+            });
+            setIsImportOpen(false);
+            toast({ title: 'Route Imported', description: route.name });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Import Failed', description: e.message });
+        }
+    };
 
     // ── Bi-directional fuel sync with M&B ──
     const syncSourceRef = useRef<'navlog' | 'mb' | null>(null);
@@ -171,6 +198,15 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                             Use the Interactive Planner to build your flight route.
                         </p>
                     </div>
+                    {(trainingRoutes?.length || 0) > 0 && (
+                        <Button 
+                          onClick={() => setIsImportOpen(true)}
+                          variant="outline"
+                          className="mt-4 h-9 bg-primary/5 border-primary/20 text-primary font-black uppercase text-[10px] gap-2"
+                        >
+                            <Library size={14} /> Import Training Route
+                        </Button>
+                    )}
                 </div>
             </div>
         );
@@ -483,6 +519,55 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                     </TableFooter>
                 </Table>
             </div>
+
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogContent className="max-w-md p-0 overflow-hidden bg-background">
+                    <DialogHeader className="p-6 pb-2 border-b">
+                        <DialogTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                            <Library className="h-4 w-4 text-primary" /> Import Training Route
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="p-4 border-b bg-muted/5">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                            <Input 
+                                placeholder="Search training routes..." 
+                                className="h-8 pl-9 text-[10px] font-bold uppercase bg-background"
+                                value={searchRoute}
+                                onChange={e => setSearchRoute(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <ScrollArea className="h-[400px]">
+                        <div className="p-4 space-y-2">
+                            {(trainingRoutes || [])
+                              .filter(r => r.name.toLowerCase().includes(searchRoute.toLowerCase()))
+                              .map(route => (
+                                <button
+                                    key={route.id}
+                                    onClick={() => handleImportRoute(route)}
+                                    className="w-full text-left p-4 rounded-xl border border-transparent hover:border-primary/20 hover:bg-primary/5 transition-all group"
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <Badge variant="outline" className="text-[8px] h-4 font-black uppercase opacity-60">Route</Badge>
+                                        <span className="text-[8px] font-bold text-muted-foreground">{route.legs.length} Waypoints</span>
+                                    </div>
+                                    <p className="text-xs font-black uppercase">{route.name}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Badge variant="secondary" className="text-[8px] bg-red-100/50 text-red-700 hover:bg-red-100/50">{route.hazards.length} Hazards</Badge>
+                                        <div className="flex -space-x-1">
+                                            {route.legs.slice(0, 3).map((l, i) => (
+                                                <div key={i} className="w-4 h-4 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[7px] font-black">{l.waypoint.substring(0, 2)}</div>
+                                            ))}
+                                            {route.legs.length > 3 && <div className="text-[8px] font-bold text-muted-foreground ml-2">+ {route.legs.length - 3} move</div>}
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

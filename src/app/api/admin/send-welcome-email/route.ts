@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getFirebaseAdminAuth } from '@/lib/server/firebase-admin';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
+import { sendWelcomeEmail } from '@/lib/server/mail';
 
 export async function POST(request: Request) {
   try {
@@ -30,14 +31,18 @@ export async function POST(request: Request) {
     
     const setupLink = await auth.generatePasswordResetLink(email, actionCodeSettings);
 
-    // In a production app, we would use Resend or another provider here.
-    // For this prototype, we simulate the dispatch.
-    console.log(`[ONBOARDING] Sending welcome email to ${email} with link: ${setupLink}`);
+    // Dispatch the actual email
+    const result = await sendWelcomeEmail({ email, name, setupLink });
 
-    // If RESEND_API_KEY is available, we would call it:
-    // await sendWelcomeEmail({ email, name, setupLink });
+    if (!result.success && result.error !== 'API Key missing') {
+      throw new Error(result.error);
+    }
 
-    return NextResponse.json({ ok: true, message: 'Welcome email dispatched.' });
+    return NextResponse.json({ 
+        ok: true, 
+        message: 'Welcome email dispatched.',
+        simulated: result.error === 'API Key missing' 
+    });
   } catch (error: any) {
     console.error('Onboarding dispatch failed:', error);
     return NextResponse.json({ error: error.message || 'Internal server error.' }, { status: 500 });

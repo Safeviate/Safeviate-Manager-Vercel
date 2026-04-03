@@ -18,8 +18,9 @@ import { collection, doc, runTransaction, arrayUnion } from 'firebase/firestore'
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
-import type { Booking, OverrideLog } from '@/types/booking';
-import { Trash2, ShieldAlert, Lock, Eye } from 'lucide-react';
+import type { Booking, OverrideLog, TrainingRoute } from '@/types/booking';
+import { Trash2, ShieldAlert, Lock, Eye, MapIcon } from 'lucide-react';
+import { onSnapshot } from 'firebase/firestore';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
@@ -37,6 +38,7 @@ const bookingFormSchema = z.object({
     notes: z.string().optional(),
     status: z.enum(['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason']).default('Confirmed'),
     cancellationReason: z.string().optional(),
+    routeId: z.string().optional(),
 })
 .refine(data => {
     const start = new Date(`${format(data.date, 'yyyy-MM-dd')}T${data.startTime}`);
@@ -65,6 +67,17 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const { hasPermission } = usePermissions();
     const { userProfile } = useUserProfile();
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Fetch Training Routes
+    const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
+    useEffect(() => {
+        if (!firestore || !tenantId) return;
+        const q = collection(firestore, `tenants/${tenantId}/trainingRoutes`);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setTrainingRoutes(snapshot.docs.map(d => ({ ...d.data(), id: d.id } as TrainingRoute)));
+        });
+        return unsubscribe;
+    }, [firestore, tenantId]);
 
     // PERMISSIONS: Can user edit/save?
     const canManageSchedule = hasPermission('bookings-schedule-manage');
@@ -168,6 +181,20 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             notes: data.notes || null,
             isOvernight: data.isOvernight,
         };
+
+        // Attach Training Route if selected
+        if (data.routeId) {
+            const selectedRoute = trainingRoutes.find(r => r.id === data.routeId);
+            if (selectedRoute) {
+                bookingData.navlog = {
+                    legs: selectedRoute.legs,
+                    hazards: selectedRoute.hazards,
+                    globalTas: 100, // Default TAS
+                    globalFuelBurn: 10, // Default burn
+                    globalFuelBurnUnit: 'GPH',
+                };
+            }
+        }
 
         if (data.isOvernight && data.overnightBookingDate) {
             bookingData.overnightBookingDate = format(data.overnightBookingDate, 'yyyy-MM-dd');
@@ -311,6 +338,35 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         </div>
+
+                        {!existingBooking && (
+                            <div className="p-4 border border-emerald-100 bg-emerald-50/30 rounded-xl space-y-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 flex items-center gap-2">
+                                     <MapIcon className="h-3.5 w-3.5" /> Mission Profile
+                                </p>
+                                <FormField control={form.control} name="routeId" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-[9px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}>
+                                            <FormControl>
+                                                <SelectTrigger className="bg-background">
+                                                    <SelectValue placeholder="Select a training route to pre-fill navlog..." />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="none">None / Manual Entry</SelectItem>
+                                                {trainingRoutes.map(r => (
+                                                    <SelectItem key={r.id} value={r.id}>
+                                                        {r.name} ({r.legs.length} Waypoints)
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
+                        )}
 
                         <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes..." {...field} disabled={!canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
                         

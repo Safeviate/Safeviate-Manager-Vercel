@@ -124,6 +124,12 @@ export const menuConfig: MenuItem[] = [
         description: 'Monitor all active aircraft positions and live school flight sessions.',
         permissionId: 'operations-view',
       },
+      {
+        href: '/operations/training-routes',
+        label: 'Training Routes',
+        description: 'Manage and view standardized training flight paths and sectors.',
+        permissionId: 'operations-view',
+      },
     ],
   },
   {

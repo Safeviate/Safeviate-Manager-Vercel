@@ -181,6 +181,28 @@ const WBCalculator = () => {
     setGraphConfig(prev => ({ ...prev, xMin: minX, xMax: maxX }));
   };
 
+  const handleEnvelopePointChange = (index: number, field: 'x' | 'y', value: string) => {
+    const val = parseFloat(value) || 0;
+    const newEnvelope = [...graphConfig.envelope];
+    newEnvelope[index] = { ...newEnvelope[index], [field]: val };
+    setGraphConfig({ ...graphConfig, envelope: newEnvelope });
+  };
+
+  const addEnvelopePoint = () => {
+    const lastPoint = graphConfig.envelope[graphConfig.envelope.length - 1] || { x: 80, y: 1500 };
+    setGraphConfig({
+      ...graphConfig,
+      envelope: [...graphConfig.envelope, { x: lastPoint.x, y: lastPoint.y }]
+    });
+  };
+
+  const removeEnvelopePoint = (index: number) => {
+    setGraphConfig({
+      ...graphConfig,
+      envelope: graphConfig.envelope.filter((_, i) => i !== index)
+    });
+  };
+
   const saveAsTemplate = async () => {
     if (!firestore || !tenantId || !templateName.trim()) return;
     try {
@@ -338,6 +360,66 @@ const WBCalculator = () => {
                         )}
                       </div>
                     ))}
+                  </div>
+                </section>
+
+                <Separator />
+
+                <section className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary" /> Envelope Definition
+                    </h3>
+                    <Button variant="outline" size="icon" onClick={addEnvelopePoint} className="h-7 w-7 border-slate-300">
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {graphConfig.envelope.map((p, index) => (
+                      <div key={index} className="p-3 border rounded-lg bg-background space-y-2 relative group transition-colors hover:border-primary/20">
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: POINT_COLORS[index % POINT_COLORS.length] }} />
+                               <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Point {index + 1}</span>
+                            </div>
+                            <Button 
+                               variant="ghost" 
+                               size="icon" 
+                               onClick={() => removeEnvelopePoint(index)} 
+                               className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                               <Trash2 size={12} />
+                            </Button>
+                         </div>
+                         <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                               <Label className="text-[8px] uppercase font-bold text-muted-foreground">CG (in)</Label>
+                               <Input 
+                                  type="number" 
+                                  step="0.01"
+                                  value={p.x} 
+                                  onChange={(e) => handleEnvelopePointChange(index, 'x', e.target.value)} 
+                                  className="h-8 text-xs font-bold" 
+                               />
+                            </div>
+                            <div className="space-y-1">
+                               <Label className="text-[8px] uppercase font-bold text-muted-foreground">Weight (lbs)</Label>
+                               <Input 
+                                  type="number" 
+                                  value={p.y} 
+                                  onChange={(e) => handleEnvelopePointChange(index, 'y', e.target.value)} 
+                                  className="h-8 text-xs font-bold" 
+                               />
+                            </div>
+                         </div>
+                      </div>
+                    ))}
+                    {graphConfig.envelope.length === 0 && (
+                      <div className="text-center py-6 border-2 border-dashed rounded-xl bg-muted/5">
+                        <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2 opacity-50" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No limits defined</p>
+                      </div>
+                    )}
                   </div>
                 </section>
 

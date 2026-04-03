@@ -96,6 +96,7 @@ export interface Navlog {
     globalFuelBurn?: number;
     globalFuelBurnUnit?: 'GPH' | 'LPH';
     globalFuelOnBoard?: number;
+    hazards?: Hazard[];
 }
 
 export interface Booking {
@@ -132,4 +133,22 @@ export interface Booking {
   accountingStatus?: 'Unbilled' | 'Exported' | 'Paid';
   invoiceReference?: string;
   totalCost?: number;
+}
+
+export interface Hazard {
+  id: string;
+  lat: number;
+  lng: number;
+  note: string;
+  severity?: 'low' | 'medium' | 'high';
+}
+
+export interface TrainingRoute {
+  id: string;
+  name: string;
+  description: string;
+  legs: NavlogLeg[];
+  hazards: Hazard[];
+  tenantId: string;
+  createdAt: string;
 }
