@@ -75,7 +75,12 @@ export async function POST(request: Request) {
       url: process.env.NEXT_PUBLIC_APP_URL || 'https://safeviate--safeviate-aviation-management.europe-west4.hosted.app',
     });
 
-    await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink });
+    const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink });
+    
+    if (!emailResult.success) {
+      // Throwing here ensures the catch block runs and the frontend shows a red error
+      throw new Error(`Failed to send email. Resend Error: ${emailResult.error}`);
+    }
 
     return NextResponse.json({ ok: true, uid, message: 'User created and invite sent.' });
   } catch (error: any) {
