@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '@/lib/server/firebase-admin';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
+import { sendWelcomeEmail } from '@/lib/server/mail';
 
 export async function POST(request: Request) {
   try {
@@ -69,10 +70,14 @@ export async function POST(request: Request) {
       profilePath: `tenants/${tenantId}/${collectionName}/${uid}`
     });
 
-    // 6. Manual onboarding trigger handled by UI
-    // const setupLink = await auth.generatePasswordResetLink(email);
+    // 6. Manual onboarding trigger
+    const setupLink = await auth.generatePasswordResetLink(email, {
+      url: process.env.NEXT_PUBLIC_APP_URL || 'https://safeviate--safeviate-aviation-management.europe-west4.hosted.app',
+    });
 
-    return NextResponse.json({ ok: true, uid });
+    await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink });
+
+    return NextResponse.json({ ok: true, uid, message: 'User created and invite sent.' });
   } catch (error: any) {
     console.error('User creation failed:', error);
     return NextResponse.json({ error: error.message || 'Internal server error during user creation.' }, { status: 500 });
