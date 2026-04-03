@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '@/lib/server/firebase-admin';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
+import { getPublicBaseUrl } from '@/lib/server/site-url';
 
 export async function POST(request: Request) {
   try {
@@ -71,8 +72,10 @@ export async function POST(request: Request) {
     });
 
     // 6. Manual onboarding trigger
+    const baseUrl = getPublicBaseUrl(request);
     const setupLink = await auth.generatePasswordResetLink(email, {
-      url: process.env.NEXT_PUBLIC_APP_URL || 'https://safeviate--safeviate-aviation-management.europe-west4.hosted.app',
+      url: `${baseUrl}/login`,
+      handleCodeInApp: true,
     });
 
     const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink });

@@ -9,7 +9,7 @@ function getPrivateKey() {
 
 /**
  * Initializes and returns the Firebase Admin App instance.
- * Optimized for both local development and Firebase App Hosting environments.
+ * Optimized for both local development and hosted server environments.
  */
 function getFirebaseAdminApp() {
   const existingApps = getApps();
@@ -33,7 +33,7 @@ function getFirebaseAdminApp() {
     });
   }
 
-  // Fallback for cloud environments (Firebase App Hosting, GAE, Cloud Run)
+  // Fallback for hosted environments that provide application default credentials.
   // Explicitly passing projectId resolves the "2 UNKNOWN" token refresh error.
   return initializeApp({
     credential: applicationDefault(),

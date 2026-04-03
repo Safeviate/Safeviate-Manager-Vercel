@@ -1,10 +1,9 @@
-# Firebase Studio
+# Safeviate Manager
 
-This is a NextJS starter in Firebase Studio.
+This is a Next.js app configured for deployment on Vercel.
 
-To get started, take a look at src/app/page.tsx.
-git
-Version 24 resend correct
+For local development, start from `src/app/page.tsx` and set the required runtime env vars in Vercel:
 
-Add some text to trigger a changes
-<!-- Build Trigger: Wed Mar 25 09:19:27 PM UTC 2026 -->
+- `RESEND_API_KEY`
+- `MAIL_FROM`
+- `NEXT_PUBLIC_APP_URL` if you want to override the deployment URL

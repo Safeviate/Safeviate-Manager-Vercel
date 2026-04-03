@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getFirebaseAdminAuth } from '@/lib/server/firebase-admin';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
+import { getPublicBaseUrl } from '@/lib/server/site-url';
 
 export async function POST(request: Request) {
   try {
@@ -22,11 +23,7 @@ export async function POST(request: Request) {
     }
 
     const auth = getFirebaseAdminAuth();
-    
-    // Securely retrieve the public-facing domain using load balancer headers (App Hosting / Cloud Run)
-    const protocol = request.headers.get('x-forwarded-proto') || 'https';
-    const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-    const baseUrl = host ? `${protocol}://${host}` : new URL(request.url).origin;
+    const baseUrl = getPublicBaseUrl(request);
 
     // Generate a secure password reset link which acts as the setup link
     const actionCodeSettings = {

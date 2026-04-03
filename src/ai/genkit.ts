@@ -1,7 +1,7 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
-// 1. Match exactly with line 13 of apphosting.yaml
+// Read the Google AI key from the runtime environment.
 const apiKey = process.env.GOOGLE_API_KEY;
 
 if (!apiKey) {
