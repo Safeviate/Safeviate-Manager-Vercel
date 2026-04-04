@@ -372,20 +372,45 @@ export default function CoherenceMatrixPage() {
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
   const [activeRegulationTab, setActiveRegulationTab] = useState<RegulationFamily>('sacaa-cars');
 
-  const canViewMatrix = hasPermission('quality-matrix-view') || hasPermission('quality-matrix-manage');
-  const canManageMatrix = hasPermission('quality-matrix-manage');
+  const userRole = ((userProfile as { role?: string } | null)?.role || '').toLowerCase();
+  const isDeveloperRole = userRole === 'dev' || userRole === 'developer';
+  const canViewMatrix = isDeveloperRole || hasPermission('quality-matrix-view') || hasPermission('quality-matrix-manage');
+  const canManageMatrix = isDeveloperRole || hasPermission('quality-matrix-manage');
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
   const [formMode, setFormMode] = useState<'item' | 'header' | 'subheader'>('item');
 
-  const [complianceItems, setComplianceItems] = useState<ComplianceRequirement[]>([]);
-  const [personnel, setPersonnel] = useState<Personnel[]>([]);
-  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [complianceItems, setComplianceItems] = useState<ComplianceRequirement[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = window.localStorage.getItem('safeviate.compliance-matrix');
+      return stored ? (JSON.parse(stored) as ComplianceRequirement[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [personnel, setPersonnel] = useState<Personnel[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = window.localStorage.getItem('safeviate.personnel');
+      return stored ? (JSON.parse(stored) as Personnel[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = window.localStorage.getItem('safeviate.external-organizations');
+      return stored ? (JSON.parse(stored) as ExternalOrganization[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const loadData = useCallback(() => {
-    setIsLoading(true);
     try {
         const storedCompliance = localStorage.getItem('safeviate.compliance-matrix');
         const storedPersonnel = localStorage.getItem('safeviate.personnel');
@@ -920,7 +945,7 @@ export default function CoherenceMatrixPage() {
     );
   };
 
-  if (isPermissionsLoading || isProfileLoading || !userProfile || isLoading) {
+  if ((!canViewMatrix && isPermissionsLoading) || isProfileLoading || !userProfile || isLoading) {
     return (
         <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
             <Skeleton className="h-20 w-full" />

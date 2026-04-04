@@ -25,10 +25,12 @@ const VisibilityManager = dynamic(
 export default function PageFormatPage() {
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const canManage = hasPermission('admin-settings-manage');
+  const isDeveloperRole = ((userProfile as { role?: string } | null)?.role || '').toLowerCase() === 'dev'
+    || ((userProfile as { role?: string } | null)?.role || '').toLowerCase() === 'developer';
+  const canManage = isDeveloperRole || hasPermission('admin-settings-manage');
   const [activeTab, setActiveTab] = useState('branding');
 
-  if (isPermissionsLoading || isProfileLoading || !userProfile) {
+  if ((!canManage && isPermissionsLoading) || isProfileLoading || !userProfile) {
     return (
       <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
         <Skeleton className="h-20 w-full" />
