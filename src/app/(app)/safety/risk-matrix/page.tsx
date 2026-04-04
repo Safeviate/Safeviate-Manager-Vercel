@@ -188,10 +188,10 @@ export default function RiskMatrixPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <h2 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4" />
                     Severity Scale
-                  </h3>
+                  </h2>
                   {canManage && (
                     <Button variant="ghost" size="sm" className="h-7 px-3 text-[10px] uppercase font-black tracking-tight" onClick={() => setIsEditingSeverity(!isEditingSeverity)}>
                       {isEditingSeverity ? <><Check className="mr-2 h-3 w-3 text-green-600" /> Save</> : <><Pencil className="mr-2 h-3 w-3" /> Edit</>}
@@ -223,10 +223,10 @@ export default function RiskMatrixPage() {
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <h2 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     Likelihood Scale
-                  </h3>
+                  </h2>
                   {canManage && (
                     <Button variant="ghost" size="sm" className="h-7 px-3 text-[10px] uppercase font-black tracking-tight" onClick={() => setIsEditingLikelihood(!isEditingLikelihood)}>
                       {isEditingLikelihood ? <><Check className="mr-2 h-3 w-3 text-green-600" /> Save</> : <><Pencil className="mr-2 h-3 w-3" /> Edit</>}
