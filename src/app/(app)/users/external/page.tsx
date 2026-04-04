@@ -22,10 +22,7 @@ export default function ExternalUsersPage() {
   const { tenantId, isLoading: isProfileLoading } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
 
-  const [personnel, setPersonnel] = useState<Personnel[]>([]);
-  const [instructors, setInstructors] = useState<PilotProfile[]>([]);
-  const [students, setStudents] = useState<PilotProfile[]>([]);
-  const [privatePilots, setPrivatePilots] = useState<PilotProfile[]>([]);
+  const [users, setUsers] = useState<Array<Personnel | PilotProfile>>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
@@ -40,20 +37,14 @@ export default function ExternalUsersPage() {
         const payload = await response.json();
         if (cancelled) return;
 
-        const allPersonnel = (payload.personnel ?? []) as Personnel[];
-        setPersonnel(allPersonnel);
-        setInstructors((allPersonnel.filter((person: Personnel) => person.userType === 'Instructor') as unknown) as PilotProfile[]);
-        setStudents((allPersonnel.filter((person: Personnel) => person.userType === 'Student') as unknown) as PilotProfile[]);
-        setPrivatePilots((allPersonnel.filter((person: Personnel) => person.userType === 'Private Pilot') as unknown) as PilotProfile[]);
+        const allUsers = (payload.personnel ?? []) as Array<Personnel | PilotProfile>;
+        setUsers(allUsers);
         setRoles(payload.roles ?? []);
         setDepartments(payload.departments ?? []);
         setOrganizations([]);
       } catch {
         if (!cancelled) {
-          setPersonnel([]);
-          setInstructors([]);
-          setStudents([]);
-          setPrivatePilots([]);
+          setUsers([]);
           setRoles([]);
           setDepartments([]);
           setOrganizations([]);
@@ -72,14 +63,8 @@ export default function ExternalUsersPage() {
   const isLoading = isProfileLoading || isLoadingData;
 
   const externalUsers = useMemo(() => {
-    const allUsers = [
-      ...(personnel || []),
-      ...(instructors || []),
-      ...(students || []),
-      ...(privatePilots || []),
-    ];
-    return allUsers.filter(u => u.organizationId && u.organizationId !== 'internal');
-  }, [personnel, instructors, students, privatePilots]);
+    return users.filter(u => u.organizationId && u.organizationId !== 'internal');
+  }, [users]);
 
   const orgMap = useMemo(() => {
     if (!organizations) return new Map();

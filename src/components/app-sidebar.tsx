@@ -28,6 +28,7 @@ import {
   menuConfig,
   type SubMenuItem,
 } from '@/lib/menu-config';
+import type { Role } from '@/app/(app)/admin/roles/page';
 import { signOut, useSession } from 'next-auth/react';
 import {
   DropdownMenu,
@@ -93,11 +94,11 @@ const SidebarItems = () => {
 
     useEffect(() => {
       let cancelled = false;
-      const loadDepartmentSubmenu = async () => {
+      const loadRoleSubmenu = async () => {
         try {
-          const response = await fetch('/api/personnel', { cache: 'no-store' });
+          const response = await fetch('/api/roles', { cache: 'no-store' });
           const payload = await response.json().catch(() => ({}));
-          const apiDepartments = Array.isArray(payload?.departments) ? payload.departments : [];
+          const apiRoles = (Array.isArray(payload?.roles) ? payload.roles : []) as Role[];
 
           const dynamicItems: SubMenuItem[] = [
             {
@@ -105,16 +106,12 @@ const SidebarItems = () => {
               label: 'All Users',
               permissionId: 'users-view',
             },
-            ...apiDepartments
-              .filter((department) => department?.id && department?.name)
+            ...apiRoles
+              .filter((role) => role?.id && role?.name)
               .sort((a, b) => a.name.localeCompare(b.name))
-              .map((department) => ({
-                href: department.name.toLowerCase() === 'administration'
-                  ? '/users/administration'
-                  : department.name.toLowerCase() === 'training'
-                    ? '/users/training'
-                    : `/users/personnel/department/${encodeURIComponent(department.id)}`,
-                label: department.name,
+              .map((role: Role) => ({
+                href: `/users/role/${encodeURIComponent(role.id)}`,
+                label: role.name,
                 permissionId: 'users-view',
               })),
           ];
@@ -129,11 +126,11 @@ const SidebarItems = () => {
         }
       };
 
-      void loadDepartmentSubmenu();
-      window.addEventListener('safeviate-departments-updated', loadDepartmentSubmenu);
+      void loadRoleSubmenu();
+      window.addEventListener('safeviate-roles-updated', loadRoleSubmenu);
       return () => {
         cancelled = true;
-        window.removeEventListener('safeviate-departments-updated', loadDepartmentSubmenu);
+        window.removeEventListener('safeviate-roles-updated', loadRoleSubmenu);
       };
     }, []);
 

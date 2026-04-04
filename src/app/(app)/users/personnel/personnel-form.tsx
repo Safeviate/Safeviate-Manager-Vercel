@@ -13,7 +13,7 @@ import { Loader2, PlusCircle, ChevronsUpDown } from 'lucide-react';
 import type { Role } from '@/app/(app)/admin/roles/page';
 import type { Department } from '@/app/(app)/admin/department/page';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import type { Personnel, PilotProfile } from './page';
+import type { Personnel, PilotProfile } from './personnel-directory-page';
 
 interface PersonnelFormProps {
   tenantId: string;
@@ -21,6 +21,8 @@ interface PersonnelFormProps {
   roles: Role[];
   departments: Department[];
   externalOrganizations?: any[];
+  defaultDepartmentId?: string | null;
+  defaultRoleId?: string | null;
   trigger?: React.ReactNode;
   onClose?: () => void;
 }
@@ -31,6 +33,8 @@ export function PersonnelForm({
   roles,
   departments,
   externalOrganizations,
+  defaultDepartmentId = null,
+  defaultRoleId = null,
   trigger,
   onClose,
 }: PersonnelFormProps) {
@@ -62,8 +66,15 @@ export function PersonnelForm({
       setOrganizationId(existingPersonnel.organizationId || null);
       setIsIncerfaContact(existingPersonnel.isErpIncerfaContact || false);
       setIsAlerfaContact(existingPersonnel.isErpAlerfaContact || false);
+    } else if (defaultDepartmentId) {
+      setSelectedDepartment(defaultDepartmentId);
     }
-  }, [existingPersonnel]);
+    if (!existingPersonnel && defaultRoleId) {
+      setSelectedRole(defaultRoleId);
+      const defaultRole = roles.find(r => r.id === defaultRoleId);
+      setUserType(defaultRole?.category || 'Personnel');
+    }
+  }, [existingPersonnel, defaultDepartmentId, defaultRoleId, roles]);
 
   const handleRoleChange = (roleId: string) => {
     const role = roles.find(r => r.id === roleId);
@@ -145,6 +156,7 @@ export function PersonnelForm({
         toast({ title: 'User Created', description: 'The new account and profile have been established.' });
       }
       
+      window.dispatchEvent(new Event('safeviate-personnel-updated'));
       setIsOpen(false);
       onClose?.();
     } catch (error: any) {

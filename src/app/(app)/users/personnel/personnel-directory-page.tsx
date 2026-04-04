@@ -104,6 +104,7 @@ type PersonnelDirectoryPageProps = {
   title?: string;
   description?: string;
   defaultDepartmentId?: string | null;
+  defaultRoleId?: string | null;
 };
 
 export function PersonnelDirectoryPage({
@@ -112,6 +113,7 @@ export function PersonnelDirectoryPage({
   title = 'Personnel Directory',
   description,
   defaultDepartmentId = null,
+  defaultRoleId = null,
 }: PersonnelDirectoryPageProps) {
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
@@ -278,6 +280,7 @@ export function PersonnelDirectoryPage({
               departments={departments || []}
               externalOrganizations={externalOrgs || []}
               defaultDepartmentId={defaultDepartmentId}
+              defaultRoleId={defaultRoleId}
               trigger={
                 <Button
                   disabled={!canCreateUsers || isProfileLoading}
