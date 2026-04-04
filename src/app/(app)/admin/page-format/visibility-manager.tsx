@@ -15,6 +15,8 @@ export function VisibilityManager() {
   const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
+  const toIdSuffix = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+
   useEffect(() => {
     if (tenant?.enabledMenus) {
       setEnabledHrefs(new Set(tenant.enabledMenus));
@@ -90,12 +92,12 @@ export function VisibilityManager() {
               <div key={menu.href} className="p-5 border rounded-2xl bg-muted/5 space-y-4 shadow-sm border-slate-200">
                 <div className="flex items-center space-x-3">
                   <Checkbox 
-                    id={`mod-${menu.href}`} 
+                    id={`mod-${toIdSuffix(menu.href)}`} 
                     checked={isEnabled}
                     onCheckedChange={() => toggleMenu(menu.href, subHrefs)}
                     className="h-5 w-5"
                   />
-                  <Label htmlFor={`mod-${menu.href}`} className="text-xs font-black uppercase tracking-tight flex items-center gap-2 cursor-pointer text-foreground">
+                  <Label htmlFor={`mod-${toIdSuffix(menu.href)}`} className="text-xs font-black uppercase tracking-tight flex items-center gap-2 cursor-pointer text-foreground">
                     <menu.icon className="h-4 w-4 text-primary opacity-70" />
                     {menu.label}
                   </Label>
@@ -107,12 +109,12 @@ export function VisibilityManager() {
                       return (
                         <div key={sub.href} className="flex items-center space-x-3">
                           <Checkbox 
-                            id={`submod-${sub.href}`} 
+                            id={`submod-${toIdSuffix(sub.href)}`} 
                             checked={isSubEnabled}
                             onCheckedChange={() => toggleSubMenu(menu.href, sub.href)}
                             className="h-4 w-4"
                           />
-                          <Label htmlFor={`submod-${sub.href}`} className="text-[11px] font-bold text-muted-foreground cursor-pointer hover:text-foreground transition-colors uppercase">
+                          <Label htmlFor={`submod-${toIdSuffix(sub.href)}`} className="text-[11px] font-bold text-muted-foreground cursor-pointer hover:text-foreground transition-colors uppercase">
                             {sub.label}
                           </Label>
                         </div>

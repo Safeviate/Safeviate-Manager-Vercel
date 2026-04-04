@@ -45,7 +45,7 @@ export function ResponsiveTabRow({
       {isMobile ? (
         <div className="space-y-2">
           <Select value={value} onValueChange={onValueChange}>
-            <SelectTrigger className="w-full justify-between border-input bg-background text-foreground text-[10px] font-bold uppercase h-9 px-3 shadow-sm hover:bg-accent/40">
+            <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground text-[10px] font-bold uppercase h-9 px-3 shadow-sm hover:bg-accent/40">
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent className="w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]">

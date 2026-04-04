@@ -245,10 +245,10 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const content = (
     <div className="p-6 space-y-8 pb-24">
         <div>
-            <h3 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">UI Scaling</h3>
-            <p className='text-[10px] text-muted-foreground font-black uppercase italic mb-4 opacity-70'>Adjust the overall size of the application interface.</p>
+            <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">UI Scaling</h2>
+            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Adjust the overall size of the application interface.</p>
             <div className='flex items-center gap-6 bg-muted/5 p-4 border rounded-xl'>
-                <Slider value={[scale]} onValueChange={(value) => setScale(value[0])} min={50} max={150} step={5} className="flex-1" />
+                <Slider aria-label="UI scale" value={[scale]} onValueChange={(value) => setScale(value[0])} min={50} max={150} step={5} className="flex-1" />
                 <span className='text-sm font-black text-primary w-12 text-right'>{scale}%</span>
             </div>
         </div>
@@ -259,11 +259,11 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
             <>
                 <div className="bg-primary/5 p-5 rounded-2xl border border-primary/20 space-y-4 shadow-sm">
                     <div className="space-y-1">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                        <h2 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-primary">
                             <Globe className="h-4 w-4" />
                             Organization Branding
-                        </h3>
-                        <p className='text-[9px] text-muted-foreground font-black uppercase italic opacity-75'>
+                        </h2>
+                        <p className='text-[9px] font-black uppercase italic text-foreground/75'>
                             Set the default branding for all members of your organization.
                         </p>
                     </div>
@@ -276,8 +276,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         )}
 
         <div>
-            <h3 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Set Theme from Tenant</h3>
-            <p className='text-[10px] text-muted-foreground font-black uppercase italic mb-4 opacity-70'>Override the current theme with a saved tenant configuration.</p>
+            <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Set Theme from Tenant</h2>
+            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Override the current theme with a saved tenant configuration.</p>
             <Select onValueChange={handleApplyTenantTheme} disabled={isLoadingTenants || tenants.length === 0}>
                 <SelectTrigger className="w-full sm:w-[320px] h-11 font-black uppercase text-[10px] border-2">
                     <SelectValue placeholder={isLoadingTenants ? "Loading themes..." : (tenants.length === 0 ? "No tenant config found" : "Select a tenant theme")} />
@@ -295,10 +295,10 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         <Separator />
       
         <div className="space-y-4">
-            <h3 className="text-sm font-black uppercase tracking-tight text-foreground">Main Theme Colors</h3>
+            <h2 className="text-sm font-black uppercase tracking-tight text-foreground">Main Theme Colors</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4 p-5 border rounded-2xl bg-muted/5 shadow-inner">
-                    <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-70">Primary Palette</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Primary Palette</h4>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="primary" className="text-[9px] font-black uppercase">Primary</Label>
@@ -311,7 +311,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     </div>
                 </div>
                 <div className="space-y-4 p-5 border rounded-2xl bg-muted/5 shadow-inner">
-                    <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-70">Base &amp; Accent</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Base &amp; Accent</h4>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="background" className="text-[9px] font-black uppercase">Background</Label>
@@ -329,7 +329,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         <Separator />
 
         <div>
-            <h3 className="text-sm font-black uppercase tracking-tight mb-4 text-foreground">Advanced Component Theming</h3>
+            <h2 className="text-sm font-black uppercase tracking-tight mb-4 text-foreground">Advanced Component Theming</h2>
             <div className="space-y-10">
                 <section className="space-y-4">
                     <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Primary Buttons</h4>
@@ -404,7 +404,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     <div className="space-y-3 rounded-2xl border bg-muted/10 p-5 shadow-inner mt-4">
                         <div className="space-y-2">
                             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sidebar Background Image</p>
-                            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tight opacity-75">Paste a direct image URL to use it for the sidebar background.</p>
+                            <p className="text-[9px] font-black uppercase tracking-tight text-foreground/75">Paste a direct image URL to use it for the sidebar background.</p>
                             <div className="flex flex-col gap-2 sm:flex-row mt-2">
                                 <Input
                                 value={sidebarImageUrl}
@@ -443,8 +443,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         <Separator />
         
         <div>
-            <h3 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Personal Theme Storage</h3>
-            <p className='text-[10px] text-muted-foreground font-black uppercase italic mb-4 opacity-70'>Save your current overrides as a personal theme for later use.</p>
+            <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Personal Theme Storage</h2>
+            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Save your current overrides as a personal theme for later use.</p>
             <div className="flex flex-col sm:flex-row items-center gap-3">
                 <Input placeholder="Personal theme name..." value={themeName} onChange={(e) => setThemeName(e.target.value)} className="h-11 font-black text-sm uppercase placeholder:font-black placeholder:text-[10px] placeholder:italic" />
                 <Button onClick={handleSaveTheme} className="w-full sm:w-auto h-11 px-10 text-[10px] font-black uppercase shadow-lg tracking-tight">Save Personal Theme</Button>
@@ -453,7 +453,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
         {isMounted && savedThemes.length > 0 && (
             <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-70">Saved Personal Themes</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Saved Personal Themes</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {savedThemes.map((theme) => (
                         <div key={theme.name} className="flex items-center justify-between p-4 border rounded-2xl bg-background shadow-sm group hover:border-primary/20 transition-all">
