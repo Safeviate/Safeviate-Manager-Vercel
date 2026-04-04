@@ -7,6 +7,12 @@ export const tenants = pgTable('tenants', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const tenantConfigs = pgTable('tenant_configs', {
+  tenantId: varchar('tenant_id', { length: 128 }).primaryKey().references(() => tenants.id, { onDelete: 'cascade' }),
+  data: jsonb('data').notNull().default({}),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const users = pgTable('users', {
   id: varchar('id', { length: 128 }).primaryKey(),
   tenantId: varchar('tenant_id', { length: 128 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),

@@ -62,19 +62,74 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
   const loadTenants = useCallback(() => {
     setIsLoadingTenants(true);
-    try {
-        const stored = localStorage.getItem('safeviate.tenant-config');
-        if (stored) {
-            setTenants([JSON.parse(stored)]);
+    const load = async () => {
+      try {
+        const [meResponse, configResponse] = await Promise.all([
+          fetch('/api/me', { cache: 'no-store' }),
+          fetch('/api/tenant-config', { cache: 'no-store' }),
+        ]);
+        const mePayload = await meResponse.json();
+        const configPayload = await configResponse.json().catch(() => ({}));
+        const tenant = mePayload?.tenant;
+        const tenantConfig = configPayload?.config ?? null;
+
+        if (tenant) {
+          setTenants([{ ...tenant, ...(tenantConfig || {}) }]);
         } else {
-            setTenants([]);
+          setTenants([]);
         }
-    } catch (e) {
+      } catch (e) {
         console.error("Failed to load tenants", e);
-    } finally {
+        setTenants([]);
+      } finally {
         setIsLoadingTenants(false);
-    }
+      }
+    };
+    void load();
   }, []);
+
+  const handleSaveToOrganization = async () => {
+    try {
+        const updatedTenant = {
+            id: tenantId || 'safeviate',
+            theme: {
+                primaryColour: theme.primary,
+                backgroundColour: theme.background,
+                accentColour: theme.accent,
+                main: theme,
+                button: buttonTheme,
+                card: cardTheme,
+                popover: popoverTheme,
+                sidebar: sidebarTheme,
+                sidebarBackgroundImage,
+                header: headerTheme,
+                swimlane: swimlaneTheme,
+                matrix: matrixTheme,
+            }
+        };
+
+        const response = await fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: updatedTenant }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          throw new Error(payload?.error || 'Could not save tenant configuration.');
+        }
+
+        window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+        loadTenants();
+
+        toast({
+            title: "Organization Default Updated",
+            description: "These branding settings have been saved as the default for all members of your organization."
+        });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Save Failed", description: "The organization branding could not be saved." });
+    }
+  };
 
   useEffect(() => {
     loadTenants();
@@ -139,41 +194,6 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     applySavedTheme(themeToApply);
     
     toast({ title: "Tenant Theme Applied", description: `The theme for "${tenant.name}" has been applied.` });
-  };
-
-  const handleSaveToOrganization = async () => {
-    try {
-        const stored = localStorage.getItem('safeviate.tenant-config');
-        const currentTenant = stored ? JSON.parse(stored) : { id: 'safeviate', name: 'Safeviate' };
-        
-        const updatedTenant = { 
-            ...currentTenant, 
-            theme: {
-                primaryColour: theme.primary,
-                backgroundColour: theme.background,
-                accentColour: theme.accent,
-                main: theme,
-                button: buttonTheme,
-                card: cardTheme,
-                popover: popoverTheme,
-                sidebar: sidebarTheme,
-                sidebarBackgroundImage,
-                header: headerTheme,
-                swimlane: swimlaneTheme,
-                matrix: matrixTheme,
-            }
-        };
-        
-        localStorage.setItem('safeviate.tenant-config', JSON.stringify(updatedTenant));
-        window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
-
-        toast({
-            title: "Organization Default Updated",
-            description: "These branding settings have been saved as the default for all members of your organization."
-        });
-    } catch (error) {
-        toast({ variant: "destructive", title: "Save Failed", description: "The organization branding could not be saved." });
-    }
   };
 
   const handleSaveTheme = () => {

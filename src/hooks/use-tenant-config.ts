@@ -50,19 +50,24 @@ export const useTenantConfig = () => {
 
       setIsLoading(true);
       try {
-        // Try local storage first (migration target)
-        const stored = localStorage.getItem('safeviate.tenant-config');
-        if (stored) {
-            setTenantData(JSON.parse(stored));
-            setError(null);
-            setIsLoading(false);
-            return;
-        }
+        const [meResponse, configResponse] = await Promise.all([
+          fetch('/api/me', { cache: 'no-store' }),
+          fetch('/api/tenant-config', { cache: 'no-store' }),
+        ]);
+        const payload = await meResponse.json();
+        const configPayload = await configResponse.json().catch(() => ({}));
+        const tenantFromApi = payload?.tenant ?? null;
+        const tenantConfig = configPayload?.config ?? null;
 
-        const response = await fetch('/api/me', { cache: 'no-store' });
-        const payload = await response.json();
         if (!cancelled) {
-          setTenantData(payload?.tenant ?? null);
+          if (tenantFromApi) {
+            setTenantData({
+              ...tenantFromApi,
+              ...(tenantConfig || {}),
+            });
+          } else {
+            setTenantData(null);
+          }
           setError(null);
         }
       } catch (err) {
@@ -77,11 +82,16 @@ export const useTenantConfig = () => {
 
     void load();
     
-    const handleUpdate = () => {
-        const stored = localStorage.getItem('safeviate.tenant-config');
-        if (stored) {
-            setTenantData(JSON.parse(stored));
+    const handleUpdate = async () => {
+      try {
+        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const payload = await response.json();
+        if (payload?.config && !cancelled) {
+          setTenantData((current) => (current ? { ...current, ...payload.config } : current));
         }
+      } catch {
+        // ignore transient refresh failures
+      }
     };
 
     window.addEventListener('safeviate-tenant-config-updated', handleUpdate);
