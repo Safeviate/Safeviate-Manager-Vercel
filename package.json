@@ -15,7 +15,9 @@
     "db:push:local": "dotenv -e .env.local -- drizzle-kit push",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:migrate:dev": "prisma migrate dev"
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:studio": "dotenv -e .env.local -- prisma studio",
+    "prisma:studio:prod": "dotenv -e .env.production -- prisma studio"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
