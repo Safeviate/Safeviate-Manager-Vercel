@@ -145,6 +145,7 @@ const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-border': '#94a3b8',
 };
 const defaultSidebarBackgroundImage = '/safeviate-background.png';
+const legacySidebarBackgroundImage = '/sidebar-background.png';
 const defaultHeaderColors: HeaderThemeColors = {
   'header-background': '#171514',
   'header-foreground': '#f3efe8',
@@ -328,11 +329,15 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       ...(tenant?.theme?.matrix || {}),
       ...getTenantScopedState(MATRIX_THEME_KEY, tenantId, defaultMatrixColors),
     });
-    const nextSidebarBackgroundImage = getTenantScopedState(
+    const rawSidebarBackgroundImage = getTenantScopedState(
       SIDEBAR_BACKGROUND_IMAGE_KEY,
       tenantId,
       tenant?.theme?.sidebarBackgroundImage || defaultSidebarBackgroundImage
     );
+    const nextSidebarBackgroundImage =
+      rawSidebarBackgroundImage === legacySidebarBackgroundImage
+        ? defaultSidebarBackgroundImage
+        : rawSidebarBackgroundImage;
     const nextScale = getTenantScopedState(SCALE_KEY, tenantId, defaultScale);
     const nextSavedThemes = getTenantScopedState<SavedTheme[]>(SAVED_THEMES_KEY, tenantId, []);
 
@@ -342,6 +347,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setPopoverTheme(nextPopoverTheme);
     setSidebarTheme(nextSidebarTheme);
     setSidebarBackgroundImageState(nextSidebarBackgroundImage);
+    if (nextSidebarBackgroundImage !== rawSidebarBackgroundImage) {
+      setTenantScopedState(SIDEBAR_BACKGROUND_IMAGE_KEY, tenantId, nextSidebarBackgroundImage);
+    }
     setHeaderTheme(nextHeaderTheme);
     setSwimlaneTheme(nextSwimlaneTheme);
     setMatrixTheme(nextMatrixTheme);
