@@ -236,11 +236,11 @@ export default function ExamsPage() {
                 <section className="space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-primary/20 pb-1 w-fit">
+                      <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-primary/20 pb-1 w-fit">
                         <ClipboardCheck className="h-3.5 w-3.5" />
                         Available {isAviation ? 'Exam' : 'Assessment'} Templates
-                      </h3>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2 opacity-70">Conduct a certified assessment. Results are permanently recorded.</p>
+                      </h2>
+                      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-foreground/75">Conduct a certified assessment. Results are permanently recorded.</p>
                     </div>
                     <div className="relative w-full sm:w-80 group">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -358,7 +358,7 @@ export default function ExamsPage() {
                       </>
                     ) : (
                       <div className="text-center py-12 bg-muted/5">
-                        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground opacity-40">No templates available.</p>
+                        <p className="text-sm font-bold uppercase tracking-widest text-foreground/70">No templates available.</p>
                       </div>
                     )}
                   </div>
@@ -368,11 +368,11 @@ export default function ExamsPage() {
 
                 <section className="space-y-4">
                   <div className="space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-primary/20 pb-1 w-fit">
+                    <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-primary/20 pb-1 w-fit">
                       <ShieldCheck className="h-3.5 w-3.5" />
                       Assessment Registry
-                    </h3>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Authenticated results and digital certifications for official assessment runs.</p>
+                    </h2>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/75">Authenticated results and digital certifications for official assessment runs.</p>
                   </div>
 
                   <div className="rounded-xl border overflow-hidden">
@@ -443,7 +443,7 @@ export default function ExamsPage() {
                       </>
                     ) : (
                       <div className="text-center py-12 bg-muted/5">
-                        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground opacity-40">No records found.</p>
+                        <p className="text-sm font-bold uppercase tracking-widest text-foreground/70">No records found.</p>
                       </div>
                     )}
                   </div>
@@ -457,7 +457,7 @@ export default function ExamsPage() {
                 <div className="p-4 space-y-8 sm:p-6 pb-20">
                     <div className="mx-auto w-full max-w-2xl space-y-6 rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
                         <div className="space-y-2 text-center">
-                            <h3 className="text-lg font-black uppercase tracking-tight text-primary">Dynamic Practice Run</h3>
+                            <h2 className="text-lg font-black uppercase tracking-tight text-primary">Dynamic Practice Run</h2>
                             <p className="text-xs text-muted-foreground italic">Select a topic to generate a randomized mock assessment from the database.</p>
                         </div>
                         
@@ -502,10 +502,10 @@ export default function ExamsPage() {
                     <Separator />
 
                     <div className="space-y-4">
-                        <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <h2 className="text-[11px] font-black uppercase tracking-widest text-foreground/75 flex items-center gap-2">
                             <ClipboardCheck className="h-4 w-4" />
                             Fixed {isAviation ? 'Exam' : 'Assessment'} Templates (Practice)
-                        </h3>
+                        </h2>
                         <div className="rounded-xl border overflow-hidden bg-card">
                             <>
                               <div className="grid gap-3 p-3 sm:hidden">

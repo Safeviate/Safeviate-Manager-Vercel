@@ -163,7 +163,7 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
       <div className="shrink-0 border-b bg-muted/5 p-4">
-        <h3 className="text-lg font-black uppercase tracking-tight">Final Review & Closure</h3>
+        <h2 className="text-lg font-black uppercase tracking-tight">Final Review & Closure</h2>
       </div>
       <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
         <FormProvider {...form}>
