@@ -227,17 +227,18 @@ const SidebarItems = () => {
                                               asChild
                                               isActive={pathname === subItem.href || selectedSubItem?.href === subItem.href}
                                             >
-                                                <Link 
-                                                    href={subItem.href} 
-                                                    onClick={() => {
-                                                      setOpenMobile(false);
-                                                      setLastSubmenuByParent(item.href, subItem.href);
-                                                      setDismissedParents((dismissed) => ({ ...dismissed, [item.href]: false }));
-                                                      setOpenParents((current) => ({ ...current, [item.href]: true }));
-                                                    }}
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setOpenMobile(false);
+                                                    setLastSubmenuByParent(item.href, subItem.href);
+                                                    setDismissedParents((dismissed) => ({ ...dismissed, [item.href]: false }));
+                                                    setOpenParents((current) => ({ ...current, [item.href]: true }));
+                                                    router.push(subItem.href);
+                                                  }}
                                                 >
                                                     <span>{subItem.label}</span>
-                                                </Link>
+                                                </button>
                                             </SidebarMenuSubButton>
                                         </SidebarMenuSubItem>
                                     ))}
