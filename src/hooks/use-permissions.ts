@@ -94,6 +94,10 @@ export const usePermissions = () => {
         return true;
       }
 
+      if (effectivePermissions.has('*')) {
+        return true;
+      }
+
       return effectivePermissions.has(permissionId);
     },
     [effectivePermissions, isLoading, userProfile]
@@ -121,6 +125,10 @@ export const usePermissions = () => {
 
       const userRole = (userProfile as Personnel).role?.toLowerCase();
       if (userRole === 'dev' || userRole === 'developer') {
+        return true;
+      }
+
+      if (effectivePermissions.has('*')) {
         return true;
       }
 
