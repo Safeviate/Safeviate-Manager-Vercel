@@ -155,7 +155,7 @@ export function AiChecklistGenerator({ onGenerated }: AiChecklistGeneratorProps)
               ) : (
                 <div className="text-center">
                   <ClipboardPaste className="mx-auto h-8 w-8" />
-                  <p>Click here and paste an image (Ctrl+V)</p>
+                  <p className="text-foreground/90">Click here and paste an image (Ctrl+V)</p>
                 </div>
               )}
             </div>

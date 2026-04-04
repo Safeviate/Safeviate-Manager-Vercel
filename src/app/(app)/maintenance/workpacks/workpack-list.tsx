@@ -23,7 +23,7 @@ export function WorkpackList({ data }: { data: Workpack[] }) {
     return (
       <div className="text-center h-48 flex flex-col items-center justify-center text-muted-foreground bg-background m-6 rounded-xl border-2 border-dashed">
         <ClipboardList className="h-10 w-10 mb-2 opacity-20" />
-        <p>No maintenance workpacks initiated.</p>
+        <p className="text-foreground/80">No maintenance workpacks initiated.</p>
       </div>
     );
   }

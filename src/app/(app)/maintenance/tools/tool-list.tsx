@@ -22,7 +22,7 @@ export function ToolList({ data }: { data: Tool[] }) {
     return (
       <div className="text-center h-48 flex flex-col items-center justify-center text-muted-foreground bg-background m-6 rounded-xl border-2 border-dashed">
         <Wrench className="h-10 w-10 mb-2 opacity-20" />
-        <p>No tools found in the registry.</p>
+        <p className="text-foreground/80">No tools found in the registry.</p>
       </div>
     );
   }

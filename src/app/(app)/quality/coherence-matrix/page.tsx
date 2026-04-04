@@ -302,7 +302,7 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                         >
                             <div className="text-center">
                                 <ClipboardPaste className="mx-auto h-8 w-8" />
-                                <p>Click here and paste image(s) (Ctrl+V)</p>
+                                <p className="text-foreground/90">Click here and paste image(s) (Ctrl+V)</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2 my-4">

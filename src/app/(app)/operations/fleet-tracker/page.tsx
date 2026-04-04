@@ -105,9 +105,9 @@ export default function FleetTrackerPage() {
             <Card className="border shadow-none">
               <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest">Ops Monitoring Goals</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex items-start gap-3 rounded-lg border bg-muted/10 p-3"><Users className="mt-0.5 h-4 w-4 text-primary" /><p>See every active aircraft for the school in one place.</p></div>
-                <div className="flex items-start gap-3 rounded-lg border bg-muted/10 p-3"><RadioTower className="mt-0.5 h-4 w-4 text-primary" /><p>Know which pilot and device are currently broadcasting each registration.</p></div>
-                <div className="flex items-start gap-3 rounded-lg border bg-muted/10 p-3"><Navigation className="mt-0.5 h-4 w-4 text-primary" /><p>Open individual aircraft detail views later for route progress and latest movement.</p></div>
+                <div className="flex items-start gap-3 rounded-lg border bg-muted/10 p-3"><Users className="mt-0.5 h-4 w-4 text-primary" /><p className="text-foreground/90">See every active aircraft for the school in one place.</p></div>
+                <div className="flex items-start gap-3 rounded-lg border bg-muted/10 p-3"><RadioTower className="mt-0.5 h-4 w-4 text-primary" /><p className="text-foreground/90">Know which pilot and device are currently broadcasting each registration.</p></div>
+                <div className="flex items-start gap-3 rounded-lg border bg-muted/10 p-3"><Navigation className="mt-0.5 h-4 w-4 text-primary" /><p className="text-foreground/90">Open individual aircraft detail views later for route progress and latest movement.</p></div>
               </CardContent>
             </Card>
           </div>
