@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PersonnelForm } from './personnel-form';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Role } from '../../admin/roles/page';
@@ -99,6 +100,7 @@ export type Personnel = {
 };
 
 export default function PersonnelPage() {
+  const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
   const { tenantId, isLoading: isProfileLoading } = useUserProfile();
@@ -178,13 +180,23 @@ export default function PersonnelPage() {
 
   const isLoading = isProfileLoading || isLoadingData;
   const error = dataError;
+  const selectedRoleId = searchParams.get('role');
+  const filteredPersonnel = useMemo(() => {
+    if (!selectedRoleId) return personnel || [];
+    return (personnel || []).filter((person) => person.role === selectedRoleId);
+  }, [personnel, selectedRoleId]);
+  const selectedRoleName = selectedRoleId ? rolesMap.get(selectedRoleId) || selectedRoleId : null;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader 
           title="Personnel Directory"
-          description="Manage all non-flying staff in your organization."
+          description={
+            selectedRoleName
+              ? `Showing users assigned to role: ${selectedRoleName}`
+              : 'Manage all non-flying staff in your organization.'
+          }
           actions={
              <PersonnelForm 
                 tenantId={tenantId || ''} 
@@ -217,7 +229,7 @@ export default function PersonnelPage() {
             </div>
           ) : (
             <PersonnelTable 
-              data={personnel || []} 
+              data={filteredPersonnel} 
               rolesMap={rolesMap} 
               departmentsMap={departmentsMap} 
               tenantId={tenantId || ''} 
