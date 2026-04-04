@@ -181,21 +181,31 @@ export default function PersonnelPage() {
   const isLoading = isProfileLoading || isLoadingData;
   const error = dataError;
   const selectedRoleId = searchParams.get('role');
+  const normalizedSelectedRole = (selectedRoleId || '').trim().toLowerCase();
+  const isAdminAlias = normalizedSelectedRole === 'admin' || normalizedSelectedRole === 'administrator';
   const filteredPersonnel = useMemo(() => {
     if (!selectedRoleId) return personnel || [];
     const roleMatch = (roles || []).find(
       (role) =>
         role.id === selectedRoleId ||
-        role.name.toLowerCase() === selectedRoleId.toLowerCase()
+        role.name.toLowerCase() === normalizedSelectedRole ||
+        (isAdminAlias && role.name.toLowerCase().includes('admin'))
     );
     if (!roleMatch) return personnel || [];
     return (personnel || []).filter(
-      (person) => person.role === roleMatch.id || person.role === roleMatch.name
+      (person) =>
+        person.role === roleMatch.id ||
+        person.role.toLowerCase() === roleMatch.name.toLowerCase() ||
+        (isAdminAlias && person.role.toLowerCase().includes('admin'))
     );
-  }, [personnel, roles, selectedRoleId]);
+  }, [personnel, roles, selectedRoleId, normalizedSelectedRole, isAdminAlias]);
   const selectedRoleName = selectedRoleId
     ? rolesMap.get(selectedRoleId) ||
-      roles.find((role) => role.name.toLowerCase() === selectedRoleId.toLowerCase())?.name ||
+      roles.find(
+        (role) =>
+          role.name.toLowerCase() === normalizedSelectedRole ||
+          (isAdminAlias && role.name.toLowerCase().includes('admin'))
+      )?.name ||
       selectedRoleId
     : null;
 
