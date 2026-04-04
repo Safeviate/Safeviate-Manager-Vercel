@@ -109,7 +109,7 @@ function AttentionList({
           ))
         ) : (
           <div className="rounded-lg border border-dashed border-card-border/70 px-4 py-8 text-center bg-muted/5">
-            <p className="text-xs text-muted-foreground font-black uppercase tracking-widest opacity-40">No items requiring immediate action.</p>
+            <p className="text-xs text-foreground/80 font-black uppercase tracking-widest">No items requiring immediate action.</p>
           </div>
         )}
       </CardContent>
