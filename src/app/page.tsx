@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 
-export default function Home() {
-  redirect('/login');
+export default async function Home() {
+  const userCount = await prisma.user.count();
+  redirect(userCount === 0 ? '/dashboard' : '/login');
 }

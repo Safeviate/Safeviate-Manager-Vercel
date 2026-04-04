@@ -7,8 +7,10 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   const authUserId = session?.user?.id?.trim();
+  const userCount = await prisma.user.count();
+  const bootstrapMode = userCount === 0;
 
-  if (!email) {
+  if (!email && !bootstrapMode) {
     return NextResponse.json({ profile: null }, { status: 200 });
   }
 
@@ -18,9 +20,9 @@ export async function GET() {
     create: { id: 'safeviate', name: 'Safeviate' },
   });
 
-  let profile = await prisma.user.findUnique({ where: { email } });
+  let profile = email ? await prisma.user.findUnique({ where: { email } }) : null;
 
-  if (!profile) {
+  if (!profile && email) {
     profile = await prisma.user.upsert({
       where: { email },
       update: {
@@ -40,6 +42,21 @@ export async function GET() {
         role: 'developer',
       },
     });
+  }
+
+  if (!profile && bootstrapMode) {
+    profile = {
+      id: 'bootstrap-admin',
+      tenantId: 'safeviate',
+      email: 'bootstrap@safeviate.local',
+      firstName: 'Bootstrap',
+      lastName: 'Admin',
+      role: 'developer',
+      profilePath: null,
+      passwordHash: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any;
   }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: profile.tenantId } });

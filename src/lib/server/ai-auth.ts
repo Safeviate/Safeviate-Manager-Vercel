@@ -28,8 +28,20 @@ export async function authenticateAiRequest() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
 
-  if (!email) {
+  const userCount = await prisma.user.count();
+  const bootstrapMode = userCount === 0;
+
+  if (!email && !bootstrapMode) {
     return { ok: false as const, status: 401, error: 'You must be signed in to use AI tools.' };
+  }
+
+  if (bootstrapMode && !email) {
+    return {
+      ok: true as const,
+      tenantId: 'safeviate',
+      userProfile: { id: 'bootstrap-admin', role: 'developer', permissions: ['*'] },
+      effectivePermissions: new Set(['*']),
+    };
   }
 
   if (SUPER_USERS.includes(email)) {

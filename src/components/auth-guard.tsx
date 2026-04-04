@@ -13,21 +13,23 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const { data: session, status } = useSession();
   const { isLoading: isProfileLoading } = useUserProfile();
+  const { userProfile } = useUserProfile();
   const router = useRouter();
   const pathname = usePathname();
 
   const isLoading = status === 'loading' || isProfileLoading;
   const authUser = session?.user ?? null;
+  const bootstrapActive = !authUser && !!userProfile && userProfile.role?.toLowerCase() === 'developer';
 
   useEffect(() => {
-    if (!isLoading && !authUser && pathname !== '/login') {
+    if (!isLoading && !authUser && !bootstrapActive && pathname !== '/login') {
       router.push('/login');
     }
 
-    if (!isLoading && authUser && pathname === '/login') {
+    if (!isLoading && (authUser || bootstrapActive) && pathname === '/login') {
       router.push('/dashboard');
     }
-  }, [authUser, isLoading, router, pathname]);
+  }, [authUser, bootstrapActive, isLoading, router, pathname]);
 
   if (isLoading && pathname !== '/login') {
     return (
