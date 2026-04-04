@@ -22,7 +22,7 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
     return (
       <div className="text-center h-48 flex flex-col items-center justify-center text-muted-foreground bg-background m-6 rounded-xl border-2 border-dashed">
         <Car className="h-10 w-10 mb-2 opacity-20" />
-        <p className="text-foreground/80">No vehicles found in the inventory.</p>
+        <p className="text-foreground">No vehicles found in the inventory.</p>
       </div>
     );
   }

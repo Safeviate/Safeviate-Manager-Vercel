@@ -101,7 +101,7 @@ export default function VehicleDetailPage({ params }: VehicleDetailPageProps) {
             <Car className="h-16 w-16 text-muted-foreground opacity-20" />
             <div className="space-y-1">
                 <p className="text-xl font-black uppercase tracking-tight">Vehicle Not Found</p>
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground italic">The requested ground asset could not be located in the fleet inventory.</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-foreground/80 italic">The requested ground asset could not be located in the fleet inventory.</p>
             </div>
             <Button asChild variant="outline" className="mt-4 text-[10px] font-black uppercase h-10 px-8 border-slate-300 shadow-sm">
                 <Link href="/assets/vehicles">
