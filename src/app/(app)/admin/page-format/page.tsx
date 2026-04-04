@@ -10,6 +10,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { MainPageHeader } from '@/components/page-header';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const ColorThemeForm = dynamic(
   () => import('../../settings/color-theme-form').then((module) => module.ColorThemeForm),
@@ -23,10 +24,11 @@ const VisibilityManager = dynamic(
 
 export default function PageFormatPage() {
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const canManage = hasPermission('admin-settings-manage');
   const [activeTab, setActiveTab] = useState('branding');
 
-  if (isPermissionsLoading) {
+  if (isPermissionsLoading || isProfileLoading || !userProfile) {
     return (
       <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
         <Skeleton className="h-20 w-full" />

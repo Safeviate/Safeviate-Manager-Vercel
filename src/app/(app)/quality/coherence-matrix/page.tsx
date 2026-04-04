@@ -364,7 +364,7 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
 
 export default function CoherenceMatrixPage() {
   const { toast } = useToast();
-  const { tenantId } = useUserProfile();
+  const { tenantId, userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { matrixTheme } = useTheme();
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-matrix-manage' });
@@ -920,7 +920,7 @@ export default function CoherenceMatrixPage() {
     );
   };
 
-  if (isPermissionsLoading || isLoading) {
+  if (isPermissionsLoading || isProfileLoading || !userProfile || isLoading) {
     return (
         <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
             <Skeleton className="h-20 w-full" />
