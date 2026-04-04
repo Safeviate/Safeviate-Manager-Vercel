@@ -294,26 +294,26 @@ export default function DocumentDatesPage() {
                 <div className="space-y-6">
                   <div className="flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4 text-primary" />
-                    <h3 className="font-black text-[10px] uppercase tracking-widest text-primary">Document Expiry Warnings</h3>
+                    <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Document Expiry Warnings</h2>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Default Safe Color</Label>
+                      <Label className="text-[10px] uppercase font-bold text-foreground/75">Default Safe Color</Label>
                       <div className='flex items-center gap-3 p-2 border rounded-lg bg-background'>
                         <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: defaultColorState }}>
                           <Input type="color" value={defaultColorState} onChange={(e) => setDefaultColorState(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
                         </div>
-                        <span className="text-[10px] font-black uppercase text-muted-foreground">Status OK</span>
+                        <span className="text-[10px] font-black uppercase text-foreground/75">Status OK</span>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Expired Color</Label>
+                      <Label className="text-[10px] uppercase font-bold text-foreground/75">Expired Color</Label>
                       <div className='flex items-center gap-3 p-2 border rounded-lg bg-background'>
                         <div className="relative h-6 w-6 rounded-full border cursor-pointer" style={{ backgroundColor: expiredColorState }}>
                           <Input type="color" value={expiredColorState} onChange={(e) => setExpiredColorState(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
                         </div>
-                        <span className="text-[10px] font-black uppercase text-muted-foreground">Expired</span>
+                        <span className="text-[10px] font-black uppercase text-foreground/75">Expired</span>
                       </div>
                     </div>
                   </div>
@@ -321,7 +321,7 @@ export default function DocumentDatesPage() {
                   <Separator />
 
                   <div className="space-y-3">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">New Warning Period</Label>
+                    <Label className="text-[10px] uppercase font-bold text-foreground/75">New Warning Period</Label>
                     <div className="flex gap-2">
                       <Input type="number" value={newPeriod} onChange={(e) => setNewPeriod(e.target.value)} placeholder="Days..." className="h-10 font-bold" onKeyDown={(e) => e.key === 'Enter' && handleAddPeriod()} />
                       <Input type="color" value={newPeriodColor} onChange={(e) => setNewPeriodColor(e.target.value)} className="p-1 h-10 w-12 shrink-0 border" />
@@ -330,7 +330,7 @@ export default function DocumentDatesPage() {
                   </div>
 
                   <div className="rounded-xl border bg-muted/5 p-4 shadow-inner">
-                    <h4 className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mb-3">Active Warning Periods</h4>
+                    <h4 className="text-[9px] font-black uppercase tracking-widest mb-3 text-foreground/75">Active Warning Periods</h4>
                     <div className="space-y-2">
                       {(expirySettings?.warningPeriods || []).length > 0 ? (
                         (expirySettings?.warningPeriods || []).map(({ period, color }) => (
@@ -341,13 +341,13 @@ export default function DocumentDatesPage() {
                               </div>
                               <span className="text-[10px] font-black uppercase tracking-tight">{period} DAYS BEFORE EXPIRY</span>
                             </div>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemovePeriod(period)}>
+                            <Button size="icon" variant="ghost" aria-label={`Remove ${period} day warning period`} className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemovePeriod(period)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         ))
                       ) : (
-                        <p className="text-[10px] font-bold text-muted-foreground text-center py-6 italic uppercase tracking-widest bg-background/50 rounded-lg">No warning periods defined.</p>
+                        <p className="text-[10px] font-bold text-foreground/75 text-center py-6 italic uppercase tracking-widest bg-background/50 rounded-lg">No warning periods defined.</p>
                       )}
                     </div>
                   </div>
@@ -357,7 +357,7 @@ export default function DocumentDatesPage() {
                 <div className="space-y-6">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" />
-                    <h3 className="font-black text-[10px] uppercase tracking-widest text-primary">Student Hour Milestones</h3>
+                    <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Student Hour Milestones</h2>
                   </div>
                   
                   <div className="grid grid-cols-1 gap-3">
@@ -365,10 +365,10 @@ export default function DocumentDatesPage() {
                       <div key={milestone} className="flex items-center justify-between p-4 border rounded-xl bg-background shadow-sm hover:border-primary/20 transition-colors">
                         <div>
                           <p className="text-sm font-black uppercase">{milestone} Hour Goal</p>
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Primary training milestone</p>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-foreground/75">Primary training milestone</p>
                         </div>
                         <div className="flex items-center gap-3 bg-muted/20 p-2 rounded-lg border">
-                          <Label className="text-[9px] font-black uppercase text-muted-foreground">Warn at:</Label>
+                          <Label className="text-[9px] font-black uppercase text-foreground/75">Warn at:</Label>
                           <div className="flex items-center gap-1.5">
                             <Input
                               type="number"
@@ -376,7 +376,7 @@ export default function DocumentDatesPage() {
                               onChange={(e) => handleMilestoneWarningChange(milestone, e.target.value)}
                               className="w-16 h-8 text-xs font-black text-center px-1"
                             />
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">hrs</span>
+                            <span className="text-[9px] font-bold uppercase text-foreground/75">hrs</span>
                           </div>
                         </div>
                       </div>
@@ -384,7 +384,7 @@ export default function DocumentDatesPage() {
                   </div>
 
                   <div className="p-4 rounded-xl border border-primary/20 bg-primary/5">
-                    <p className="text-[9px] font-black uppercase leading-relaxed text-primary/80 italic">
+                    <p className="text-[9px] font-black uppercase leading-relaxed text-primary italic">
                       Warning hours determine when the milestone progress bar changes color in the student profile view to indicate a target is approaching.
                     </p>
                   </div>
@@ -397,7 +397,7 @@ export default function DocumentDatesPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-primary" />
-                  <h3 className="font-black text-[10px] uppercase tracking-widest text-primary">Aircraft Inspection Warnings</h3>
+                  <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Aircraft Inspection Warnings</h2>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -408,14 +408,14 @@ export default function DocumentDatesPage() {
                     </div>
                     
                     <div className="space-y-3">
-                      <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">New Threshold</Label>
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-foreground/75">New Threshold</Label>
                       <div className="flex gap-2">
                         <Input value={newFiftyHour} onChange={(e) => setNewFiftyHour(e.target.value)} placeholder="Hours..." className="h-10 bg-background font-bold" />
                         <div className="flex gap-1 bg-background border rounded-md p-1 px-2">
-                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 opacity-50">BG</Label>
+                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 text-foreground/75">BG</Label>
                           <Input type="color" value={newFiftyHourColor} onChange={(e) => setNewFiftyHourColor(e.target.value)} className="p-0 h-8 w-8 border-none" />
                           <Separator orientation="vertical" className="h-4 mt-2 mx-1" />
-                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 opacity-50">FG</Label>
+                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 text-foreground/75">FG</Label>
                           <Input type="color" value={newFiftyHourFgColor} onChange={(e) => setNewFiftyHourFgColor(e.target.value)} className="p-0 h-8 w-8 border-none" />
                         </div>
                         <Button onClick={() => handleAddInspectionWarning('50hr')} className="h-10 px-6 font-black uppercase text-[10px]">Add</Button>
@@ -433,13 +433,13 @@ export default function DocumentDatesPage() {
                               <Input type="color" value={color} onChange={(e) => updateInspectionWarningColor('50hr', hours, 'color', e.target.value)} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
                               <Input type="color" value={foregroundColor} onChange={(e) => updateInspectionWarningColor('50hr', hours, 'foregroundColor', e.target.value)} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
                             </div>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleRemoveInspectionWarning('50hr', hours)}>
+                            <Button size="icon" variant="ghost" aria-label={`Remove 50 hour warning at ${hours} hours`} className="h-8 w-8 text-destructive" onClick={() => handleRemoveInspectionWarning('50hr', hours)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
                       )) : (
-                        <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] text-muted-foreground uppercase font-black tracking-widest bg-background/50">
+                        <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] uppercase font-black tracking-widest bg-background/50 text-foreground/75">
                           No thresholds defined
                         </div>
                       )}
@@ -453,14 +453,14 @@ export default function DocumentDatesPage() {
                     </div>
                     
                     <div className="space-y-3">
-                      <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">New Threshold</Label>
+                      <Label className="text-[10px] uppercase font-black tracking-widest text-foreground/75">New Threshold</Label>
                       <div className="flex gap-2">
                         <Input value={newHundredHour} onChange={(e) => setNewHundredHour(e.target.value)} placeholder="Hours..." className="h-10 bg-background font-bold" />
                         <div className="flex gap-1 bg-background border rounded-md p-1 px-2">
-                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 opacity-50">BG</Label>
+                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 text-foreground/75">BG</Label>
                           <Input type="color" value={newHundredHourColor} onChange={(e) => setNewHundredHourColor(e.target.value)} className="p-0 h-8 w-8 border-none" />
                           <Separator orientation="vertical" className="h-4 mt-2 mx-1" />
-                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 opacity-50">FG</Label>
+                          <Label className="text-[8px] uppercase font-black pt-2 pr-1 text-foreground/75">FG</Label>
                           <Input type="color" value={newHundredHourFgColor} onChange={(e) => setNewHundredHourFgColor(e.target.value)} className="p-0 h-8 w-8 border-none" />
                         </div>
                         <Button onClick={() => handleAddInspectionWarning('100hr')} className="h-10 px-6 font-black uppercase text-[10px]">Add</Button>
@@ -478,13 +478,13 @@ export default function DocumentDatesPage() {
                               <Input type="color" value={color} onChange={(e) => updateInspectionWarningColor('100hr', hours, 'color', e.target.value)} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
                               <Input type="color" value={foregroundColor} onChange={(e) => updateInspectionWarningColor('100hr', hours, 'foregroundColor', e.target.value)} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
                             </div>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleRemoveInspectionWarning('100hr', hours)}>
+                            <Button size="icon" variant="ghost" aria-label={`Remove 100 hour warning at ${hours} hours`} className="h-8 w-8 text-destructive" onClick={() => handleRemoveInspectionWarning('100hr', hours)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
                       )) : (
-                        <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] text-muted-foreground uppercase font-black tracking-widest bg-background/50">
+                        <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] uppercase font-black tracking-widest bg-background/50 text-foreground/75">
                           No thresholds defined
                         </div>
                       )}
