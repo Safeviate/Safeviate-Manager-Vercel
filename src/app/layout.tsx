@@ -9,6 +9,13 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 export const metadata: Metadata = {
   title: 'Safeviate Manager',
   description: 'Aviation Academy Management',
+  icons: {
+    icon: [
+      { url: '/safeviate-icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: ['/safeviate-icon.svg'],
+    apple: ['/safeviate-icon.svg'],
+  },
 };
 
 export default function RootLayout({
