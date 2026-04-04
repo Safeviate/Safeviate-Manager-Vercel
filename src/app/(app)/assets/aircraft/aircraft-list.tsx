@@ -45,12 +45,12 @@ export function AircraftList({ data, tenantId }: AircraftListProps) {
           <Table>
             <TableHeader className="bg-muted/5 border-b-2">
               <TableRow className="hover:bg-transparent border-b-0">
-                <TableHead className="text-[10px] uppercase font-black tracking-widest px-8 h-14">Identifier</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest h-14">Asset Configuration</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest h-14">Category</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest h-14 text-center">Meter Readings</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest h-14">Operational Status</TableHead>
-                <TableHead className="text-right text-[10px] uppercase font-black tracking-widest h-14 px-8">Vault Access</TableHead>
+                <TableHead className="h-14 px-8 text-[10px] font-black uppercase tracking-widest text-foreground/80">Identifier</TableHead>
+                <TableHead className="h-14 text-[10px] font-black uppercase tracking-widest text-foreground/80">Asset Configuration</TableHead>
+                <TableHead className="h-14 text-[10px] font-black uppercase tracking-widest text-foreground/80">Category</TableHead>
+                <TableHead className="h-14 text-center text-[10px] font-black uppercase tracking-widest text-foreground/80">Meter Readings</TableHead>
+                <TableHead className="h-14 text-[10px] font-black uppercase tracking-widest text-foreground/80">Operational Status</TableHead>
+                <TableHead className="h-14 px-8 text-right text-[10px] font-black uppercase tracking-widest text-foreground/80">Vault Access</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -67,7 +67,7 @@ export function AircraftList({ data, tenantId }: AircraftListProps) {
                   <TableCell className="py-5">
                     <div className="flex flex-col">
                         <span className="text-sm font-black uppercase tracking-tight">{ac.make} {ac.model}</span>
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground opacity-60">OEM Specification</span>
+                        <span className="text-[10px] font-bold uppercase text-foreground/75">OEM Specification</span>
                     </div>
                   </TableCell>
                   <TableCell className="py-5">
@@ -78,11 +78,11 @@ export function AircraftList({ data, tenantId }: AircraftListProps) {
                   <TableCell className="py-5">
                     <div className="flex items-center justify-center gap-6">
                         <div className="flex flex-col items-center">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1"><Timer className="h-2.5 w-2.5" /> Hobbs</span>
+                            <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-foreground/75"><Timer className="h-2.5 w-2.5" /> Hobbs</span>
                             <span className="text-xs font-mono font-black">{ac.currentHobbs?.toFixed(1) || '0.0'}h</span>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1"><Gauge className="h-2.5 w-2.5" /> Tacho</span>
+                            <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-foreground/75"><Gauge className="h-2.5 w-2.5" /> Tacho</span>
                             <span className="text-xs font-mono font-black">{ac.currentTacho?.toFixed(1) || '0.0'}h</span>
                         </div>
                     </div>
@@ -90,7 +90,7 @@ export function AircraftList({ data, tenantId }: AircraftListProps) {
                   <TableCell className="py-5">
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Airworthy</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Airworthy</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right px-8 py-5">

@@ -56,12 +56,12 @@ export function ComponentList({ components, isLoading, aircraftId, tenantId }: C
       <Table>
         <TableHeader className="bg-muted/5 border-b-2">
           <TableRow className="hover:bg-transparent border-b-0">
-            <TableHead className="px-8 text-[10px] font-black uppercase tracking-widest h-14">Identifier</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-14">Manufacturer</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-14 text-center">Serial Number</TableHead>
-            <TableHead className="text-[10px] font-black uppercase tracking-widest h-14">Install Date</TableHead>
-            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-14 px-8">Operational Age</TableHead>
-            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-14 px-8">Actions</TableHead>
+            <TableHead className="h-14 px-8 text-[10px] font-black uppercase tracking-widest text-foreground/80">Identifier</TableHead>
+            <TableHead className="h-14 text-[10px] font-black uppercase tracking-widest text-foreground/80">Manufacturer</TableHead>
+            <TableHead className="h-14 text-center text-[10px] font-black uppercase tracking-widest text-foreground/80">Serial Number</TableHead>
+            <TableHead className="h-14 text-[10px] font-black uppercase tracking-widest text-foreground/80">Install Date</TableHead>
+            <TableHead className="h-14 px-8 text-right text-[10px] font-black uppercase tracking-widest text-foreground/80">Operational Age</TableHead>
+            <TableHead className="h-14 px-8 text-right text-[10px] font-black uppercase tracking-widest text-foreground/80">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -75,26 +75,26 @@ export function ComponentList({ components, isLoading, aircraftId, tenantId }: C
                         </div>
                         <div className="flex flex-col">
                             <span className="font-black text-sm text-foreground uppercase tracking-tight">{comp.name}</span>
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">{comp.partNumber || 'NA-PN'}</span>
+                            <span className="text-[9px] font-bold uppercase text-foreground/75">{comp.partNumber || 'NA-PN'}</span>
                         </div>
                     </div>
                 </TableCell>
                 <TableCell className="py-5">
                     <div className="flex items-center gap-2">
-                        <PenTool className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs font-bold uppercase tracking-tight text-muted-foreground">{comp.manufacturer}</span>
+                        <PenTool className="h-3 w-3 text-foreground/70" />
+                        <span className="text-xs font-bold uppercase tracking-tight text-foreground/75">{comp.manufacturer}</span>
                     </div>
                 </TableCell>
                 <TableCell className="py-5 text-center">
                     <span className="text-[10px] font-mono font-black border-2 border-slate-200 px-3 py-1 rounded-lg bg-white shadow-sm uppercase">{comp.serialNumber}</span>
                 </TableCell>
                 <TableCell className="py-5">
-                    <span className="text-xs font-bold uppercase text-muted-foreground">{comp.installDate ? format(new Date(comp.installDate), 'dd MMM y') : 'N/A'}</span>
+                    <span className="text-xs font-bold uppercase text-foreground/75">{comp.installDate ? format(new Date(comp.installDate), 'dd MMM y') : 'N/A'}</span>
                 </TableCell>
                 <TableCell className="text-right px-8 py-5">
                     <div className="flex flex-col items-end">
                         <span className="text-sm font-black text-primary uppercase tracking-tight">{(comp.totalTime || 0).toFixed(1)}h Total</span>
-                        <div className="flex items-center gap-1.5 mt-0.5 opacity-50">
+                        <div className="mt-0.5 flex items-center gap-1.5 text-foreground/75">
                             <Timer className="h-2.5 w-2.5" />
                             <span className="text-[9px] font-black uppercase tracking-widest">TSN: {(comp.tsn || 0).toFixed(1)}h</span>
                         </div>
