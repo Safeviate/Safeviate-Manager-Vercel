@@ -1,7 +1,5 @@
 import { authOptions } from '@/auth';
-import { getDb } from '@/db';
-import { roles, tenants, users } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -14,42 +12,40 @@ export async function GET() {
     return NextResponse.json({ profile: null }, { status: 200 });
   }
 
-  const db = getDb();
-  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
+  await prisma.tenant.upsert({
+    where: { id: 'safeviate' },
+    update: { updatedAt: new Date() },
+    create: { id: 'safeviate', name: 'Safeviate' },
+  });
 
-  let [profile] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  let profile = await prisma.user.findUnique({ where: { email } });
 
   if (!profile) {
-    [profile] = await db
-      .insert(users)
-      .values({
+    profile = await prisma.user.upsert({
+      where: { email },
+      update: {
+        id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
+        tenantId: 'safeviate',
+        firstName: session?.user?.name?.split(' ')[0] ?? 'User',
+        lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
+        role: 'developer',
+        updatedAt: new Date(),
+      },
+      create: {
         id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
         tenantId: 'safeviate',
         email,
         firstName: session?.user?.name?.split(' ')[0] ?? 'User',
         lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
         role: 'developer',
-      })
-      .onConflictDoUpdate({
-        target: users.email,
-        set: {
-          id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
-          tenantId: 'safeviate',
-          firstName: session?.user?.name?.split(' ')[0] ?? 'User',
-          lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
-          role: 'developer',
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+      },
+    });
   }
 
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, profile.tenantId)).limit(1);
-  const [role] = await db
-    .select()
-    .from(roles)
-    .where(and(eq(roles.tenantId, profile.tenantId), eq(roles.id, profile.role)))
-    .limit(1);
+  const tenant = await prisma.tenant.findUnique({ where: { id: profile.tenantId } });
+  const role = await prisma.role.findFirst({
+    where: { tenantId: profile.tenantId, id: profile.role },
+  });
 
   return NextResponse.json(
     {

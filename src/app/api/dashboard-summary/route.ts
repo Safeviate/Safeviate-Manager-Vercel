@@ -1,18 +1,5 @@
 import { authOptions } from '@/auth';
-import { getDb } from '@/db';
-import {
-  correctiveActionPlans,
-  aircrafts,
-  bookings,
-  managementOfChange,
-  personnel,
-  qualityAudits,
-  risks,
-  safetyReports,
-  tenants,
-  users,
-} from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -32,10 +19,16 @@ export async function GET() {
     );
   }
 
-  const db = getDb();
-  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
+  await prisma.tenant.upsert({
+    where: { id: 'safeviate' },
+    update: { updatedAt: new Date() },
+    create: { id: 'safeviate', name: 'Safeviate' },
+  });
 
-  const [currentUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const currentUser = await prisma.user.findUnique({
+    where: { email },
+    select: { tenantId: true },
+  });
   const tenantId = currentUser?.tenantId || 'safeviate';
 
   const [
@@ -48,14 +41,17 @@ export async function GET() {
     capRows,
     riskRows,
   ] = await Promise.all([
-    db.select().from(bookings).where(eq(bookings.tenantId, tenantId)),
-    db.select().from(aircrafts).where(eq(aircrafts.tenantId, tenantId)),
-    db.select().from(personnel).where(eq(personnel.tenantId, tenantId)),
-    db.select().from(managementOfChange).where(eq(managementOfChange.tenantId, tenantId)),
-    db.select().from(qualityAudits).where(eq(qualityAudits.tenantId, tenantId)),
-    db.select().from(safetyReports).where(eq(safetyReports.tenantId, tenantId)),
-    db.select().from(correctiveActionPlans).where(eq(correctiveActionPlans.tenantId, tenantId)),
-    db.select().from(risks).where(eq(risks.tenantId, tenantId)),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM bookings WHERE tenant_id = $1`, tenantId),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM aircrafts WHERE tenant_id = $1`, tenantId),
+    prisma.$queryRawUnsafe<{ userType: string | null }[]>(
+      `SELECT user_type AS "userType" FROM personnel WHERE tenant_id = $1`,
+      tenantId
+    ),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM management_of_change WHERE tenant_id = $1`, tenantId),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM quality_audits WHERE tenant_id = $1`, tenantId),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM safety_reports WHERE tenant_id = $1`, tenantId),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM corrective_action_plans WHERE tenant_id = $1`, tenantId),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM risks WHERE tenant_id = $1`, tenantId),
   ]);
 
   const personnelList = [];
