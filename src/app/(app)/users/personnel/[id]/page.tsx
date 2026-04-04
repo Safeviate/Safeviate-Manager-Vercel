@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, use, Suspense, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useMemo, Suspense, useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
@@ -15,19 +15,15 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 
-interface UserProfilePageProps {
-    params: Promise<{ id: string }>;
-}
-
 type UserProfile = Personnel | PilotProfile;
 
-function UserProfileContent({ params }: UserProfilePageProps) {
-    const resolvedParams = use(params);
+function UserProfileContent() {
+    const params = useParams<{ id: string }>();
     const searchParams = useSearchParams();
     const { hasPermission } = usePermissions();
     const isMobile = useIsMobile();
     const { tenantId } = useUserProfile();
-    const userId = resolvedParams.id;
+    const userId = params?.id;
     const [isEditing, setIsEditing] = useState(false);
     const canEditUsers = hasPermission('users-edit');
 
@@ -131,10 +127,10 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     );
 }
 
-export default function UserProfilePageWrapper(props: UserProfilePageProps) {
+export default function UserProfilePageWrapper() {
   return (
     <Suspense fallback={<div className="p-8 h-full"><Skeleton className="h-full w-full" /></div>}>
-      <UserProfileContent {...props} />
+      <UserProfileContent />
     </Suspense>
   )
 }
