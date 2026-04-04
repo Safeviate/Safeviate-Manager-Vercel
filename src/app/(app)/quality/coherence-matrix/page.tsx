@@ -366,7 +366,7 @@ export default function CoherenceMatrixPage() {
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
   const { matrixTheme } = useTheme();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-matrix-manage' });
   const isMobile = useIsMobile();
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
@@ -920,7 +920,7 @@ export default function CoherenceMatrixPage() {
     );
   };
 
-  if (isLoading) {
+  if (isPermissionsLoading || isLoading) {
     return (
         <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
             <Skeleton className="h-20 w-full" />

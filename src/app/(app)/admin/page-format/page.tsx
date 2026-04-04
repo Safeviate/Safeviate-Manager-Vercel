@@ -9,6 +9,7 @@ import { Palette, Layers } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { MainPageHeader } from '@/components/page-header';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ColorThemeForm = dynamic(
   () => import('../../settings/color-theme-form').then((module) => module.ColorThemeForm),
@@ -21,9 +22,18 @@ const VisibilityManager = dynamic(
 );
 
 export default function PageFormatPage() {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const canManage = hasPermission('admin-settings-manage');
   const [activeTab, setActiveTab] = useState('branding');
+
+  if (isPermissionsLoading) {
+    return (
+      <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    );
+  }
 
   if (!canManage) {
     return (
