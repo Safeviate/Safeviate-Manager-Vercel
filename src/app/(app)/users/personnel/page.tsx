@@ -112,6 +112,22 @@ export default function PersonnelPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const loadLocalRoleAndDepartmentFallback = () => {
+      if (typeof window === 'undefined') return;
+      try {
+        const storedRoles = window.localStorage.getItem('safeviate.roles');
+        const storedDepartments = window.localStorage.getItem('safeviate.departments');
+        const localRoles = storedRoles ? (JSON.parse(storedRoles) as Role[]) : [];
+        const localDepartments = storedDepartments ? (JSON.parse(storedDepartments) as Department[]) : [];
+        if (!cancelled) {
+          if (localRoles.length > 0) setRoles(localRoles);
+          if (localDepartments.length > 0) setDepartments(localDepartments);
+        }
+      } catch {
+        // Ignore malformed local data
+      }
+    };
+
     const load = async () => {
       setIsLoadingData(true);
       try {
@@ -119,14 +135,21 @@ export default function PersonnelPage() {
         const payload = await response.json();
         if (!cancelled) {
           setPersonnel(payload.personnel ?? []);
-          setRoles(payload.roles ?? []);
-          setDepartments(payload.departments ?? []);
+          const apiRoles = payload.roles ?? [];
+          const apiDepartments = payload.departments ?? [];
+          setRoles(apiRoles);
+          setDepartments(apiDepartments);
           setExternalOrgs([]);
           setDataError(null);
+
+          if (apiRoles.length === 0 || apiDepartments.length === 0) {
+            loadLocalRoleAndDepartmentFallback();
+          }
         }
       } catch (error) {
         if (!cancelled) {
           setDataError(error instanceof Error ? error : new Error('Failed to load personnel data.'));
+          loadLocalRoleAndDepartmentFallback();
         }
       } finally {
         if (!cancelled) setIsLoadingData(false);
@@ -134,8 +157,12 @@ export default function PersonnelPage() {
     };
 
     void load();
+    window.addEventListener('safeviate-roles-updated', loadLocalRoleAndDepartmentFallback);
+    window.addEventListener('safeviate-departments-updated', loadLocalRoleAndDepartmentFallback);
     return () => {
       cancelled = true;
+      window.removeEventListener('safeviate-roles-updated', loadLocalRoleAndDepartmentFallback);
+      window.removeEventListener('safeviate-departments-updated', loadLocalRoleAndDepartmentFallback);
     };
   }, [tenantId]);
 

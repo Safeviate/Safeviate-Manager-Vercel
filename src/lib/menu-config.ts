@@ -447,6 +447,12 @@ export const menuConfig: MenuItem[] = [
         description: 'Model cloud operational costs based on company size and activity.',
         permissionId: 'development-view',
       },
+      {
+        href: '/development/test',
+        label: 'Welcome Email Test',
+        description: 'Send a test welcome email to any address.',
+        permissionId: 'development-view',
+      },
     ],
   },
 ];
