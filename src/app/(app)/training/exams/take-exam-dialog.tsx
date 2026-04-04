@@ -142,7 +142,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter leading-none">
                   {template.title}
                 </DialogTitle>
-                <DialogDescription className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-2 opacity-70">
+                <DialogDescription className="mt-2 text-[11px] font-bold uppercase tracking-widest text-foreground/75">
                     {template.subject} • Target Proficiency: <span className="text-primary font-black">{template.passingScore}%</span>
                 </DialogDescription>
               </div>
@@ -169,7 +169,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
                         <ShieldAlert className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
                         <div className="space-y-1">
                             <p className="font-black text-sm uppercase tracking-tight text-amber-900">Practice Mode Engagement</p>
-                            <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700 opacity-70">Performance data will be verified locally but no persistent training record will be generated.</p>
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-amber-800">Performance data will be verified locally but no persistent training record will be generated.</p>
                         </div>
                     </div>
                 ) : (
@@ -257,7 +257,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
               <div className="space-y-4">
                 <h3 className="text-5xl font-black uppercase tracking-tighter">{result.passed ? 'Assessment Certified' : 'Review Required'}</h3>
                 <div className="flex flex-col items-center gap-1">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Verified Attainment Level</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-foreground/80">Verified Attainment Level</p>
                     <p className={cn("text-8xl font-black font-mono tracking-tighter", result.passed ? 'text-green-600' : 'text-red-700')}>
                         {result.score}<span className="text-3xl ml-1">%</span>
                     </p>
@@ -269,18 +269,18 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
 
               <div className="w-full max-w-lg bg-muted/5 p-8 rounded-[2rem] border-2 border-slate-100 shadow-inner grid grid-cols-2 gap-8">
                 <div className="space-y-1 text-left">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Authorized Candidate</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Authorized Candidate</p>
                     <p className="font-black text-base uppercase truncate leading-none">{result.studentName}</p>
                 </div>
                 <div className="space-y-1 text-right">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Record Type</p>
-                    <Badge variant={result.isMock ? "secondary" : "default"} className="h-7 px-4 py-0 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Record Type</p>
+                    <Badge variant={result.isMock ? "secondary" : "default"} className="h-7 px-4 py-0 text-[10px] font-black uppercase tracking-widest rounded-lg text-foreground">
                         {result.isMock ? 'Practice Mock' : 'Official Cert'}
                     </Badge>
                 </div>
                 <div className="col-span-2 space-y-1 text-left border-t border-slate-200/50 pt-6">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Validation Timestamp</p>
-                    <p className="font-mono text-xs font-black text-muted-foreground uppercase">{format(new Date(result.date), 'dd MMMM yyyy • HH:mm:ss')}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Validation Timestamp</p>
+                    <p className="font-mono text-xs font-black text-foreground/80 uppercase">{format(new Date(result.date), 'dd MMMM yyyy • HH:mm:ss')}</p>
                 </div>
               </div>
 
