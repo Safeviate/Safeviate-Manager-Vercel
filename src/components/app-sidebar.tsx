@@ -89,19 +89,15 @@ const SidebarItems = () => {
     const lastSubmenuByParent = useMemo(() => getLastSubmenuByParent(), [pathname]);
     const [openParents, setOpenParents] = useState<Record<string, boolean>>({});
     const [dismissedParents, setDismissedParents] = useState<Record<string, boolean>>({});
-    const [roleBasedUserSubItems, setRoleBasedUserSubItems] = useState<SubMenuItem[]>([]);
+    const [departmentBasedUserSubItems, setDepartmentBasedUserSubItems] = useState<SubMenuItem[]>([]);
 
     useEffect(() => {
       let cancelled = false;
-      const loadRoleSubmenu = async () => {
+      const loadDepartmentSubmenu = async () => {
         try {
           const response = await fetch('/api/personnel', { cache: 'no-store' });
           const payload = await response.json().catch(() => ({}));
-          const apiRoles = Array.isArray(payload?.roles) ? payload.roles : [];
-          const localRolesRaw =
-            typeof window !== 'undefined' ? window.localStorage.getItem('safeviate.roles') : null;
-          const localRoles = localRolesRaw ? JSON.parse(localRolesRaw) : [];
-          const roles = (apiRoles.length > 0 ? apiRoles : localRoles) as Array<{ id: string; name: string }>;
+          const apiDepartments = Array.isArray(payload?.departments) ? payload.departments : [];
 
           const dynamicItems: SubMenuItem[] = [
             {
@@ -109,31 +105,31 @@ const SidebarItems = () => {
               label: 'All Users',
               permissionId: 'users-view',
             },
-            ...roles
-              .filter((role) => role?.id && role?.name)
+            ...apiDepartments
+              .filter((department) => department?.id && department?.name)
               .sort((a, b) => a.name.localeCompare(b.name))
-              .map((role) => ({
-                href: `/users/personnel?role=${encodeURIComponent(role.id)}`,
-                label: role.name,
+              .map((department) => ({
+                href: `/users/personnel?department=${encodeURIComponent(department.id)}`,
+                label: department.name,
                 permissionId: 'users-view',
               })),
           ];
 
-          if (!cancelled) setRoleBasedUserSubItems(dynamicItems);
+          if (!cancelled) setDepartmentBasedUserSubItems(dynamicItems);
         } catch {
           if (!cancelled) {
-            setRoleBasedUserSubItems([
+            setDepartmentBasedUserSubItems([
               { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
             ]);
           }
         }
       };
 
-      void loadRoleSubmenu();
-      window.addEventListener('safeviate-roles-updated', loadRoleSubmenu);
+      void loadDepartmentSubmenu();
+      window.addEventListener('safeviate-departments-updated', loadDepartmentSubmenu);
       return () => {
         cancelled = true;
-        window.removeEventListener('safeviate-roles-updated', loadRoleSubmenu);
+        window.removeEventListener('safeviate-departments-updated', loadDepartmentSubmenu);
       };
     }, []);
 
@@ -167,22 +163,22 @@ const SidebarItems = () => {
       filteredItems.forEach((item) => {
         prefetch(item.href);
         const configuredSubItems =
-          item.href === '/users' && roleBasedUserSubItems.length > 0
-            ? roleBasedUserSubItems
+          item.href === '/users' && departmentBasedUserSubItems.length > 0
+            ? departmentBasedUserSubItems
             : item.subItems || [];
         configuredSubItems
           .filter((sub) => canAccessMenuItem(sub, item))
           .forEach((sub) => prefetch(sub.href));
       });
-    }, [filteredItems, roleBasedUserSubItems, canAccessMenuItem, router]);
+    }, [filteredItems, departmentBasedUserSubItems, canAccessMenuItem, router]);
 
     return (
         <SidebarMenu>
             {filteredItems.map((item, index) => {
                 const Icon = item.icon;
                 const configuredSubItems =
-                  item.href === '/users' && roleBasedUserSubItems.length > 0
-                    ? roleBasedUserSubItems
+                  item.href === '/users' && departmentBasedUserSubItems.length > 0
+                    ? departmentBasedUserSubItems
                     : item.subItems || [];
                 const subItems = configuredSubItems.filter((sub) => canAccessMenuItem(sub, item));
                 const activeSubItem = subItems.find((sub) => pathname === (sub.href.split('?')[0] || sub.href));

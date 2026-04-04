@@ -181,9 +181,28 @@ export default function PersonnelPage() {
   const isLoading = isProfileLoading || isLoadingData;
   const error = dataError;
   const selectedRoleId = searchParams.get('role');
+  const selectedDepartmentId = searchParams.get('department');
   const normalizedSelectedRole = (selectedRoleId || '').trim().toLowerCase();
+  const normalizedSelectedDepartment = (selectedDepartmentId || '').trim().toLowerCase();
   const isAdminAlias = normalizedSelectedRole === 'admin' || normalizedSelectedRole === 'administrator';
+  const isTrainingAlias = normalizedSelectedDepartment === 'training';
   const filteredPersonnel = useMemo(() => {
+    if (selectedDepartmentId) {
+      const departmentMatch = (departments || []).find(
+        (department) =>
+          department.id === selectedDepartmentId ||
+          department.name.toLowerCase() === normalizedSelectedDepartment ||
+          (isTrainingAlias && department.name.toLowerCase().includes('training'))
+      );
+      if (!departmentMatch) return personnel || [];
+      return (personnel || []).filter(
+        (person) =>
+          person.department === departmentMatch.id ||
+          person.department?.toLowerCase() === departmentMatch.name.toLowerCase() ||
+          (isTrainingAlias && (person.department || '').toLowerCase().includes('training'))
+      );
+    }
+
     if (!selectedRoleId) return personnel || [];
     const roleMatch = (roles || []).find(
       (role) =>
@@ -198,7 +217,17 @@ export default function PersonnelPage() {
         person.role.toLowerCase() === roleMatch.name.toLowerCase() ||
         (isAdminAlias && person.role.toLowerCase().includes('admin'))
     );
-  }, [personnel, roles, selectedRoleId, normalizedSelectedRole, isAdminAlias]);
+  }, [
+    personnel,
+    departments,
+    roles,
+    selectedRoleId,
+    selectedDepartmentId,
+    normalizedSelectedRole,
+    normalizedSelectedDepartment,
+    isAdminAlias,
+    isTrainingAlias,
+  ]);
   const selectedRoleName = selectedRoleId
     ? rolesMap.get(selectedRoleId) ||
       roles.find(
@@ -208,6 +237,15 @@ export default function PersonnelPage() {
       )?.name ||
       selectedRoleId
     : null;
+  const selectedDepartmentName = selectedDepartmentId
+    ? departmentsMap.get(selectedDepartmentId) ||
+      departments.find(
+        (department) =>
+          department.name.toLowerCase() === normalizedSelectedDepartment ||
+          (isTrainingAlias && department.name.toLowerCase().includes('training'))
+      )?.name ||
+      selectedDepartmentId
+    : null;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
@@ -215,8 +253,10 @@ export default function PersonnelPage() {
         <MainPageHeader 
           title="Personnel Directory"
           description={
-            selectedRoleName
-              ? `Showing users assigned to role: ${selectedRoleName}`
+            selectedDepartmentName
+              ? `Showing users assigned to department: ${selectedDepartmentName}`
+              : selectedRoleName
+                ? `Showing users assigned to role: ${selectedRoleName}`
               : 'Manage all non-flying staff in your organization.'
           }
           actions={
