@@ -303,6 +303,15 @@ export default function DashboardPage() {
           <Skeleton className="h-[320px] w-full" />
           <Skeleton className="h-[320px] w-full" />
         </div>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Skeleton className="h-[420px] w-full" />
+          <Skeleton className="h-[420px] w-full" />
+        </div>
+        <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr_1fr]">
+          <Skeleton className="h-[420px] w-full" />
+          <Skeleton className="h-[420px] w-full" />
+          <Skeleton className="h-[420px] w-full" />
+        </div>
       </div>
     );
   }
