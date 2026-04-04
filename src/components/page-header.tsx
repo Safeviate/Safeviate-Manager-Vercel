@@ -3,16 +3,16 @@ import { CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 export const HEADER_ACTION_BUTTON_CLASS =
-  "h-11 px-8 text-[11px] font-black uppercase tracking-widest shadow-md gap-2 shrink-0 rounded-full transition-transform hover:scale-[1.02] active:scale-[0.98]";
+  "h-11 px-8 text-[11px] font-black uppercase tracking-widest shadow-md gap-2 shrink-0 rounded-md transition-transform hover:scale-[1.02] active:scale-[0.98]";
 
 export const HEADER_MOBILE_ACTION_BUTTON_CLASS =
   "h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40";
 
 export const HEADER_TAB_LIST_CLASS =
-  "bg-muted/10 h-auto p-1.5 gap-1.5 border rounded-full justify-start flex min-w-max flex-nowrap shadow-inner";
+  "bg-muted/10 h-auto p-1.5 gap-1.5 border rounded-md justify-start flex min-w-max flex-nowrap shadow-inner";
 
 export const HEADER_TAB_TRIGGER_CLASS =
-  "rounded-full px-8 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm";
+  "rounded-md px-8 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm";
 
 interface MainPageHeaderProps {
   title: string;

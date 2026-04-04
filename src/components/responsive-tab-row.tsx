@@ -85,7 +85,7 @@ export function ResponsiveTabRow({
                     `${HEADER_TAB_TRIGGER_CLASS} border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground`,
                     joinedDesktopTabs
                       ? "!rounded-none border-0 border-r border-input last:border-r-0 data-[state=active]:rounded-none"
-                      : "rounded-full"
+                      : "rounded-md"
                   )}
                 >
                   {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
