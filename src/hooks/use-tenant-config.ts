@@ -54,8 +54,8 @@ export const useTenantConfig = () => {
           fetch('/api/me', { cache: 'no-store' }),
           fetch('/api/tenant-config', { cache: 'no-store' }),
         ]);
-        const payload = await meResponse.json();
-        const configPayload = await configResponse.json().catch(() => ({}));
+        const payload = meResponse.ok ? await meResponse.json().catch(() => ({})) : {};
+        const configPayload = configResponse.ok ? await configResponse.json().catch(() => ({})) : {};
         const tenantFromApi = payload?.tenant ?? null;
         const tenantConfig = configPayload?.config ?? null;
 
@@ -82,14 +82,14 @@ export const useTenantConfig = () => {
 
     void load();
     
-    const handleUpdate = async () => {
-      try {
-        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
-        const payload = await response.json();
-        if (payload?.config && !cancelled) {
-          setTenantData((current) => (current ? { ...current, ...payload.config } : current));
-        }
-      } catch {
+      const handleUpdate = async () => {
+        try {
+          const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+          const payload = response.ok ? await response.json().catch(() => ({})) : {};
+          if (payload?.config && !cancelled) {
+            setTenantData((current) => (current ? { ...current, ...payload.config } : current));
+          }
+        } catch {
         // ignore transient refresh failures
       }
     };

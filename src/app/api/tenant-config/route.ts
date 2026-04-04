@@ -3,17 +3,22 @@ import { prisma } from '@/lib/prisma';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 
 export async function GET() {
-  const auth = await authenticateAiRequest();
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  try {
+    const auth = await authenticateAiRequest();
+    if (!auth.ok) {
+      return NextResponse.json({ config: null }, { status: 200 });
+    }
+
+    const configRows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+      `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
+      auth.tenantId
+    );
+
+    return NextResponse.json({ config: configRows[0]?.data ?? null }, { status: 200 });
+  } catch (error) {
+    console.error('[tenant-config] fallback to empty config:', error);
+    return NextResponse.json({ config: null }, { status: 200 });
   }
-
-  const configRows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-    `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
-    auth.tenantId
-  );
-
-  return NextResponse.json({ config: configRows[0]?.data ?? null }, { status: 200 });
 }
 
 export async function PUT(request: Request) {

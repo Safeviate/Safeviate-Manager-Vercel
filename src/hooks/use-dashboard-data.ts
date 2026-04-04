@@ -54,7 +54,7 @@ export function useDashboardData() {
             setIsLoadingData(true);
             try {
                 const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
-                const payload = await response.json();
+                const payload = response.ok ? await response.json().catch(() => ({})) : {};
                 if (!cancelled) {
                     setPersonnel(payload.personnel ?? []);
                     setInstructors(payload.instructors ?? []);
@@ -64,6 +64,17 @@ export function useDashboardData() {
                     setAudits(payload.audits ?? []);
                     setReports(payload.reports ?? []);
                     setCaps(payload.caps ?? []);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setPersonnel([]);
+                    setInstructors([]);
+                    setStudents([]);
+                    setPrivatePilots([]);
+                    setMocs([]);
+                    setAudits([]);
+                    setReports([]);
+                    setCaps([]);
                 }
             } finally {
                 if (!cancelled) setIsLoadingData(false);
