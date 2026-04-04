@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { AppSidebar, AppSidebarMobile } from '@/components/app-sidebar';
 import { AppHeader } from '@/components/app-header';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -7,12 +8,47 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { AuthGuard } from '@/components/auth-guard';
 import { OverdueBookingMonitor } from '@/components/overdue-booking-monitor';
 
+const CHUNK_RELOAD_KEY = 'safeviate:chunk-reload-attempted';
+
 export default function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const handleChunkError = (message: string) => {
+      if (!message.includes('ChunkLoadError') && !message.includes('Loading chunk')) return;
+      if (typeof window === 'undefined') return;
+      if (window.sessionStorage.getItem(CHUNK_RELOAD_KEY) === '1') return;
+
+      window.sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+      const url = new URL(window.location.href);
+      url.searchParams.set('__chunk_reload', Date.now().toString());
+      window.location.replace(url.toString());
+    };
+
+    const onError = (event: ErrorEvent) => {
+      handleChunkError(event.message || '');
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reasonMessage =
+        typeof event.reason === 'string'
+          ? event.reason
+          : event.reason?.message || String(event.reason || '');
+      handleChunkError(reasonMessage);
+    };
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
+  }, []);
+
   return (
     <AuthGuard>
         <SidebarProvider className="h-svh overflow-hidden">
