@@ -366,10 +366,10 @@ const WBCalculator = () => {
             <ScrollArea className="h-full">
               <div className="p-6 space-y-8 pb-24">
                 <section className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Basic Empty Weight</h3>
+                  <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Basic Empty Weight</h2>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label className="text-[9px] uppercase font-bold text-muted-foreground">Weight (lbs)</Label><Input type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} className="h-9 font-bold bg-background" /></div>
-                    <div className="space-y-1.5"><Label className="text-[9px] uppercase font-bold text-muted-foreground">Arm (in)</Label><Input type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} className="h-9 font-bold bg-background" /></div>
+                    <div className="space-y-1.5"><Label className="text-[9px] uppercase font-bold text-foreground/75">Weight (lbs)</Label><Input aria-label="Basic empty weight (lbs)" type="number" value={basicEmpty.weight} onChange={(e) => handleBasicEmptyChange('weight', e.target.value)} className="h-9 font-bold bg-background" /></div>
+                    <div className="space-y-1.5"><Label className="text-[9px] uppercase font-bold text-foreground/75">Arm (in)</Label><Input aria-label="Basic empty arm (in)" type="number" value={basicEmpty.arm} onChange={(e) => handleBasicEmptyChange('arm', e.target.value)} className="h-9 font-bold bg-background" /></div>
                   </div>
                 </section>
 
@@ -377,28 +377,28 @@ const WBCalculator = () => {
 
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Loading Stations</h3>
-                    <Button variant="outline" size="icon" onClick={() => setStations([...stations, { id: Date.now(), name: 'New Item', weight: 0, arm: 0, type: 'standard' }])} className="h-7 w-7 border-slate-300"><Plus size={14} /></Button>
+                    <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Loading Stations</h2>
+                    <Button variant="outline" size="icon" aria-label="Add loading station" onClick={() => setStations([...stations, { id: Date.now(), name: 'New Item', weight: 0, arm: 0, type: 'standard' }])} className="h-7 w-7 border-slate-300"><Plus size={14} /></Button>
                   </div>
                   <div className="space-y-3">
                     {stations.map(s => (
                       <div key={s.id} className="p-3 border rounded-lg bg-background space-y-2 relative group">
-                        <Button variant="ghost" size="icon" onClick={() => setStations(stations.filter(st => st.id !== s.id))} className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-destructive"><Trash2 size={12} /></Button>
+                        <Button variant="ghost" size="icon" aria-label={`Remove station ${s.name || s.id}`} onClick={() => setStations(stations.filter(st => st.id !== s.id))} className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-destructive"><Trash2 size={12} /></Button>
                         <div className="flex items-center gap-2">
                           {s.type === 'fuel' ? <Fuel size={14} className="text-yellow-500" /> : <Plane size={14} className="text-primary" />}
                           <Input value={s.name} onChange={(e) => setStations(stations.map(st => st.id === s.id ? { ...st, name: e.target.value } : st))} className="h-7 border-none shadow-none font-black uppercase text-[10px] p-0 focus-visible:ring-0" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1"><Label className="text-[8px] uppercase font-bold text-muted-foreground">Wt (lbs)</Label><Input type="number" value={s.weight} onChange={(e) => s.type === 'fuel' ? handleFuelChange(s.id, 'weight', e.target.value) : setStations(stations.map(st => st.id === s.id ? { ...st, weight: Number(e.target.value) } : st))} className="h-8 text-xs font-bold" /></div>
-                          <div className="space-y-1"><Label className="text-[8px] uppercase font-bold text-muted-foreground">Arm (in)</Label><Input type="number" value={s.arm} onChange={(e) => setStations(stations.map(st => st.id === s.id ? { ...st, arm: Number(e.target.value) } : st))} className="h-8 text-xs font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[8px] uppercase font-bold text-foreground/75">Wt (lbs)</Label><Input aria-label={`${s.name} weight (lbs)`} type="number" value={s.weight} onChange={(e) => s.type === 'fuel' ? handleFuelChange(s.id, 'weight', e.target.value) : setStations(stations.map(st => st.id === s.id ? { ...st, weight: Number(e.target.value) } : st))} className="h-8 text-xs font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[8px] uppercase font-bold text-foreground/75">Arm (in)</Label><Input aria-label={`${s.name} arm (in)`} type="number" value={s.arm} onChange={(e) => setStations(stations.map(st => st.id === s.id ? { ...st, arm: Number(e.target.value) } : st))} className="h-8 text-xs font-bold" /></div>
                         </div>
                         {s.type === 'fuel' && (
                           <div className="space-y-2 pt-1 border-t mt-1">
-                            <div className="flex justify-between items-center text-[9px] font-black uppercase text-muted-foreground">
+                            <div className="flex justify-between items-center text-[9px] font-black uppercase text-foreground/75">
                               <span>{s.gallons} GAL / {formatLitres(s.gallons)} L</span>
                               <span>Max: {s.maxGallons}</span>
                             </div>
-                            <input type="range" min="0" max={s.maxGallons || 50} step="0.1" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500" />
+                            <input aria-label={`${s.name} fuel gallons`} type="range" min="0" max={s.maxGallons || 50} step="0.1" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500" />
                           </div>
                         )}
                       </div>
@@ -410,9 +410,9 @@ const WBCalculator = () => {
 
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-primary" /> Envelope Definition
-                    </h3>
+                    </h2>
                     <Button variant="outline" size="icon" onClick={addEnvelopePoint} className="h-7 w-7 border-slate-300">
                       <Plus size={14} />
                     </Button>
@@ -423,12 +423,13 @@ const WBCalculator = () => {
                          <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: POINT_COLORS[index % POINT_COLORS.length] }} />
-                               <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Point {index + 1}</span>
+                               <span className="text-[9px] font-black uppercase tracking-widest text-foreground/75">Point {index + 1}</span>
                             </div>
                             <Button 
                                variant="ghost" 
                                size="icon" 
                                onClick={() => removeEnvelopePoint(index)} 
+                               aria-label={`Remove envelope point ${index + 1}`}
                                className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                <Trash2 size={12} />
@@ -436,8 +437,9 @@ const WBCalculator = () => {
                          </div>
                          <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                               <Label className="text-[8px] uppercase font-bold text-muted-foreground">CG (in)</Label>
+                               <Label className="text-[8px] uppercase font-bold text-foreground/75">CG (in)</Label>
                                <Input 
+                                  aria-label={`Envelope point ${index + 1} CG`}
                                   type="number" 
                                   step="0.01"
                                   value={p.x} 
@@ -446,8 +448,9 @@ const WBCalculator = () => {
                                />
                             </div>
                             <div className="space-y-1">
-                               <Label className="text-[8px] uppercase font-bold text-muted-foreground">Weight (lbs)</Label>
+                               <Label className="text-[8px] uppercase font-bold text-foreground/75">Weight (lbs)</Label>
                                <Input 
+                                  aria-label={`Envelope point ${index + 1} weight`}
                                   type="number" 
                                   value={p.y} 
                                   onChange={(e) => handleEnvelopePointChange(index, 'y', e.target.value)} 
@@ -460,7 +463,7 @@ const WBCalculator = () => {
                     {graphConfig.envelope.length === 0 && (
                       <div className="text-center py-6 border-2 border-dashed rounded-xl bg-muted/5">
                         <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2 opacity-50" />
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No limits defined</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground/75">No limits defined</p>
                       </div>
                     )}
                   </div>
@@ -470,7 +473,7 @@ const WBCalculator = () => {
 
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Chart Scaling</h3>
+                    <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Chart Scaling</h2>
                     <Button variant="outline" size="sm" onClick={handleAutoFit} className="h-7 px-3 text-[9px] font-black uppercase border-slate-300">Auto-Fit</Button>
                   </div>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-4">
