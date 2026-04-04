@@ -38,23 +38,62 @@ export default function RolesPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadRoles = useCallback(() => {
+    let cancelled = false;
     setIsLoading(true);
-    try {
-        const stored = localStorage.getItem('safeviate.roles');
-        if (stored) {
-            setRoles(JSON.parse(stored));
+    const syncLocalRoles = async () => {
+      if (typeof window === 'undefined') return;
+      try {
+        const stored = window.localStorage.getItem('safeviate.roles');
+        const localRoles = stored ? (JSON.parse(stored) as Role[]) : [];
+        if (!localRoles.length) return;
+
+        const existingResponse = await fetch('/api/roles', { cache: 'no-store' });
+        const existingPayload = await existingResponse.json().catch(() => ({ roles: [] }));
+        const existingRoles = Array.isArray(existingPayload.roles) ? (existingPayload.roles as Role[]) : [];
+        const existingKeys = new Set(existingRoles.map((role) => `${role.name.toLowerCase()}::${role.category?.toLowerCase() || 'personnel'}`));
+
+        for (const role of localRoles) {
+          const key = `${role.name.toLowerCase()}::${role.category?.toLowerCase() || 'personnel'}`;
+          if (existingKeys.has(key)) continue;
+          await fetch('/api/roles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(role),
+          });
         }
-    } catch (e) {
-        console.error("Failed to load roles", e);
-    } finally {
-        setIsLoading(false);
-    }
+      } catch (error) {
+        console.error('Failed to sync local roles', error);
+      }
+    };
+
+    void (async () => {
+      await syncLocalRoles();
+      const response = await fetch('/api/roles', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ roles: [] }));
+      const nextRoles = Array.isArray(payload.roles) ? payload.roles : [];
+      if (!cancelled) {
+        setRoles(nextRoles);
+      }
+    })()
+      .catch((e) => {
+        console.error('Failed to load roles', e);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    loadRoles();
+    const cleanup = loadRoles();
     window.addEventListener('safeviate-roles-updated', loadRoles);
-    return () => window.removeEventListener('safeviate-roles-updated', loadRoles);
+    return () => {
+      cleanup?.();
+      window.removeEventListener('safeviate-roles-updated', loadRoles);
+    };
   }, [loadRoles]);
 
   return (

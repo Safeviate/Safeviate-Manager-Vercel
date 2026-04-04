@@ -35,26 +35,25 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     : undefined;
 
   const handleDelete = () => {
-    try {
-        const stored = localStorage.getItem('safeviate.roles');
-        if (stored) {
-            const roles = JSON.parse(stored) as Role[];
-            const nextRoles = roles.filter(r => r.id !== role.id);
-            localStorage.setItem('safeviate.roles', JSON.stringify(nextRoles));
-            window.dispatchEvent(new Event('safeviate-roles-updated'));
-            
-            toast({
-                title: 'Role Deleted',
-                description: `The role "${role.name}" has been removed.`,
-            });
+    fetch(`/api/roles/${role.id}`, { method: 'DELETE' })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'The role could not be deleted.');
         }
-    } catch (e) {
+        window.dispatchEvent(new Event('safeviate-roles-updated'));
+        toast({
+          title: 'Role Deleted',
+          description: `The role "${role.name}" has been removed.`,
+        });
+      })
+      .catch(() => {
         toast({
             variant: 'destructive',
             title: 'Delete Failed',
             description: 'The role could not be deleted.',
         });
-    }
+      });
     setIsDeleteDialogOpen(false);
   }
 

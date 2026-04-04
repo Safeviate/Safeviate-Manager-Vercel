@@ -34,26 +34,63 @@ export default function DepartmentPage() {
   const [error, setError] = useState<Error | null>(null);
 
   const loadDepartments = useCallback(() => {
+    let cancelled = false;
     setIsLoading(true);
-    try {
-        const stored = localStorage.getItem('safeviate.departments');
-        if (stored) {
-            setDepartments(JSON.parse(stored));
-        } else {
-            setDepartments([]);
+    const syncLocalDepartments = async () => {
+      if (typeof window === 'undefined') return;
+      try {
+        const stored = window.localStorage.getItem('safeviate.departments');
+        const localDepartments = stored ? (JSON.parse(stored) as Department[]) : [];
+        if (!localDepartments.length) return;
+
+        const existingResponse = await fetch('/api/departments', { cache: 'no-store' });
+        const existingPayload = await existingResponse.json().catch(() => ({ departments: [] }));
+        const existingDepartments = Array.isArray(existingPayload.departments) ? (existingPayload.departments as Department[]) : [];
+        const existingNames = new Set(existingDepartments.map((dept) => dept.name.toLowerCase()));
+
+        for (const dept of localDepartments) {
+          if (existingNames.has(dept.name.toLowerCase())) continue;
+          await fetch('/api/departments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dept),
+          });
         }
+      } catch (error) {
+        console.error('Failed to sync local departments', error);
+      }
+    };
+
+    void (async () => {
+      await syncLocalDepartments();
+      const response = await fetch('/api/departments', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ departments: [] }));
+      if (!cancelled) {
+        setDepartments(Array.isArray(payload.departments) ? payload.departments : []);
         setError(null);
-    } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load departments.'));
-    } finally {
-        setIsLoading(false);
-    }
+      }
+    })()
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error('Failed to load departments.'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    loadDepartments();
+    const cleanup = loadDepartments();
     window.addEventListener('safeviate-departments-updated', loadDepartments);
-    return () => window.removeEventListener('safeviate-departments-updated', loadDepartments);
+    return () => {
+      cleanup?.();
+      window.removeEventListener('safeviate-departments-updated', loadDepartments);
+    };
   }, [loadDepartments]);
 
   return (

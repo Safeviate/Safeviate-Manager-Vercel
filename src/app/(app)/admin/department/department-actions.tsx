@@ -63,43 +63,45 @@ export function DepartmentActions({ tenantId, department }: DepartmentActionsPro
       return;
     }
 
-    try {
-        const stored = localStorage.getItem('safeviate.departments');
-        if (stored) {
-            const depts = JSON.parse(stored) as Department[];
-            const updatedDepts = depts.map(d => d.id === department.id ? { ...d, name: departmentName.trim() } : d);
-            localStorage.setItem('safeviate.departments', JSON.stringify(updatedDepts));
-            window.dispatchEvent(new Event('safeviate-departments-updated'));
-
-            toast({
-                title: 'Department Updated',
-                description: `The department has been renamed to "${departmentName}".`,
-            });
-            setIsEditOpen(false);
+    fetch(`/api/departments/${department.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: departmentName.trim() }),
+    })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update department.');
         }
-    } catch (e) {
+        window.dispatchEvent(new Event('safeviate-departments-updated'));
+        toast({
+          title: 'Department Updated',
+          description: `The department has been renamed to "${departmentName}".`,
+        });
+        setIsEditOpen(false);
+      })
+      .catch(() => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to update department.' });
-    }
+      });
   };
 
   const handleDeleteDepartment = () => {
-    try {
-        const stored = localStorage.getItem('safeviate.departments');
-        if (stored) {
-            const depts = JSON.parse(stored) as Department[];
-            const updatedDepts = depts.filter(d => d.id !== department.id);
-            localStorage.setItem('safeviate.departments', JSON.stringify(updatedDepts));
-            window.dispatchEvent(new Event('safeviate-departments-updated'));
-
-            toast({
-                title: 'Department Deleted',
-                description: `The "${department.name}" department has been deleted.`,
-            });
-            setIsDeleteOpen(false);
+    fetch(`/api/departments/${department.id}`, { method: 'DELETE' })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to delete department.');
         }
-    } catch (e) {
+        window.dispatchEvent(new Event('safeviate-departments-updated'));
+        toast({
+          title: 'Department Deleted',
+          description: `The "${department.name}" department has been deleted.`,
+        });
+        setIsDeleteOpen(false);
+      })
+      .catch(() => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete department.' });
-    }
+      });
   }
 
   return (

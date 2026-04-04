@@ -39,28 +39,30 @@ export function DepartmentForm({ tenantId }: DepartmentFormProps) {
       return;
     }
 
-    try {
-        const stored = localStorage.getItem('safeviate.departments');
-        const departments = stored ? JSON.parse(stored) as Department[] : [];
-        
-        const newDept: Department = {
-            id: crypto.randomUUID(),
-            name: departmentName.trim(),
-        };
-        
-        localStorage.setItem('safeviate.departments', JSON.stringify([...departments, newDept]));
+    void fetch('/api/departments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: crypto.randomUUID(),
+        name: departmentName.trim(),
+      }),
+    })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create department.');
+        }
         window.dispatchEvent(new Event('safeviate-departments-updated'));
-
         toast({
-            title: 'Department Added',
-            description: `The "${departmentName}" department has been created.`,
+          title: 'Department Added',
+          description: `The "${departmentName}" department has been created.`,
         });
-
         setDepartmentName('');
         setIsOpen(false);
-    } catch (e) {
+      })
+      .catch(() => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to create department.' });
-    }
+      });
   };
 
   const onOpenChange = (open: boolean) => {

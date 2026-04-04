@@ -113,17 +113,16 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
     };
 
     try {
-        const stored = localStorage.getItem('safeviate.roles');
-        const roles = stored ? JSON.parse(stored) as Role[] : [];
-        
-        let nextRoles: Role[];
-        if (existingRole) {
-            nextRoles = roles.map(r => r.id === roleData.id ? roleData : r);
-        } else {
-            nextRoles = [...roles, roleData];
+        const response = await fetch('/api/roles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(roleData),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to save role.');
         }
 
-        localStorage.setItem('safeviate.roles', JSON.stringify(nextRoles));
         window.dispatchEvent(new Event('safeviate-roles-updated'));
 
         toast({
