@@ -28,12 +28,19 @@ export async function POST(request: Request) {
     const result = await sendWelcomeEmail({ email, name, setupLink });
 
     if (!result.success) {
-      throw new Error(result.error);
+      return NextResponse.json(
+        {
+          error: result.error || 'Failed to send welcome email.',
+          diagnostics: result.diagnostics || null,
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ 
         ok: true, 
-        message: 'Welcome email dispatched.'
+        message: 'Welcome email dispatched.',
+        diagnostics: result.diagnostics || null,
     });
   } catch (error: any) {
     console.error('Onboarding dispatch failed:', error);

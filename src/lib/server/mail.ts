@@ -8,11 +8,23 @@ interface WelcomeEmailOptions {
   tempPassword?: string;
 }
 
+type WelcomeEmailResult = {
+  success: boolean;
+  error?: string;
+  diagnostics?: {
+    fromEmail?: string;
+    hasApiKey?: boolean;
+    provider?: 'resend';
+    status?: number;
+    statusText?: string;
+  };
+};
+
 /**
  * Sends a branded welcome email to new users.
  * Uses the Resend API via fetch to avoid dependency bloating.
  */
-export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }: WelcomeEmailOptions) {
+export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }: WelcomeEmailOptions): Promise<WelcomeEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail =
     process.env.MAIL_FROM ||
@@ -23,13 +35,21 @@ export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }:
   if (!apiKey) {
     console.warn(`[MAIL] Skipping dispatch to ${email}. RESEND_API_KEY is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
-    return { success: false, error: 'RESEND_API_KEY missing' };
+    return {
+      success: false,
+      error: 'RESEND_API_KEY missing',
+      diagnostics: { fromEmail, hasApiKey: false, provider: 'resend' },
+    };
   }
 
   if (!fromEmail) {
     console.warn(`[MAIL] Skipping dispatch to ${email}. MAIL_FROM is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
-    return { success: false, error: 'Sender email missing (set MAIL_FROM or RESEND_FROM)' };
+    return {
+      success: false,
+      error: 'Sender email missing (set MAIL_FROM or RESEND_FROM)',
+      diagnostics: { hasApiKey: true, provider: 'resend' },
+    };
   }
 
   const html = `
@@ -150,14 +170,29 @@ export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }:
         // Keep raw response text when Resend does not return JSON.
       }
 
-      throw new Error(
-        `Resend rejected the message (${response.status} ${response.statusText}): ${errorMessage}`
-      );
+      return {
+        success: false,
+        error: `Resend rejected the message (${response.status} ${response.statusText}): ${errorMessage}`,
+        diagnostics: {
+          fromEmail,
+          hasApiKey: true,
+          provider: 'resend',
+          status: response.status,
+          statusText: response.statusText,
+        },
+      };
     }
 
-    return { success: true };
+    return {
+      success: true,
+      diagnostics: { fromEmail, hasApiKey: true, provider: 'resend', status: response.status, statusText: response.statusText },
+    };
   } catch (error: any) {
     console.error(`[MAIL] Error sending welcome email to ${email}:`, error);
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: error.message,
+      diagnostics: { fromEmail, hasApiKey: true, provider: 'resend' },
+    };
   }
 }

@@ -13,6 +13,11 @@ export default function TestPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('Test User');
   const [isSending, setIsSending] = useState(false);
+  const [lastResult, setLastResult] = useState<null | {
+    ok: boolean;
+    message: string;
+    diagnostics?: Record<string, unknown> | null;
+  }>(null);
 
   const handleSend = async () => {
     if (!email.trim()) {
@@ -37,8 +42,20 @@ export default function TestPage() {
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload?.error || 'Failed to send test welcome email.');
+        const message = payload?.error || 'Failed to send test welcome email.';
+        setLastResult({
+          ok: false,
+          message,
+          diagnostics: payload?.diagnostics || null,
+        });
+        throw new Error(message);
       }
+
+      setLastResult({
+        ok: true,
+        message: payload?.message || `Welcome email sent to ${email.trim()}.`,
+        diagnostics: payload?.diagnostics || null,
+      });
 
       toast({
         title: 'Test Email Sent',
@@ -88,6 +105,16 @@ export default function TestPage() {
               Send Test Welcome Email
             </Button>
           </div>
+
+          {lastResult ? (
+            <div className={`rounded-md border p-3 text-xs ${lastResult.ok ? 'border-emerald-300 bg-emerald-50' : 'border-red-300 bg-red-50'}`}>
+              <p className="font-black uppercase tracking-wide">{lastResult.ok ? 'Last Send: Success' : 'Last Send: Failed'}</p>
+              <p className="mt-1 font-medium">{lastResult.message}</p>
+              <pre className="mt-2 overflow-auto whitespace-pre-wrap rounded bg-white/80 p-2 text-[11px]">
+                {JSON.stringify(lastResult.diagnostics || {}, null, 2)}
+              </pre>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

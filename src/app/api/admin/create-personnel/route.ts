@@ -101,8 +101,13 @@ export async function POST(request: Request) {
     const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink, tempPassword });
     
     if (!emailResult.success) {
-      // Throwing here ensures the catch block runs and the frontend shows a red error
-      throw new Error(`Failed to send email. Resend Error: ${emailResult.error}`);
+      return NextResponse.json(
+        {
+          error: `Failed to send email. Resend Error: ${emailResult.error}`,
+          diagnostics: emailResult.diagnostics || null,
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ ok: true, uid, message: 'User created and invite sent.' });
