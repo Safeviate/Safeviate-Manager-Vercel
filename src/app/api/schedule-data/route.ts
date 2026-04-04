@@ -1,7 +1,5 @@
 import { authOptions } from '@/auth';
-import { getDb } from '@/db';
-import { aircrafts, bookings, tenants, users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -13,15 +11,27 @@ export async function GET() {
     return NextResponse.json({ aircraft: [], bookings: [] }, { status: 200 });
   }
 
-  const db = getDb();
-  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
+  await prisma.tenant.upsert({
+    where: { id: 'safeviate' },
+    update: { updatedAt: new Date() },
+    create: { id: 'safeviate', name: 'Safeviate' },
+  });
 
-  const [currentUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const currentUser = await prisma.user.findUnique({
+    where: { email },
+    select: { tenantId: true },
+  });
   const tenantId = currentUser?.tenantId || 'safeviate';
 
   const [aircraftRows, bookingRows] = await Promise.all([
-    db.select().from(aircrafts).where(eq(aircrafts.tenantId, tenantId)),
-    db.select().from(bookings).where(eq(bookings.tenantId, tenantId)),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(
+      `SELECT data FROM aircrafts WHERE tenant_id = $1 ORDER BY created_at ASC`,
+      tenantId
+    ),
+    prisma.$queryRawUnsafe<{ data: unknown }[]>(
+      `SELECT data FROM bookings WHERE tenant_id = $1 ORDER BY created_at ASC`,
+      tenantId
+    ),
   ]);
 
   return NextResponse.json(
