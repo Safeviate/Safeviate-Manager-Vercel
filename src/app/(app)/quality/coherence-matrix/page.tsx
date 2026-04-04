@@ -39,6 +39,15 @@ const REGULATION_TABS = [
 ] as const;
 type RegulationFamily = (typeof REGULATION_TABS)[number]['value'];
 
+function regulationTabToUiValue(value: RegulationFamily) {
+    return value.replace(/[^a-z0-9_-]/gi, '_');
+}
+
+function uiValueToRegulationTab(value: string): RegulationFamily {
+    const match = REGULATION_TABS.find((tab) => regulationTabToUiValue(tab.value) === value);
+    return match?.value ?? 'sacaa-cars';
+}
+
 function formatParentOptionLabel(option: { code: string; label: string }) {
     const code = option.code.trim();
     const label = option.label.trim();
@@ -310,7 +319,7 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                             <Label htmlFor="multi-image-mode">Treat images as a single document</Label>
                         </div>
                         {isMultiImageMode && (
-                           <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">
+                           <p className="text-xs text-foreground/80 p-2 bg-muted rounded-md">
                                Instruction to AI: &quot;You will be given a sequence of images. Treat them as pages of a single document, in the order they are provided. Text may flow from one image to the next.&quot;
                            </p>
                         )}
@@ -842,6 +851,7 @@ export default function CoherenceMatrixPage() {
                                 <Button
                                     variant="outline"
                                     size="sm"
+                                    aria-label="Open coherence matrix actions"
                                     className="h-9 w-full justify-between border-border bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-muted/40"
                                 >
                                     <span className="flex items-center gap-2">
@@ -918,10 +928,10 @@ export default function CoherenceMatrixPage() {
             )}
 
             <div className="border-b bg-muted/5 px-4 py-3 shrink-0 md:px-6">
-                <Tabs value={activeRegulationTab} onValueChange={(value) => setActiveRegulationTab(value as RegulationFamily)} className="w-full">
+                <Tabs value={regulationTabToUiValue(activeRegulationTab)} onValueChange={(value) => setActiveRegulationTab(uiValueToRegulationTab(value))} className="w-full">
                     <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center gap-2">
                         {REGULATION_TABS.map((tab) => (
-                            <TabsTrigger key={tab.value} value={tab.value} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-black text-[10px] uppercase shrink-0">
+                            <TabsTrigger key={tab.value} value={regulationTabToUiValue(tab.value)} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-black text-[10px] uppercase shrink-0">
                                 {tab.label}
                             </TabsTrigger>
                         ))}
@@ -935,8 +945,8 @@ export default function CoherenceMatrixPage() {
                     {topLevelItems.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-24 text-center opacity-30">
                             <Layers className="h-16 w-16 mb-4" />
-                            <p className="text-sm font-black uppercase tracking-widest">Coherence Matrix Empty</p>
-                            <p className="text-xs font-medium max-w-xs mt-2">Populate your matrix using the AI upload tool or by seeding standard Part 141 regulations.</p>
+                            <p className="text-sm font-black uppercase tracking-widest text-foreground/90">Coherence Matrix Empty</p>
+                            <p className="text-xs font-medium text-foreground/80 max-w-xs mt-2">Populate your matrix using the AI upload tool or by seeding standard Part 141 regulations.</p>
                         </div>
                     )}
                 </div>
@@ -959,8 +969,8 @@ export default function CoherenceMatrixPage() {
         <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
             <Card className="border shadow-none">
                 <CardContent className="py-16 text-center">
-                    <p className="text-sm font-black uppercase tracking-widest">No Access</p>
-                    <p className="mt-2 text-sm text-muted-foreground">You do not have permission to view the coherence matrix.</p>
+                    <p className="text-sm font-black uppercase tracking-widest text-foreground/90">No Access</p>
+                    <p className="mt-2 text-sm text-foreground/80">You do not have permission to view the coherence matrix.</p>
                 </CardContent>
             </Card>
         </div>
