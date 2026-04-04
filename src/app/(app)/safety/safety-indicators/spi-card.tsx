@@ -69,17 +69,17 @@ export function SPICard({ spi, onEdit, onDelete, reports, bookings, onMonthDataS
     const getMonthStatusClass = (value: number) => {
         const { levels, comparison } = spi;
 
-        if (value === 0 && comparison === 'greater-is-better') return 'bg-primary/10 text-primary';
+        if (value === 0 && comparison === 'greater-is-better') return 'bg-primary/15 text-foreground border border-primary/30';
         if (comparison === 'greater-is-better') {
-            if (value >= levels.acceptable) return 'bg-primary/10 text-primary';
-            if (value >= levels.monitor) return 'bg-muted text-foreground';
-            if (value >= levels.actionRequired) return 'bg-secondary text-secondary-foreground';
-            return 'bg-destructive/10 text-destructive';
+            if (value >= levels.acceptable) return 'bg-primary/15 text-foreground border border-primary/30';
+            if (value >= levels.monitor) return 'bg-muted/70 text-foreground border border-border';
+            if (value >= levels.actionRequired) return 'bg-amber-100 text-amber-900 border border-amber-300';
+            return 'bg-red-100 text-red-900 border border-red-300';
         } else { // lower-is-better
-            if (value <= levels.acceptable) return 'bg-primary/10 text-primary';
-            if (value <= levels.monitor) return 'bg-muted text-foreground';
-            if (value <= levels.actionRequired) return 'bg-secondary text-secondary-foreground';
-            return 'bg-destructive/10 text-destructive';
+            if (value <= levels.acceptable) return 'bg-primary/15 text-foreground border border-primary/30';
+            if (value <= levels.monitor) return 'bg-muted/70 text-foreground border border-border';
+            if (value <= levels.actionRequired) return 'bg-amber-100 text-amber-900 border border-amber-300';
+            return 'bg-red-100 text-red-900 border border-red-300';
         }
     };
 
