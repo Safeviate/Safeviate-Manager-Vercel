@@ -1,7 +1,5 @@
 import { authOptions } from '@/auth';
-import { getDb } from '@/db';
-import { safetyReports, tenants, users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -10,9 +8,12 @@ async function getTenantId() {
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return null;
 
-  const db = getDb();
-  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
-  const [currentUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  await prisma.tenant.upsert({
+    where: { id: 'safeviate' },
+    update: { updatedAt: new Date() },
+    create: { id: 'safeviate', name: 'Safeviate' },
+  });
+  const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
   return currentUser?.tenantId || 'safeviate';
 }
 
@@ -28,8 +29,12 @@ export async function PUT(request: Request, context: { params: Promise<{ reportI
     return NextResponse.json({ error: 'Missing report data.' }, { status: 400 });
   }
 
-  const db = getDb();
-  await db.update(safetyReports).set({ data, updatedAt: new Date() }).where(eq(safetyReports.id, reportId));
+  await prisma.$executeRawUnsafe(
+    `UPDATE safety_reports SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
+    reportId,
+    JSON.stringify(data),
+    tenantId
+  );
 
   return NextResponse.json({ report: data }, { status: 200 });
 }
@@ -41,13 +46,13 @@ export async function GET(_request: Request, context: { params: Promise<{ report
   const { reportId } = await context.params;
   if (!reportId) return NextResponse.json({ report: null }, { status: 400 });
 
-  const db = getDb();
-  const [row] = await db
-    .select()
-    .from(safetyReports)
-    .where(eq(safetyReports.id, reportId));
+  const rows = await prisma.$queryRawUnsafe<{ data: unknown; tenant_id: string }[]>(
+    `SELECT data, tenant_id FROM safety_reports WHERE id = $1 LIMIT 1`,
+    reportId
+  );
+  const row = rows[0];
 
-  if (!row || row.tenantId !== tenantId) {
+  if (!row || row.tenant_id !== tenantId) {
     return NextResponse.json({ report: null }, { status: 404 });
   }
 

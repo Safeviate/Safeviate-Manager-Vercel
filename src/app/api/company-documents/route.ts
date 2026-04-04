@@ -1,7 +1,5 @@
 import { authOptions } from '@/auth';
-import { getDb } from '@/db';
-import { companyDocuments, tenants, users } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -14,29 +12,31 @@ async function getTenantIdForSession() {
     return null;
   }
 
-  const db = getDb();
-  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
+  await prisma.tenant.upsert({
+    where: { id: 'safeviate' },
+    update: { updatedAt: new Date() },
+    create: { id: 'safeviate', name: 'Safeviate' },
+  });
 
-  let [profile] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (!profile) {
-    [profile] = await db
-      .insert(users)
-      .values({
-        id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
-        tenantId: 'safeviate',
-        email,
-        firstName: session?.user?.name?.split(' ')[0] ?? 'User',
-        lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
-        role: 'developer',
-      })
-      .onConflictDoUpdate({
-        target: users.email,
-        set: {
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-  }
+  const profile = await prisma.user.upsert({
+    where: { email },
+    update: {
+      id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
+      tenantId: 'safeviate',
+      firstName: session?.user?.name?.split(' ')[0] ?? 'User',
+      lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
+      role: 'developer',
+      updatedAt: new Date(),
+    },
+    create: {
+      id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
+      tenantId: 'safeviate',
+      email,
+      firstName: session?.user?.name?.split(' ')[0] ?? 'User',
+      lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
+      role: 'developer',
+    },
+  });
 
   return profile.tenantId;
 }
@@ -47,17 +47,19 @@ export async function GET() {
     return NextResponse.json({ documents: [] }, { status: 200 });
   }
 
-  const db = getDb();
-  const rows = await db.select().from(companyDocuments).where(eq(companyDocuments.tenantId, tenantId));
+  const rows = await prisma.$queryRawUnsafe<any[]>(
+    `SELECT id, name, url, upload_date, expiration_date, doc_type FROM company_documents WHERE tenant_id = $1 ORDER BY created_at ASC`,
+    tenantId
+  );
 
   return NextResponse.json({
     documents: rows.map((row) => ({
       id: row.id,
       name: row.name,
       url: row.url,
-      uploadDate: row.uploadDate?.toISOString() ?? new Date().toISOString(),
-      expirationDate: row.expirationDate ? row.expirationDate.toISOString() : null,
-      type: row.docType === 'image' ? 'image' : 'file',
+      uploadDate: row.upload_date ? new Date(row.upload_date).toISOString() : new Date().toISOString(),
+      expirationDate: row.expiration_date ? new Date(row.expiration_date).toISOString() : null,
+      type: row.doc_type === 'image' ? 'image' : 'file',
     })),
   });
 }
@@ -80,17 +82,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const db = getDb();
-  await db.insert(companyDocuments).values({
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO company_documents (id, tenant_id, name, url, upload_date, expiration_date, doc_type, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
     id,
     tenantId,
     name,
     url,
     uploadDate,
     expirationDate,
-    docType,
-    updatedAt: new Date(),
-  });
+    docType
+  );
 
   return NextResponse.json({ ok: true, id });
 }
@@ -109,14 +111,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Missing id' }, { status: 400 });
   }
 
-  const db = getDb();
-  await db
-    .update(companyDocuments)
-    .set({
-      expirationDate,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(companyDocuments.id, id), eq(companyDocuments.tenantId, tenantId)));
+  await prisma.$executeRawUnsafe(
+    `UPDATE company_documents SET expiration_date = $3, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`,
+    id,
+    tenantId,
+    expirationDate
+  );
 
   return NextResponse.json({ ok: true });
 }
@@ -134,8 +134,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Missing id' }, { status: 400 });
   }
 
-  const db = getDb();
-  await db.delete(companyDocuments).where(and(eq(companyDocuments.id, id), eq(companyDocuments.tenantId, tenantId)));
+  await prisma.$executeRawUnsafe(`DELETE FROM company_documents WHERE id = $1 AND tenant_id = $2`, id, tenantId);
 
   return NextResponse.json({ ok: true });
 }

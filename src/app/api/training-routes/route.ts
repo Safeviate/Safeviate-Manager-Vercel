@@ -1,7 +1,5 @@
 import { authOptions } from '@/auth';
-import { getDb } from '@/db';
-import { tenants, trainingRoutes, users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -13,13 +11,19 @@ export async function GET() {
     return NextResponse.json({ routes: [] }, { status: 200 });
   }
 
-  const db = getDb();
-  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
+  await prisma.tenant.upsert({
+    where: { id: 'safeviate' },
+    update: { updatedAt: new Date() },
+    create: { id: 'safeviate', name: 'Safeviate' },
+  });
 
-  const [currentUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
   const tenantId = currentUser?.tenantId || 'safeviate';
 
-  const rows = await db.select().from(trainingRoutes).where(eq(trainingRoutes.tenantId, tenantId));
+  const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+    `SELECT data FROM training_routes WHERE tenant_id = $1 ORDER BY created_at ASC`,
+    tenantId
+  );
 
   return NextResponse.json({ routes: rows.map((row) => row.data) }, { status: 200 });
 }
