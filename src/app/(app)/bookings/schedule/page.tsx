@@ -195,15 +195,6 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = (ac: Aircraft, hour: number) => {
-    if (!canManageSchedule) {
-        toast({
-            variant: 'destructive',
-            title: 'Access Restricted',
-            description: 'You do not have permission to create bookings on the schedule.',
-        });
-        return;
-    }
-
     const slotTime = setMinutes(setHours(selectedDate, hour), 0);
     const currentTime = new Date();
     
@@ -231,6 +222,13 @@ export default function SchedulePage() {
 
     setBookingFormData({ aircraft: ac, startTime, allBookingsForAircraft });
     setIsBookingFormOpen(true);
+
+    if (!canManageSchedule) {
+        toast({
+            title: 'Read-Only Access',
+            description: 'You can view booking details, but you do not have permission to create or edit bookings.',
+        });
+    }
   };
   
   const handleBookingClick = (booking: Booking) => {
