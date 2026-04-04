@@ -5,7 +5,6 @@ const CANONICAL_HOST = 'safeviate-manager.vercel.app';
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host')?.toLowerCase() ?? '';
-
   const isVercelHost = host.endsWith('.vercel.app');
   const isCanonicalHost = host === CANONICAL_HOST;
 
@@ -14,7 +13,6 @@ export function middleware(request: NextRequest) {
     redirectUrl.host = CANONICAL_HOST;
     redirectUrl.protocol = 'https';
     redirectUrl.port = '';
-
     return NextResponse.redirect(redirectUrl, 308);
   }
 
@@ -22,8 +20,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)'],
 };
 
