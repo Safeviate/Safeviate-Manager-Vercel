@@ -40,6 +40,16 @@ const defaultColors: Record<string, string> = {
   '1A': '#f59e0b', '1B': '#10b981', '1C': '#10b981', '1D': '#10b981', '1E': '#10b981',
 };
 
+const isLightColor = (hexColor: string) => {
+  const normalized = hexColor.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return false;
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.62;
+};
+
 export default function RiskMatrixPage() {
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
@@ -134,7 +144,7 @@ export default function RiskMatrixPage() {
                     </div>
                     {severities.map((s) => (
                       <div key={s.value} className="flex flex-col items-center justify-center p-2 bg-background rounded-lg border border-slate-200 text-center shadow-sm">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{s.name}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80 mb-1">{s.name}</span>
                         <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-[10px] border-primary/20 text-primary bg-primary/5">
                           {s.value}
                         </Badge>
@@ -151,17 +161,19 @@ export default function RiskMatrixPage() {
                         {severities.map((s) => {
                           const cellId = `${l.value}${s.value}`;
                           const color = colors[cellId];
+                          const textColorClass = isLightColor(color) ? 'text-slate-900' : 'text-white';
                           return (
                             <button
                               key={cellId}
                               onClick={() => canEditColors && setActiveCell(cellId)}
                               style={{ backgroundColor: color }}
                               className={cn(
-                                'h-14 rounded-lg shadow-sm flex items-center justify-center font-black text-[11px] text-white transition-all border-2 border-white/20',
+                                'h-14 rounded-lg shadow-sm flex items-center justify-center font-black text-[11px] transition-all border-2 border-white/20',
+                                textColorClass,
                                 canEditColors ? 'hover:scale-[1.03] cursor-pointer' : 'cursor-default'
                               )}
                             >
-                              <span className="drop-shadow-md opacity-90">{cellId}</span>
+                              <span className="drop-shadow-md">{cellId}</span>
                             </button>
                           );
                         })}
@@ -200,7 +212,7 @@ export default function RiskMatrixPage() {
                           ) : (
                             <>
                               <p className="text-[11px] font-black uppercase tracking-widest text-foreground">{s.name}</p>
-                              <p className="text-xs text-muted-foreground leading-relaxed font-medium">{s.description}</p>
+                              <p className="text-xs text-foreground/80 leading-relaxed font-medium">{s.description}</p>
                             </>
                           )}
                         </div>
@@ -235,7 +247,7 @@ export default function RiskMatrixPage() {
                           ) : (
                             <>
                               <p className="text-[11px] font-black uppercase tracking-widest text-foreground">{l.name}</p>
-                              <p className="text-xs text-muted-foreground leading-relaxed font-medium">{l.description}</p>
+                              <p className="text-xs text-foreground/80 leading-relaxed font-medium">{l.description}</p>
                             </>
                           )}
                         </div>
