@@ -34,18 +34,18 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
           <Table>
             <TableHeader className="bg-muted/30 sticky top-0 z-10">
               <TableRow>
-                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Registration</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Vehicle</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Type</TableHead>
-                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Odometer</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Next Service</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
-                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">Registration</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">Vehicle</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">Type</TableHead>
+                <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider text-foreground/80">Odometer</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">Next Service</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">Status</TableHead>
+                <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider text-foreground/80">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((vehicle) => (
-                <TableRow key={vehicle.id} className="hover:bg-muted/30 transition-colors">
+                <TableRow key={vehicle.id} className="hover:bg-muted/20 transition-colors">
                   <TableCell className="font-black text-primary uppercase tracking-tight">{vehicle.registrationNumber}</TableCell>
                   <TableCell className="text-sm font-medium">{vehicle.make} {vehicle.model}</TableCell>
                   <TableCell>
@@ -55,7 +55,7 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
                   </TableCell>
                   <TableCell className="text-right font-mono font-bold">{vehicle.currentOdometer?.toFixed(0) || '0'}</TableCell>
                   <TableCell>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-foreground/75">
                       {vehicle.nextServiceDueDate ? <div>{format(new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy')}</div> : null}
                       {vehicle.nextServiceDueOdometer != null ? <div>{vehicle.nextServiceDueOdometer.toFixed(0)} km</div> : null}
                       {!vehicle.nextServiceDueDate && vehicle.nextServiceDueOdometer == null ? 'Not scheduled' : null}
@@ -66,9 +66,9 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
                       Active
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right text-foreground">
                     <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                      <Link href={`/assets/vehicles/${vehicle.id}`}>
+                      <Link href={`/assets/vehicles/${vehicle.id}`} aria-label={`View ${vehicle.registrationNumber} details`}>
                         <Eye className="h-4 w-4" />
                       </Link>
                     </Button>
@@ -85,7 +85,7 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
               <CardHeader className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
                 <div className="flex flex-col">
                   <span className="text-lg font-black text-primary leading-none uppercase">{vehicle.registrationNumber}</span>
-                  <span className="text-xs text-muted-foreground font-medium mt-1">{vehicle.make} {vehicle.model}</span>
+                  <span className="mt-1 text-xs font-medium text-foreground/75">{vehicle.make} {vehicle.model}</span>
                 </div>
                 <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px] font-black uppercase">
                   Active
@@ -93,20 +93,20 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
               </CardHeader>
               <CardContent className="p-4 py-3 grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-[9px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                  <p className="flex items-center gap-1 text-[9px] font-bold uppercase text-foreground/75">
                     <GaugeCircle className="h-2.5 w-2.5" /> Odometer
                   </p>
                   <p className="text-sm font-mono font-black">{vehicle.currentOdometer?.toFixed(0) || '0'}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[9px] uppercase font-bold text-muted-foreground">Type</p>
+                  <p className="text-[9px] font-bold uppercase text-foreground/75">Type</p>
                   <Badge variant="outline" className="text-[9px] uppercase tracking-tighter">
                     {vehicle.type || 'Car'}
                   </Badge>
                 </div>
                 <div className="col-span-2 space-y-1">
-                  <p className="text-[9px] uppercase font-bold text-muted-foreground">Next Service</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[9px] font-bold uppercase text-foreground/75">Next Service</p>
+                  <p className="text-xs text-foreground/75">
                     {vehicle.nextServiceDueDate ? format(new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy') : 'No date set'}
                     {vehicle.nextServiceDueOdometer != null ? ` | ${vehicle.nextServiceDueOdometer.toFixed(0)} km` : ''}
                   </p>
