@@ -11,3 +11,18 @@ For local development, start from `src/app/page.tsx` and set the required runtim
 - `NEXTAUTH_URL`
 - `AUTH_SEED_EMAIL`
 - `AUTH_SEED_PASSWORD` or `AUTH_SEED_PASSWORD_HASH`
+
+## Prisma (Development)
+
+This repo now includes Prisma alongside existing Drizzle code during migration.
+
+1. Install deps:
+`npm install`
+
+2. Generate client:
+`npm run prisma:generate`
+
+3. Push schema to your **development** database:
+`npm run prisma:push`
+
+Use a dev-only `DATABASE_URL` locally and keep production values in Vercel environment variables.

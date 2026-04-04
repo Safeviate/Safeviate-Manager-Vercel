@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Tenant {
+  id        String      @id @db.VarChar(128)
+  name      String
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  users     User[]
+  roles     Role[]
+  departments Department[]
+  personnel Personnel[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @db.VarChar(128)
+  tenantId     String   @map("tenant_id") @db.VarChar(128)
+  email        String   @unique
+  passwordHash String?  @map("password_hash")
+  firstName    String   @default("") @map("first_name")
+  lastName     String   @default("") @map("last_name")
+  role         String   @default("developer")
+  profilePath  String?  @map("profile_path")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+model Role {
+  id                String    @id @db.VarChar(128)
+  tenantId          String    @map("tenant_id") @db.VarChar(128)
+  name              String
+  category          String    @default("Personnel")
+  permissions       Json      @default("[]")
+  requiredDocuments Json?     @map("required_documents")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("roles")
+}
+
+model Department {
+  id        String   @id @db.VarChar(128)
+  tenantId  String   @map("tenant_id") @db.VarChar(128)
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("departments")
+}
+
+model Personnel {
+  id              String    @id @db.VarChar(128)
+  tenantId        String    @map("tenant_id") @db.VarChar(128)
+  userNumber      String?   @map("user_number")
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  email           String
+  contactNumber   String?   @map("contact_number")
+  department      String?
+  role            String
+  permissions     Json      @default("[]")
+  accessOverrides Json?     @map("access_overrides")
+  userType        String    @default("Personnel") @map("user_type")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("personnel")
+}
+
