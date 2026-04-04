@@ -46,23 +46,44 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const canEdit = hasPermission('users-edit');
 
   const handleDeleteUser = () => {
-    const collectionName = determineCollection(user.userType);
-    const key = `safeviate.${collectionName}`;
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        const arr = JSON.parse(stored) as UserProfile[];
-        const nextArr = arr.filter(u => u.id !== user.id);
-        localStorage.setItem(key, JSON.stringify(nextArr));
+    const removeFromLocal = () => {
+      const collectionName = determineCollection(user.userType);
+      const key = `safeviate.${collectionName}`;
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          const arr = JSON.parse(stored) as UserProfile[];
+          const nextArr = arr.filter(u => u.id !== user.id);
+          localStorage.setItem(key, JSON.stringify(nextArr));
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-    toast({
-        title: 'User Removed',
-        description: `The user profile for ${user.firstName} ${user.lastName} is being deleted.`,
-    });
-    setIsDeleteDialogOpen(false);
+    };
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/personnel/${user.id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete user');
+        }
+        removeFromLocal();
+        toast({
+          title: 'User Removed',
+          description: `The user profile for ${user.firstName} ${user.lastName} was deleted.`,
+        });
+      } catch {
+        removeFromLocal();
+        toast({
+          title: 'User Removed',
+          description: `The user profile for ${user.firstName} ${user.lastName} was removed locally.`,
+        });
+      } finally {
+        setIsDeleteDialogOpen(false);
+      }
+    })();
   }
 
   const handleSendWelcomeEmail = async () => {

@@ -67,6 +67,11 @@ const isPilotProfile = (user: UserProfile): user is PilotProfile => {
     return user.userType === 'Student' || user.userType === 'Private Pilot' || user.userType === 'Instructor';
 }
 
+const roleGrantsPermission = (role: Role | null | undefined, permissionId: string) => {
+  const permissions = Array.isArray(role?.permissions) ? role?.permissions : [];
+  return permissions.includes('*') || permissions.includes(permissionId);
+};
+
 export function ViewPersonnelDetails({ user, role, department, actions }: ViewPersonnelDetailsProps) {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
@@ -257,9 +262,9 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   };
 
   const handlePermissionToggle = async (permissionId: string, checked: boolean) => {
-    if (!canEdit) return;
-    const currentPermissions = user.permissions || [];
-    const isInherited = role?.permissions?.includes(permissionId);
+      if (!canEdit) return;
+      const currentPermissions = user.permissions || [];
+    const isInherited = roleGrantsPermission(role, permissionId);
 
     if (!isInherited) {
         toast({
@@ -536,7 +541,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                 <div className="flex flex-col gap-2.5">
                                                     {resource.actions.map(action => {
                                                         const permissionId = `${resource.id}-${action}`;
-                                                        const isInherited = role?.permissions?.includes(permissionId);
+                                                        const isInherited = roleGrantsPermission(role, permissionId);
                                                         const isOverridden = user.permissions?.includes(permissionId);
                                                         const isDenied = user.permissions?.includes(`!${permissionId}`);
                                                         const isEffective = (isInherited && !isDenied) || isOverridden;
