@@ -142,10 +142,10 @@ export function SPICard({ spi, onEdit, onDelete, reports, bookings, onMonthDataS
                                     <p className={cn('text-5xl font-bold tracking-tighter', getStatusClass(yearlySummary.value))}>
                                         {yearlySummary.value}
                                     </p>
-                                    <p className='text-sm text-muted-foreground mt-1'>{unitLabel} {yearlySummary.label}</p>
+                                    <p className='text-sm text-foreground/80 mt-1'>{unitLabel} {yearlySummary.label}</p>
                                 </>
                             ) : (
-                                <p className="text-sm text-muted-foreground">No data</p>
+                                <p className="text-sm text-foreground/80">No data</p>
                             )}
                         </div>
                         <div className="lg:col-span-3">
