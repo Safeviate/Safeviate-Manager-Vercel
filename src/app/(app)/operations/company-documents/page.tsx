@@ -283,10 +283,10 @@ export default function CompanyDocumentsPage() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="text-center py-24 opacity-40">
-                <FileText className="h-16 w-16 mx-auto mb-4" />
-                <p className="text-lg font-medium">No documents found.</p>
-                <p className="text-sm">Controlled manuals and procedures will appear here once added.</p>
+              <div className="text-center py-24">
+                <FileText className="h-16 w-16 mx-auto mb-4 text-foreground/70" />
+                <p className="text-lg font-medium text-foreground">No documents found.</p>
+                <p className="text-sm text-foreground/80">Controlled manuals and procedures will appear here once added.</p>
               </div>
             )}
           </ScrollArea>
