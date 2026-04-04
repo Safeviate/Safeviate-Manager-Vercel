@@ -43,7 +43,13 @@ export async function GET() {
 
   const tenant = await prisma.tenant.findUnique({ where: { id: profile.tenantId } }).catch(() => null);
   const role = await prisma.role.findFirst({
-    where: { tenantId: profile.tenantId, id: profile.role },
+    where: {
+      tenantId: profile.tenantId,
+      OR: [
+        { id: profile.role },
+        { name: profile.role },
+      ],
+    },
   }).catch(() => null);
 
   return NextResponse.json(

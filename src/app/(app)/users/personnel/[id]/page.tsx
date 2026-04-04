@@ -95,7 +95,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
 
     const currentRole = useMemo(() => {
         if (user && 'role' in user) {
-            return roles?.find(r => r.id === user.role) || null;
+            return roles?.find(r => r.id === user.role || r.name === user.role) || null;
         }
         return null;
     }, [roles, user]);
