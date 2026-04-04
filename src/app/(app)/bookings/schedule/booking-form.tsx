@@ -60,7 +60,7 @@ interface BookingFormProps {
 
 export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, pilots, allBookingsForAircraft, existingBooking, refreshBookings }: BookingFormProps) {
     const { toast } = useToast();
-    const { hasPermission } = usePermissions();
+    const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
     const { userProfile } = useUserProfile();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -306,7 +306,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                     </div>
                 )}
 
-                {!canManageSchedule && (
+                {!isPermissionsLoading && !canManageSchedule && (
                     <div className="bg-muted border border-border rounded-md p-3 mb-4 flex items-start gap-3">
                         <Lock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                         <div className="text-xs text-muted-foreground">

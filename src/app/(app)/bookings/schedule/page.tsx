@@ -101,7 +101,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
 export default function SchedulePage() {
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
   const [now, setNow] = useState(new Date());
@@ -236,7 +236,7 @@ export default function SchedulePage() {
     setBookingFormData({ aircraft: ac, startTime, allBookingsForAircraft });
     setIsBookingFormOpen(true);
 
-    if (!canManageSchedule) {
+    if (!isPermissionsLoading && !canManageSchedule) {
         toast({
             title: 'Read-Only Access',
             description: 'You can view booking details, but you do not have permission to create or edit bookings.',
@@ -332,11 +332,11 @@ export default function SchedulePage() {
 
                         <div className="flex relative">
                             
-                            <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 border-r bg-muted sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]")}>
+                            <div className={cn(TIME_COL_WIDTH_CLASS, "flex-shrink-0 border-r bg-swimlane-header sticky left-0 z-40 shadow-[2px_0_5px_rgba(0,0,0,0.05)]")}>
                                 {Array.from({ length: TOTAL_HOURS }).map((_, hour) => (
                                     <div 
                                         key={hour} 
-                                        className="flex items-center justify-center border-b text-[10px] md:text-xs font-mono font-bold text-foreground bg-muted"
+                                        className="flex items-center justify-center border-b text-[10px] md:text-xs font-mono font-bold text-swimlane-header-foreground bg-swimlane-header"
                                         style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                     >
                                         {format(new Date(0, 0, 0, hour), 'HH:mm')}
