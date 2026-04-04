@@ -39,9 +39,35 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     const [isLoadingUser, setIsLoadingUser] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
+
+        const load = async () => {
+            setIsLoadingUser(true);
+            try {
+                const response = await fetch('/api/personnel', { cache: 'no-store' });
+                const payload = await response.json().catch(() => ({}));
+
+                const apiPersonnel = Array.isArray(payload?.personnel) ? payload.personnel : [];
+                const apiRoles = Array.isArray(payload?.roles) ? payload.roles : [];
+                const apiDepartments = Array.isArray(payload?.departments) ? payload.departments : [];
+
+                if (!cancelled) {
+                    const found = apiPersonnel.find((u: UserProfile) => u.id === userId);
+                    if (found) setUser(found);
+                    setRoles(apiRoles);
+                    setDepartments(apiDepartments);
+                }
+            } catch {
+                // ignore and fall back to local storage
+            } finally {
+                if (!cancelled) setIsLoadingUser(false);
+            }
+        };
+
         try {
-            const collectionName = userType === 'Instructor' ? 'instructors' : 
-                                   userType === 'Student' ? 'students' : 
+            void load();
+            const collectionName = userType === 'Instructor' ? 'instructors' :
+                                   userType === 'Student' ? 'students' :
                                    userType === 'Private Pilot' ? 'private-pilots' : 'personnel';
             
             const storedUser = localStorage.getItem(`safeviate.${collectionName}`);
@@ -61,9 +87,10 @@ function UserProfileContent({ params }: UserProfilePageProps) {
             if (storedLogbooks) setLogbookTemplates(JSON.parse(storedLogbooks));
         } catch {
             // ignore
-        } finally {
-            setIsLoadingUser(false);
         }
+        return () => {
+            cancelled = true;
+        };
     }, [userType, userId]);
 
     const currentRole = useMemo(() => {
