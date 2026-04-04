@@ -32,33 +32,42 @@ export default function ExternalUsersPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    try {
-      const storedPersonnel = localStorage.getItem('safeviate.personnel');
-      if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
+    let cancelled = false;
+    const load = async () => {
+      setIsLoadingData(true);
+      try {
+        const response = await fetch('/api/personnel', { cache: 'no-store' });
+        const payload = await response.json();
+        if (cancelled) return;
 
-      const storedInstructors = localStorage.getItem('safeviate.instructors');
-      if (storedInstructors) setInstructors(JSON.parse(storedInstructors));
+        const allPersonnel = (payload.personnel ?? []) as Personnel[];
+        setPersonnel(allPersonnel);
+        setInstructors((allPersonnel.filter((person: Personnel) => person.userType === 'Instructor') as unknown) as PilotProfile[]);
+        setStudents((allPersonnel.filter((person: Personnel) => person.userType === 'Student') as unknown) as PilotProfile[]);
+        setPrivatePilots((allPersonnel.filter((person: Personnel) => person.userType === 'Private Pilot') as unknown) as PilotProfile[]);
+        setRoles(payload.roles ?? []);
+        setDepartments(payload.departments ?? []);
+        setOrganizations([]);
+      } catch {
+        if (!cancelled) {
+          setPersonnel([]);
+          setInstructors([]);
+          setStudents([]);
+          setPrivatePilots([]);
+          setRoles([]);
+          setDepartments([]);
+          setOrganizations([]);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
+      }
+    };
 
-      const storedStudents = localStorage.getItem('safeviate.students');
-      if (storedStudents) setStudents(JSON.parse(storedStudents));
-
-      const storedPilots = localStorage.getItem('safeviate.private-pilots');
-      if (storedPilots) setPrivatePilots(JSON.parse(storedPilots));
-      
-      const storedRoles = localStorage.getItem('safeviate.roles');
-      if (storedRoles) setRoles(JSON.parse(storedRoles));
-      
-      const storedDepts = localStorage.getItem('safeviate.departments');
-      if (storedDepts) setDepartments(JSON.parse(storedDepts));
-
-      const storedOrgs = localStorage.getItem('safeviate.external-organizations');
-      if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
-    } catch (err: any) {
-      // ignore
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, []);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const isLoading = isProfileLoading || isLoadingData;
 
