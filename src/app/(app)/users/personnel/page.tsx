@@ -11,7 +11,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, PlusCircle, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MainPageHeader } from '@/components/page-header';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS, MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
@@ -208,7 +208,7 @@ export default function PersonnelPage() {
                         disabled={!canCreateUsers || isProfileLoading}
                         variant={isMobile ? 'outline' : 'default'}
                         size={isMobile ? 'sm' : 'default'}
-                        className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full gap-2 px-6 text-xs font-black uppercase shadow-md sm:w-auto'}
+                        className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`}
                     >
                         <span className="flex items-center gap-2">
                             <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />

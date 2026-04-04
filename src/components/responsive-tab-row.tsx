@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Building, type LucideIcon } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { HEADER_TAB_LIST_CLASS, HEADER_TAB_TRIGGER_CLASS } from '@/components/page-header';
 import {
   Select,
   SelectContent,
@@ -71,7 +72,7 @@ export function ResponsiveTabRow({
       ) : (
         <div className="flex items-center justify-between gap-3">
           <TabsList className={cn(
-            "bg-transparent h-auto p-0 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center",
+            `${HEADER_TAB_LIST_CLASS} bg-transparent border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center`,
             joinedDesktopTabs ? "gap-0 !rounded-none border border-input overflow-hidden" : "gap-2"
           )}>
             {options.map((option) => {
@@ -81,7 +82,7 @@ export function ResponsiveTabRow({
                   key={option.value}
                   value={option.value}
                   className={cn(
-                    "px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-black text-[10px] uppercase transition-all shrink-0",
+                    `${HEADER_TAB_TRIGGER_CLASS} border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground`,
                     joinedDesktopTabs
                       ? "!rounded-none border-0 border-r border-input last:border-r-0 data-[state=active]:rounded-none"
                       : "rounded-full"

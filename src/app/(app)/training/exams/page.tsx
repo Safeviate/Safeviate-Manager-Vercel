@@ -2,7 +2,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
+import {
+  HEADER_ACTION_BUTTON_CLASS,
+  HEADER_MOBILE_ACTION_BUTTON_CLASS,
+  HEADER_TAB_LIST_CLASS,
+  HEADER_TAB_TRIGGER_CLASS,
+  MainPageHeader,
+} from "@/components/page-header";
 import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -171,7 +177,7 @@ export default function ExamsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40"
+                      className={HEADER_MOBILE_ACTION_BUTTON_CLASS}
                     >
                       <span className="flex items-center gap-2">
                         <MoreHorizontal className="h-3.5 w-3.5" />
@@ -201,24 +207,24 @@ export default function ExamsPage() {
                 </DropdownMenu>
               ) : (
                 <>
-                  <TabsList className="bg-muted/10 h-auto p-1.5 gap-1.5 border rounded-full justify-start flex min-w-max flex-nowrap shadow-inner">
+                  <TabsList className={HEADER_TAB_LIST_CLASS}>
                     <TabsTrigger 
                       value="internal" 
-                      className="rounded-full px-8 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                      className={HEADER_TAB_TRIGGER_CLASS}
                     >
                       <ShieldCheck className="h-4 w-4" /> 
                       {isAviation ? 'Internal Exams' : 'Internal Assessments'}
                     </TabsTrigger>
                     <TabsTrigger 
                       value="mock" 
-                      className="rounded-full px-8 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                      className={HEADER_TAB_TRIGGER_CLASS}
                     >
                       <Microscope className="h-4 w-4" /> 
                       Mock Exams
                     </TabsTrigger>
                   </TabsList>
                   {canManage && (
-                    <Button asChild size="sm" className="h-11 px-8 text-[11px] font-black uppercase tracking-widest shadow-xl gap-2 shrink-0 rounded-full transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                    <Button asChild size="sm" className={HEADER_ACTION_BUTTON_CLASS}>
                       <Link href="/training/exams/new">
                         <PlusCircle className="h-5 w-5" /> New Template
                       </Link>
