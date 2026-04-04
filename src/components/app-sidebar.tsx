@@ -109,7 +109,11 @@ const SidebarItems = () => {
               .filter((department) => department?.id && department?.name)
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((department) => ({
-                href: `/users/personnel?department=${encodeURIComponent(department.id)}`,
+                href: department.name.toLowerCase() === 'administration'
+                  ? '/users/administration'
+                  : department.name.toLowerCase() === 'training'
+                    ? '/users/training'
+                    : `/users/personnel/department/${encodeURIComponent(department.id)}`,
                 label: department.name,
                 permissionId: 'users-view',
               })),
