@@ -453,7 +453,7 @@ export default function VehicleUsagePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <CardTitle className="text-base">{vehicle.registrationNumber}</CardTitle>
-                          <CardDescription>{vehicle.make} {vehicle.model}</CardDescription>
+                          <CardDescription className="text-foreground/80">{vehicle.make} {vehicle.model}</CardDescription>
                         </div>
                         <Badge variant={isBookedOut ? 'secondary' : 'default'}>
                           {isBookedOut ? 'Booked Out' : 'Available'}

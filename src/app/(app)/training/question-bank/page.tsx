@@ -340,7 +340,7 @@ function DeleteQuestionButton({ item, tenantId, selectedTopic }: { item: Questio
                     <AlertDialogAction 
                         onClick={handleDelete}
                         disabled={isDeleting}
-                        className="bg-destructive hover:bg-destructive/90 text-[10px] font-black uppercase"
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-[10px] font-black uppercase"
                     >
                         {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete Permanently'}
                     </AlertDialogAction>
