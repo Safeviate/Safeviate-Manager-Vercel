@@ -20,7 +20,7 @@ import {
   SidebarMobileContent,
 } from '@/components/ui/sidebar';
 import { Plane, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -83,6 +83,7 @@ type SidebarSharedState = {
 
 const SidebarItems = () => {
     const pathname = usePathname();
+    const router = useRouter();
     const { setOpenMobile } = useSidebar();
     const { canAccessMenuItem } = usePermissions();
     const lastSubmenuByParent = useMemo(() => getLastSubmenuByParent(), [pathname]);
@@ -155,6 +156,25 @@ const SidebarItems = () => {
     const filteredItems = useMemo(() => {
       return menuConfig.filter((item) => canAccessMenuItem(item));
     }, [canAccessMenuItem]);
+
+    useEffect(() => {
+      const prefetch = (href: string) => {
+        const basePath = href.split('?')[0];
+        if (!basePath || basePath.includes('[')) return;
+        router.prefetch(basePath);
+      };
+
+      filteredItems.forEach((item) => {
+        prefetch(item.href);
+        const configuredSubItems =
+          item.href === '/users' && roleBasedUserSubItems.length > 0
+            ? roleBasedUserSubItems
+            : item.subItems || [];
+        configuredSubItems
+          .filter((sub) => canAccessMenuItem(sub, item))
+          .forEach((sub) => prefetch(sub.href));
+      });
+    }, [filteredItems, roleBasedUserSubItems, canAccessMenuItem, router]);
 
     return (
         <SidebarMenu>
