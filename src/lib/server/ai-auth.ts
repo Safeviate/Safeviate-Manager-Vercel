@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureCoreSchema, getBootstrapDbState } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 
 type DbUserProfile = {
@@ -27,11 +28,7 @@ const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
 export async function authenticateAiRequest() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
-
-  const userTableRows = await prisma.$queryRawUnsafe<{ exists: string | null }[]>(
-    `SELECT to_regclass('public.users') AS exists`
-  ).catch(() => []);
-  const bootstrapMode = !Boolean(userTableRows[0]?.exists);
+  const { bootstrapMode } = await getBootstrapDbState();
 
   if (!email && !bootstrapMode) {
     return { ok: false as const, status: 401, error: 'You must be signed in to use AI tools.' };
@@ -54,6 +51,8 @@ export async function authenticateAiRequest() {
       effectivePermissions: new Set(['*']),
     };
   }
+
+  await ensureCoreSchema();
 
   await prisma.tenant.upsert({
     where: { id: 'safeviate' },

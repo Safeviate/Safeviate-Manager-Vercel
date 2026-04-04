@@ -3,6 +3,7 @@ import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
 import { getPublicBaseUrl } from '@/lib/server/site-url';
 import { prisma } from '@/lib/prisma';
+import { ensureCoreSchema } from '@/lib/server/bootstrap-db';
 import { hash } from 'bcryptjs';
 
 export async function POST(request: Request) {
@@ -31,6 +32,8 @@ export async function POST(request: Request) {
     if (!tenantId || !email || !firstName || !lastName || !role) {
       return NextResponse.json({ error: 'Missing required user information.' }, { status: 400 });
     }
+
+    await ensureCoreSchema();
 
     await prisma.tenant.upsert({
       where: { id: tenantId },
