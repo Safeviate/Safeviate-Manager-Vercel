@@ -176,10 +176,10 @@ export default function AccountingPage() {
                 <Calculator className="h-5 w-5 text-primary" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Pending Billing</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Pending Billing</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-foreground">${totalBillable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">{enrichedData.unbilled.length} FLIGHTS</span>
+                  <span className="text-[10px] font-bold uppercase text-foreground/75">{enrichedData.unbilled.length} FLIGHTS</span>
                 </div>
               </div>
             </div>
@@ -189,10 +189,10 @@ export default function AccountingPage() {
                 <Receipt className="h-5 w-5 text-green-600" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Sync History</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Sync History</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-black text-foreground">{enrichedData.exported.length}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">SUCCESSFUL</span>
+                  <span className="text-[10px] font-bold uppercase text-foreground/75">SUCCESSFUL</span>
                 </div>
               </div>
             </div>
