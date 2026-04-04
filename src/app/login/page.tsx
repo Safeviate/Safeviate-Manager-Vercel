@@ -68,13 +68,13 @@ export default function LoginPage() {
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4"
       style={{ backgroundImage: "url('https://images.unsplash.com/photo-1597571063304-81f081944ee8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
     >
-      <div className="absolute inset-0 bg-slate-950/45" />
+      <div className="absolute inset-0 bg-slate-950/60" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(15,118,110,0.22),transparent_28%)]" />
 
       <Card className="relative w-full max-w-md border-white/20 bg-white/10 shadow-2xl backdrop-blur-md">
         <CardHeader className="text-center">
           <CardTitle className="text-white">Safeviate Manager</CardTitle>
-          <CardDescription className="text-center text-white/85">Secure access to organization portal.</CardDescription>
+          <CardDescription className="text-center text-white">Secure access to organization portal.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

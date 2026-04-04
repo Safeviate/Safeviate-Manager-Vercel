@@ -267,6 +267,7 @@ const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSha
     return (
         <SidebarGroup>
           <SidebarMenu>
+            <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
@@ -274,7 +275,10 @@ const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSha
                     className="w-full h-auto py-2 justify-start items-center gap-3"
                   >
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={`https://picsum.photos/seed/${userDisplayName}/100/100`} />
+                      <AvatarImage
+                        src={`https://picsum.photos/seed/${userDisplayName}/100/100`}
+                        alt={`${userDisplayName} profile avatar`}
+                      />
                       <AvatarFallback>{userFallback}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col gap-0.5 items-start overflow-hidden group-data-[collapsible=icon]:hidden">
@@ -304,6 +308,7 @@ const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSha
                   </DropdownMenuLabel>
                 </DropdownMenuContent>
               </DropdownMenu>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
     )
