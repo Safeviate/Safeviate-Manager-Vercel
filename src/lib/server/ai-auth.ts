@@ -1,7 +1,5 @@
 import { authOptions } from '@/auth';
-import { getDb } from '@/db';
-import { roles, tenants, users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 
 type DbUserProfile = {
@@ -43,16 +41,21 @@ export async function authenticateAiRequest() {
     };
   }
 
-  const db = getDb();
-  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
+  await prisma.tenant.upsert({
+    where: { id: 'safeviate' },
+    update: { updatedAt: new Date() },
+    create: { id: 'safeviate', name: 'Safeviate' },
+  });
 
-  const [currentUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const currentUser = await prisma.user.findUnique({
+    where: { email },
+  });
 
   if (!currentUser) {
     return { ok: false as const, status: 403, error: 'No profile is linked to this account.' };
   }
 
-  const roleRows = await db.select().from(roles).where(eq(roles.tenantId, currentUser.tenantId));
+  const roleRows = await prisma.role.findMany({ where: { tenantId: currentUser.tenantId } });
   const roleRow = roleRows.find((role) => role.id === currentUser.role) || roleRows[0] || null;
   const inheritedPermissions = Array.isArray(roleRow?.permissions) ? (roleRow.permissions as string[]) : [];
 

@@ -2,10 +2,8 @@ import { NextResponse } from 'next/server';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
 import { getPublicBaseUrl } from '@/lib/server/site-url';
-import { getDb } from '@/db';
-import { personnel, tenants, users } from '@/db/schema';
+import { prisma } from '@/lib/prisma';
 import { hash } from 'bcryptjs';
-import { eq } from 'drizzle-orm';
 
 export async function POST(request: Request) {
   try {
@@ -34,26 +32,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required user information.' }, { status: 400 });
     }
 
-    const db = getDb();
-    await db.insert(tenants).values({ id: tenantId, name: tenantId, updatedAt: new Date() }).onConflictDoNothing();
+    await prisma.tenant.upsert({
+      where: { id: tenantId },
+      update: { updatedAt: new Date() },
+      create: { id: tenantId, name: tenantId },
+    });
 
     const uid = `user_${email.replace(/[^a-z0-9]+/g, '_')}`;
     const tempPassword = password;
     const passwordHash = await hash(tempPassword, 12);
 
-    await db.insert(users).values({
-      id: uid,
-      tenantId,
-      email,
-      passwordHash,
-      firstName,
-      lastName,
-      role,
-      profilePath: `tenants/${tenantId}/personnel/${uid}`,
-      updatedAt: new Date(),
-    }).onConflictDoUpdate({
-      target: users.email,
-      set: {
+    await prisma.user.upsert({
+      where: { email },
+      update: {
         id: uid,
         tenantId,
         passwordHash,
@@ -63,24 +54,21 @@ export async function POST(request: Request) {
         profilePath: `tenants/${tenantId}/personnel/${uid}`,
         updatedAt: new Date(),
       },
+      create: {
+        id: uid,
+        tenantId,
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        role,
+        profilePath: `tenants/${tenantId}/personnel/${uid}`,
+      },
     });
 
-    await db.insert(personnel).values({
-      id: uid,
-      tenantId,
-      userNumber: userNumber || null,
-      firstName,
-      lastName,
-      email,
-      department: department || null,
-      role,
-      permissions: [],
-      accessOverrides: null,
-      userType: userType || 'Personnel',
-      updatedAt: new Date(),
-    }).onConflictDoUpdate({
-      target: personnel.id,
-      set: {
+    await prisma.personnel.upsert({
+      where: { id: uid },
+      update: {
         tenantId,
         userNumber: userNumber || null,
         firstName,
@@ -92,6 +80,19 @@ export async function POST(request: Request) {
         accessOverrides: null,
         userType: userType || 'Personnel',
         updatedAt: new Date(),
+      },
+      create: {
+        id: uid,
+        tenantId,
+        userNumber: userNumber || null,
+        firstName,
+        lastName,
+        email,
+        department: department || null,
+        role,
+        permissions: [],
+        accessOverrides: null,
+        userType: userType || 'Personnel',
       },
     });
 

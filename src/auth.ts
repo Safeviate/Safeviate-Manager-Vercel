@@ -1,9 +1,7 @@
 import NextAuth, { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
-import { getDb } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { prisma } from '@/lib/prisma';
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
@@ -35,8 +33,7 @@ export const authOptions: NextAuthOptions = {
           seedPasswordConfigured: Boolean(seedPassword),
         });
 
-        const db = getDb();
-        const [dbUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        const dbUser = await prisma.user.findUnique({ where: { email } });
 
         if (dbUser?.passwordHash) {
           const ok = await compare(password, dbUser.passwordHash);
