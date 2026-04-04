@@ -26,7 +26,7 @@ interface StudentsTableProps {
 export function StudentsTable({ data, tenantId }: StudentsTableProps) {
   if (data.length === 0) {
     return (
-        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
+        <div className="text-center h-24 flex items-center justify-center text-foreground/80">
             No students found.
         </div>
     );

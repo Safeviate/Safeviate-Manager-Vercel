@@ -59,7 +59,7 @@ export default function RolesPage() {
           {isMobile ? (
             <div className="space-y-0">
               {isLoading ? (
-                <div className="p-6 text-center text-sm text-muted-foreground">Loading roles...</div>
+                <div className="p-6 text-center text-sm text-foreground/80">Loading roles...</div>
               ) : error ? (
                 <div className="p-6 text-center font-semibold text-destructive">{error.message}</div>
               ) : roles && roles.length > 0 ? (
@@ -84,7 +84,7 @@ export default function RolesPage() {
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-sm text-muted-foreground">No roles found.</div>
+                <div className="p-6 text-center text-sm text-foreground/80">No roles found.</div>
               )}
             </div>
           ) : (
@@ -99,7 +99,7 @@ export default function RolesPage() {
               <TableBody>
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={3} className="h-24 text-center text-foreground/80">
                       Loading roles...
                     </TableCell>
                   </TableRow>
@@ -126,7 +126,7 @@ export default function RolesPage() {
                 )}
                 {!isLoading && !error && (!roles || roles.length === 0) && (
                    <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={3} className="h-24 text-center text-foreground/80">
                           No roles found.
                       </TableCell>
                    </TableRow>

@@ -19,7 +19,7 @@ interface PilotsTableProps {
 export function PilotsTable({ data, tenantId }: PilotsTableProps) {
   if (data.length === 0) {
     return (
-        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
+        <div className="text-center h-24 flex items-center justify-center text-foreground/80">
             No users found in this section.
         </div>
     );

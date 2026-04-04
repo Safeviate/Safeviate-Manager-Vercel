@@ -29,7 +29,7 @@ interface ExternalUsersTableProps {
 export function ExternalUsersTable({ data, orgMap, rolesMap, tenantId }: ExternalUsersTableProps) {
   if (data.length === 0) {
     return (
-      <div className="text-center h-24 flex items-center justify-center text-muted-foreground italic uppercase font-bold tracking-widest bg-muted/5">
+      <div className="text-center h-24 flex items-center justify-center text-foreground/80 italic uppercase font-bold tracking-widest bg-muted/5">
         No external users found.
       </div>
     );
