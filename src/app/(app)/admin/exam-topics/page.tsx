@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { PlusCircle, Pencil, Trash2, BookOpen, Save, X, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DeleteActionButton } from '@/components/record-action-buttons';
@@ -146,7 +146,7 @@ export default function ExamTopicsPage() {
         <div className="shrink-0 border-b bg-muted/5 p-4 lg:p-6 space-y-6">
             <Alert className="bg-primary/5 border-primary/20">
                 <AlertTriangle className="h-4 w-4 text-primary" />
-                <AlertTitle className="text-[10px] font-black uppercase tracking-widest text-primary">Synchronization Note</AlertTitle>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Synchronization Note</p>
                 <AlertDescription className="text-xs font-medium text-muted-foreground italic">
                 Renaming a topic automatically updates all associated questions to maintain data integrity.
                 </AlertDescription>
@@ -191,10 +191,10 @@ export default function ExamTopicsPage() {
                         disabled={isSyncing}
                       />
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" className="h-10 w-10 text-emerald-600 hover:bg-emerald-50" onClick={handleSaveEdit} disabled={isSyncing}>
+                        <Button size="icon" variant="ghost" aria-label="Save topic name" className="h-10 w-10 text-emerald-600 hover:bg-emerald-50" onClick={handleSaveEdit} disabled={isSyncing}>
                             {isSyncing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-10 w-10 text-muted-foreground hover:bg-muted/10" onClick={() => setEditingIndex(null)} disabled={isSyncing}>
+                        <Button size="icon" variant="ghost" aria-label="Cancel topic edit" className="h-10 w-10 text-muted-foreground hover:bg-muted/10" onClick={() => setEditingIndex(null)} disabled={isSyncing}>
                             <X className="h-5 w-5" />
                         </Button>
                       </div>
@@ -208,7 +208,7 @@ export default function ExamTopicsPage() {
                         <span className="font-black text-sm uppercase text-foreground">{topic}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 border border-transparent hover:border-slate-200" onClick={() => handleStartEdit(idx, topic)}>
+                        <Button variant="ghost" size="icon" aria-label={`Edit topic ${topic}`} className="h-9 w-9 border border-transparent hover:border-slate-200" onClick={() => handleStartEdit(idx, topic)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <DeleteActionButton
