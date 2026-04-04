@@ -14,18 +14,22 @@ interface WelcomeEmailOptions {
  */
 export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }: WelcomeEmailOptions) {
   const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.MAIL_FROM;
+  const fromEmail =
+    process.env.MAIL_FROM ||
+    process.env.RESEND_FROM ||
+    process.env.EMAIL_FROM ||
+    'onboarding@resend.dev';
 
   if (!apiKey) {
     console.warn(`[MAIL] Skipping dispatch to ${email}. RESEND_API_KEY is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
-    return { success: false, error: 'API Key missing' };
+    return { success: false, error: 'RESEND_API_KEY missing' };
   }
 
   if (!fromEmail) {
     console.warn(`[MAIL] Skipping dispatch to ${email}. MAIL_FROM is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
-    return { success: false, error: 'MAIL_FROM missing' };
+    return { success: false, error: 'Sender email missing (set MAIL_FROM or RESEND_FROM)' };
   }
 
   const html = `
