@@ -24,7 +24,6 @@ type UserProfile = Personnel | PilotProfile;
 function UserProfileContent({ params }: UserProfilePageProps) {
     const resolvedParams = use(params);
     const searchParams = useSearchParams();
-    const userType = searchParams.get('type') || 'Personnel';
     const { hasPermission } = usePermissions();
     const isMobile = useIsMobile();
     const { tenantId } = useUserProfile();
@@ -66,23 +65,6 @@ function UserProfileContent({ params }: UserProfilePageProps) {
 
         try {
             void load();
-            const collectionName = userType === 'Instructor' ? 'instructors' :
-                                   userType === 'Student' ? 'students' :
-                                   userType === 'Private Pilot' ? 'private-pilots' : 'personnel';
-            
-            const storedUser = localStorage.getItem(`safeviate.${collectionName}`);
-            if (storedUser) {
-                const arr = JSON.parse(storedUser) as UserProfile[];
-                const found = arr.find(u => u.id === userId);
-                if (found) setUser(found);
-            }
-
-            const storedRoles = localStorage.getItem('safeviate.roles');
-            if (storedRoles) setRoles(JSON.parse(storedRoles));
-
-            const storedDepts = localStorage.getItem('safeviate.departments');
-            if (storedDepts) setDepartments(JSON.parse(storedDepts));
-
             const storedLogbooks = localStorage.getItem('safeviate.logbook-templates');
             if (storedLogbooks) setLogbookTemplates(JSON.parse(storedLogbooks));
         } catch {
@@ -91,7 +73,7 @@ function UserProfileContent({ params }: UserProfilePageProps) {
         return () => {
             cancelled = true;
         };
-    }, [userType, userId]);
+    }, [userId]);
 
     const currentRole = useMemo(() => {
         if (user && 'role' in user) {
