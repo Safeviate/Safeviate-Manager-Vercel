@@ -4,11 +4,12 @@ import { sendWelcomeEmail } from '@/lib/server/mail';
 import { getPublicBaseUrl } from '@/lib/server/site-url';
 import { prisma } from '@/lib/prisma';
 import { hash } from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
     // 1. Authenticate the administrator
-    const authResult = await authenticateAiRequest(request);
+    const authResult = await authenticateAiRequest();
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
         department: department || null,
         role,
         permissions: [],
-        accessOverrides: null,
+        accessOverrides: Prisma.JsonNull,
         userType: userType || 'Personnel',
         updatedAt: new Date(),
       },
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
         department: department || null,
         role,
         permissions: [],
-        accessOverrides: null,
+        accessOverrides: Prisma.JsonNull,
         userType: userType || 'Personnel',
       },
     });

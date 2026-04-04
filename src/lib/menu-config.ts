@@ -305,28 +305,23 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'users-view',
     subItems: [
       {
-        href: '/users/external',
-        label: 'External',
-        permissionId: 'users-view',
-      },
-      {
-        href: '/users/instructors',
-        label: 'Instructors',
-        permissionId: 'users-view',
-      },
-      {
         href: '/users/personnel',
-        label: 'Personnel',
+        label: 'All Users',
         permissionId: 'users-view',
       },
       {
-        href: '/users/private-pilots',
-        label: 'Private Pilots',
+        href: '/users/administration',
+        label: 'Administration',
         permissionId: 'users-view',
       },
       {
-        href: '/users/students',
-        label: 'Students',
+        href: '/users/training',
+        label: 'Training',
+        permissionId: 'users-view',
+      },
+      {
+        href: '/users/external-instructors',
+        label: 'External Instructors',
         permissionId: 'users-view',
       },
     ],

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Download, 
@@ -20,8 +21,7 @@ import {
     Archive,
     History
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { formatBytes } from '@/lib/utils'; // Assuming this exists or I'll implement locally
+import { cn, formatBytes } from '@/lib/utils';
 
 export default function DataPortabilityPage() {
   const { toast } = useToast();

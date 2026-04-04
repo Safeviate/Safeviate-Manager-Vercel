@@ -101,6 +101,8 @@ export type Personnel = {
 type PersonnelDirectoryPageProps = {
   selectedDepartmentId?: string | null;
   selectedRoleId?: string | null;
+  selectedUserType?: string | null;
+  externalOnly?: boolean;
   title?: string;
   description?: string;
   defaultDepartmentId?: string | null;
@@ -110,6 +112,8 @@ type PersonnelDirectoryPageProps = {
 export function PersonnelDirectoryPage({
   selectedDepartmentId = null,
   selectedRoleId = null,
+  selectedUserType = null,
+  externalOnly = false,
   title = 'Personnel Directory',
   description,
   defaultDepartmentId = null,
@@ -197,6 +201,16 @@ export function PersonnelDirectoryPage({
   const isTrainingAlias = normalizedSelectedDepartment === 'training';
 
   const filteredPersonnel = useMemo(() => {
+    let result = [...personnel];
+
+    if (externalOnly) {
+      result = result.filter(u => u.organizationId && u.organizationId !== 'internal');
+    }
+
+    if (selectedUserType) {
+      result = result.filter(u => u.userType === selectedUserType);
+    }
+
     if (selectedDepartmentId) {
       const departmentMatch = departments.find(
         (department) =>
@@ -204,35 +218,42 @@ export function PersonnelDirectoryPage({
           department.name.toLowerCase() === normalizedSelectedDepartment ||
           (isTrainingAlias && department.name.toLowerCase().includes('training'))
       );
-      if (!departmentMatch) return personnel;
-      return personnel.filter(
-        (person) =>
-          person.department === departmentMatch.id ||
-          person.department?.toLowerCase() === departmentMatch.name.toLowerCase() ||
-          (isTrainingAlias && (person.department || '').toLowerCase().includes('training'))
-      );
+      if (departmentMatch) {
+         result = result.filter(
+            (person) =>
+              person.department === departmentMatch.id ||
+              person.department?.toLowerCase() === departmentMatch.name.toLowerCase() ||
+              (isTrainingAlias && (person.department || '').toLowerCase().includes('training'))
+          );
+      }
     }
 
-    if (!selectedRoleId) return personnel;
-    const roleMatch = roles.find(
-      (role) =>
-        role.id === selectedRoleId ||
-        role.name.toLowerCase() === normalizedSelectedRole ||
-        (isAdminAlias && role.name.toLowerCase().includes('admin'))
-    );
-    if (!roleMatch) return personnel;
-    return personnel.filter(
-      (person) =>
-        person.role === roleMatch.id ||
-        person.role.toLowerCase() === roleMatch.name.toLowerCase() ||
-        (isAdminAlias && person.role.toLowerCase().includes('admin'))
-    );
+    if (selectedRoleId) {
+      const roleMatch = roles.find(
+        (role) =>
+          role.id === selectedRoleId ||
+          role.name.toLowerCase() === normalizedSelectedRole ||
+          (isAdminAlias && role.name.toLowerCase().includes('admin'))
+      );
+      if (roleMatch) {
+        result = result.filter(
+          (person) =>
+            person.role === roleMatch.id ||
+            person.role.toLowerCase() === roleMatch.name.toLowerCase() ||
+            (isAdminAlias && person.role.toLowerCase().includes('admin'))
+        );
+      }
+    }
+
+    return result;
   }, [
     personnel,
     departments,
     roles,
     selectedRoleId,
     selectedDepartmentId,
+    selectedUserType,
+    externalOnly,
     normalizedSelectedRole,
     normalizedSelectedDepartment,
     isAdminAlias,

@@ -38,6 +38,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { DeleteActionButton } from '@/components/record-action-buttons';
+import { cn } from '@/lib/utils';
 
 export default function ExamsPage() {
   const { toast } = useToast();

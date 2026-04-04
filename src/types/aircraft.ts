@@ -1,4 +1,5 @@
 import type { FuelType } from '@/lib/fuel';
+export type { MaintenanceLog } from './maintenance';
 
 export interface AircraftComponent {
     id: string;

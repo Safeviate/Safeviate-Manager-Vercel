@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import type { StudentProgressReport, StudentMilestoneSettings } from '@/types/training';
-import type { PilotProfile } from '../page';
+import type { PilotProfile } from '../personnel-directory-page';
 import type { Booking } from '@/types/booking';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';

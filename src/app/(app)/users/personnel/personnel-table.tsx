@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { Personnel } from './page';
+import type { Personnel } from './personnel-directory-page';
 import { PersonnelActions } from './personnel-actions';
 import { ShieldAlert, Mail, User as UserIcon, Building2, ArrowRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';

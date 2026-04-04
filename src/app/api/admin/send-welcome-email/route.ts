@@ -5,7 +5,7 @@ import { getPublicBaseUrl } from '@/lib/server/site-url';
 
 export async function POST(request: Request) {
   try {
-    const authResult = await authenticateAiRequest(request);
+    const authResult = await authenticateAiRequest();
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }

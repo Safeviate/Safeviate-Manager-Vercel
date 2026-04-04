@@ -82,8 +82,6 @@ export default function ExternalCompaniesPage() {
                 name,
                 contactEmail: email,
                 address,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
             };
             nextOrgs = [...orgs, newOrg];
         }

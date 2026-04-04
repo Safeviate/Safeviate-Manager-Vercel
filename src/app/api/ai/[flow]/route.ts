@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { flowRegistry, type RegisteredFlowName } from '@/ai/flow-registry';
 import { authenticateAiRequest, isAuthorizedForAiFlow } from '@/lib/server/ai-auth';
 
@@ -11,7 +11,7 @@ type RouteContext = {
 };
 
 // Handle OPTIONS requests for CORS preflight
-export async function OPTIONS(request: Request) {
+export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('origin');
 
   // In a production environment, you should lock this down to your specific frontend domain
@@ -27,7 +27,7 @@ export async function OPTIONS(request: Request) {
   });
 }
 
-export async function GET(_: Request, { params }: RouteContext) {
+export async function GET(_: NextRequest, { params }: RouteContext) {
   return new NextResponse(
     JSON.stringify({ ok: false, error: 'Method not allowed.' }),
     { 
@@ -37,7 +37,7 @@ export async function GET(_: Request, { params }: RouteContext) {
   );
 }
 
-export async function POST(request: Request, { params }: RouteContext) {
+export async function POST(request: NextRequest, { params }: RouteContext) {
   const origin = request.headers.get('origin');
   // In a production environment, you should lock this down to your specific frontend domain
   const allowedOrigin = origin || '*'; 
@@ -58,7 +58,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
-  const authResult = await authenticateAiRequest(request);
+  const authResult = await authenticateAiRequest();
   if (!authResult.ok) {
     return new NextResponse(
       JSON.stringify({ ok: false, error: authResult.error }),

@@ -36,7 +36,7 @@ export async function authenticateAiRequest() {
     return {
       ok: true as const,
       tenantId: 'safeviate',
-      userProfile: { id: session.user?.id || email, role: 'developer', permissions: ['*'] },
+      userProfile: { id: session?.user?.id || email, role: 'developer', permissions: ['*'] },
       effectivePermissions: new Set(['*']),
     };
   }

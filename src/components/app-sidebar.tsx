@@ -178,8 +178,13 @@ const SidebarItems = () => {
             {filteredItems.map((item, index) => {
                 const Icon = item.icon;
                 const configuredSubItems =
-                  item.href === '/users' && departmentBasedUserSubItems.length > 0
-                    ? departmentBasedUserSubItems
+                  item.href === '/users'
+                    ? [
+                        ...(item.subItems || []),
+                        ...departmentBasedUserSubItems.filter(di => 
+                          !(item.subItems || []).some(si => si.href === di.href || si.label === di.label)
+                        )
+                      ]
                     : item.subItems || [];
                 const subItems = configuredSubItems.filter((sub) => canAccessMenuItem(sub, item));
                 const activeSubItem = subItems.find((sub) => pathname === sub.href || pathname === sub.href.split('?')[0]);
