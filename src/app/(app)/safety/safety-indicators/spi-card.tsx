@@ -117,7 +117,7 @@ export function SPICard({ spi, onEdit, onDelete, reports, bookings, onMonthDataS
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0">
+                                <Button variant="ghost" size="icon" className="w-8 h-8 flex-shrink-0" aria-label={`Open actions menu for ${spi.name}`}>
                                     <MoreVertical className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -159,7 +159,7 @@ export function SPICard({ spi, onEdit, onDelete, reports, bookings, onMonthDataS
                                         )}
                                         onClick={() => handleMonthClick(index, dataPoint.label, dataPoint.value)}
                                     >
-                                        <p className="text-xs font-medium opacity-80">{dataPoint.label.split(' ')[0]}</p>
+                                        <p className="text-xs font-semibold">{dataPoint.label.split(' ')[0]}</p>
                                         <p className="text-lg font-bold">{dataPoint.value}</p>
                                     </button>
                                 ))}
