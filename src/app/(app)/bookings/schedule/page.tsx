@@ -208,9 +208,19 @@ export default function SchedulePage() {
     const currentTime = new Date();
     
     if (isSameDay(selectedDate, currentTime) && hour < getHours(now)) {
+        toast({
+            variant: 'destructive',
+            title: 'Slot Unavailable',
+            description: 'Past time slots cannot be used for new bookings.',
+        });
         return; 
     }
     if (isBefore(selectedDate, startOfDay(currentTime))) {
+        toast({
+            variant: 'destructive',
+            title: 'Date Unavailable',
+            description: 'You cannot create a new booking on a past date.',
+        });
         return;
     }
 
@@ -335,7 +345,7 @@ export default function SchedulePage() {
                                                         !canManageSchedule && !isPast && "cursor-default"
                                                     )} 
                                                     style={{ height: `${HOUR_HEIGHT_PX}px` }}
-                                                    onClick={() => !isPast && handleSlotClick(ac, hour)}
+                                                    onClick={() => handleSlotClick(ac, hour)}
                                                 />
                                             )
                                         })}
