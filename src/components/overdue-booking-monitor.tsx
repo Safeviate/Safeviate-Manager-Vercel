@@ -84,10 +84,10 @@ export function OverdueBookingMonitor() {
 
         <div className="bg-muted/50 p-4 rounded-lg border space-y-3">
           <div className="flex items-center gap-3">
-            <PlaneLanding className="h-5 w-5 text-muted-foreground" />
+            <PlaneLanding className="h-5 w-5 text-foreground/70" />
             <div className="text-sm">
               <p className="font-bold">Booking #{activeAlert.bookingNumber}</p>
-              <p className="text-xs text-muted-foreground">{activeAlert.type}</p>
+              <p className="text-xs text-foreground/75">{activeAlert.type}</p>
             </div>
           </div>
         </div>

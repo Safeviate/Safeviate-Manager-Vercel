@@ -91,12 +91,13 @@ export default function OverdueSettingsPage() {
           <div className="flex items-center justify-between space-x-4 rounded-xl border border-primary/10 p-5 bg-primary/5">
             <div className="space-y-1">
               <Label htmlFor="monitor-toggle" className="text-[10px] font-black uppercase text-foreground tracking-widest">Enable Safety Monitor</Label>
-              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tight opacity-75">
+              <p className="text-[9px] text-foreground/75 font-black uppercase tracking-tight">
                 Activate the global alert for flights past their end time.
               </p>
             </div>
             <Switch
               id="monitor-toggle"
+              aria-label={isEnabled ? 'Disable safety monitor' : 'Enable safety monitor'}
               checked={isEnabled}
               onCheckedChange={setIsEnabled}
             />
@@ -104,7 +105,7 @@ export default function OverdueSettingsPage() {
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-foreground/80">
                 <Clock className="h-3.5 w-3.5" />
                 Alert Threshold (Minutes)
               </Label>
@@ -115,13 +116,13 @@ export default function OverdueSettingsPage() {
                 placeholder="e.g., 5"
                 className="h-12 bg-background font-black text-lg border-2"
               />
-              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tight opacity-75 italic leading-relaxed">
+              <p className="text-[9px] text-foreground/75 font-black uppercase tracking-tight italic leading-relaxed">
                 The number of minutes to wait after the scheduled end time before showing the alert.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-foreground/80">
                 <Phone className="h-3.5 w-3.5" />
                 Operations Fallback Number
               </Label>
@@ -132,7 +133,7 @@ export default function OverdueSettingsPage() {
                 placeholder="e.g., 555-0199"
                 className="h-12 bg-background font-black text-lg border-2"
               />
-              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tight opacity-75 italic leading-relaxed">
+              <p className="text-[9px] text-foreground/75 font-black uppercase tracking-tight italic leading-relaxed">
                 This number is displayed only if no specific contact numbers are found in the instructor or student profiles.
               </p>
             </div>
