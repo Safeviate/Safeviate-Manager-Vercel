@@ -336,7 +336,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {Object.entries(buttonTheme).map(([name, value]) => (
                         <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
                             <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                         </div>
                         ))}
@@ -348,7 +348,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {Object.entries(headerTheme).map(([name, value]) => (
                         <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
                             <Input id={name} type="color" value={value} onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                         </div>
                         ))}
@@ -360,7 +360,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     <div className="grid grid-cols-2 gap-4">
                         {Object.entries(swimlaneTheme).map(([name, value]) => (
                         <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
                             <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                         </div>
                         ))}
@@ -372,7 +372,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {Object.entries(matrixTheme).map(([name, value]) => (
                         <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
                             <Input id={name} type="color" value={value} onChange={(e) => setMatrixThemeValue(name as keyof typeof matrixTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                         </div>
                         ))}
@@ -384,7 +384,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {Object.entries(cardTheme).map(([name, value]) => (
                         <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
                             <Input id={name} type="color" value={value} onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                         </div>
                         ))}
@@ -396,7 +396,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {[...Object.entries(popoverTheme), ...Object.entries(sidebarTheme)].map(([name, value]) => (
                         <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-muted-foreground">{formatLabel(name)}</Label>
+                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
                             <Input id={name} type="color" value={value} onChange={(e) => (popoverTheme as any)[name] !== undefined ? setPopoverThemeValue(name as any, e.target.value) : setSidebarThemeValue(name as any, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                         </div>
                         ))}
