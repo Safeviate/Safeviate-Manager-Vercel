@@ -18,6 +18,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
@@ -241,7 +242,8 @@ export default function SchedulePage() {
     }
   };
   
-  const extraLanes = ['', '', ''];
+  const hasAircraft = (aircraft || []).length > 0;
+  const extraLanes = hasAircraft ? ['', '', ''] : [];
 
   if (isLoading) {
     return <div className="max-w-[1200px] mx-auto w-full px-1"><Skeleton className="h-[600px] w-full" /></div>;
@@ -282,6 +284,17 @@ export default function SchedulePage() {
                 }
             />
             <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
+                {!hasAircraft ? (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                        <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">No Aircraft Configured</p>
+                        <p className="max-w-md text-sm text-muted-foreground">
+                            Add at least one aircraft before creating bookings from the daily schedule.
+                        </p>
+                        <Button asChild size="sm" className="font-black uppercase text-xs">
+                            <Link href="/assets/aircraft/new">Add Aircraft</Link>
+                        </Button>
+                    </div>
+                ) : (
                 <div className="w-full flex-grow overflow-auto bg-card custom-scrollbar" style={{ height: 'calc(100vh - 220px)' }}>
                     <div className="min-w-full w-fit">
                         
@@ -391,6 +404,7 @@ export default function SchedulePage() {
                         </div>
                     </div>
                 </div>
+                )}
             </CardContent>
         </Card>
 
