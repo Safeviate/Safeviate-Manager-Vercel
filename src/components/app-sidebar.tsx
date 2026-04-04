@@ -20,15 +20,14 @@ import {
   SidebarMobileContent,
 } from '@/components/ui/sidebar';
 import { Plane, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   menuConfig,
 } from '@/lib/menu-config';
-import { useAuth } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { signOut, useSession } from 'next-auth/react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +41,6 @@ import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { usePermissions } from '@/hooks/use-permissions';
-import { firebaseConfig } from '@/firebase/config';
 
 const LAST_SUBMENU_STORAGE_KEY = 'safeviate:last-submenu-by-parent';
 
@@ -206,17 +204,12 @@ const SidebarItems = () => {
 }
 
 const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSharedState, 'userDisplayName' | 'userFallback'>) => {
-    const auth = useAuth();
-    const router = useRouter();
+    const { data: session } = useSession();
     const { setOpenMobile } = useSidebar();
 
     const handleSignOut = () => {
-      if (auth) {
-        signOut(auth);
-      }
-      localStorage.removeItem('impersonatedUser');
+      void signOut({ callbackUrl: '/login' });
       setOpenMobile(false);
-      router.push('/login');
     };
     
     return (
@@ -237,7 +230,7 @@ const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSha
                         {userDisplayName}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-mono truncate w-full opacity-60">
-                        {firebaseConfig.projectId}
+                        {session?.user?.email ?? 'Signed in'}
                       </span>
                     </div>
                   </SidebarMenuButton>
@@ -255,7 +248,7 @@ const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSha
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-[9px] font-mono opacity-50 uppercase tracking-tighter">
-                    Project: {firebaseConfig.projectId}
+                    Project: Vercel
                   </DropdownMenuLabel>
                 </DropdownMenuContent>
               </DropdownMenu>

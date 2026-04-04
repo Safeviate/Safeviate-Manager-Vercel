@@ -1,10 +1,7 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
-import { doc, setDoc, collection } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload, Library, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -21,7 +18,6 @@ import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, g
 import type { Aircraft, AircraftModelProfile } from '@/types/aircraft';
 import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
@@ -50,7 +46,6 @@ const generateNiceTicks = (min: number | string, max: number | string, stepCount
 };
 
 const formatLitres = (gallons: number) => gallonsToLitres(gallons).toFixed(1);
-const formatKilograms = (pounds: number) => poundsToKilograms(pounds).toFixed(1);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const normalizeFuelStation = (station: any) => {
   if (station?.type !== 'fuel') return station;
@@ -83,16 +78,13 @@ const serializeStation = (station: any) => {
 };
 
 const WBCalculator = () => {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { tenantId } = useUserProfile();
 
-  const aircraftsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftsQuery);
-
-  const templatesQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/massAndBalance`) : null), [firestore, tenantId]);
-  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<AircraftModelProfile>(templatesQuery);
+  const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [savedTemplates, setSavedTemplates] = useState<AircraftModelProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -116,6 +108,31 @@ const WBCalculator = () => {
   const [isLoadAircraftDialogOpen, setIsLoadAircraftDialogOpen] = useState(false);
   const [isLoadTemplateDialogOpen, setIsLoadTemplateDialogOpen] = useState(false);
   const [loadedAircraft, setLoadedAircraft] = useState<Aircraft | null>(null);
+
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedAircrafts = localStorage.getItem('safeviate.aircrafts');
+        const storedTemplates = localStorage.getItem('safeviate.mass-and-balance-templates');
+        
+        if (storedAircrafts) setAircrafts(JSON.parse(storedAircrafts));
+        if (storedTemplates) setSavedTemplates(JSON.parse(storedTemplates));
+    } catch (e) {
+        console.error("Failed to load M&B data", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    window.addEventListener('safeviate-aircrafts-updated', loadData);
+    window.addEventListener('safeviate-mb-templates-updated', loadData);
+    return () => {
+        window.removeEventListener('safeviate-aircrafts-updated', loadData);
+        window.removeEventListener('safeviate-mb-templates-updated', loadData);
+    };
+  }, [loadData]);
 
   useEffect(() => {
     let totalMom = parseFloat(String(basicEmpty.moment)) || 0;
@@ -204,14 +221,22 @@ const WBCalculator = () => {
   };
 
   const saveAsTemplate = async () => {
-    if (!firestore || !tenantId || !templateName.trim()) return;
+    if (!templateName.trim()) return;
     try {
       const id = templateName.trim().toLowerCase().replace(/\s+/g, '-');
-      await setDoc(doc(firestore, "tenants", tenantId, "massAndBalance", id), {
+      const newTemplate: AircraftModelProfile = {
         id, profileName: templateName.trim(), emptyWeight: basicEmpty.weight, emptyWeightMoment: basicEmpty.moment,
         xMin: graphConfig.xMin, xMax: graphConfig.xMax, yMin: graphConfig.yMin, yMax: graphConfig.yMax,
-        cgEnvelope: graphConfig.envelope, stations: stations.map(serializeStation)
-      });
+        cgEnvelope: graphConfig.envelope.map(p => ({ x: p.x, y: p.y })), stations: stations.map(serializeStation)
+      };
+      
+      const stored = localStorage.getItem('safeviate.mass-and-balance-templates');
+      const templates = stored ? JSON.parse(stored) as AircraftModelProfile[] : [];
+      const nextTemplates = [...templates.filter(t => t.id !== id), newTemplate];
+      
+      localStorage.setItem('safeviate.mass-and-balance-templates', JSON.stringify(nextTemplates));
+      window.dispatchEvent(new Event('safeviate-mb-templates-updated'));
+      
       toast({ title: 'Template Saved' });
       setTemplateName('');
       setIsSaveTemplateDialogOpen(false);
@@ -219,13 +244,31 @@ const WBCalculator = () => {
   };
 
   const handleSaveToAircraft = (aircraftId: string) => {
-    if (!firestore || !tenantId) return;
-    updateDocumentNonBlocking(doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId), {
-      emptyWeight: basicEmpty.weight, emptyWeightMoment: basicEmpty.moment, maxTakeoffWeight: graphConfig.yMax,
-      maxLandingWeight: graphConfig.yMax, cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
-      stations: stations.map(serializeStation),
-    });
-    toast({ title: 'Saved to Aircraft' });
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        if (stored) {
+            const acs = JSON.parse(stored) as Aircraft[];
+            const updatedAcs = acs.map(ac => {
+                if (ac.id === aircraftId) {
+                    return {
+                        ...ac,
+                        emptyWeight: basicEmpty.weight,
+                        emptyWeightMoment: basicEmpty.moment,
+                        maxTakeoffWeight: graphConfig.yMax,
+                        maxLandingWeight: graphConfig.yMax,
+                        cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
+                        stations: stations.map(serializeStation),
+                    };
+                }
+                return ac;
+            });
+            localStorage.setItem('safeviate.aircrafts', JSON.stringify(updatedAcs));
+            window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+            toast({ title: 'Saved to Aircraft' });
+        }
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Save Failed' });
+    }
     setIsSaveAircraftDialogOpen(false);
   };
 

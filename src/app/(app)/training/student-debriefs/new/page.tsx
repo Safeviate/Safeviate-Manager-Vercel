@@ -2,8 +2,6 @@
 
 import { use, useState, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { doc, collection } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,7 +18,6 @@ import { PlusCircle, Trash2, ArrowLeft, Save, User } from 'lucide-react';
 import Link from 'next/link';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -43,30 +40,40 @@ function NewDebriefContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const bookingId = searchParams.get('bookingId');
-    const firestore = useFirestore();
     const { toast } = useToast();
     const tenantId = 'safeviate';
 
-    const bookingRef = useMemoFirebase(
-        () => (firestore && bookingId ? doc(firestore, `tenants/${tenantId}/bookings`, bookingId) : null),
-        [firestore, bookingId, tenantId]
-    );
+    const [booking, setBooking] = useState<Booking | null>(null);
+    const [student, setStudent] = useState<PilotProfile | null>(null);
+    const [instructor, setInstructor] = useState<PilotProfile | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const { data: booking, isLoading: isLoadingBooking } = useDoc<Booking>(bookingRef);
+    useEffect(() => {
+        try {
+            const storedBookings = localStorage.getItem('safeviate.bookings');
+            const bookings = storedBookings ? JSON.parse(storedBookings) as Booking[] : [];
+            const b = bookings.find(x => x.id === bookingId);
+            if (b) {
+                setBooking(b);
+                
+                const storedStudents = localStorage.getItem('safeviate.students');
+                const students = storedStudents ? JSON.parse(storedStudents) as PilotProfile[] : [];
+                setStudent(students.find(s => s.id === b.studentId) || null);
+                
+                const storedInstructors = localStorage.getItem('safeviate.instructors');
+                const instructors = storedInstructors ? JSON.parse(storedInstructors) as PilotProfile[] : [];
+                setInstructor(instructors.find(i => i.id === b.instructorId) || null);
+            }
+        } catch (e) {
+            console.error('Failed to load data', e);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [bookingId]);
 
-    // Fetch Student Details
-    const studentRef = useMemoFirebase(
-        () => (firestore && booking?.studentId ? doc(firestore, `tenants/${tenantId}/students`, booking.studentId) : null),
-        [firestore, booking?.studentId, tenantId]
-    );
-    const { data: student, isLoading: isLoadingStudent } = useDoc<PilotProfile>(studentRef);
-
-    // Fetch Instructor Details
-    const instructorRef = useMemoFirebase(
-        () => (firestore && booking?.instructorId ? doc(firestore, `tenants/${tenantId}/instructors`, booking.instructorId) : null),
-        [firestore, booking?.instructorId, tenantId]
-    );
-    const { data: instructor, isLoading: isLoadingInstructor } = useDoc<PilotProfile>(instructorRef);
+    const isLoadingBooking = isLoading;
+    const isLoadingStudent = isLoading;
+    const isLoadingInstructor = isLoading;
 
     const form = useForm<FormValues>({
         resolver: zodResolver(debriefSchema),
@@ -84,10 +91,11 @@ function NewDebriefContent() {
     });
 
     const onSubmit = async (values: FormValues) => {
-        if (!firestore || !booking) return;
+        if (!booking) return;
 
         const debriefData = {
             ...values,
+            id: crypto.randomUUID(),
             bookingId: booking.id,
             bookingNumber: booking.bookingNumber,
             studentId: booking.studentId,
@@ -96,8 +104,12 @@ function NewDebriefContent() {
         };
 
         try {
-            const reportsCollection = collection(firestore, `tenants/${tenantId}/student-progress-reports`);
-            addDocumentNonBlocking(reportsCollection, debriefData);
+            const storedReports = localStorage.getItem('safeviate.student-progress-reports');
+            const reports = storedReports ? JSON.parse(storedReports) : [];
+            const nextReports = [debriefData, ...reports];
+            localStorage.setItem('safeviate.student-progress-reports', JSON.stringify(nextReports));
+            
+            window.dispatchEvent(new Event('safeviate-training-updated'));
             
             toast({
                 title: 'Debrief Saved',

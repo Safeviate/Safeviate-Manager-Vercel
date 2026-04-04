@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -6,15 +5,40 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, ClipboardPaste, Wand2, Table, Trash2, PlusCircle, Save, X, GripVertical } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { 
+    Loader2, 
+    ClipboardPaste, 
+    Wand2, 
+    Table, 
+    Trash2, 
+    PlusCircle, 
+    Save, 
+    X, 
+    GripVertical, 
+    Sparkles,
+    Eye,
+    ChevronDown,
+    LayoutGrid,
+    FileType,
+    ScanLine
+} from 'lucide-react';
 import { callAiFlow } from '@/lib/ai-client';
 import type { ParseLogbookOutput, LogbookColumn } from '@/ai/flows/parse-logbook-flow';
 import Image from 'next/image';
-import { useFirestore, addDocumentNonBlocking, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription, 
+    DialogFooter, 
+    DialogTrigger, 
+    DialogClose 
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // --- Types ---
 interface HeaderCell {
@@ -114,17 +138,17 @@ const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setCo
   };
   
   const handleDragOver = (e: React.DragEvent<HTMLTableHeaderCellElement>, index: number) => {
-    e.preventDefault(); // This is necessary to allow a drop
+    e.preventDefault();
     dragOverItem.current = index;
-    e.currentTarget.classList.add('bg-primary/20', 'border-primary');
+    e.currentTarget.classList.add('bg-primary/5', 'border-primary/50');
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLTableHeaderCellElement>) => {
-    e.currentTarget.classList.remove('bg-primary/20', 'border-primary');
+    e.currentTarget.classList.remove('bg-primary/5', 'border-primary/50');
   }
 
   const handleDrop = (e: React.DragEvent<HTMLTableHeaderCellElement>) => {
-    e.currentTarget.classList.remove('bg-primary/20', 'border-primary');
+    e.currentTarget.classList.remove('bg-primary/5', 'border-primary/50');
     if (dragItem.current === null || dragOverItem.current === null) return;
     
     const newColumns = [...columns];
@@ -142,9 +166,9 @@ const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setCo
   if (!headerRows || headerRows.length === 0) return null;
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-sm text-left text-gray-500 table-fixed">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+    <div className="overflow-x-auto rounded-[2rem] border-2 border-slate-100 bg-background shadow-inner">
+      <table className="w-full text-xs text-left table-fixed border-collapse">
+        <thead className="bg-muted/5 uppercase tracking-widest text-primary">
           {headerRows.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {row.map((cell, cellIndex) => {
@@ -154,19 +178,27 @@ const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setCo
                     key={cell.id}
                     colSpan={cell.colSpan}
                     rowSpan={cell.rowSpan}
-                    className={cn("px-1 py-1 border relative group transition-colors", isTopLevelDraggable && "cursor-move")}
+                    className={cn(
+                        "px-2 py-4 border-2 border-slate-50 relative group transition-all text-center", 
+                        isTopLevelDraggable && "cursor-grab active:cursor-grabbing",
+                        isTopLevelDraggable ? "bg-muted/10" : ""
+                    )}
                     draggable={isTopLevelDraggable}
                     onDragStart={(e) => isTopLevelDraggable && handleDragStart(e, cellIndex)}
                     onDragOver={(e) => isTopLevelDraggable && handleDragOver(e, cellIndex)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => isTopLevelDraggable && handleDrop(e)}
                   >
-                      <div className="flex items-center justify-center">
-                          {isTopLevelDraggable && <GripVertical className="h-4 w-4 text-muted-foreground absolute left-1 top-1/2 -translate-y-1/2" />}
+                      <div className="flex flex-col items-center justify-center gap-2">
+                          {isTopLevelDraggable && (
+                              <Badge variant="outline" className="text-[8px] font-black opacity-30 border-0 p-0 group-hover:opacity-100 transition-opacity">
+                                <GripVertical className="h-3 w-3" />
+                              </Badge>
+                          )}
                           <Input
                               value={cell.label}
                               onChange={(e) => handleLabelChange(cell.id, e.target.value)}
-                              className="bg-transparent border-none text-center font-semibold text-gray-700 focus-visible:ring-1 focus-visible:ring-primary focus-visible:bg-white"
+                              className="h-8 bg-transparent border-none text-center font-black uppercase text-[10px] tracking-widest text-slate-700 focus-visible:ring-1 focus-visible:ring-primary focus-visible:bg-white rounded-lg shadow-none"
                           />
                       </div>
                   </th>
@@ -176,9 +208,12 @@ const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setCo
           ))}
         </thead>
         <tbody>
-          <tr className="bg-white border-b">
-            <td colSpan={totalCols} className="px-6 py-12 text-center text-muted-foreground">
-              (Logbook entries would appear here)
+          <tr className="bg-white">
+            <td colSpan={totalCols} className="px-6 py-20 text-center text-muted-foreground bg-muted/5 opacity-50">
+                <div className="flex flex-col items-center gap-3">
+                    <Table className="h-10 w-10 opacity-20" />
+                    <p className="font-black uppercase tracking-widest text-[10px]">Logical Grid Mapping Established</p>
+                </div>
             </td>
           </tr>
         </tbody>
@@ -190,20 +225,30 @@ const TablePreview = ({ columns, setColumns }: { columns: LogbookColumn[], setCo
 
 // --- Main Page Component ---
 export default function LogbookParserPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
-
   const [isProcessing, setIsProcessing] = useState(false);
   const [pastedImage, setPastedImage] = useState<string | null>(null);
   const [parsedStructure, setParsedStructure] = useState<LogbookColumn[] | null>(null);
   const [templateName, setTemplateName] = useState('');
+  const [savedTemplates, setSavedTemplates] = useState<LogbookTemplate[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
 
-  const templatesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/logbook-templates`) : null),
-    [firestore, tenantId]
-  );
-  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<LogbookTemplate>(templatesQuery);
+  // Load Templates from LocalStorage
+  useEffect(() => {
+    const loadTemplates = () => {
+        try {
+            const stored = localStorage.getItem('safeviate.logbook-templates');
+            if (stored) {
+                setSavedTemplates(JSON.parse(stored));
+            }
+        } catch (e) {
+            console.error('Failed to load logbook templates', e);
+        } finally {
+            setIsLoadingTemplates(false);
+        }
+    };
+    loadTemplates();
+  }, []);
 
   const handlePaste = useCallback((event: React.ClipboardEvent) => {
     const items = event.clipboardData.items;
@@ -214,8 +259,8 @@ export default function LogbookParserPage() {
           const reader = new FileReader();
           reader.onload = (e) => {
             setPastedImage(e.target?.result as string);
-            setParsedStructure(null); // Clear previous result
-            toast({ title: 'Image Pasted', description: 'The logbook image has been loaded.' });
+            setParsedStructure(null);
+            toast({ title: 'Axiom Vision Engaged', description: 'Logbook frame captured for synthesis.' });
           };
           reader.readAsDataURL(blob);
         }
@@ -226,7 +271,7 @@ export default function LogbookParserPage() {
 
   const handleProcess = async () => {
     if (!pastedImage) {
-      toast({ variant: 'destructive', title: 'No Image', description: 'Please paste an image of the logbook table.' });
+      toast({ variant: 'destructive', title: 'Input Missing', description: 'Focus and use Ctrl+V to engage Axiom Vision.' });
       return;
     }
 
@@ -239,30 +284,37 @@ export default function LogbookParserPage() {
         { image: pastedImage }
       );
       if (!result.columns || result.columns.length === 0) {
-        toast({ variant: 'destructive', title: 'Parsing Failed', description: 'The AI could not identify a table structure.' });
+        toast({ variant: 'destructive', title: 'Synthesis Zero', description: 'No logical grid structures identified.' });
       } else {
         setParsedStructure(result.columns);
-        toast({ title: 'Structure Parsed', description: 'The logbook table structure has been extracted and is now editable.' });
+        toast({ title: 'Logic Mapped', description: `Identified ${result.columns.length} structural headers.` });
       }
     } catch (error: any) {
       console.error('Error parsing logbook:', error);
-      toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
+      toast({ variant: 'destructive', title: 'System Error', description: error.message || 'Unknown fault during synthesis.' });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleSaveTemplate = () => {
-    if (!firestore || !parsedStructure) return;
+    if (!parsedStructure) return;
     if (!templateName.trim()) {
-        toast({ variant: 'destructive', title: 'Name required', description: 'Please enter a name for the template.' });
+        toast({ variant: 'destructive', title: 'Label Required', description: 'Please provide a unique label for this grid.' });
         return;
     }
 
-    const templatesCollection = collection(firestore, `tenants/${tenantId}/logbook-templates`);
-    addDocumentNonBlocking(templatesCollection, { name: templateName, columns: parsedStructure });
+    const newTemplate: LogbookTemplate = {
+        id: crypto.randomUUID(),
+        name: templateName,
+        columns: parsedStructure
+    };
+
+    const nextTemplates = [newTemplate, ...savedTemplates];
+    localStorage.setItem('safeviate.logbook-templates', JSON.stringify(nextTemplates));
+    setSavedTemplates(nextTemplates);
     
-    toast({ title: 'Template Saved', description: `Template "${templateName}" has been saved.`});
+    toast({ title: 'Logic Persistent', description: `Grid schema "${templateName}" saved to local registry.`});
     setTemplateName('');
   };
 
@@ -272,121 +324,180 @@ export default function LogbookParserPage() {
   };
   
   const handleDeleteTemplate = (templateId: string) => {
-    if (!firestore) return;
-    const templateRef = doc(firestore, `tenants/${tenantId}/logbook-templates`, templateId);
-    deleteDocumentNonBlocking(templateRef);
-    toast({ title: 'Template Deleted', description: 'The logbook template is being deleted.' });
+    const nextTemplates = savedTemplates.filter(t => t.id !== templateId);
+    localStorage.setItem('safeviate.logbook-templates', JSON.stringify(nextTemplates));
+    setSavedTemplates(nextTemplates);
+    toast({ title: 'Registry Purged' });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full items-start">
-        <Card>
-          <CardHeader>
-            <CardTitle>Logbook Parser</CardTitle>
-            <CardDescription>
-              Paste an image of a logbook page to parse its column structure. You can then edit the structure and save it as a template.
-            </CardDescription>
+    <div className="p-8 space-y-12">
+      <div className="flex items-center justify-between">
+          <div className="space-y-4 text-left">
+              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/30 bg-primary/5 px-4 h-7 tracking-widest">
+                  <Sparkles className="h-3.5 w-3.5 mr-2" />
+                  Axiom Vision Ingestion
+              </Badge>
+              <div>
+                  <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Logbook Grid Synthesis</h1>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-2 opacity-70">
+                      Ingest physical logbook documentation into structured logical schematics via AI vision.
+                  </p>
+              </div>
+          </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+        <Card className="rounded-3xl border-0 shadow-2xl overflow-hidden bg-background">
+          <CardHeader className="p-8 pb-4 bg-muted/5 border-b">
+              <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                  <ScanLine className="h-5 w-5 text-primary" />
+                  Vision Ingestion
+              </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-8 space-y-6">
             <div
               onPaste={handlePaste}
-              className="h-60 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground bg-muted/20"
+              className={cn(
+                "h-72 border-4 border-dashed rounded-[2.5rem] flex items-center justify-center transition-all bg-muted/5 overflow-hidden group",
+                pastedImage ? "border-primary/20" : "border-slate-100 hover:border-primary/40"
+              )}
             >
               {pastedImage ? (
-                <Image src={pastedImage} alt="Pasted logbook" width={400} height={240} className="max-h-full max-w-full object-contain rounded-md" />
+                <div className="relative h-full w-full p-4 animate-in zoom-in duration-500">
+                    <Image src={pastedImage} alt="Pasted logbook" fill className="object-contain rounded-2xl" />
+                </div>
               ) : (
-                <div className="text-center">
-                  <ClipboardPaste className="mx-auto h-10 w-10" />
-                  <p className="mt-2">Click here and paste an image (Ctrl+V)</p>
+                <div className="text-center group-hover:scale-110 transition-transform duration-500">
+                  <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center mx-auto mb-4 border-2 border-primary/10 shadow-inner">
+                    <ClipboardPaste className="h-10 w-10 text-primary opacity-50" />
+                  </div>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Calibrate Vision Parameters</p>
+                  <p className="text-[10px] font-bold opacity-30 mt-1 uppercase tracking-tight">Focus & Paste (Ctrl+V)</p>
                 </div>
               )}
             </div>
             {pastedImage && (
-              <div className="flex gap-2">
-                <Button onClick={handleProcess} disabled={isProcessing} className="w-full">
-                  {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : <><Wand2 className="mr-2 h-4 w-4"/>Parse Structure</>}
+              <div className="flex gap-4 animate-in slide-in-from-bottom-4">
+                <Button onClick={handleProcess} disabled={isProcessing} className="flex-1 h-16 rounded-2xl shadow-xl font-black uppercase tracking-widest text-lg gap-3 transition-all hover:scale-[1.02]">
+                  {isProcessing ? <><Loader2 className="h-6 w-6 animate-spin" /> Engaged...</> : <><Wand2 className="h-6 w-6"/> Engage Synthesis</>}
                 </Button>
-                <Button onClick={handleClearImage} variant="outline" size="icon">
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Clear image</span>
+                <Button onClick={handleClearImage} variant="outline" size="icon" className="h-16 w-16 rounded-2xl border-2 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors">
+                    <X className="h-6 w-6" />
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Structure Preview</CardTitle>
-            <CardDescription>A visual, editable representation of the parsed table header structure.</CardDescription>
+        <Card className="rounded-3xl border-0 shadow-2xl overflow-hidden bg-background h-full min-h-[500px]">
+          <CardHeader className="p-8 pb-4 bg-muted/5 border-b flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                  <LayoutGrid className="h-5 w-5 text-primary" />
+                  Grid Logic Preview
+                </CardTitle>
+                <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1">Refine and parameterize identified structures.</CardDescription>
+              </div>
+              {parsedStructure && (
+                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] font-black px-3 h-6 uppercase tracking-widest">Validated</Badge>
+              )}
           </CardHeader>
-          <CardContent>
+          <CardScrollArea parsedStructure={parsedStructure} isProcessing={isProcessing}>
             {isProcessing ? (
-               <div className="h-48 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+               <div className="h-64 flex flex-col items-center justify-center gap-6 animate-pulse">
+                  <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Executing Logical Extraction</p>
                </div>
             ) : parsedStructure ? (
-                <>
+                <div className="p-8 flex flex-col h-full gap-8">
                     <TablePreview columns={parsedStructure} setColumns={setParsedStructure} />
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button className="mt-4 w-full">
-                                <Save className="mr-2 h-4 w-4" /> Save as Template
+                            <Button className="w-full h-14 rounded-2xl shadow-xl font-black uppercase tracking-widest text-base gap-3">
+                                <Save className="h-5 w-5" /> Commit to Registry
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="rounded-3xl border-0 shadow-2xl p-8">
                             <DialogHeader>
-                                <DialogTitle>Save Logbook Template</DialogTitle>
-                                <DialogDescription>Give this logbook structure a name to save it for later use.</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Initialize Grid Schema</DialogTitle>
+                                <DialogDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Assign a registry identifier to this structure.</DialogDescription>
                             </DialogHeader>
-                            <div className="py-4">
+                            <div className="py-8">
                                 <Input 
-                                    placeholder="e.g., Standard PPL Logbook"
+                                    placeholder="e.g., PH-PPL Standard Layout"
                                     value={templateName}
                                     onChange={(e) => setTemplateName(e.target.value)}
+                                    className="h-14 border-2 rounded-xl font-black uppercase tracking-tight text-lg focus-visible:ring-primary/20"
                                 />
                             </div>
-                            <DialogFooter>
-                                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                            <DialogFooter className="gap-4">
+                                <DialogClose asChild><Button variant="outline" className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px]">Abort</Button></DialogClose>
                                 <DialogClose asChild>
-                                    <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>Save Template</Button>
+                                    <Button onClick={handleSaveTemplate} disabled={!templateName.trim()} className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg">Finalize Schema</Button>
                                 </DialogClose>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                </>
+                </div>
             ) : (
-              <div className="h-48 flex items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                <Table className="h-8 w-8 mr-2" />
-                <p>The parsed table structure will appear here.</p>
+              <div className="h-64 flex flex-col items-center justify-center text-center p-12 border-4 border-dashed border-slate-50 rounded-[2.5rem] m-8 bg-muted/5 opacity-50">
+                <div className="h-16 w-16 bg-muted/20 rounded-3xl flex items-center justify-center mb-6">
+                    <Table className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Logical Interface Pending</p>
               </div>
             )}
-          </CardContent>
+          </CardScrollArea>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Saved Logbook Templates</CardTitle>
-            <CardDescription>A list of all saved logbook templates.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {isLoadingTemplates ? <p>Loading templates...</p> : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(savedTemplates || []).map(template => (
-                        <Card key={template.id} className="flex items-center justify-between p-4">
-                           <p className="font-semibold">{template.name}</p>
-                           <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteTemplate(template.id)}>
-                               <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </Card>
-                    ))}
-                     {(savedTemplates || []).length === 0 && <p className="col-span-full text-center text-muted-foreground py-4">No templates saved yet.</p>}
-                </div>
-            )}
-        </CardContent>
-      </Card>
+      <div className="space-y-8">
+        <div className="flex items-center gap-4 text-left">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm border border-primary/20">
+                <ChevronDown className="h-5 w-5" />
+            </div>
+            <div>
+                <h3 className="text-2xl font-black uppercase tracking-tighter">Schema Registry</h3>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">Authorized logbook templates persistent in local storage.</p>
+            </div>
+        </div>
+
+        {isLoadingTemplates ? (
+            <div className="flex justify-center p-20">
+                <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {savedTemplates.map(template => (
+                    <Card key={template.id} className="flex items-center justify-between p-6 rounded-3xl border-2 hover:border-primary/40 transition-all group shadow-sm bg-background">
+                       <div className="flex items-center gap-4 text-left">
+                           <div className="h-12 w-12 rounded-2xl bg-muted/5 flex items-center justify-center text-primary group-hover:bg-primary/5 transition-colors border">
+                               <FileType className="h-6 w-6" />
+                           </div>
+                           <div>
+                               <p className="font-black uppercase tracking-tight text-sm text-slate-800">{template.name}</p>
+                               <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-50">{template.columns.length} Mapping Columns</p>
+                           </div>
+                       </div>
+                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-600 hover:bg-red-50 h-10 w-10 rounded-xl transition-all" onClick={() => handleDeleteTemplate(template.id)}>
+                           <Trash2 className="h-5 w-5" />
+                       </Button>
+                    </Card>
+                ))}
+                 {savedTemplates.length === 0 && (
+                    <div className="col-span-full py-20 flex flex-col items-center justify-center text-center bg-muted/5 rounded-[3rem] border-4 border-dashed border-slate-50">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-40">Registry Empty. Engage Vision to Populate.</p>
+                    </div>
+                )}
+            </div>
+        )}
+      </div>
     </div>
   );
+}
+
+function CardScrollArea({ children, parsedStructure, isProcessing }: { children: React.ReactNode, parsedStructure: any, isProcessing: boolean }) {
+    if (parsedStructure || isProcessing) return <div className="h-full">{children}</div>;
+    return <div>{children}</div>;
 }

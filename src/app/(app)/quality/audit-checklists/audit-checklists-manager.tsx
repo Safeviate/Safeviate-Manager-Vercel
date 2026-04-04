@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useMemo, useState, useEffect } from 'react';
 import { NewChecklistDialog } from './new-checklist-dialog';
 import { ChecklistTemplateCard } from './checklist-template-card';
 import { Accordion } from '@/components/ui/accordion';
@@ -18,28 +16,36 @@ import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
 
 export default function AuditChecklistsManager() {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
 
-  const templatesQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audit-templates`)) : null),
-    [firestore, tenantId]
-  );
-  
-  const personnelQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
-    [firestore, tenantId]
-  );
+  const [templates, setTemplates] = useState<QualityAuditChecklistTemplate[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const departmentsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/departments`)) : null),
-    [firestore, tenantId]
-  );
+  const loadData = () => {
+    try {
+        const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
+        if (storedTemplates) setTemplates(JSON.parse(storedTemplates));
+        
+        const storedPersonnel = localStorage.getItem('safeviate.personnel');
+        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
+        
+        const storedDepts = localStorage.getItem('safeviate.departments');
+        if (storedDepts) setDepartments(JSON.parse(storedDepts));
+    } catch (e) {
+        console.error('Failed to load local audit template data', e);
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
-  const { data: templates, isLoading: isLoadingTemplates } = useCollection<QualityAuditChecklistTemplate>(templatesQuery);
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
-  const { data: departments } = useCollection<Department>(departmentsQuery);
+  useEffect(() => {
+    loadData();
+    window.addEventListener('safeviate-quality-templates-updated', loadData);
+    return () => window.removeEventListener('safeviate-quality-templates-updated', loadData);
+  }, []);
 
   const groupedTemplates = useMemo(() => {
     if (!templates) return {};
@@ -55,7 +61,7 @@ export default function AuditChecklistsManager() {
   }, [templates]);
 
 
-  if (isLoadingTemplates) {
+  if (isLoading) {
     return (
       <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
         <Skeleton className="h-14 w-full" />

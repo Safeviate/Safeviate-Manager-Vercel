@@ -3,8 +3,6 @@
 import { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Alert } from '@/types/alert';
@@ -15,13 +13,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 
 interface AlertCardProps {
     alert: Alert;
-    tenantId: string;
     canManage: boolean;
+    onArchive: (alertId: string) => void;
     showReadReceipts?: boolean;
 }
 
-export function AlertCard({ alert, tenantId, canManage, showReadReceipts = true }: AlertCardProps) {
-    const firestore = useFirestore();
+export function AlertCard({ alert, canManage, onArchive, showReadReceipts = true }: AlertCardProps) {
     const { toast } = useToast();
     const cardRef = useRef<HTMLDivElement>(null);
 
@@ -34,9 +31,7 @@ export function AlertCard({ alert, tenantId, canManage, showReadReceipts = true 
     }
 
     const handleArchive = () => {
-        if (!firestore) return;
-        const alertRef = doc(firestore, `tenants/${tenantId}/alerts`, alert.id);
-        updateDocumentNonBlocking(alertRef, { status: 'Archived' });
+        onArchive(alert.id);
         toast({ title: 'Alert Archived', description: `"${alert.title}" has been archived.` });
     };
 

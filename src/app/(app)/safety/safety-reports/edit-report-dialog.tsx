@@ -10,8 +10,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Pencil, CalendarIcon } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { SafetyReport } from '@/types/safety-report';
@@ -37,7 +35,6 @@ interface EditReportDialogProps {
 
 export function EditReportDialog({ report, tenantId, trigger }: EditReportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -64,16 +61,22 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
   }, [isOpen, report, form]);
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore) return;
-
-    const reportRef = doc(firestore, `tenants/${tenantId}/safety-reports`, report.id);
     const dataToSave = {
       ...values,
       eventDate: format(values.eventDate, 'yyyy-MM-dd'),
     };
 
     try {
-      await updateDoc(reportRef, dataToSave);
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: { ...report, ...dataToSave } }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to update this report right now.');
+      }
       toast({ title: 'Report Updated', description: `Safety Report #${report.reportNumber} has been updated.` });
       setIsOpen(false);
     } catch (error) {

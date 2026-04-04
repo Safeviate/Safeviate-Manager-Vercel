@@ -8,12 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { CorrectiveActionPlan, CorrectiveAction } from '@/types/quality';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import type { CorrectiveActionPlan } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { cn } from '@/lib/utils';
@@ -43,7 +40,6 @@ interface CapActionsFormProps {
 }
 
 export function CapActionsForm({ cap, tenantId, personnel, onFormSubmit }: CapActionsFormProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
 
     const form = useForm<CapFormValues>({
@@ -60,23 +56,30 @@ export function CapActionsForm({ cap, tenantId, personnel, onFormSubmit }: CapAc
     });
 
     const onSubmit = (values: CapFormValues) => {
-        if (!firestore) return;
+        try {
+            const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
+            const currentCaps = storedCaps ? JSON.parse(storedCaps) as CorrectiveActionPlan[] : [];
+            
+            const dataToSave = {
+                ...values,
+                actions: values.actions.map(action => ({
+                    ...action,
+                    deadline: action.deadline.toISOString(),
+                }))
+            };
 
-        const capRef = doc(firestore, 'tenants', tenantId, 'corrective-action-plans', cap.id);
-        const dataToSave = {
-            ...values,
-            actions: values.actions.map(action => ({
-                ...action,
-                deadline: action.deadline.toISOString(),
-            }))
-        };
-        
-        updateDocumentNonBlocking(capRef, dataToSave);
-        toast({
-            title: 'Corrective Action Plan Saved',
-            description: 'The CAP has been updated.',
-        });
-        onFormSubmit();
+            const nextCaps = currentCaps.map(c => c.id === cap.id ? { ...c, ...dataToSave } : c);
+            localStorage.setItem('safeviate.corrective-action-plans', JSON.stringify(nextCaps));
+            
+            window.dispatchEvent(new Event('safeviate-quality-updated'));
+            toast({
+                title: 'Corrective Action Plan Saved',
+                description: 'The CAP has been updated.',
+            });
+            onFormSubmit();
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
     };
 
     return (
@@ -87,7 +90,7 @@ export function CapActionsForm({ cap, tenantId, personnel, onFormSubmit }: CapAc
 
                 <div className="flex justify-between items-center pt-4">
                     <h3 className="text-lg font-medium">Corrective Actions</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ id: crypto.randomUUID(), description: '', responsiblePersonId: '', deadline: new Date(), status: 'Open' })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Action
                     </Button>
                 </div>

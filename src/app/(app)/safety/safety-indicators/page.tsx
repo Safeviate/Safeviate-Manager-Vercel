@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { EditSpiForm } from './edit-spi-form';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 import { SPICard } from './spi-card';
@@ -99,7 +97,6 @@ export default function SafetyIndicatorsPage() {
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
   const isMobile = useIsMobile();
 
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'safety-indicators-view' });
@@ -107,52 +104,62 @@ export default function SafetyIndicatorsPage() {
 
   const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
 
-  const canViewAll = hasPermission('safety-indicators-view');
+  const [reports, setReports] = useState<SafetyReport[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const reportsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'safety-reports')) : null),
-    [firestore, tenantId]
-  );
-  const bookingsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'bookings')) : null),
-    [firestore, tenantId]
-  );
-  const orgsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
-    [firestore, tenantId]
-  );
-  const spiConfigRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, settingsDocId) : null),
-    [firestore, tenantId]
-  );
-  const visibilitySettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
-    [firestore, tenantId]
-  );
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedReports = localStorage.getItem('safeviate.safety-reports');
+        const storedBookings = localStorage.getItem('safeviate.bookings');
+        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
+        const storedSpi = localStorage.getItem('safeviate.spi-configurations');
 
-  const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
-  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-  const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
-  const { data: spiDocument, isLoading: isLoadingSpiDocument } = useDoc<SpiConfigurations>(spiConfigRef);
-  const { data: visibilitySettings, isLoading: isLoadingVisibility } = useDoc<TabVisibilitySettings>(visibilitySettingsRef);
+        if (storedReports) setReports(JSON.parse(storedReports));
+        if (storedBookings) setBookings(JSON.parse(storedBookings));
+        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+        
+        if (storedSpi) {
+            const config = JSON.parse(storedSpi) as SpiConfigurations;
+            if (config.configurations) setSpiConfig(config.configurations);
+        } else {
+            const configToSave: SpiConfigurations = {
+                id: settingsDocId,
+                configurations: initialSpiConfig
+            };
+            localStorage.setItem('safeviate.spi-configurations', JSON.stringify(configToSave));
+            setSpiConfig(initialSpiConfig);
+        }
+    } catch (e) {
+        console.error("Failed to load safety data", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    const events = [
+        'safeviate-safety-reports-updated',
+        'safeviate-bookings-updated',
+        'safeviate-external-organizations-updated',
+        'safeviate-spi-configurations-updated'
+    ];
+    events.forEach(event => window.addEventListener(event, loadData));
+    return () => events.forEach(event => window.removeEventListener(event, loadData));
+  }, [loadData]);
   
-  const saveConfigToFirestore = useCallback((updatedConfig: SpiConfig[]) => {
-    if (!firestore || !spiConfigRef) return;
+  const saveConfigToLocal = useCallback((updatedConfig: SpiConfig[]) => {
     const configToSave: SpiConfigurations = {
         id: settingsDocId,
         configurations: JSON.parse(JSON.stringify(updatedConfig))
     };
-    setDocumentNonBlocking(spiConfigRef, configToSave, { merge: true });
-  }, [firestore, spiConfigRef]);
+    localStorage.setItem('safeviate.spi-configurations', JSON.stringify(configToSave));
+    window.dispatchEvent(new Event('safeviate-spi-configurations-updated'));
+  }, []);
   
-  useEffect(() => {
-    if (!isLoadingSpiDocument && spiDocument?.configurations) {
-        setSpiConfig(spiDocument.configurations);
-    } else if (!isLoadingSpiDocument && !spiDocument) {
-        saveConfigToFirestore(initialSpiConfig);
-    }
-  }, [spiDocument, isLoadingSpiDocument, saveConfigToFirestore]);
-
   const handleEdit = (spi: SpiConfig) => {
     setSelectedSpi(spi);
     setIsEditDialogOpen(true);
@@ -163,7 +170,7 @@ export default function SafetyIndicatorsPage() {
         ? [...spiConfig, { ...spiToSave, id: `spi-${Date.now()}` }]
         : spiConfig.map(s => s.id === spiToSave.id ? spiToSave : s);
     setSpiConfig(newConfig);
-    saveConfigToFirestore(newConfig);
+    saveConfigToLocal(newConfig);
     setIsEditDialogOpen(false);
     setSelectedSpi(null);
   };
@@ -178,7 +185,7 @@ export default function SafetyIndicatorsPage() {
           return spi;
       });
       setSpiConfig(newConfig);
-      saveConfigToFirestore(newConfig);
+      saveConfigToLocal(newConfig);
   };
 
   const renderOrgCard = (orgId: string | 'internal') => {
@@ -220,7 +227,7 @@ export default function SafetyIndicatorsPage() {
                         </Button>
                     }
                 />
-                {showTabs && <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+                {showTabs && <OrganizationTabsRow organizations={organizations} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
             </div>
             
             <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
@@ -239,11 +246,11 @@ export default function SafetyIndicatorsPage() {
                                     if(window.confirm('Delete this indicator?')) {
                                         const nc = spiConfig.filter(s => s.id !== id);
                                         setSpiConfig(nc);
-                                        saveConfigToFirestore(nc);
+                                        saveConfigToLocal(nc);
                                     }
                                 }}
-                                reports={reports?.filter(r => r.organizationId === contextOrgId) || []} 
-                                bookings={bookings?.filter(b => b.organizationId === contextOrgId) || []}
+                                reports={reports.filter(r => r.organizationId === contextOrgId) || []} 
+                                bookings={bookings.filter(b => b.organizationId === contextOrgId) || []}
                                 onMonthDataSave={handleMonthDataSave}
                             />
                         )
@@ -254,7 +261,7 @@ export default function SafetyIndicatorsPage() {
     );
   };
 
-  if (isLoadingReports || isLoadingBookings || isLoadingOrgs || isLoadingSpiDocument || isLoadingVisibility) {
+  if (isLoading) {
     return (
         <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1 h-full overflow-hidden">
             <Skeleton className="h-20 w-full" />
@@ -276,7 +283,7 @@ export default function SafetyIndicatorsPage() {
                         {renderOrgCard('internal')}
                     </TabsContent>
                     
-                    {(organizations || []).map(org => (
+                    {organizations.map(org => (
                         <TabsContent key={org.id} value={org.id} className="mt-0 h-full flex flex-col flex-1 overflow-hidden">
                             {renderOrgCard(org.id)}
                         </TabsContent>

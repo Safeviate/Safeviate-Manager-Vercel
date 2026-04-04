@@ -1,46 +1,54 @@
-
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { collection, doc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { useUserProfile } from '@/hooks/use-user-profile';
-import { useToast } from '@/hooks/use-toast';
-import { PlaneTakeoff, Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, ChevronRight, Info, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff } from 'lucide-react';
+import { MainPageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import dynamic from 'next/dynamic';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
-import { MainPageHeader } from '@/components/page-header';
 import { v4 as uuidv4 } from 'uuid';
 
-// Dynamically import map to avoid SSR issues with Leaflet
-const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), { 
+const STORAGE_KEY = 'safeviate.training-routes';
+
+const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
   ssr: false,
-  loading: () => <div className="h-full w-full bg-slate-900 animate-pulse flex items-center justify-center text-white font-black uppercase tracking-widest text-[10px]">Loading Aeronautical Engine...</div>
+  loading: () => <div className="h-full w-full animate-pulse bg-slate-900 flex items-center justify-center text-white font-black uppercase tracking-widest text-[10px]">Loading Aeronautical Engine...</div>
 });
 
+const loadRoutes = (): TrainingRoute[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as TrainingRoute[];
+  } catch {
+    return [];
+  }
+};
+
 export default function TrainingRoutesPage() {
-  const firestore = useFirestore();
-  const { tenantId } = useUserProfile();
-  const { toast } = useToast();
-
-  const routesQuery = useMemoFirebase(() => (
-    firestore && tenantId ? collection(firestore, `tenants/${tenantId}/trainingRoutes`) : null
-  ), [firestore, tenantId]);
-  
-  const { data: routes, isLoading } = useCollection<TrainingRoute>(routesQuery);
-
+  const [routes, setRoutes] = useState<TrainingRoute[]>([]);
   const [activeRoute, setActiveRoute] = useState<TrainingRoute | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [hazardToEdit, setHazardToEdit] = useState<{ lat: number, lng: number } | null>(null);
+  const [hazardToEdit, setHazardToEdit] = useState<{ lat: number; lng: number } | null>(null);
   const [hazardNote, setHazardNote] = useState('');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    setRoutes(loadRoutes());
+  }, []);
+
+  const persistRoutes = (nextRoutes: TrainingRoute[]) => {
+    setRoutes(nextRoutes);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRoutes));
+    }
+  };
 
   const handleCreateNew = () => {
     const newRoute: TrainingRoute = {
@@ -49,8 +57,8 @@ export default function TrainingRoutesPage() {
       description: '',
       legs: [],
       hazards: [],
-      tenantId: tenantId!,
-      createdAt: new Date().toISOString()
+      tenantId: 'local',
+      createdAt: new Date().toISOString(),
     };
     setActiveRoute(newRoute);
     setIsEditing(true);
@@ -58,7 +66,6 @@ export default function TrainingRoutesPage() {
 
   const handleAddWaypoint = (lat: number, lon: number, identifier?: string) => {
     if (!isEditing || !activeRoute) return;
-    
     const newLeg: NavlogLeg = {
       id: uuidv4(),
       waypoint: identifier || `WP ${activeRoute.legs.length + 1}`,
@@ -66,11 +73,7 @@ export default function TrainingRoutesPage() {
       longitude: lon,
       altitude: 4500,
     };
-
-    setActiveRoute({
-      ...activeRoute,
-      legs: [...activeRoute.legs, newLeg]
-    });
+    setActiveRoute({ ...activeRoute, legs: [...activeRoute.legs, newLeg] });
   };
 
   const handleAddHazardRequest = (lat: number, lng: number) => {
@@ -80,109 +83,68 @@ export default function TrainingRoutesPage() {
 
   const confirmAddHazard = () => {
     if (!hazardToEdit || !activeRoute) return;
-    
-    const newHazard: Hazard = {
-      id: uuidv4(),
-      lat: hazardToEdit.lat,
-      lng: hazardToEdit.lng,
-      note: hazardNote,
-      severity: 'medium'
-    };
-
-    setActiveRoute({
-      ...activeRoute,
-      hazards: [...activeRoute.hazards, newHazard]
-    });
+    const newHazard: Hazard = { id: uuidv4(), lat: hazardToEdit.lat, lng: hazardToEdit.lng, note: hazardNote, severity: 'medium' };
+    setActiveRoute({ ...activeRoute, hazards: [...activeRoute.hazards, newHazard] });
     setHazardToEdit(null);
   };
 
-  const handleRemoveLeg = (id: string) => {
+  const handleSave = () => {
     if (!activeRoute) return;
-    setActiveRoute({
-      ...activeRoute,
-      legs: activeRoute.legs.filter(l => l.id !== id)
-    });
+    const nextRoutes = routes.some((route) => route.id === activeRoute.id)
+      ? routes.map((route) => (route.id === activeRoute.id ? activeRoute : route))
+      : [activeRoute, ...routes];
+    persistRoutes(nextRoutes);
+    setIsEditing(false);
   };
 
-  const handleRemoveHazard = (id: string) => {
-    if (!activeRoute) return;
-    setActiveRoute({
-      ...activeRoute,
-      hazards: activeRoute.hazards.filter(h => h.id !== id)
-    });
+  const handleDelete = (routeId: string) => {
+    const nextRoutes = routes.filter((route) => route.id !== routeId);
+    persistRoutes(nextRoutes);
+    if (activeRoute?.id === routeId) setActiveRoute(null);
   };
 
-  const handleSave = async () => {
-    if (!firestore || !tenantId || !activeRoute) return;
-    
-    try {
-      await setDoc(doc(firestore, `tenants/${tenantId}/trainingRoutes`, activeRoute.id), activeRoute);
-      toast({ title: 'Route Saved', description: activeRoute.name });
-      setIsEditing(false);
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
-    }
-  };
-
-  const handleDelete = async (routeId: string) => {
-    if (!firestore || !tenantId) return;
-    try {
-      await deleteDoc(doc(firestore, `tenants/${tenantId}/trainingRoutes`, routeId));
-      if (activeRoute?.id === routeId) setActiveRoute(null);
-      toast({ title: 'Route Deleted' });
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
-    }
-  };
+  const filteredRoutes = useMemo(
+    () => routes.filter((route) => route.name.toLowerCase().includes(search.toLowerCase()) || route.description.toLowerCase().includes(search.toLowerCase())),
+    [routes, search]
+  );
 
   return (
-    <div className="flex h-full flex-col overflow-hidden gap-4 px-1">
-      <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <div className="sticky top-0 z-30 bg-card border-b">
-          <MainPageHeader 
+    <div className="flex h-full flex-col gap-4 overflow-hidden px-1">
+      <Card className="flex h-full flex-col overflow-hidden border shadow-none">
+        <div className="sticky top-0 z-30 border-b bg-card">
+          <MainPageHeader
             title="Training Routes"
             actions={
-              <Button 
-                onClick={handleCreateNew}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[10px] h-9"
-              >
+              <Button onClick={handleCreateNew} className="h-9 bg-emerald-700 text-[10px] font-black uppercase text-white hover:bg-emerald-800">
                 <Plus size={14} className="mr-2" /> New Route
               </Button>
             }
           />
         </div>
 
-        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
-          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_350px] h-full overflow-hidden">
-            {/* ── Sidebar: Route List ── */}
-            <div className="border-r bg-background flex flex-col h-full overflow-hidden">
-              <div className="p-4 border-b bg-muted/10">
+        <CardContent className="flex-1 overflow-hidden p-0 bg-muted/5">
+          <div className="grid h-full grid-cols-1 overflow-hidden lg:grid-cols-[300px_1fr_350px]">
+            <div className="flex h-full flex-col overflow-hidden border-r bg-background">
+              <div className="border-b bg-muted/10 p-4">
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search routes..." 
-                    className="h-8 pl-9 text-[10px] font-bold uppercase"
-                  />
+                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search routes..." className="h-8 pl-9 text-[10px] font-bold uppercase" />
                 </div>
               </div>
               <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {(routes || []).map(route => (
-                    <button
-                      key={route.id}
-                      onClick={() => { setActiveRoute(route); setIsEditing(false); }}
-                      className={`w-full text-left p-3 rounded-xl transition-all border ${activeRoute?.id === route.id ? 'bg-primary/5 border-primary/20 shadow-sm' : 'hover:bg-muted/50 border-transparent'}`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <Badge variant="outline" className="text-[8px] h-4 font-black uppercase opacity-60">Route</Badge>
+                <div className="space-y-1 p-2">
+                  {filteredRoutes.map((route) => (
+                    <button key={route.id} onClick={() => { setActiveRoute(route); setIsEditing(false); }} className={`w-full rounded-xl border p-3 text-left transition-all ${activeRoute?.id === route.id ? 'border-primary/20 bg-primary/5 shadow-sm' : 'border-transparent hover:bg-muted/50'}`}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <Badge variant="outline" className="h-4 text-[8px] font-black uppercase opacity-60">Route</Badge>
                         <span className="text-[8px] font-bold text-muted-foreground">{route.legs.length} Waypoints</span>
                       </div>
-                      <p className="text-[11px] font-black uppercase truncate">{route.name}</p>
-                      <p className="text-[9px] text-muted-foreground font-bold mt-1 line-clamp-1 italic">{route.description || 'No description'}</p>
+                      <p className="truncate text-[11px] font-black uppercase">{route.name}</p>
+                      <p className="mt-1 line-clamp-1 text-[9px] font-bold italic text-muted-foreground">{route.description || 'No description'}</p>
                     </button>
                   ))}
-                  {routes?.length === 0 && (
-                    <div className="p-8 text-center space-y-3 opacity-40">
+                  {filteredRoutes.length === 0 && (
+                    <div className="space-y-3 p-8 text-center opacity-40">
                       <PlaneTakeoff size={32} className="mx-auto" />
                       <p className="text-[10px] font-black uppercase tracking-widest">No routes found</p>
                     </div>
@@ -191,177 +153,95 @@ export default function TrainingRoutesPage() {
               </ScrollArea>
             </div>
 
-            {/* ── Center: Map Area ── */}
-            <div className="relative bg-slate-900 h-full overflow-hidden flex flex-col">
-              <AeronauticalMap 
-                legs={activeRoute?.legs || []}
-                hazards={activeRoute?.hazards || []}
-                onAddWaypoint={handleAddWaypoint}
-                onAddHazard={handleAddHazardRequest}
-              />
-              
+            <div className="relative flex h-full flex-col overflow-hidden bg-slate-900">
+              <AeronauticalMap legs={activeRoute?.legs || []} hazards={activeRoute?.hazards || []} onAddWaypoint={handleAddWaypoint} onAddHazard={handleAddHazardRequest} />
               {!isEditing && activeRoute && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000]">
-                  <Button 
-                    onClick={() => setIsEditing(true)}
-                    className="bg-white/95 backdrop-blur text-black hover:bg-white shadow-2xl font-black uppercase text-[10px] h-10 px-6 rounded-full border"
-                  >
+                <div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2">
+                  <Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">
                     Edit Route Engine
                   </Button>
                 </div>
               )}
             </div>
 
-            {/* ── Sidebar: Route Details/Editor ── */}
-            <div className="border-l bg-background flex flex-col h-full overflow-hidden">
+            <div className="flex h-full flex-col overflow-hidden border-l bg-background">
               {activeRoute ? (
-                <div className="flex flex-col h-full">
-                  <div className="p-6 border-b space-y-4">
+                <div className="flex h-full flex-col">
+                  <div className="space-y-4 border-b p-6">
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Profile</p>
                       <div className="flex items-center gap-2">
-                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
-                         <Button 
-                           onClick={handleSave}
-                           disabled={!isEditing}
-                           className="h-8 bg-emerald-700 hover:bg-emerald-800 font-black uppercase text-[9px] px-3 shrink-0"
-                         >
-                            <Save size={14} className="mr-2" /> Save
-                         </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
+                        <Button onClick={handleSave} disabled={!isEditing} className="h-8 shrink-0 bg-emerald-700 px-3 text-[9px] font-black uppercase">
+                          <Save size={14} className="mr-2" /> Save
+                        </Button>
                       </div>
                     </div>
-                    
                     <div className="space-y-3">
                       <div>
-                        <Label className="text-[9px] font-black uppercase text-muted-foreground mb-1 block">Route Name</Label>
-                        <Input 
-                          value={activeRoute.name} 
-                          onChange={e => setActiveRoute({...activeRoute, name: e.target.value})}
-                          className="h-9 font-black uppercase text-xs"
-                          readOnly={!isEditing}
-                        />
+                        <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Name</label>
+                        <Input value={activeRoute.name} onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })} className="h-9 text-xs font-black uppercase" readOnly={!isEditing} />
                       </div>
                       <div>
-                        <Label className="text-[9px] font-black uppercase text-muted-foreground mb-1 block">Description / Notes</Label>
-                        <Textarea 
-                          value={activeRoute.description} 
-                          onChange={e => setActiveRoute({...activeRoute, description: e.target.value})}
-                          className="min-h-[60px] text-[10px] font-bold"
-                          readOnly={!isEditing}
-                          placeholder="Training sector details, frequency requirements, etc."
-                        />
+                        <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Description / Notes</label>
+                        <Textarea value={activeRoute.description} onChange={(e) => setActiveRoute({ ...activeRoute, description: e.target.value })} className="min-h-[60px] text-[10px] font-bold" readOnly={!isEditing} placeholder="Training sector details, frequency requirements, etc." />
                       </div>
                     </div>
                   </div>
-
                   <ScrollArea className="flex-1">
-                    <div className="p-6 space-y-8 pb-12">
-                      {/* Legs List */}
+                    <div className="space-y-8 p-6 pb-12">
                       <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                             <div className="w-2 h-2 rounded-full bg-emerald-500" /> Planned Legs
-                          </h3>
-                        </div>
+                        <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Planned Legs</h3>
                         <div className="space-y-2">
                           {activeRoute.legs.map((leg, i) => (
-                            <div key={leg.id} className="p-3 border rounded-xl bg-background shadow-sm hover:border-primary/20 transition-all group overflow-hidden">
-                              <div className="flex items-center justify-between mb-2">
+                            <div key={leg.id} className="group overflow-hidden rounded-xl border bg-background p-3 shadow-sm transition-all hover:border-primary/20">
+                              <div className="mb-2 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                   <div className="w-5 h-5 rounded flex items-center justify-center bg-muted text-[10px] font-black uppercase">{i+1}</div>
-                                   <Input 
-                                     value={leg.waypoint} 
-                                     onChange={e => {
-                                       const newLegs = [...activeRoute.legs];
-                                       newLegs[i].waypoint = e.target.value;
-                                       setActiveRoute({...activeRoute, legs: newLegs});
-                                     }}
-                                     className="h-6 border-none shadow-none font-bold uppercase text-[10px] p-0 focus-visible:ring-0 w-24"
-                                     readOnly={!isEditing}
-                                   />
+                                  <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-[10px] font-black uppercase">{i + 1}</div>
+                                  <Input value={leg.waypoint} onChange={(e) => { const next = [...activeRoute.legs]; next[i].waypoint = e.target.value; setActiveRoute({ ...activeRoute, legs: next }); }} className="h-6 w-24 border-none p-0 text-[10px] font-bold uppercase shadow-none focus-visible:ring-0" readOnly={!isEditing} />
                                 </div>
-                                {isEditing && (
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveLeg(leg.id)}><Trash2 size={12} /></Button>
-                                )}
+                                {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}><Trash2 size={12} /></Button>}
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                   <p className="text-[8px] font-black uppercase text-muted-foreground">Alt (ft)</p>
-                                   <Input 
-                                      type="number" 
-                                      value={leg.altitude} 
-                                      onChange={e => {
-                                        const newLegs = [...activeRoute.legs];
-                                        newLegs[i].altitude = Number(e.target.value);
-                                        setActiveRoute({...activeRoute, legs: newLegs});
-                                      }}
-                                      className="h-7 text-[10px] font-black border-dashed"
-                                      readOnly={!isEditing}
-                                   />
+                                  <p className="text-[8px] font-black uppercase text-muted-foreground">Alt (ft)</p>
+                                  <Input type="number" value={leg.altitude} onChange={(e) => { const next = [...activeRoute.legs]; next[i].altitude = Number(e.target.value); setActiveRoute({ ...activeRoute, legs: next }); }} className="h-7 border-dashed text-[10px] font-black" readOnly={!isEditing} />
                                 </div>
                                 <div className="flex items-end justify-end">
-                                   <p className="text-[9px] font-mono font-bold text-muted-foreground">{leg.latitude.toFixed(3)}, {leg.longitude.toFixed(3)}</p>
+                                  <p className="font-mono text-[9px] font-bold text-muted-foreground">{leg.latitude?.toFixed(3)}, {leg.longitude?.toFixed(3)}</p>
                                 </div>
                               </div>
                             </div>
                           ))}
-                          {activeRoute.legs.length === 0 && (
-                            <div className="text-center py-8 border-2 border-dashed rounded-xl bg-muted/5">
-                               <Navigation className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-50" />
-                               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Click map to add waypoints</p>
-                            </div>
-                          )}
+                          {activeRoute.legs.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><Navigation className="mx-auto mb-2 h-6 w-6 opacity-50 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Click map to add waypoints</p></div>}
                         </div>
                       </section>
-
                       <Separator />
-
-                      {/* Hazards List */}
                       <section className="space-y-4">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-destructive flex items-center gap-2">
-                           <div className="w-2 h-2 rounded-full bg-destructive" /> Safety Hazards
-                        </h3>
+                        <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-destructive"><div className="h-2 w-2 rounded-full bg-destructive" /> Safety Hazards</h3>
                         <div className="space-y-2">
                           {activeRoute.hazards.map((hazard) => (
-                            <div key={hazard.id} className="p-3 border border-destructive/10 rounded-xl bg-destructive/5 space-y-2 relative group hover:border-destructive/30 transition-all">
-                               <div className="flex items-center justify-between">
-                                  <Badge variant="destructive" className="text-[8px] h-4 font-black uppercase">Alert</Badge>
-                                  {isEditing && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveHazard(hazard.id)}><Trash2 size={12} /></Button>
-                                  )}
-                               </div>
-                               <Textarea 
-                                  value={hazard.note}
-                                  onChange={e => {
-                                    const newHazards = activeRoute.hazards.map(h => h.id === hazard.id ? {...h, note: e.target.value} : h);
-                                    setActiveRoute({...activeRoute, hazards: newHazards});
-                                  }}
-                                  className="h-16 text-[10px] font-bold bg-transparent border-none shadow-none focus-visible:ring-0 p-0 resize-none leading-relaxed"
-                                  placeholder="Hazard description..."
-                                  readOnly={!isEditing}
-                               />
-                               <p className="text-[8px] font-mono text-destructive/60 font-black">{hazard.lat.toFixed(4)}, {hazard.lng.toFixed(4)}</p>
+                            <div key={hazard.id} className="group relative space-y-2 rounded-xl border border-destructive/10 bg-destructive/5 p-3 transition-all hover:border-destructive/30">
+                              <div className="flex items-center justify-between">
+                                <Badge variant="destructive" className="h-4 text-[8px] font-black uppercase">Alert</Badge>
+                                {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.filter((item) => item.id !== hazard.id) })}><Trash2 size={12} /></Button>}
+                              </div>
+                              <Textarea value={hazard.note} onChange={(e) => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.map((item) => item.id === hazard.id ? { ...item, note: e.target.value } : item) })} className="h-16 resize-none border-none bg-transparent p-0 text-[10px] font-bold leading-relaxed shadow-none focus-visible:ring-0" placeholder="Hazard description..." readOnly={!isEditing} />
+                              <p className="font-mono text-[8px] font-black text-destructive/60">{hazard.lat.toFixed(4)}, {hazard.lng.toFixed(4)}</p>
                             </div>
                           ))}
-                          {activeRoute.hazards.length === 0 && (
-                            <div className="text-center py-8 border rounded-xl bg-muted/5 border-dashed">
-                               <AlertTriangle className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-40" />
-                               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mark hazards from the map</p>
-                            </div>
-                          )}
+                          {activeRoute.hazards.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><AlertTriangle className="mx-auto mb-2 h-6 w-6 opacity-40 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mark hazards from the map</p></div>}
                         </div>
                       </section>
                     </div>
                   </ScrollArea>
                 </div>
               ) : (
-                <div className="flex h-full flex-col items-center justify-center p-12 text-center space-y-4 opacity-40">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                    <MapIcon size={32} />
-                  </div>
+                <div className="flex h-full flex-col items-center justify-center space-y-4 p-12 text-center opacity-40">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted"><MapIcon size={32} /></div>
                   <div className="max-w-xs">
                     <p className="text-xs font-black uppercase tracking-tight">Select a Training Route</p>
-                    <p className="text-[10px] font-bold mt-2 leading-relaxed">Choose a route from the list or create a new one to begin planning.</p>
+                    <p className="mt-2 text-[10px] font-bold leading-relaxed">Choose a route from the list or create a new one to begin planning.</p>
                   </div>
                 </div>
               )}
@@ -370,38 +250,25 @@ export default function TrainingRoutesPage() {
         </CardContent>
       </Card>
 
-      {/* Hazard Note Dialog */}
       <Dialog open={!!hazardToEdit} onOpenChange={() => setHazardToEdit(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-destructive" /> Mark Safety Hazard
-            </DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest"><AlertTriangle className="h-4 w-4 text-destructive" /> Mark Safety Hazard</DialogTitle>
+            <DialogDescription>Describe the hazard and save it with the local route.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-muted-foreground">Hazard Description</Label>
-              <Textarea 
-                placeholder="Describe the hazard (e.g., High terrain, restricted area, frequent turbulence...)"
-                className="text-xs font-bold min-h-[100px]"
-                value={hazardNote}
-                onChange={e => setHazardNote(e.target.value)}
-              />
+              <label className="text-[10px] font-black uppercase text-muted-foreground">Hazard Description</label>
+              <Textarea value={hazardNote} onChange={(e) => setHazardNote(e.target.value)} placeholder="Describe the hazard..." className="min-h-[100px] text-xs font-bold" />
             </div>
-            <p className="text-[9px] font-mono font-bold text-muted-foreground text-center">
-              Target: {hazardToEdit?.lat.toFixed(4)}, {hazardToEdit?.lng.toFixed(4)}
-            </p>
+            <p className="text-center font-mono text-[9px] font-bold text-muted-foreground">Target: {hazardToEdit?.lat.toFixed(4)}, {hazardToEdit?.lng.toFixed(4)}</p>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="ghost" className="text-[10px] font-black uppercase">Cancel</Button></DialogClose>
-            <Button onClick={confirmAddHazard} className="bg-destructive hover:bg-destructive/90 text-white font-black uppercase text-[10px]">Add Marker</Button>
+            <Button onClick={confirmAddHazard} className="bg-destructive text-[10px] font-black uppercase text-white hover:bg-destructive/90">Add Marker</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
-
-function Label({ children, className, ...props }: any) {
-  return <label className={`${className}`} {...props}>{children}</label>;
 }

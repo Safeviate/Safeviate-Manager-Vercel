@@ -2,33 +2,32 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection } from 'firebase/firestore';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ExamForm, type ExamFormValues } from '../exam-form';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { BackNavButton } from '@/components/back-nav-button';
-import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function NewExamPage() {
-  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { tenantId } = useUserProfile();
 
   const handleCreate = async (values: ExamFormValues) => {
-    if (!firestore || !tenantId) return;
     setIsSubmitting(true);
 
     try {
-      const colRef = collection(firestore, `tenants/${tenantId}/exam-templates`);
+      const storedTemplates = localStorage.getItem('safeviate.exam-templates');
+      const templates = storedTemplates ? JSON.parse(storedTemplates) : [];
       const data = {
         ...values,
+        id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       };
 
-      addDocumentNonBlocking(colRef, data);
+      const nextTemplates = [data, ...templates];
+      localStorage.setItem('safeviate.exam-templates', JSON.stringify(nextTemplates));
+      window.dispatchEvent(new Event('safeviate-exams-updated'));
+      
       toast({ title: 'Exam Created', description: `"${values.title}" template is now available.` });
       router.push('/training/exams');
     } catch (error: any) {

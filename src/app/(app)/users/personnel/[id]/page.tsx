@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useMemo, use, Suspense } from 'react';
+import { useState, useMemo, use, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { collection, doc, query } from 'firebase/firestore';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Personnel, PilotProfile } from '../page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
@@ -25,7 +23,6 @@ type UserProfile = Personnel | PilotProfile;
 
 function UserProfileContent({ params }: UserProfilePageProps) {
     const resolvedParams = use(params);
-    const firestore = useFirestore();
     const searchParams = useSearchParams();
     const userType = searchParams.get('type') || 'Personnel';
     const { hasPermission } = usePermissions();
@@ -35,40 +32,39 @@ function UserProfileContent({ params }: UserProfilePageProps) {
     const [isEditing, setIsEditing] = useState(false);
     const canEditUsers = hasPermission('users-edit');
 
-    const collectionName = useMemo(() => {
-        switch(userType) {
-            case 'Personnel': return 'personnel';
-            case 'Instructor': return 'instructors';
-            case 'Student': return 'students';
-            case 'Private Pilot': return 'private-pilots';
-            default: return 'personnel';
+    const [user, setUser] = useState<UserProfile | null>(null);
+    const [roles, setRoles] = useState<Role[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [logbookTemplates, setLogbookTemplates] = useState<LogbookTemplate[]>([]);
+    const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+    useEffect(() => {
+        try {
+            const collectionName = userType === 'Instructor' ? 'instructors' : 
+                                   userType === 'Student' ? 'students' : 
+                                   userType === 'Private Pilot' ? 'private-pilots' : 'personnel';
+            
+            const storedUser = localStorage.getItem(`safeviate.${collectionName}`);
+            if (storedUser) {
+                const arr = JSON.parse(storedUser) as UserProfile[];
+                const found = arr.find(u => u.id === userId);
+                if (found) setUser(found);
+            }
+
+            const storedRoles = localStorage.getItem('safeviate.roles');
+            if (storedRoles) setRoles(JSON.parse(storedRoles));
+
+            const storedDepts = localStorage.getItem('safeviate.departments');
+            if (storedDepts) setDepartments(JSON.parse(storedDepts));
+
+            const storedLogbooks = localStorage.getItem('safeviate.logbook-templates');
+            if (storedLogbooks) setLogbookTemplates(JSON.parse(storedLogbooks));
+        } catch {
+            // ignore
+        } finally {
+            setIsLoadingUser(false);
         }
-    }, [userType]);
-
-    const userDocRef = useMemoFirebase(
-        () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, collectionName, userId) : null),
-        [firestore, tenantId, collectionName, userId]
-    );
-
-    const rolesQuery = useMemoFirebase(
-        () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'roles') : null),
-        [firestore, tenantId]
-    );
-
-    const departmentsQuery = useMemoFirebase(
-        () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'departments') : null),
-        [firestore, tenantId]
-    );
-    
-    const logbookTemplatesQuery = useMemoFirebase(
-        () => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'logbook-templates') : null),
-        [firestore, tenantId]
-    );
-
-    const { data: user, isLoading: isLoadingUser } = useDoc<UserProfile>(userDocRef);
-    const { data: roles } = useCollection<Role>(rolesQuery);
-    const { data: departments } = useCollection<Department>(departmentsQuery);
-    const { data: logbookTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
+    }, [userType, userId]);
 
     const currentRole = useMemo(() => {
         if (user && 'role' in user) {

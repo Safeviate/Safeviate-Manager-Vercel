@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { PilotProfile } from '../personnel/page';
 import { PrivatePilotsTable } from './private-pilots-table';
@@ -18,47 +16,35 @@ import { ChevronDown, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PrivatePilotsPage() {
-  const firestore = useFirestore();
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
   const { tenantId, isLoading: isProfileLoading } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
 
-  const privatePilotsQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'private-pilots'))
-        : null,
-    [firestore, tenantId]
-  );
-  
-  const rolesQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'roles'))
-        : null,
-    [firestore, tenantId]
-  );
+  const [privatePilots, setPrivatePilots] = useState<PilotProfile[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [error, setError] = useState<any>(null);
 
-  const departmentsQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'departments'))
-        : null,
-    [firestore, tenantId]
-  );
-  
+  useEffect(() => {
+    try {
+      const storedPilots = localStorage.getItem('safeviate.private-pilots');
+      if (storedPilots) setPrivatePilots(JSON.parse(storedPilots));
+      
+      const storedRoles = localStorage.getItem('safeviate.roles');
+      if (storedRoles) setRoles(JSON.parse(storedRoles));
+      
+      const storedDepts = localStorage.getItem('safeviate.departments');
+      if (storedDepts) setDepartments(JSON.parse(storedDepts));
+    } catch (err: any) {
+      setError(err);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
 
-  const { data: privatePilots, isLoading: isLoadingPilots, error: pilotsError } = useCollection<PilotProfile>(privatePilotsQuery);
-  const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
-  const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
-
-
-  const isLoading = isProfileLoading || isLoadingPilots || isLoadingRoles || isLoadingDepts;
-  const error = pilotsError || rolesError || deptsError;
+  const isLoading = isProfileLoading || isLoadingData;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">

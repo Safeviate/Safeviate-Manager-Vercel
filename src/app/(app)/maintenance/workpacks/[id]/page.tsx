@@ -1,16 +1,14 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, doc, query, orderBy, updateDoc } from 'firebase/firestore';
 import { ChevronLeft, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Workpack, TaskCard } from '@/types/workpack';
 import { TaskCardDialog } from './task-card-dialog';
@@ -19,27 +17,62 @@ import { TaskCardItem } from './task-card-item';
 export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   
-  // Workpack Document Reference
-  const wpRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/workpacks/${resolvedParams.id}`) : null),
-    [firestore, tenantId, resolvedParams.id]
-  );
-  const { data: workpack, isLoading: isLoadingWp } = useDoc<Workpack>(wpRef);
+  const [workpack, setWorkpack] = useState<Workpack | null>(null);
+  const [allTaskCards, setAllTaskCards] = useState<TaskCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Task Cards Subcollection Reference
-  const tcQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(
-      collection(firestore, `tenants/${tenantId}/workpacks/${resolvedParams.id}/taskCards`),
-      orderBy('createdAt', 'asc')
-    ) : null),
-    [firestore, tenantId, resolvedParams.id]
-  );
-  const { data: taskCards, isLoading: isLoadingTc } = useCollection<TaskCard>(tcQuery);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedWps = localStorage.getItem('safeviate.maintenance-workpacks');
+        const storedTcs = localStorage.getItem('safeviate.maintenance-task-cards');
+        
+        if (storedWps) {
+            const wps = JSON.parse(storedWps) as Workpack[];
+            const found = wps.find(wp => wp.id === resolvedParams.id);
+            if (found) setWorkpack(found);
+        }
+        
+        if (storedTcs) {
+            setAllTaskCards(JSON.parse(storedTcs));
+        }
+    } catch (e) {
+        console.error("Failed to load workpack data", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [resolvedParams.id]);
 
-  if (isLoadingWp || isLoadingTc) {
+  useEffect(() => {
+    loadData();
+    window.addEventListener('safeviate-maintenance-workpacks-updated', loadData);
+    window.addEventListener('safeviate-maintenance-task-cards-updated', loadData);
+    return () => {
+        window.removeEventListener('safeviate-maintenance-workpacks-updated', loadData);
+        window.removeEventListener('safeviate-maintenance-task-cards-updated', loadData);
+    }
+  }, [loadData]);
+
+  const taskCards = useMemo(() => {
+      return allTaskCards.filter(tc => tc.workpackId === resolvedParams.id);
+  }, [allTaskCards, resolvedParams.id]);
+
+  const handleCloseWorkpack = () => {
+      if (!workpack) return;
+      try {
+          const storedWps = localStorage.getItem('safeviate.maintenance-workpacks');
+          const wps = storedWps ? JSON.parse(storedWps) as Workpack[] : [];
+          const nextWps = wps.map(wp => wp.id === workpack.id ? { ...wp, status: 'CLOSED', closedAt: new Date().toISOString() } : wp);
+          localStorage.setItem('safeviate.maintenance-workpacks', JSON.stringify(nextWps));
+          window.dispatchEvent(new Event('safeviate-maintenance-workpacks-updated'));
+      } catch (e) {
+          console.error("Failed to close workpack", e);
+      }
+  }
+
+  if (isLoading) {
     return (
       <div className="max-w-[1400px] mx-auto w-full space-y-6 px-4">
         <Skeleton className="h-32 w-full" />
@@ -90,7 +123,7 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
         </CardContent>
       </Card>
 
-      {/* CRS Banner — uses theme tokens so it responds to Page Format branding */}
+      {/* CRS Banner */}
       {workpack.status !== 'CLOSED' && taskCards && taskCards.length > 0 && taskCards.every(tc => tc.isCompleted && (!tc.requiresInspector || tc.isInspected)) && (
         <Card className="shrink-0 bg-primary/10 border-primary/30 shadow-sm">
            <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -100,10 +133,7 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
               </div>
               <Button 
                 className="font-black uppercase shadow-md"
-                onClick={async () => {
-                  if (!firestore || !tenantId || !wpRef) return;
-                  await updateDoc(wpRef, { status: 'CLOSED', closedAt: new Date().toISOString() });
-                }}
+                onClick={handleCloseWorkpack}
               >
                  Issue CRS & Lock Package
               </Button>

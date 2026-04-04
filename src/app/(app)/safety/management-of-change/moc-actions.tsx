@@ -1,7 +1,5 @@
 'use client';
 
-import { doc } from 'firebase/firestore';
-import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange } from '@/types/moc';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -23,20 +21,27 @@ interface MocActionsProps {
 }
 
 export function MocActions({ moc, tenantId }: MocActionsProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
   
   const canManage = hasPermission('moc-manage');
 
-  const handleDelete = () => {
-    if (!firestore) return;
-    const mocRef = doc(firestore, `tenants/${tenantId}/management-of-change`, moc.id);
-    deleteDocumentNonBlocking(mocRef);
+  const handleDelete = async () => {
+    const response = await fetch('/api/management-of-change', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mocId: moc.id }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error || 'Unable to delete MOC.');
+    }
+
     toast({
-        title: "MOC Deleted",
-        description: `MOC #${moc.mocNumber} is being deleted.`
+      title: "MOC Deleted",
+      description: `MOC #${moc.mocNumber} is being deleted.`
     });
   };
 

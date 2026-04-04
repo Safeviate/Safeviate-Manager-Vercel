@@ -1,28 +1,42 @@
 'use client';
 
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 import { useUserProfile } from './use-user-profile';
 import type { TabVisibilitySettings } from '@/types/quality';
 
 /**
  * A custom hook to determine if specific UI tabs should be visible.
- * RESTORED: Now strictly checks settings in Firestore.
+ * Uses the current MOC/Vercel profile context and the tenant database route.
  */
 export function useTabVisibility(pageId: string, canViewAll: boolean): boolean {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
+  const [settings, setSettings] = useState<TabVisibilitySettings | null>(null);
 
-  const settingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'tab-visibility') : null),
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!tenantId) {
+        setSettings(null);
+        return;
+      }
 
-  const { data: settings } = useDoc<TabVisibilitySettings>(settingsRef);
+      try {
+        const response = await fetch('/api/me', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled) {
+          setSettings(payload?.tenant?.tabVisibilitySettings ?? null);
+        }
+      } catch {
+        if (!cancelled) setSettings(null);
+      }
+    };
 
-  // If user can view all (admin/manager), tabs are visible unless explicitly disabled
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
   if (canViewAll) return true;
-
-  // Otherwise check the stored settings for this page
   return settings?.visibilities?.[pageId] ?? true;
 }

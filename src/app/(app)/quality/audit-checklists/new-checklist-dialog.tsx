@@ -1,13 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { v4 as uuidv4 } from 'uuid';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, GripVertical, Trash2, Wand2, Library } from 'lucide-react';
+import { PlusCircle, GripVertical, Trash2, Library } from 'lucide-react';
 import type { QualityAuditChecklistTemplate, AuditChecklistItem, ChecklistSection, ComplianceRequirement } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -77,19 +73,20 @@ export function NewChecklistDialog({
   existingTemplate,
   trigger,
 }: NewChecklistDialogProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
+  const [complianceItems, setComplianceItems] = useState<ComplianceRequirement[]>([]);
 
   // Drag-and-drop state for sections
   const dragSectionNode = useRef<HTMLDivElement | null>(null);
   
-  const complianceQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: complianceItems } = useCollection<ComplianceRequirement>(complianceQuery);
+  useEffect(() => {
+    if (isOpen) {
+        const storedCompliance = localStorage.getItem('safeviate.compliance-matrix');
+        if (storedCompliance) setComplianceItems(JSON.parse(storedCompliance));
+    }
+  }, [isOpen]);
 
 
   const form = useForm<FormValues>({
@@ -113,39 +110,43 @@ export function NewChecklistDialog({
   }, [isOpen, existingTemplate, form]);
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore || !tenantId) {
-      toast({
-        variant: 'destructive',
-        title: 'Tenant not ready',
-        description: 'Please wait for tenant context to load, then try again.',
-      });
-      return;
-    }
-    
-    const dataToSave = {
-        ...values,
-        sections: values.sections.map(section => ({
-            ...section,
-            items: section.items.map(item => ({
-                id: item.id || uuidv4(), 
-                text: item.text,
-                type: item.type,
-                regulationReference: item.regulationReference,
+    try {
+        const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
+        const currentTemplates = storedTemplates ? JSON.parse(storedTemplates) as QualityAuditChecklistTemplate[] : [];
+        
+        const dataToSave = {
+            ...values,
+            sections: values.sections.map(section => ({
+                ...section,
+                items: section.items.map(item => ({
+                    id: item.id || crypto.randomUUID(), 
+                    text: item.text,
+                    type: item.type,
+                    regulationReference: item.regulationReference,
+                }))
             }))
-        }))
-    }
+        }
 
-    if (existingTemplate) {
-        const templateRef = doc(firestore, `tenants/${tenantId}/quality-audit-templates`, existingTemplate.id);
-        updateDocumentNonBlocking(templateRef, dataToSave);
-        toast({ title: 'Template Updated', description: 'The checklist template has been saved.' });
-    } else {
-        const templatesCollection = collection(firestore, `tenants/${tenantId}/quality-audit-templates`);
-        addDocumentNonBlocking(templatesCollection, dataToSave);
-        toast({ title: 'Template Created', description: 'The new checklist template has been saved.' });
+        if (existingTemplate) {
+            const nextTemplates = currentTemplates.map(t => t.id === existingTemplate.id ? { ...t, ...dataToSave } : t);
+            localStorage.setItem('safeviate.quality-audit-templates', JSON.stringify(nextTemplates));
+            toast({ title: 'Template Updated', description: 'The checklist template has been saved.' });
+        } else {
+            const newTemplate = {
+                ...dataToSave,
+                id: crypto.randomUUID(),
+                category: departments.find(d => d.id === values.departmentId)?.name || 'General',
+                organizationId: '', // Default to global/internal for now
+            };
+            localStorage.setItem('safeviate.quality-audit-templates', JSON.stringify([newTemplate, ...currentTemplates]));
+            toast({ title: 'Template Created', description: 'The new checklist template has been saved.' });
+        }
+        
+        window.dispatchEvent(new Event('safeviate-quality-templates-updated'));
+        setIsOpen(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
-    
-    setIsOpen(false);
   };
 
   const handleAiGeneratedSections = (sections: ChecklistSection[]) => {
@@ -202,7 +203,7 @@ export function NewChecklistDialog({
       const dragItemNode = useRef<HTMLDivElement | null>(null);
 
       const addItem = (type: AuditChecklistItem['type']) => {
-        append({ id: uuidv4(), text: '', type, regulationReference: '' });
+        append({ id: crypto.randomUUID(), text: '', type, regulationReference: '' });
       };
 
       const handleItemDragStart = (e: React.DragEvent, index: number) => {
@@ -303,9 +304,9 @@ export function NewChecklistDialog({
                 <Separator />
                 
                 <div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4"> {/* Updated responsive classes */}
-                        <h3 className="text-lg font-medium mb-2 sm:mb-0">Sections</h3> {/* Added responsive margin */}
-                        <div className="flex flex-wrap gap-2 justify-end sm:justify-start"> {/* Added flex-wrap and justify-end */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
+                        <h3 className="text-lg font-medium mb-2 sm:mb-0">Sections</h3>
+                        <div className="flex flex-wrap gap-2 justify-end sm:justify-start">
                             <ImportFromMatrixDialog 
                                 complianceItems={complianceItems || []}
                                 onImport={handleImportFromMatrix}
@@ -314,7 +315,7 @@ export function NewChecklistDialog({
                             <Button 
                                 type="button" 
                                 variant="outline" 
-                                onClick={() => appendSection({ id: uuidv4(), title: '', items: [] })}
+                                onClick={() => appendSection({ id: crypto.randomUUID(), title: '', items: [] })}
                                 className="w-full sm:w-auto"
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Section

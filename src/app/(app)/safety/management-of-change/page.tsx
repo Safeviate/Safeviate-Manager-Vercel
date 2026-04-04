@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronsUpDown, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +19,7 @@ import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,27 +28,53 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function ManagementOfChangePage() {
-    const firestore = useFirestore();
     const { hasPermission } = usePermissions();
     const { tenantId } = useUserProfile();
     const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'moc-manage' });
     const isMobile = useIsMobile();
     const [activeOrgTab, setActiveOrgTab] = useState('internal');
+    const [mocs, setMocs] = useState<ManagementOfChange[]>([]);
+    const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+    const [isLoadingMocs, setIsLoadingMocs] = useState(true);
+    const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
 
     const canViewAll = hasPermission('moc-manage');
 
-    const mocsQuery = useMemoFirebase(
-        () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/management-of-change`), orderBy('proposalDate', 'desc')) : null),
-        [firestore, tenantId]
-    );
+    useEffect(() => {
+        let cancelled = false;
 
-    const orgsQuery = useMemoFirebase(
-        () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
-        [firestore, tenantId]
-    );
+        const load = async () => {
+            if (!tenantId) {
+                setIsLoadingMocs(false);
+                setIsLoadingOrgs(false);
+                return;
+            }
 
-    const { data: mocs, isLoading: isLoadingMocs, error } = useCollection<ManagementOfChange>(mocsQuery);
-    const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+            setIsLoadingMocs(true);
+            setIsLoadingOrgs(true);
+            setError(null);
+            try {
+                const response = await fetch('/api/management-of-change', { cache: 'no-store' });
+                const payload = await response.json();
+                if (cancelled) return;
+                setMocs(payload.mocs ?? []);
+                setOrganizations(payload.organizations ?? []);
+            } catch (err) {
+                if (!cancelled) setError(err instanceof Error ? err : new Error('Unable to load MOC records.'));
+            } finally {
+                if (!cancelled) {
+                    setIsLoadingMocs(false);
+                    setIsLoadingOrgs(false);
+                }
+            }
+        };
+
+        void load();
+        return () => {
+            cancelled = true;
+        };
+    }, [tenantId]);
 
     const isLoading = isLoadingMocs || isLoadingOrgs;
 

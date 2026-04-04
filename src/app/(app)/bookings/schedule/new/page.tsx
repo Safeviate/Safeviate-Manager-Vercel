@@ -1,48 +1,60 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, runTransaction } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NewBookingForm, type NewBookingFormValues } from './new-booking-form';
 import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function NewBookingPage() {
-  const firestore = useFirestore();
-  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
-  const { userProfile, tenantId } = useUserProfile();
+  const { tenantId } = useUserProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const canManageSchedule = hasPermission('bookings-schedule-manage');
 
   useEffect(() => {
-    if (!canManageSchedule && user) {
+    if (!canManageSchedule) {
         toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to create aircraft bookings.' });
         router.push('/bookings/schedule');
     }
-  }, [canManageSchedule, user, router, toast]);
+  }, [canManageSchedule, router, toast]);
 
-  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-  
-  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftQuery);
-  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/schedule-data', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled) {
+          setAircrafts((payload?.aircraft ?? []) as Aircraft[]);
+        }
+      } catch {
+        if (!cancelled) {
+          setAircrafts([]);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
-  const isLoading = isLoadingAircrafts || isLoadingInstructors || isLoadingStudents;
+  const isLoading = isLoadingData;
 
   const handleNewBooking = async (values: NewBookingFormValues) => {
-    if (!firestore || !tenantId || !canManageSchedule) return;
+    if (!tenantId || !canManageSchedule) return;
     
     setIsSubmitting(true);
 
@@ -64,25 +76,16 @@ export default function NewBookingPage() {
         instructorId: rest.instructorId || null,
         studentId: rest.studentId || null,
         notes: rest.notes || null,
-        createdById: userProfile?.id || user?.uid || null,
+        createdById: tenantId || null,
     };
 
     try {
-        const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
-        const bookingsCollection = collection(firestore, `tenants/${tenantId}/bookings`);
-        
-        await runTransaction(firestore, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            const newCount = (counterDoc.data()?.currentNumber || 0) + 1;
-            transaction.set(counterRef, { currentNumber: newCount });
-            
-            const newBookingRef = doc(bookingsCollection);
-            transaction.set(newBookingRef, {
-                ...bookingData,
-                id: newBookingRef.id,
-                bookingNumber: String(newCount).padStart(5, '0'),
-            });
+        const response = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking: bookingData }),
         });
+        if (!response.ok) throw new Error((await response.json())?.error || 'Failed to create booking.');
         
         toast({
             title: 'Booking Created',
@@ -110,8 +113,8 @@ export default function NewBookingPage() {
   return (
     <NewBookingForm
       aircrafts={aircrafts || []}
-      instructors={instructors || []}
-      students={students || []}
+      instructors={[]}
+      students={[]}
       onSubmit={handleNewBooking}
       isSubmitting={isSubmitting}
     />

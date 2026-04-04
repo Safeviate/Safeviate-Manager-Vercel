@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { FileText, Search, CalendarIcon, PlusCircle, FileType, ImageIcon, ChevronsUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -36,7 +34,6 @@ interface CompanyDocument {
 }
 
 export default function CompanyDocumentsPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
@@ -45,33 +42,46 @@ export default function CompanyDocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingDoc, setViewingDoc] = useState<CompanyDocument | null>(null);
 
+  const [documents, setDocuments] = useState<CompanyDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const expirySettings: DocumentExpirySettings | undefined = undefined;
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetch('/api/company-documents', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error('Failed to load documents');
+        }
+        const payload = await response.json();
+        setDocuments(payload.documents || []);
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Load Failed',
+          description: 'Could not load company documents.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   const canManage = hasPermission('operations-documents-manage');
-
-  const docsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/company-documents`), orderBy('uploadDate', 'desc')) : null),
-    [firestore, tenantId]
-  );
-  const expirySettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
-    [firestore, tenantId]
-  );
-
-  const { data: documents, isLoading } = useCollection<CompanyDocument>(docsQuery);
-  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
 
   const filteredDocs = useMemo(() => {
     if (!documents) return [];
-    return documents.filter(doc => 
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    return documents
+      .filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
   }, [documents, searchQuery]);
 
-  const handleDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
-    if (!firestore || !tenantId) return;
-    
-    const isImage = docDetails.url.startsWith('data:image/');
-    
-    const newDoc = {
+  const handleDocumentUploaded = async (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
+    const isImage = /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(docDetails.url) || docDetails.url.includes('/image/');
+
+    const newDoc: CompanyDocument = {
+      id: crypto.randomUUID(),
       name: docDetails.name,
       url: docDetails.url,
       uploadDate: docDetails.uploadDate,
@@ -79,21 +89,75 @@ export default function CompanyDocumentsPage() {
       type: isImage ? 'image' : 'file'
     };
 
-    addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/company-documents`), newDoc);
-    toast({ title: 'Document Added', description: `"${docDetails.name}" has been saved.` });
+    try {
+      const response = await fetch('/api/company-documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newDoc),
+      });
+
+      if (!response.ok) {
+        throw new Error('Save failed');
+      }
+
+      setDocuments((prev) => [newDoc, ...prev]);
+      toast({ title: 'Document Added', description: `"${docDetails.name}" has been saved.` });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: 'Could not save document metadata.',
+      });
+    }
   };
 
-  const handleUpdateExpiry = (docId: string, date: Date | undefined) => {
-    if (!firestore || !tenantId) return;
-    const docRef = doc(firestore, `tenants/${tenantId}/company-documents`, docId);
-    updateDocumentNonBlocking(docRef, { expirationDate: date ? date.toISOString() : null });
-    toast({ title: 'Expiry Updated' });
+  const handleUpdateExpiry = async (docId: string, date: Date | undefined) => {
+    const expirationDate = date ? date.toISOString() : null;
+    const previous = documents;
+    setDocuments((prev) => prev.map((d) => (d.id === docId ? { ...d, expirationDate } : d)));
+    try {
+      const response = await fetch('/api/company-documents', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: docId, expirationDate }),
+      });
+      if (!response.ok) {
+        throw new Error('Update failed');
+      }
+      toast({ title: 'Expiry Updated' });
+    } catch {
+      setDocuments(previous);
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Could not update expiry date.',
+      });
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (!firestore || !tenantId) return;
-    deleteDocumentNonBlocking(doc(firestore, `tenants/${tenantId}/company-documents`, id));
-    toast({ title: 'Document Deleted' });
+  const handleDelete = async (id: string) => {
+    const previous = documents;
+    setDocuments((prev) => prev.filter((d) => d.id !== id));
+    try {
+      const response = await fetch(`/api/company-documents?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Delete failed');
+      }
+      toast({ title: 'Document Deleted' });
+    } catch {
+      setDocuments(previous);
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: 'Could not delete document.',
+      });
+    }
   };
 
   return (

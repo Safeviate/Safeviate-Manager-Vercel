@@ -2,13 +2,10 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { collection, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import type { Booking, NavlogLeg } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
-import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
@@ -109,25 +106,17 @@ function stripUndefinedDeep<T>(value: T): T {
 }
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
-    const firestore = useFirestore();
     const isMobile = useIsMobile();
     const { toast } = useToast();
     const { tenantId } = useUserProfile();
     const [activeTab, setActiveTab] = useState('navlog');
     const [isSaving, setIsSaving] = useState(false);
-
-    const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-    const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-    const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
-    const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-
-    const { data: aircrafts, isLoading: loadingAc } = useCollection<Aircraft>(aircraftQuery);
-    const { data: instructors, isLoading: loadingIns } = useCollection<PilotProfile>(instructorsQuery);
-    const { data: students, isLoading: loadingStu } = useCollection<PilotProfile>(studentsQuery);
-    const { data: personnel } = useCollection<Personnel>(personnelQuery);
+    const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+    const [personnel, setPersonnel] = useState<any[]>([]);
+    const [loadingAc, setLoadingAc] = useState(true);
+    const [loadingPeople, setLoadingPeople] = useState(true);
 
     const aircraft = useMemo(() => aircrafts?.find(a => a.id === booking.aircraftId), [aircrafts, booking.aircraftId]);
-
     const [stations, setStations] = useState<any[]>([]);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
@@ -141,6 +130,51 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [depLon, setDepLon] = useState(booking.navlog?.departureLongitude?.toString() || '');
     const [arrLat, setArrLat] = useState(booking.navlog?.arrivalLatitude?.toString() || '');
     const [arrLon, setArrLon] = useState(booking.navlog?.arrivalLongitude?.toString() || '');
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadData = async () => {
+            if (!tenantId) {
+                setLoadingAc(false);
+                setLoadingPeople(false);
+                return;
+            }
+
+            try {
+                const [scheduleRes, personnelRes] = await Promise.all([
+                    fetch('/api/schedule-data'),
+                    fetch('/api/personnel'),
+                ]);
+
+                if (!scheduleRes.ok) throw new Error('Failed to load aircraft data.');
+                if (!personnelRes.ok) throw new Error('Failed to load personnel data.');
+
+                const scheduleData = await scheduleRes.json();
+                const peopleData = await personnelRes.json();
+
+                if (!cancelled) {
+                    setAircrafts(scheduleData.aircraft || []);
+                    setPersonnel(peopleData.personnel || []);
+                }
+            } catch {
+                if (!cancelled) {
+                    setAircrafts([]);
+                    setPersonnel([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoadingAc(false);
+                    setLoadingPeople(false);
+                }
+            }
+        };
+
+        loadData();
+        return () => {
+            cancelled = true;
+        };
+    }, [tenantId]);
 
     useEffect(() => {
         if (aircraft) {
@@ -193,17 +227,29 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }, []);
 
     const handleSaveToBooking = () => {
-        if (!firestore || !tenantId) return;
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        updateDocumentNonBlocking(bookingRef, {
-            massAndBalance: stripUndefinedDeep({
-                takeoffWeight: results.weight,
-                takeoffCg: results.cg,
-                isWithinLimits: results.isSafe,
-                stations
-            })
+        void fetch('/api/bookings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking: {
+                    ...booking,
+                    massAndBalance: stripUndefinedDeep({
+                        takeoffWeight: results.weight,
+                        takeoffCg: results.cg,
+                        isWithinLimits: results.isSafe,
+                        stations,
+                    }),
+                },
+            }),
+        }).then(async (res) => {
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Save failed.');
+            }
+            toast({ title: 'M&B Saved' });
+        }).catch((error: any) => {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
         });
-        toast({ title: 'M&B Saved' });
     };
 
     const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
@@ -227,22 +273,32 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleCommitRoute = async () => {
-        if (!firestore || !tenantId) return;
         setIsSaving(true);
-
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        
         try {
             const sanitizedLegs = stripUndefinedDeep(plannedLegs);
-            await updateDocumentNonBlocking(bookingRef, {
-                'navlog.legs': sanitizedLegs,
-                'navlog.departureIcao': depIcao,
-                'navlog.arrivalIcao': arrIcao,
-                'navlog.departureLatitude': depLat ? parseFloat(depLat) : null,
-                'navlog.departureLongitude': depLon ? parseFloat(depLon) : null,
-                'navlog.arrivalLatitude': arrLat ? parseFloat(arrLat) : null,
-                'navlog.arrivalLongitude': arrLon ? parseFloat(arrLon) : null
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        navlog: {
+                            ...(booking.navlog || {}),
+                            legs: sanitizedLegs,
+                            departureIcao: depIcao,
+                            arrivalIcao: arrIcao,
+                            departureLatitude: depLat ? parseFloat(depLat) : null,
+                            departureLongitude: depLon ? parseFloat(depLon) : null,
+                            arrivalLatitude: arrLat ? parseFloat(arrLat) : null,
+                            arrivalLongitude: arrLon ? parseFloat(arrLon) : null,
+                        },
+                    },
+                }),
             });
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Commit failed.');
+            }
             toast({ title: "Route Committed", description: "The navigation log has been updated." });
         } catch (e: any) {
             toast({ variant: "destructive", title: "Commit Failed", description: e.message });
@@ -251,7 +307,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    if (loadingAc || loadingIns || loadingStu) return <Skeleton className="h-64 w-full" />;
+    if (loadingAc || loadingPeople) return <Skeleton className="h-64 w-full" />;
 
     const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
     const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));

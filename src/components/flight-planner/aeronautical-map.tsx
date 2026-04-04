@@ -10,8 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { doc, setDoc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 const DefaultIcon = L.icon({
@@ -974,14 +972,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   const [airspaceFeatures, setAirspaceFeatures] = useState<OpenAipAirspace[]>([]);
   const [obstacleFeatures, setObstacleFeatures] = useState<OpenAipObstacle[]>([]);
   const [mapZoom, setMapZoom] = useState(8);
-  const firestore = useFirestore();
-  const { tenantId } = useUserProfile();
-  const mapSettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'flight-planner-map') : null),
-    [firestore, tenantId]
-  );
-  const { data: mapSettings } = useDoc<FlightPlannerMapSettings>(mapSettingsRef, {
-    initialData: {
+  const [mapSettings, setMapSettings] = useState<FlightPlannerMapSettings>({
       id: 'flight-planner-map',
       baseLayer: 'light',
       showMasterChart: true,
@@ -998,8 +989,24 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
       showGlidingSectors: true,
       showHangGlidings: true,
       showOnlyActiveAirspace: false,
-    },
   });
+
+  const loadMapSettings = useCallback(() => {
+    const stored = localStorage.getItem('safeviate.flight-planner-map-settings');
+    if (stored) {
+        try {
+            setMapSettings(JSON.parse(stored));
+        } catch (e) {
+            console.error("Failed to parse map settings", e);
+        }
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMapSettings();
+    window.addEventListener('safeviate-flight-planner-map-settings-updated', loadMapSettings);
+    return () => window.removeEventListener('safeviate-flight-planner-map-settings-updated', loadMapSettings);
+  }, [loadMapSettings]);
 
   const [masterVisible, setMasterVisible] = useState(true);
   const [airportsVisible, setAirportsVisible] = useState(true);
@@ -1352,9 +1359,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   }, [mapSettings]);
 
   useEffect(() => {
-    if (!mapSettingsRef || !mapSettingsHydratedRef.current) return;
+    if (!mapSettingsHydratedRef.current) return;
 
-    const nextSettings = {
+    const nextSettings: FlightPlannerMapSettings = {
       id: 'flight-planner-map',
       baseLayer: selectedBaseLayer,
       showMasterChart: masterVisible,
@@ -1376,7 +1383,8 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     if (serialized === lastPersistedSettingsRef.current) return;
 
     lastPersistedSettingsRef.current = serialized;
-    void setDoc(mapSettingsRef, nextSettings, { merge: true });
+    localStorage.setItem('safeviate.flight-planner-map-settings', serialized);
+    window.dispatchEvent(new Event('safeviate-flight-planner-map-settings-updated'));
   }, [
     airspacesVisible,
     airportsVisible,
@@ -1385,7 +1393,6 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     classGVisible,
     glidingSectorsVisible,
     hangGlidingVisible,
-    mapSettingsRef,
     militaryAreasVisible,
     navaidsVisible,
     obstaclesVisible,

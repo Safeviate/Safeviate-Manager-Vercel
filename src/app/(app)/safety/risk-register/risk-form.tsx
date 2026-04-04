@@ -23,8 +23,6 @@ import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
@@ -307,19 +305,30 @@ interface RiskFormProps {
 export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false }: RiskFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const router = useRouter();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
+  const [hazardAreas, setHazardAreas] = React.useState(DEFAULT_HAZARD_AREAS);
+  const [riskMatrixSettings, setRiskMatrixSettings] = React.useState<RiskMatrixSettings | null>(null);
 
-  const riskMatrixRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
-  const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
-  
-  const riskRegisterSettingsRef = useMemoFirebase(() => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-register-config') : null), [firestore, tenantId]);
-  const { data: registerSettings } = useDoc<RiskRegisterSettings>(riskRegisterSettingsRef);
-
-  const hazardAreas = React.useMemo(() => {
-      return registerSettings?.hazardAreas || DEFAULT_HAZARD_AREAS;
-  }, [registerSettings]);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedAreas = window.localStorage.getItem('safeviate:risk-register-areas');
+      if (storedAreas) setHazardAreas(JSON.parse(storedAreas));
+      const storedMatrix = window.localStorage.getItem('safeviate:risk-matrix');
+      if (storedMatrix) {
+        const parsed = JSON.parse(storedMatrix) as Partial<RiskMatrixSettings>;
+        setRiskMatrixSettings({
+          id: 'risk-matrix-config',
+          colors: parsed.colors || {},
+          likelihoodDefinitions: parsed.likelihoodDefinitions,
+          severityDefinitions: parsed.severityDefinitions,
+        });
+      }
+    } catch {
+      // ignore bad cache
+    }
+  }, []);
 
   const form = useForm<RiskFormValues>({
     resolver: zodResolver(formSchema),
@@ -327,7 +336,7 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
   });
 
   const onSubmit = async (data: RiskFormValues) => {
-    if (!firestore || !tenantId) return;
+    if (!tenantId) return;
     setIsSubmitting(true);
     
     // Convert dates back to ISO strings before saving
@@ -343,15 +352,15 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
     };
 
     try {
-        if (existingRisk) {
-            const riskRef = doc(firestore, `tenants/${tenantId}/risks`, existingRisk.id);
-            await updateDocumentNonBlocking(riskRef, dataToSave);
-            toast({ title: "Risk Updated", description: "The risk has been updated in the register." });
-        } else {
-            const risksCollection = collection(firestore, `tenants/${tenantId}/risks`);
-            await addDocumentNonBlocking(risksCollection, { ...dataToSave, status: 'Open' });
-            toast({ title: "Hazard Added", description: "The new hazard and its risks have been added to the register." });
+        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('safeviate:risk-register-data') : null;
+        const current = stored ? (JSON.parse(stored) as Risk[]) : [];
+        const next = existingRisk
+          ? current.map((risk) => (risk.id === existingRisk.id ? ({ ...risk, ...dataToSave } as Risk) : risk))
+          : [...current, ({ id: uuidv4(), ...dataToSave, status: 'Open' } as Risk)];
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('safeviate:risk-register-data', JSON.stringify(next));
         }
+        toast({ title: existingRisk ? 'Risk Updated' : 'Hazard Added', description: existingRisk ? 'The risk has been updated in the register.' : 'The new hazard and its risks have been added to the register.' });
         if (onCancel) onCancel();
         else router.push('/safety/risk-register');
     } catch (error) {

@@ -1,10 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, type ComponentType } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import type { Booking } from '@/types/booking';
@@ -120,45 +118,49 @@ function AttentionList({
 }
 
 export default function DashboardPage() {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const { tenant } = useTenantConfig();
+  const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [aircrafts, setAircrafts] = useState<Aircraft[] | null>(null);
+  const [audits, setAudits] = useState<QualityAudit[] | null>(null);
+  const [caps, setCaps] = useState<CorrectiveActionPlan[] | null>(null);
+  const [safetyReports, setSafetyReports] = useState<SafetyReport[] | null>(null);
+  const [risks, setRisks] = useState<Risk[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
 
-  const bookingsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
-    [firestore, tenantId]
-  );
-  const aircraftQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
-    [firestore, tenantId]
-  );
-  const auditsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null),
-    [firestore, tenantId]
-  );
-  const capsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null),
-    [firestore, tenantId]
-  );
-  const safetyReportsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null),
-    [firestore, tenantId]
-  );
-  const risksQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/risks`)) : null),
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    let cancelled = false;
 
-  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-  const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftQuery);
-  const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
-  const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
-  const { data: safetyReports, isLoading: isLoadingSafetyReports } = useCollection<SafetyReport>(safetyReportsQuery);
-  const { data: risks, isLoading: isLoadingRisks } = useCollection<Risk>(risksQuery);
+    const load = async () => {
+      if (!tenantId) {
+        setIsLoading(false);
+        return;
+      }
 
-  const isLoading = isLoadingBookings || isLoadingAircrafts || isLoadingAudits || isLoadingCaps || isLoadingSafetyReports || isLoadingRisks;
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+        const payload = await response.json();
+        if (cancelled) return;
+        setBookings(payload.bookings ?? []);
+        setAircrafts(payload.aircrafts ?? []);
+        setAudits(payload.audits ?? []);
+        setCaps(payload.caps ?? []);
+        setSafetyReports(payload.reports ?? []);
+        setRisks(payload.risks ?? []);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const stats = useMemo(() => {
     if (!bookings || !aircrafts || !audits || !caps || !safetyReports || !risks) return null;

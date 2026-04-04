@@ -5,13 +5,14 @@ interface WelcomeEmailOptions {
   email: string;
   name: string;
   setupLink: string;
+  tempPassword?: string;
 }
 
 /**
  * Sends a branded welcome email to new users.
  * Uses the Resend API via fetch to avoid dependency bloating.
  */
-export async function sendWelcomeEmail({ email, name, setupLink }: WelcomeEmailOptions) {
+export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }: WelcomeEmailOptions) {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.MAIL_FROM;
 
@@ -102,12 +103,13 @@ export async function sendWelcomeEmail({ email, name, setupLink }: WelcomeEmailO
           <div class="content">
             <p>Hello <strong>${name}</strong>,</p>
             <p>Your account has been successfully established in the Safeviate Aviation Management system.</p>
-            <p>To finalize your setup and gain access to your flight operations dashboard, please click the secure link below to establish your password.</p>
+            <p>To finalize your setup and gain access to your flight operations dashboard, please click the secure link below and sign in with the temporary password shown here.</p>
+            ${tempPassword ? `<p><strong>Temporary password:</strong> <code>${tempPassword}</code></p>` : ''}
             <center>
-              <a href="${setupLink}" class="button">Set Up Your Account</a>
+              <a href="${setupLink}" class="button">Open Safeviate</a>
             </center>
             <p style="margin-top: 32px; font-size: 13px; color: #64748b;">
-              If you did not expect this invitation, please disregard this email. This link will expire shortly for security purposes.
+              If you did not expect this invitation, please disregard this email.
             </p>
           </div>
           <div class="footer">
@@ -128,7 +130,7 @@ export async function sendWelcomeEmail({ email, name, setupLink }: WelcomeEmailO
       body: JSON.stringify({
         from: `Safeviate <${fromEmail}>`,
         to: [email],
-        subject: 'Welcome to Safeviate - Account Setup Required',
+      subject: 'Welcome to Safeviate - Account Ready',
         html,
       }),
     });

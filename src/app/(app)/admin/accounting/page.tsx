@@ -1,9 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { query } from "firebase/firestore";
-import { collection, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
@@ -26,23 +23,49 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function AccountingPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { tenantId } = useUserProfile();
 
-  // --- Data Fetching: SIMPLE QUERIES ONLY to avoid security/index errors ---
-  const bookingsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
-  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [instructors, setInstructors] = useState<PilotProfile[]>([]);
+  const [students, setStudents] = useState<PilotProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: bookings, isLoading: loadingB } = useCollection<Booking>(bookingsQuery);
-  const { data: aircrafts, isLoading: loadingA } = useCollection<Aircraft>(aircraftQuery);
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const b = localStorage.getItem('safeviate.bookings');
+        const a = localStorage.getItem('safeviate.aircrafts');
+        const p = localStorage.getItem('safeviate.personnel');
+        const i = localStorage.getItem('safeviate.instructors');
+        const s = localStorage.getItem('safeviate.students');
+        
+        if (b) setBookings(JSON.parse(b));
+        if (a) setAircrafts(JSON.parse(a));
+        if (p) setPersonnel(JSON.parse(p));
+        if (i) setInstructors(JSON.parse(i));
+        if (s) setStudents(JSON.parse(s));
+    } catch (e) {
+        console.error("Failed to load accounting data", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    window.addEventListener('safeviate-bookings-updated', loadData);
+    window.addEventListener('safeviate-aircrafts-updated', loadData);
+    window.addEventListener('safeviate-personnel-updated', loadData);
+    return () => {
+        window.removeEventListener('safeviate-bookings-updated', loadData);
+        window.removeEventListener('safeviate-aircrafts-updated', loadData);
+        window.removeEventListener('safeviate-personnel-updated', loadData);
+    };
+  }, [loadData]);
 
   const allUsers = useMemo(() => [
     ...(personnel || []),
@@ -104,13 +127,14 @@ export default function AccountingPage() {
         duration: duration.toFixed(1),
         rate: rate.toFixed(2),
         total: (duration * rate).toFixed(2),
-        nominalCode: "4000"
+        nominalCode: "4000",
+        id: b.id
       };
     });
   }, [selectedIds, enrichedData.unbilled, aircrafts, allUsers]);
 
   const handleSageExport = async () => {
-    if (selectedIds.size === 0 || !firestore || !tenantId) return;
+    if (selectedIds.size === 0) return;
 
     try {
       const headers = ["Reference", "Date", "Customer ID", "Customer Name", "Description", "Duration", "Rate", "Total", "Nominal Code"];
@@ -137,14 +161,19 @@ export default function AccountingPage() {
       link.click();
       document.body.removeChild(link);
 
-      // 2. Update Firestore Status
-      const batch = writeBatch(firestore);
-      const selectedBookings = enrichedData.unbilled.filter(b => selectedIds.has(b.id));
-      selectedBookings.forEach(b => {
-        const ref = doc(firestore, `tenants/${tenantId}/bookings`, b.id);
-        batch.update(ref, { accountingStatus: 'Exported' });
-      });
-      await batch.commit();
+      // 2. Update Status (locally)
+      const stored = localStorage.getItem('safeviate.bookings');
+      if (stored) {
+          const bks = JSON.parse(stored) as Booking[];
+          const updatedBks = bks.map(b => {
+              if (selectedIds.has(b.id)) {
+                  return { ...b, accountingStatus: 'Exported' as const };
+              }
+              return b;
+          });
+          localStorage.setItem('safeviate.bookings', JSON.stringify(updatedBks));
+          window.dispatchEvent(new Event('safeviate-bookings-updated'));
+      }
 
       toast({ title: 'Export Successful', description: `${selectedIds.size} records prepared for Sage.` });
       setSelectedIds(new Set());
@@ -162,7 +191,7 @@ export default function AccountingPage() {
     }, 0);
   }, [enrichedData.unbilled, aircrafts]);
 
-  if (loadingB || loadingA) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
+  if (isLoading) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
 
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">

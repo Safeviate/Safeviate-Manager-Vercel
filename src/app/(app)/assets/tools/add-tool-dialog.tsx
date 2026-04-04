@@ -4,9 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ChevronsUpDown, PlusCircle, Wrench } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -31,6 +29,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { addMonths, format } from 'date-fns';
+import type { Tool } from '@/types/tool';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Tool name is required.'),
@@ -45,7 +44,6 @@ const formSchema = z.object({
 
 export function AddToolDialog({ tenantId }: { tenantId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -64,8 +62,6 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!firestore || !tenantId) return;
-
     let nextCalibrationDueDate = null;
     if (values.lastCalibrationDate && values.calibrationIntervalMonths) {
       const lastDate = new Date(values.lastCalibrationDate);
@@ -73,15 +69,19 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
       nextCalibrationDueDate = format(nextDate, 'yyyy-MM-dd');
     }
 
-    const toolsRef = collection(firestore, `tenants/${tenantId}/tools`);
-    
-    // We don't have a rigid ID like registration, so let Firestore generate it
     try {
-      await addDoc(toolsRef, {
+      const stored = localStorage.getItem('safeviate.assets-tools');
+      const current = stored ? JSON.parse(stored) as Tool[] : [];
+
+      const newTool: Tool = {
         ...values,
-        nextCalibrationDueDate,
-        createdAt: serverTimestamp(),
-      });
+        id: crypto.randomUUID(),
+        nextCalibrationDueDate: nextCalibrationDueDate || undefined,
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem('safeviate.assets-tools', JSON.stringify([...current, newTool]));
+      window.dispatchEvent(new Event('safeviate-assets-tools-updated'));
       
       toast({
         title: 'Tool Added',

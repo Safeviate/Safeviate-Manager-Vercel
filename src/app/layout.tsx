@@ -2,9 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ThemeProvider } from '@/components/theme-provider';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { UserProfileProvider } from '@/hooks/use-user-profile';
+import { AppProviders } from '@/providers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -30,14 +28,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} font-body antialiased`}>
-        <FirebaseClientProvider>
-          <UserProfileProvider>
-            <ThemeProvider>
-              {children}
-              <Toaster />
-            </ThemeProvider>
-          </UserProfileProvider>
-        </FirebaseClientProvider>
+        <AppProviders>
+          {children}
+          <Toaster />
+        </AppProviders>
       </body>
     </html>
   );

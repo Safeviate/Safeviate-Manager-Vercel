@@ -1,15 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Palette, Layers } from 'lucide-react';
-import { ColorThemeForm } from '../../settings/color-theme-form';
-import { VisibilityManager } from './visibility-manager';
 import { usePermissions } from '@/hooks/use-permissions';
 import { MainPageHeader } from '@/components/page-header';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+
+const ColorThemeForm = dynamic(
+  () => import('../../settings/color-theme-form').then((module) => module.ColorThemeForm),
+  { ssr: false }
+);
+
+const VisibilityManager = dynamic(
+  () => import('./visibility-manager').then((module) => module.VisibilityManager),
+  { ssr: false }
+);
 
 export default function PageFormatPage() {
   const { hasPermission } = usePermissions();

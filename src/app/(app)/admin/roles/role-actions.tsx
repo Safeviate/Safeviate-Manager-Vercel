@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { doc } from 'firebase/firestore';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -12,26 +11,18 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
 import { RoleForm } from './role-form';
-import type { RoleCategory } from './page';
+import type { RoleCategory, Role } from './page';
 
 interface RoleActionsProps {
   tenantId: string;
-  role: {
-    id: string;
-    name: string;
-    category?: string;
-    permissions: string[];
-    requiredDocuments?: string[];
-  };
+  role: Role;
 }
 
 export function RoleActions({ tenantId, role }: RoleActionsProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -44,13 +35,26 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
     : undefined;
 
   const handleDelete = () => {
-    if (!firestore) return;
-    const roleRef = doc(firestore, 'tenants', tenantId, 'roles', role.id);
-    deleteDocumentNonBlocking(roleRef);
-    toast({
-        title: 'Role Deleted',
-        description: `The role "${role.name}" is being deleted.`,
-    });
+    try {
+        const stored = localStorage.getItem('safeviate.roles');
+        if (stored) {
+            const roles = JSON.parse(stored) as Role[];
+            const nextRoles = roles.filter(r => r.id !== role.id);
+            localStorage.setItem('safeviate.roles', JSON.stringify(nextRoles));
+            window.dispatchEvent(new Event('safeviate-roles-updated'));
+            
+            toast({
+                title: 'Role Deleted',
+                description: `The role "${role.name}" has been removed.`,
+            });
+        }
+    } catch (e) {
+        toast({
+            variant: 'destructive',
+            title: 'Delete Failed',
+            description: 'The role could not be deleted.',
+        });
+    }
     setIsDeleteDialogOpen(false);
   }
 

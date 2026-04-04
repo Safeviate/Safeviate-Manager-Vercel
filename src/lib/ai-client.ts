@@ -1,5 +1,3 @@
-import { initializeFirebase } from '@/firebase';
-
 export type AiFlowName =
   | 'analyzeMoc'
   | 'generateChecklist'
@@ -25,15 +23,10 @@ export async function callAiFlow<TInput, TResult>(
   flow: AiFlowName,
   input: TInput
 ): Promise<TResult> {
-  const { auth } = initializeFirebase();
-  const currentUser = auth.currentUser;
-  const idToken = currentUser ? await currentUser.getIdToken() : null;
-
   const response = await fetch(`/api/ai/${flow}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
     },
     body: JSON.stringify(input),
   });

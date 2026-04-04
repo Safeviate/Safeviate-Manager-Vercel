@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getFirebaseAdminAuth } from '@/lib/server/firebase-admin';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
 import { getPublicBaseUrl } from '@/lib/server/site-url';
@@ -22,16 +21,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email is required.' }, { status: 400 });
     }
 
-    const auth = getFirebaseAdminAuth();
     const baseUrl = getPublicBaseUrl(request);
-
-    // Generate a secure password reset link which acts as the setup link
-    const actionCodeSettings = {
-      url: `${baseUrl}/login`,
-      handleCodeInApp: true,
-    };
-    
-    const setupLink = await auth.generatePasswordResetLink(email, actionCodeSettings);
+    const setupLink = `${baseUrl}/login`;
 
     // Dispatch the actual email
     const result = await sendWelcomeEmail({ email, name, setupLink });

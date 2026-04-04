@@ -4,9 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ChevronsUpDown, PlusCircle } from 'lucide-react';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -31,6 +29,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
+import type { Workpack } from '@/types/workpack';
 
 const formSchema = z.object({
   aircraftId: z.string().min(1, 'Aircraft reference is required.'),
@@ -40,7 +39,6 @@ const formSchema = z.object({
 
 export function AddWorkpackDialog({ tenantId }: { tenantId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -54,20 +52,24 @@ export function AddWorkpackDialog({ tenantId }: { tenantId: string }) {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!firestore || !tenantId) return;
-
-    const workpacksRef = collection(firestore, `tenants/${tenantId}/workpacks`);
-    const datePrefix = format(new Date(), 'yyMM');
-    const trackingNumber = `WP-${datePrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
-
     try {
-      await addDoc(workpacksRef, {
+      const stored = localStorage.getItem('safeviate.maintenance-workpacks');
+      const current = stored ? JSON.parse(stored) as Workpack[] : [];
+      
+      const datePrefix = format(new Date(), 'yyMM');
+      const trackingNumber = `WP-${datePrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const newWorkpack: Workpack = {
         ...values,
+        id: crypto.randomUUID(),
         trackingNumber,
         status: 'OPEN',
         openedAt: new Date().toISOString(),
-        createdAt: serverTimestamp(),
-      });
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem('safeviate.maintenance-workpacks', JSON.stringify([newWorkpack, ...current]));
+      window.dispatchEvent(new Event('safeviate-maintenance-workpacks-updated'));
       
       toast({
         title: 'Workpack Initiated',

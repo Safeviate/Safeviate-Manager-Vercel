@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc } from 'firebase/firestore';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -13,11 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LayoutGrid } from 'lucide-react';
 
 export function VisibilityManager() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
-  const tenantId = 'safeviate';
-
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -50,10 +45,22 @@ export function VisibilityManager() {
   };
 
   const handleSaveModules = () => {
-    if (!firestore) return;
-    const tenantRef = doc(firestore, 'tenants', tenantId);
-    setDocumentNonBlocking(tenantRef, { enabledMenus: Array.from(enabledHrefs) }, { merge: true });
-    toast({ title: 'Module Access Updated', description: 'Sidebar navigation settings have been saved.' });
+    try {
+        const stored = localStorage.getItem('safeviate.tenant-config');
+        const currentTenant = stored ? JSON.parse(stored) : { id: 'safeviate', name: 'Safeviate' };
+        
+        const updatedTenant = { 
+            ...currentTenant, 
+            enabledMenus: Array.from(enabledHrefs) 
+        };
+        
+        localStorage.setItem('safeviate.tenant-config', JSON.stringify(updatedTenant));
+        window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+        
+        toast({ title: 'Module Access Updated', description: 'Sidebar navigation settings have been saved.' });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save module settings.' });
+    }
   };
 
   if (isLoadingTenant) {

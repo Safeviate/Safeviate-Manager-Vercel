@@ -1,8 +1,6 @@
 'use client';
 
-import { use } from 'react';
-import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { use, useEffect, useState } from 'react';
 import type { Booking } from '@/types/booking';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ViewBookingDetails } from './view-booking-details';
@@ -15,15 +13,41 @@ interface BookingDetailPageProps {
 
 export default function BookingHistoryDetailPage({ params }: BookingDetailPageProps) {
     const resolvedParams = use(params);
-    const firestore = useFirestore();
     const { tenantId } = useUserProfile();
+    const [booking, setBooking] = useState<Booking | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const bookingRef = useMemoFirebase(
-        () => firestore && tenantId ? doc(firestore, `tenants/${tenantId}/bookings`, resolvedParams.id) : null,
-        [firestore, tenantId, resolvedParams.id]
-    );
+    useEffect(() => {
+        let cancelled = false;
 
-    const { data: booking, isLoading, error } = useDoc<Booking>(bookingRef);
+        const loadBooking = async () => {
+            if (!tenantId) {
+                setIsLoading(false);
+                return;
+            }
+
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const res = await fetch('/api/schedule-data');
+                if (!res.ok) throw new Error('Failed to load booking.');
+                const data = await res.json();
+                const found = (data.bookings || []).find((item: Booking) => item.id === resolvedParams.id) || null;
+                if (!cancelled) setBooking(found);
+            } catch (err: any) {
+                if (!cancelled) setError(err?.message || 'Failed to load booking.');
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        };
+
+        loadBooking();
+        return () => {
+            cancelled = true;
+        };
+    }, [resolvedParams.id, tenantId]);
 
     if (isLoading) {
         return (
@@ -38,7 +62,7 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
         return (
             <div className="max-w-[1200px] mx-auto w-full text-center py-10">
                 <p className="text-destructive mb-4">
-                    {error ? `Error: ${error.message}` : "Booking not found."}
+                    {error ? `Error: ${error}` : "Booking not found."}
                 </p>
                 <BackNavButton href="/bookings/history" text="Back to History" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
             </div>

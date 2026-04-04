@@ -1,16 +1,12 @@
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '@/lib/server/firebase-admin';
+import { authOptions } from '@/auth';
+import { getDb } from '@/db';
+import { roles, tenants, users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { getServerSession } from 'next-auth';
 
-type FirestoreUserLink = {
-  profilePath?: string;
-};
-
-type FirestoreRole = {
-  permissions?: string[];
-};
-
-type FirestoreUserProfile = {
-  id?: string;
-  role?: string;
+type DbUserProfile = {
+  id: string;
+  role: string;
   permissions?: string[];
 };
 
@@ -18,7 +14,6 @@ type FlowPermissionRule = {
   anyOf: string[];
 };
 
-// Map of AI flows to required permissions
 export const aiFlowPermissions: Record<string, FlowPermissionRule> = {
   analyzeMoc: { anyOf: ['moc-manage'] },
   generateChecklist: { anyOf: ['quality-templates-manage', 'quality-audits-manage'] },
@@ -31,102 +26,47 @@ export const aiFlowPermissions: Record<string, FlowPermissionRule> = {
 
 const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
 
-function extractBearerToken(authorizationHeader: string | null) {
-  if (!authorizationHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  return authorizationHeader.slice('Bearer '.length).trim();
-}
+export async function authenticateAiRequest() {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email?.trim().toLowerCase();
 
-/**
- * Authenticates an incoming request using the Firebase Admin SDK.
- * Verifies the ID token and retrieves the user's effective permissions.
- */
-export async function authenticateAiRequest(request: Request) {
-  const token = extractBearerToken(request.headers.get('authorization'));
-  if (!token) {
-    return { ok: false as const, status: 401, error: 'Missing authorization token.' };
+  if (!email) {
+    return { ok: false as const, status: 401, error: 'You must be signed in to use AI tools.' };
   }
 
-  try {
-    const auth = getFirebaseAdminAuth();
-    const firestore = getFirebaseAdminFirestore();
-    const decodedToken = await auth.verifyIdToken(token);
-
-    // 1. Check for Super-User Bypass (Immediate authorization)
-    if (decodedToken.email && SUPER_USERS.includes(decodedToken.email)) {
-      return {
-        ok: true as const,
-        decodedToken,
-        tenantId: 'safeviate',
-        userProfile: { id: decodedToken.uid, role: 'developer' },
-        effectivePermissions: new Set(['*']), // Wildcard permissions
-      };
-    }
-
-    // 2. Standard Authorization: Resolve profile and permissions
-    const userLinkSnapshot = await firestore.doc(`users/${decodedToken.uid}`).get();
-    const userLink = userLinkSnapshot.data() as FirestoreUserLink | undefined;
-
-    if (!userLink?.profilePath) {
-      return { ok: false as const, status: 403, error: 'No profile is linked to this account.' };
-    }
-
-    const userProfileSnapshot = await firestore.doc(userLink.profilePath).get();
-    const userProfile = userProfileSnapshot.data() as FirestoreUserProfile | undefined;
-
-    if (!userProfile) {
-      return { ok: false as const, status: 403, error: 'The linked profile could not be found.' };
-    }
-
-    const profilePathParts = userLink.profilePath.split('/');
-    const tenantId = profilePathParts[0] === 'tenants' ? profilePathParts[1] ?? null : null;
-
-    const roleId = userProfile.role;
-    const roleSnapshot = roleId && tenantId
-      ? await firestore.doc(`tenants/${tenantId}/roles/${roleId}`).get()
-      : null;
-    const role = roleSnapshot?.data() as FirestoreRole | undefined;
-
-    const inheritedPermissions = role?.permissions ?? [];
-    const overridePermissions = userProfile.permissions ?? [];
-    const deniedPermissions = new Set(
-      overridePermissions.filter((permission) => permission.startsWith('!')).map((permission) => permission.slice(1))
-    );
-    const effectivePermissions = new Set<string>();
-
-    inheritedPermissions.forEach((permission) => {
-      if (!deniedPermissions.has(permission)) {
-        effectivePermissions.add(permission);
-      }
-    });
-
-    overridePermissions.forEach((permission) => {
-      if (!permission.startsWith('!')) {
-        effectivePermissions.add(permission);
-      }
-    });
-
+  if (SUPER_USERS.includes(email)) {
     return {
       ok: true as const,
-      decodedToken,
-      tenantId,
-      userProfile,
-      effectivePermissions,
+      tenantId: 'safeviate',
+      userProfile: { id: session.user?.id || email, role: 'developer', permissions: ['*'] },
+      effectivePermissions: new Set(['*']),
     };
-  } catch (error: any) {
-    console.error('AI Auth Internal Error:', error);
-    return { ok: false as const, status: 401, error: `Authentication failed: ${error.message}` };
   }
+
+  const db = getDb();
+  await db.insert(tenants).values({ id: 'safeviate', name: 'Safeviate', updatedAt: new Date() }).onConflictDoNothing();
+
+  const [currentUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+  if (!currentUser) {
+    return { ok: false as const, status: 403, error: 'No profile is linked to this account.' };
+  }
+
+  const roleRows = await db.select().from(roles).where(eq(roles.tenantId, currentUser.tenantId));
+  const roleRow = roleRows.find((role) => role.id === currentUser.role) || roleRows[0] || null;
+  const inheritedPermissions = Array.isArray(roleRow?.permissions) ? (roleRow.permissions as string[]) : [];
+
+  return {
+    ok: true as const,
+    tenantId: currentUser.tenantId,
+    userProfile: { id: currentUser.id, role: currentUser.role, permissions: inheritedPermissions } satisfies DbUserProfile,
+    effectivePermissions: new Set(inheritedPermissions),
+  };
 }
 
-/**
- * Checks if the authenticated user is authorized to run a specific AI flow.
- */
-export function isAuthorizedForAiFlow(flow: string, userProfile: FirestoreUserProfile, effectivePermissions: Set<string>) {
-  // Developer/Super-user check
+export function isAuthorizedForAiFlow(flow: string, userProfile: DbUserProfile, effectivePermissions: Set<string>) {
   if (effectivePermissions.has('*')) return true;
-  
+
   const role = userProfile.role?.toLowerCase();
   if (role === 'dev' || role === 'developer') {
     return true;

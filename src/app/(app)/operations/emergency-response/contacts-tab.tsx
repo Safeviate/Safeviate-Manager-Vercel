@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,19 +21,42 @@ interface ContactsTabProps {
 const CATEGORIES: ERPContactCategory[] = ['Internal', 'Aviation Authorities', 'Emergency Services', 'External Partners'];
 
 export function ContactsTab({ tenantId }: ContactsTabProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<ERPContact | null>(null);
+  const [contacts, setContacts] = useState<ERPContact[]>([]);
+
+  useEffect(() => {
+    const loadContacts = async () => {
+      try {
+        const response = await fetch('/api/erp-state?category=contacts', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const parsed = (payload.data || []) as ERPContact[];
+        setContacts(parsed.sort((a, b) => a.priority - b.priority));
+      } catch {
+        // ignore load errors
+      }
+    };
+    loadContacts();
+  }, []);
+
+  const persistContacts = async (nextContacts: ERPContact[]) => {
+    setContacts(nextContacts);
+    await fetch('/api/erp-state', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category: 'contacts',
+        data: nextContacts,
+      }),
+    }).catch(() => null);
+  };
 
   const canAdmin = hasPermission('operations-erp-admin');
-
-  const contactsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-contacts`), orderBy('priority', 'asc')) : null),
-    [firestore, tenantId]
-  );
-  const { data: contacts } = useCollection<ERPContact>(contactsQuery);
 
   const handleOpenDialog = (contact: ERPContact | null = null) => {
     setEditingContact(contact);
@@ -47,25 +68,37 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
     if (!canAdmin) return;
 
     const formData = new FormData(e.currentTarget);
-    const contactData = {
-      name: formData.get('name') as string,
-      role: formData.get('role') as string,
-      organization: formData.get('organization') as string,
-      phone: formData.get('phone') as string,
-      email: formData.get('email') as string,
-      priority: parseInt(formData.get('priority') as string) || 1,
-      category: formData.get('category') as ERPContactCategory,
-    };
-
-    if (!firestore) return;
-
+    const formPriority = parseInt(formData.get('priority') as string) || 1;
+    
     if (editingContact) {
-      const contactRef = doc(firestore, `tenants/${tenantId}/erp-contacts`, editingContact.id);
-      updateDocumentNonBlocking(contactRef, contactData);
+      const contactData: ERPContact = {
+        ...editingContact,
+        name: formData.get('name') as string,
+        role: formData.get('role') as string,
+        organization: formData.get('organization') as string,
+        phone: formData.get('phone') as string,
+        email: formData.get('email') as string,
+        priority: formPriority,
+        category: formData.get('category') as ERPContactCategory,
+      };
+      
+      const nextContacts = contacts.map(c => c.id === editingContact.id ? contactData : c);
+      void persistContacts(nextContacts.sort((a, b) => a.priority - b.priority));
       toast({ title: 'Contact Updated' });
     } else {
-      const colRef = collection(firestore, `tenants/${tenantId}/erp-contacts`);
-      addDocumentNonBlocking(colRef, contactData);
+      const contactData: ERPContact = {
+        id: crypto.randomUUID(),
+        name: formData.get('name') as string,
+        role: formData.get('role') as string,
+        organization: formData.get('organization') as string,
+        phone: formData.get('phone') as string,
+        email: formData.get('email') as string,
+        priority: formPriority,
+        category: formData.get('category') as ERPContactCategory,
+      };
+
+      const nextContacts = [...contacts, contactData];
+      void persistContacts(nextContacts.sort((a, b) => a.priority - b.priority));
       toast({ title: 'Contact Added' });
     }
 
@@ -74,8 +107,9 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!firestore || !canAdmin) return;
-    await deleteDoc(doc(firestore, `tenants/${tenantId}/erp-contacts`, id));
+    if (!canAdmin) return;
+    const nextContacts = contacts.filter(c => c.id !== id);
+    void persistContacts(nextContacts);
     toast({ title: 'Contact Deleted' });
   };
 

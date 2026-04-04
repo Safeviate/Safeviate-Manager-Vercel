@@ -1,7 +1,6 @@
 'use client';
 
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useEffect, useState, useCallback } from 'react';
 import { RoleForm } from './role-form';
 import { RoleActions } from './role-actions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,18 +30,32 @@ export type Role = {
 };
 
 export default function RolesPage() {
-  const firestore = useFirestore();
   const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
   const { tenantId } = useUserProfile();
   const canManage = hasPermission('admin-roles-manage');
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const rolesQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'roles')) : null),
-    [firestore, tenantId]
-  );
+  const loadRoles = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const stored = localStorage.getItem('safeviate.roles');
+        if (stored) {
+            setRoles(JSON.parse(stored));
+        }
+    } catch (e) {
+        console.error("Failed to load roles", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
-  const { data: roles, isLoading } = useCollection<Role>(rolesQuery);
+  useEffect(() => {
+    loadRoles();
+    window.addEventListener('safeviate-roles-updated', loadRoles);
+    return () => window.removeEventListener('safeviate-roles-updated', loadRoles);
+  }, [loadRoles]);
 
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
@@ -60,8 +73,8 @@ export default function RolesPage() {
                   <div className="p-8 text-center uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">
                     Loading roles...
                   </div>
-                ) : (roles || []).length > 0 ? (
-                  (roles || []).map((role) => (
+                ) : roles.length > 0 ? (
+                  roles.map((role) => (
                     <div key={role.id} className="border-b px-4 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1 space-y-3">

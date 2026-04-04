@@ -1,8 +1,6 @@
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { collection, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import type { Aircraft } from '@/types/aircraft';
@@ -100,7 +98,6 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
 }
 
 export default function SchedulePage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
@@ -117,45 +114,62 @@ export default function SchedulePage() {
   // PERMISSIONS
   const canManageSchedule = hasPermission('bookings-schedule-manage');
 
-  const aircraftQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
-    [firestore, tenantId]
-  );
-  
-  const bookingsQuery = useMemoFirebase(() => {
-    if (!firestore || !tenantId) return null;
-    const today = format(selectedDate, 'yyyy-MM-dd');
-    const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
-    return query(
-        collection(firestore, `tenants/${tenantId}/bookings`),
-        where('date', 'in', [today, yesterday]),
-    );
-  }, [firestore, tenantId, selectedDate, dataVersion]); 
+  const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [instructors, setInstructors] = useState<PilotProfile[]>([]);
+  const [students, setStudents] = useState<PilotProfile[]>([]);
+  const [privatePilots, setPrivatePilots] = useState<PilotProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const allBookingsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/bookings`)) : null),
-    [firestore, tenantId, dataVersion]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!tenantId) {
+        setIsLoading(false);
+        return;
+      }
 
-  const { data: aircraft, isLoading: isLoadingAircraft } = useCollection<Aircraft>(aircraftQuery);
-  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-  const { data: allBookings, isLoading: isLoadingAllBookings } = useCollection<Booking>(allBookingsQuery);
+      setIsLoading(true);
+      try {
+        const [scheduleResponse, personnelResponse] = await Promise.all([
+          fetch('/api/schedule-data', { cache: 'no-store' }),
+          fetch('/api/personnel', { cache: 'no-store' }),
+        ]);
 
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
+        const schedulePayload = await scheduleResponse.json();
+        const personnelPayload = await personnelResponse.json();
+        if (!cancelled) {
+          const scheduleBookings = schedulePayload.bookings ?? [];
+          setAircraft(schedulePayload.aircraft ?? []);
+          setAllBookings(scheduleBookings);
 
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students } = useCollection<PilotProfile>(studentsQuery);
-  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+          const today = format(selectedDate, 'yyyy-MM-dd');
+          const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
+          setBookings(
+            scheduleBookings.filter((booking: Booking) => booking.date === today || booking.date === yesterday)
+          );
+
+          setPersonnel(personnelPayload.personnel ?? []);
+          setInstructors(personnelPayload.instructors ?? []);
+          setStudents(personnelPayload.students ?? []);
+          setPrivatePilots(personnelPayload.privatePilots ?? []);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, selectedDate, dataVersion]);
 
   const allPilots = useMemo(() => {
       return [...(personnel || []), ...(students || []), ...(instructors || []), ...(privatePilots || [])];
   }, [personnel, students, instructors, privatePilots]);
-
-  const isLoading = isLoadingAircraft || isLoadingBookings || isLoadingAllBookings;
 
   const refreshBookings = useCallback(() => {
     setDataVersion(v => v + 1);

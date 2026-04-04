@@ -225,7 +225,12 @@ function getTenantScopedState<T>(baseKey: string, tenantId: string | null | unde
 
   if (typeof window === 'undefined') return scopedValue;
 
-  const hasScopedValue = window.localStorage.getItem(scopedKey) !== null;
+  let hasScopedValue = false;
+  try {
+    hasScopedValue = window.localStorage.getItem(scopedKey) !== null;
+  } catch {
+    hasScopedValue = false;
+  }
   if (hasScopedValue) return scopedValue;
 
   return getInitialState(baseKey, defaultValue);
@@ -233,12 +238,20 @@ function getTenantScopedState<T>(baseKey: string, tenantId: string | null | unde
 
 const setTenantScopedState = <T,>(baseKey: string, tenantId: string | null | undefined, value: T) => {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(getScopedStorageKey(baseKey, tenantId), JSON.stringify(value));
+  try {
+    window.localStorage.setItem(getScopedStorageKey(baseKey, tenantId), JSON.stringify(value));
+  } catch {
+    // Ignore storage failures (private mode, quota limits, restricted browsers).
+  }
 };
 
 const removeTenantScopedState = (baseKey: string, tenantId: string | null | undefined) => {
   if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(getScopedStorageKey(baseKey, tenantId));
+  try {
+    window.localStorage.removeItem(getScopedStorageKey(baseKey, tenantId));
+  } catch {
+    // Ignore storage failures (private mode, quota limits, restricted browsers).
+  }
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);

@@ -1,8 +1,6 @@
 'use client';
 
-import { use, useState, useMemo } from 'react';
-import { doc, collection, query, orderBy, arrayUnion } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { use, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -62,34 +60,55 @@ interface AircraftDetailPageProps {
 
 export default function AircraftDetailPage({ params }: AircraftDetailPageProps) {
   const resolvedParams = use(params);
-  const firestore = useFirestore();
   const isMobile = useIsMobile();
   const { tenantId } = useUserProfile();
   const [activeTab, setActiveTab] = useState('overview');
   const aircraftId = resolvedParams.id;
 
-  const aircraftRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
-    [firestore, tenantId, aircraftId]
-  );
+  const [aircraft, setAircraft] = useState<Aircraft | null>(null);
+  const [logs, setLogs] = useState<MaintenanceLog[]>([]);
+  const [inspectionSettings, setInspectionSettings] = useState<AircraftInspectionWarningSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const logsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`), orderBy('date', 'desc')) : null),
-    [firestore, tenantId, aircraftId]
-  );
-  const inspectionSettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'inspection-warnings') : null),
-    [firestore, tenantId]
-  );
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedAircrafts = localStorage.getItem('safeviate.aircrafts');
+        if (storedAircrafts) {
+            const aircrafts = JSON.parse(storedAircrafts) as Aircraft[];
+            const ac = aircrafts.find(a => a.id === aircraftId);
+            setAircraft(ac || null);
+        }
 
-  const { data: aircraft, isLoading: isLoadingAircraft } = useDoc<Aircraft>(aircraftRef);
-  const { data: logs, isLoading: isLoadingLogs } = useCollection<MaintenanceLog>(logsQuery);
-  const { data: inspectionSettings } = useDoc<AircraftInspectionWarningSettings>(inspectionSettingsRef);
+        const storedLogs = localStorage.getItem(`safeviate.maintenance-logs:${aircraftId}`);
+        if (storedLogs) {
+            setLogs(JSON.parse(storedLogs));
+        } else {
+            setLogs([]);
+        }
 
-  if (isLoadingAircraft) {
+        const storedInsp = localStorage.getItem('safeviate.inspection-warning-settings');
+        if (storedInsp) {
+            setInspectionSettings(JSON.parse(storedInsp));
+        }
+    } catch (e) {
+        console.error("Failed to load aircraft details", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [aircraftId]);
+
+  useEffect(() => {
+    loadData();
+    const events = ['safeviate-aircrafts-updated', `safeviate-maintenance-logs-updated:${aircraftId}`, 'safeviate-inspection-warning-settings-updated'];
+    events.forEach(e => window.addEventListener(e, loadData));
+    return () => events.forEach(e => window.removeEventListener(e, loadData));
+  }, [loadData, aircraftId]);
+
+  if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4">
-        <Skeleton className="h-12 w-full" />
+      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+        <Skeleton className="h-20 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
     );
@@ -97,11 +116,19 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
   if (!aircraft) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full text-center py-20">
-        <p className="text-muted-foreground">Aircraft not found.</p>
-        <Button asChild variant="link" className="mt-4">
-          <Link href="/assets/aircraft">Back to All Aircraft to fleet</Link>
-        </Button>
+      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+        <div className="flex flex-col items-center gap-4 bg-muted/5 p-12 rounded-3xl border-2 border-dashed">
+            <Plane className="h-16 w-16 text-muted-foreground opacity-20" />
+            <div className="space-y-1">
+                <p className="text-xl font-black uppercase tracking-tight">Aircraft Not Found</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground italic">The requested asset could not be located in the fleet inventory.</p>
+            </div>
+            <Button asChild variant="outline" className="mt-4 text-[10px] font-black uppercase h-10 px-8 border-slate-300 shadow-sm">
+                <Link href="/assets/aircraft">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Fleet
+                </Link>
+            </Button>
+        </div>
       </div>
     );
   }
@@ -110,76 +137,65 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const timeTo100 = (aircraft.tachoAtNext100Inspection || 0) - (aircraft.currentTacho || 0);
 
   return (
-    <div className={cn("max-w-[1400px] mx-auto w-full flex flex-col pt-2", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+    <div className={cn("max-w-[1400px] mx-auto w-full flex flex-col pt-2 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className={cn("w-full flex-1 flex flex-col", isMobile ? "overflow-visible" : "overflow-hidden")}>
         
-        {/* --- RETURN BUTTON --- */}
-
-        {/* --- MAIN CONTENT AREA --- */}
-        <div className={cn("flex-1 px-1 pb-10", isMobile ? "overflow-visible" : "overflow-y-auto no-scrollbar")}>
+        <div className={cn("flex-1 pb-10", isMobile ? "overflow-visible" : "overflow-y-auto no-scrollbar")}>
           <Card className="shadow-none border rounded-xl overflow-hidden flex flex-col">
             <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 shrink-0">
-              <div>
-                <CardTitle className="text-2xl flex items-center gap-2 font-black">
-                  <Plane className="h-6 w-6 text-primary" />
-                  {aircraft.tailNumber}
-                </CardTitle>
-                <CardDescription className="text-sm font-medium">{aircraft.make} {aircraft.model}</CardDescription>
+              <div className="flex items-center gap-4">
+                <Button asChild variant="ghost" size="icon" className="h-10 w-10 border rounded-full bg-background hover:bg-muted shadow-sm">
+                    <Link href="/assets/aircraft"><ArrowLeft className="h-5 w-5" /></Link>
+                </Button>
+                <div>
+                    <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase tracking-tight">
+                    <Plane className="h-6 w-6 text-primary" />
+                    {aircraft.tailNumber}
+                    </CardTitle>
+                    <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{aircraft.make} {aircraft.model}</CardDescription>
+                </div>
               </div>
               <EditAircraftDialog aircraft={aircraft} tenantId={tenantId || ''} />
             </CardHeader>
 
-            {/* --- TAB BAR INSIDE CARD WITH HORIZONTAL SCROLL --- */}
             <div className="border-b bg-muted/5 px-6 py-2 shrink-0 overflow-hidden">
-              {isMobile ? (
-                <ResponsiveTabRow
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                  placeholder="Select Section"
-                  className="shrink-0"
-                  options={[
-                    { value: 'overview', label: 'Overview' },
-                    { value: 'maintenance', label: 'Maintenance' },
-                    { value: 'components', label: 'Components' },
-                    { value: 'documents', label: 'Documents' },
-                  ]}
-                />
-              ) : (
-                <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
-                  <TabsTrigger 
-                    value="overview" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
-                  >
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="maintenance" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
-                  >
-                    Maintenance
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="components" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
-                  >
-                    Components
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="documents" 
-                    className="rounded-sm px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0"
-                  >
-                    Documents
-                  </TabsTrigger>
-                </TabsList>
-              )}
+              <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">
+                <TabsTrigger 
+                  value="overview" 
+                  className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black text-[10px] uppercase transition-all shrink-0 shadow-sm"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="maintenance" 
+                  className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black text-[10px] uppercase transition-all shrink-0 shadow-sm"
+                >
+                  Maintenance
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="components" 
+                  className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black text-[10px] uppercase transition-all shrink-0 shadow-sm"
+                >
+                  Components
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="documents" 
+                  className="rounded-full px-6 py-2 border data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black text-[10px] uppercase transition-all shrink-0 shadow-sm"
+                >
+                  Documents
+                </TabsTrigger>
+              </TabsList>
             </div>
 
             <div className="flex-1 min-h-0">
               <TabsContent value="overview" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
-                <CardContent className="p-8 space-y-10">
+                <CardContent className="p-8 space-y-12">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                    <div className="space-y-6">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary border-b pb-2">Specifications</h3>
+                    <div className="space-y-6 bg-muted/5 p-6 rounded-2xl border shadow-inner">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Info className="h-3.5 w-3.5" />
+                        Specifications
+                      </h3>
                       <div className="grid grid-cols-1 gap-6">
                         <DetailItem label="Manufacturer" value={aircraft.make} />
                         <DetailItem label="Model" value={aircraft.model} />
@@ -187,16 +203,22 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary border-b pb-2">Hobbs Meter</h3>
+                    <div className="space-y-6 bg-muted/5 p-6 rounded-2xl border shadow-inner">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5" />
+                        Hobbs Meter
+                      </h3>
                       <div className="grid grid-cols-1 gap-6">
                         <DetailItem label="Initial Hobbs" value={(aircraft.initialHobbs || 0).toFixed(1)} />
                         <DetailItem label="Current Hobbs" value={(aircraft.currentHobbs || 0).toFixed(1)} />
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary border-b pb-2">Tacho Meter</h3>
+                    <div className="space-y-6 bg-muted/5 p-6 rounded-2xl border shadow-inner">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Gauge className="h-3.5 w-3.5" />
+                        Tacho Meter
+                      </h3>
                       <div className="grid grid-cols-1 gap-6">
                         <DetailItem label="Initial Tacho" value={(aircraft.initialTacho || 0).toFixed(1)} />
                         <DetailItem label="Current Tacho" value={(aircraft.currentTacho || 0).toFixed(1)} />
@@ -204,27 +226,30 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                     </div>
                   </div>
 
-                  <div className="space-y-6">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary border-b pb-2">Inspection Targets</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+                  <div className="space-y-6 p-8 border rounded-3xl bg-primary/5 shadow-sm">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2 flex items-center gap-2">
+                        <ArrowLeft className="h-4 w-4 rotate-180" />
+                        Inspection Service Targets
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12">
                       <DetailItem label="Next 50h Tacho" value={(aircraft.tachoAtNext50Inspection || 0).toFixed(1)} />
                       <DetailItem label="Next 100h Tacho" value={(aircraft.tachoAtNext100Inspection || 0).toFixed(1)} />
                       <div className="pt-2">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">To 50h</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">To 50h Inspection</p>
                         <Badge
                           variant="outline"
                           style={getInspectionWarningStyle(timeTo50, '50', inspectionSettings) || undefined}
-                          className="font-mono font-black text-xs h-8 px-4"
+                          className="font-mono font-black text-sm h-10 px-6 rounded-lg shadow-sm border-2"
                         >
                           {timeTo50.toFixed(1)}h
                         </Badge>
                       </div>
                       <div className="pt-2">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">To 100h</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">To 100h Inspection</p>
                         <Badge
                           variant="outline"
                           style={getInspectionWarningStyle(timeTo100, '100', inspectionSettings) || undefined}
-                          className="font-mono font-black text-xs h-8 px-4"
+                          className="font-mono font-black text-sm h-10 px-6 rounded-lg shadow-sm border-2"
                         >
                           {timeTo100.toFixed(1)}h
                         </Badge>
@@ -235,7 +260,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
               </TabsContent>
 
               <TabsContent value="maintenance" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
-                <MaintenanceTab aircraftId={aircraftId} tenantId={tenantId || ''} logs={logs || []} isLoading={isLoadingLogs} />
+                <MaintenanceTab aircraftId={aircraftId} tenantId={tenantId || ''} logs={logs || []} isLoading={isLoading} />
               </TabsContent>
 
               <TabsContent value="components" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
@@ -255,9 +280,9 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
 function DetailItem({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="space-y-1">
-      <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">{label}</p>
-      <p className="text-sm font-black text-foreground">{value}</p>
+    <div className="space-y-1.5">
+      <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground opacity-70">{label}</p>
+      <p className="text-sm font-black text-foreground uppercase">{value}</p>
     </div>
   );
 }
@@ -265,42 +290,47 @@ function DetailItem({ label, value }: { label: string; value: string | number })
 function MaintenanceTab({ aircraftId, tenantId, logs, isLoading }: { aircraftId: string; tenantId: string; logs: MaintenanceLog[]; isLoading: boolean }) {
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 shrink-0">
+      <div className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-8 shrink-0">
         <div>
-          <h3 className="text-lg font-black uppercase tracking-tight">Maintenance History</h3>
-          <p className="text-xs font-medium text-muted-foreground">All recorded maintenance events and inspections.</p>
+          <h3 className="text-xl font-black uppercase tracking-tight">Maintenance History</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-75">All recorded technical maintenance events and major inspections.</p>
         </div>
         <AddMaintenanceLogDialog aircraftId={aircraftId} tenantId={tenantId} />
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-background">
         <Table>
           <TableHeader className="bg-muted/30 sticky top-0 z-10">
             <TableRow>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Date</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Type</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Reference</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Details</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">AME/AMO</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Date</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest">Event Type</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest">Reference</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest">Details</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest">AME/AMO Credentials</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {logs.length > 0 ? (
               logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="whitespace-nowrap font-medium text-sm">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
-                  <TableCell><Badge variant="secondary" className="text-[10px] font-bold uppercase">{log.maintenanceType}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs font-bold">{log.reference || 'N/A'}</TableCell>
-                  <TableCell className="max-w-md truncate text-sm italic">"{log.details}"</TableCell>
-                  <TableCell className="text-[10px] font-bold">
-                    {log.ameNo && <div className="text-primary">AME: {log.ameNo}</div>}
-                    {log.amoNo && <div className="text-muted-foreground">AMO: {log.amoNo}</div>}
+                <TableRow key={log.id} className="hover:bg-muted/5 transition-colors group">
+                  <TableCell className="whitespace-nowrap font-black text-[11px] uppercase tracking-tighter px-8">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px] font-black uppercase border-slate-300 bg-background">{log.maintenanceType}</Badge></TableCell>
+                  <TableCell className="font-mono text-xs font-black text-muted-foreground">{log.reference || 'N/A'}</TableCell>
+                  <TableCell className="max-w-md truncate text-sm font-medium italic text-foreground opacity-80 opacity-100 transition-opacity">"{log.details}"</TableCell>
+                  <TableCell className="text-[10px] font-black uppercase tracking-tight">
+                    {log.ameNo && <div className="text-primary">AME-LIC: {log.ameNo}</div>}
+                    {log.amoNo && <div className="text-muted-foreground font-bold">AMO-CERT: {log.amoNo}</div>}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
-                  {isLoading ? 'Loading logs...' : 'No maintenance logs recorded.'}
+                <TableCell colSpan={5} className="h-64 text-center">
+                  <div className="flex flex-col items-center gap-3 opacity-30">
+                    <History className="h-10 w-10" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">
+                        {isLoading ? 'Decrypting maintenance logs...' : 'No maintenance history recorded for this asset.'}
+                    </p>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -314,23 +344,23 @@ function MaintenanceTab({ aircraftId, tenantId, logs, isLoading }: { aircraftId:
 function ComponentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: string }) {
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 shrink-0">
+      <div className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-8 shrink-0">
         <div>
-          <h3 className="text-lg font-black uppercase tracking-tight">Component Tracker</h3>
-          <p className="text-xs font-medium text-muted-foreground">Track lifecycle and remaining hours for critical serialized parts.</p>
+          <h3 className="text-xl font-black uppercase tracking-tight">Component Lifecycle</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-75">Track service intervals and remaining hours for critical serialized parts.</p>
         </div>
         <AddComponentDialog aircraftId={aircraft.id} tenantId={tenantId} />
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-background">
         <Table>
           <TableHeader className="bg-muted/30 sticky top-0 z-10">
             <TableRow>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Component</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Serial No.</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">TSN</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">TSO</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Remaining</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Limit</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Component Name</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest">Serial Number</TableHead>
+              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest">TSN</TableHead>
+              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest">TSO</TableHead>
+              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest">Remaining</TableHead>
+              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest pr-8">Limit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -338,24 +368,27 @@ function ComponentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: s
               aircraft.components.map((comp) => {
                 const remaining = comp.maxHours - comp.totalTime;
                 return (
-                  <TableRow key={comp.id}>
-                    <TableCell className="font-bold text-sm">{comp.name}</TableCell>
-                    <TableCell className="font-mono text-xs font-bold text-muted-foreground">{comp.serialNumber}</TableCell>
-                    <TableCell className="text-right font-mono font-bold">{(comp.tsn || 0).toFixed(1)}</TableCell>
-                    <TableCell className="text-right font-mono font-bold">{(comp.tso || 0).toFixed(1)}</TableCell>
+                  <TableRow key={comp.id} className="hover:bg-muted/5 transition-colors group">
+                    <TableCell className="font-black text-sm uppercase px-8">{comp.name}</TableCell>
+                    <TableCell className="font-mono text-xs font-black text-muted-foreground uppercase">{comp.serialNumber}</TableCell>
+                    <TableCell className="text-right font-mono font-black text-xs">{(comp.tsn || 0).toFixed(1)}h</TableCell>
+                    <TableCell className="text-right font-mono font-black text-xs">{(comp.tso || 0).toFixed(1)}h</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant={remaining < 50 ? "destructive" : "outline"} className="font-mono font-black text-xs">
+                      <Badge variant={remaining < 50 ? "destructive" : "outline"} className="font-mono font-black text-[11px] h-8 px-4 border-2 shadow-sm uppercase">
                         {remaining.toFixed(1)}h
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs font-medium text-muted-foreground">{comp.maxHours.toFixed(1)}</TableCell>
+                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground pr-8">{comp.maxHours.toFixed(1)}h</TableCell>
                   </TableRow>
                 );
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic">
-                  No serialized components tracked for this aircraft.
+                <TableCell colSpan={6} className="h-64 text-center">
+                    <div className="flex flex-col items-center gap-3 opacity-30">
+                        <Settings2 className="h-10 w-10" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">No serialized components tracked for this session.</p>
+                    </div>
                 </TableCell>
               </TableRow>
             )}
@@ -367,54 +400,74 @@ function ComponentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: s
 }
 
 function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: string }) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [viewingDoc, setViewingDoc] = useState<{ name: string; url: string } | null>(null);
-  const expirySettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
-    [firestore, tenantId]
-  );
-  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
+  
+  const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('safeviate.document-expiry-settings');
+    if (stored) setExpirySettings(JSON.parse(stored));
+  }, []);
 
   const handleDocUpload = (newDoc: any) => {
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, {
-      documents: arrayUnion(newDoc)
-    });
-    toast({ title: 'Document Added', description: `"${newDoc.name}" has been uploaded.` });
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
+        const nextAircrafts = aircrafts.map(ac => ac.id === aircraft.id ? {
+            ...ac,
+            documents: [...(ac.documents || []), newDoc]
+        } : ac);
+        
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        toast({ title: 'Document Added', description: `"${newDoc.name}" has been uploaded.` });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Failed to update aircraft document list.' });
+    }
   };
 
   const handleDeleteDoc = (docName: string) => {
-    const updatedDocs = (aircraft.documents || []).filter(d => d.name !== docName);
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocs });
-    toast({ title: 'Document Removed' });
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
+        const nextAircrafts = aircrafts.map(ac => ac.id === aircraft.id ? {
+            ...ac,
+            documents: (ac.documents || []).filter(d => d.name !== docName)
+        } : ac);
+        
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        toast({ title: 'Document Removed' });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to remove document.' });
+    }
   };
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 shrink-0">
+      <div className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-8 shrink-0">
         <div>
-          <h3 className="text-lg font-black uppercase tracking-tight">Technical Documents</h3>
-          <p className="text-xs font-medium text-muted-foreground">Aircraft certifications, insurance, and manuals.</p>
+          <h3 className="text-xl font-black uppercase tracking-tight">Technical Library</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-75">Aircraft certifications, insurance, and manufacturer manuals.</p>
         </div>
         <DocumentUploader
           onDocumentUploaded={handleDocUpload}
           trigger={(open) => (
-            <Button size="sm" onClick={() => open()} variant="outline" className="gap-2 h-9 px-6 text-xs font-black uppercase border-slate-300">
+            <Button size="sm" onClick={() => open()} variant="outline" className="gap-2 h-10 px-8 text-[10px] font-black uppercase border-slate-300 shadow-sm bg-background">
               <PlusCircle className="h-4 w-4" /> Add Document
             </Button>
           )}
         />
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-background">
         <Table>
           <TableHeader className="bg-muted/30 sticky top-0 z-10">
             <TableRow>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Document Name</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Upload Date</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold tracking-wider">Expiry</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Document Name</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest">Upload Date</TableHead>
+              <TableHead className="text-[10px] uppercase font-black tracking-widest">Expiration</TableHead>
+              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest pr-8">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -422,24 +475,24 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
               aircraft.documents.map((doc) => {
                 const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
                 return (
-                <TableRow key={doc.name}>
-                  <TableCell className="font-bold text-sm">{doc.name}</TableCell>
-                  <TableCell className="text-xs font-medium">{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
+                <TableRow key={doc.name} className="hover:bg-muted/5 transition-colors group">
+                  <TableCell className="font-black text-sm uppercase px-8">{doc.name}</TableCell>
+                  <TableCell className="text-[11px] font-black uppercase tracking-tight opacity-70">{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
                   <TableCell className="text-xs">
                     {doc.expirationDate ? (
-                      <Badge variant="outline" className="font-bold" style={expiryStyle || undefined}>
+                      <Badge variant="outline" className="font-black h-8 px-4 border-2 shadow-sm uppercase text-[10px]" style={expiryStyle || undefined}>
                         {format(new Date(doc.expirationDate), 'dd MMM yyyy')}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground opacity-50 font-medium">No Expiry</span>
+                      <span className="text-[10px] font-black uppercase text-muted-foreground opacity-30 italic">No Expiry Date</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-8">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setViewingDoc({ name: doc.name, url: doc.url })}>
+                      <Button variant="outline" size="icon" className="h-9 w-9 hover:bg-primary hover:text-primary-foreground border-slate-300 shadow-sm transition-all" onClick={() => setViewingDoc({ name: doc.name, url: doc.url })}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteDoc(doc.name)}>
+                      <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive hover:text-destructive-foreground border-slate-300 shadow-sm transition-all" onClick={() => handleDeleteDoc(doc.name)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -448,8 +501,11 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
               )})
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic">
-                  No technical documents uploaded.
+                <TableCell colSpan={4} className="h-64 text-center">
+                    <div className="flex flex-col items-center gap-3 opacity-30">
+                        <FileText className="h-10 w-10" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">No technical certifications uploaded.</p>
+                    </div>
                 </TableCell>
               </TableRow>
             )}
@@ -458,15 +514,15 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
       </div>
 
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-5xl max-h-[95vh] rounded-3xl p-8">
           <DialogHeader>
-            <DialogTitle>{viewingDoc?.name}</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight">{viewingDoc?.name}</DialogTitle>
           </DialogHeader>
-          <div className="relative aspect-[4/3] w-full bg-muted rounded-md overflow-hidden border">
+          <div className="relative aspect-[16/9] w-full bg-muted/20 rounded-2xl overflow-hidden border-2 shadow-inner mt-4">
             {viewingDoc && <img src={viewingDoc.url} alt={viewingDoc.name} className="object-contain w-full h-full" />}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingDoc(null)}>Close</Button>
+          <DialogFooter className="pt-6">
+            <Button variant="outline" className="h-11 px-10 text-[10px] font-black uppercase border-slate-300 shadow-sm" onClick={() => setViewingDoc(null)}>Close Viewer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -478,7 +534,6 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
 
 function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm({
@@ -507,34 +562,43 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
   });
 
   const onSubmit = (values: any) => {
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, values);
-    toast({ title: 'Aircraft Updated' });
-    setIsOpen(false);
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
+        const nextAircrafts = aircrafts.map(ac => ac.id === aircraft.id ? { ...ac, ...values } : ac);
+        
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        
+        toast({ title: 'Asset Updated', description: `Configuration for ${aircraft.tailNumber} has been synchronized.` });
+        setIsOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Failed to save asset configuration.' });
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 h-9 px-6 text-xs font-black uppercase border-slate-300">
-          <Pencil className="h-3.5 w-3.5" /> Edit Specifications
+        <Button variant="outline" size="sm" className="gap-2 h-10 px-8 text-[10px] font-black uppercase border-slate-300 shadow-sm bg-background">
+          <Pencil className="h-3.5 w-3.5" /> Edit Specs
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-8">
         <DialogHeader>
-          <DialogTitle>Edit Aircraft Details</DialogTitle>
-          <DialogDescription>Update physical specs and meter offsets for {aircraft.tailNumber}.</DialogDescription>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">Edit Physical Specifications</DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Update the technical offsets and meter readings for {aircraft.tailNumber}.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Model</FormLabel><FormControl><Input {...field} /></FormControl></FormItem> )}/>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-6">
+            <div className="grid grid-cols-2 gap-6">
+              <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Manufacturer</FormLabel><FormControl><Input className="h-11 font-bold" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Model</FormLabel><FormControl><Input className="h-11 font-bold" {...field} /></FormControl></FormItem> )}/>
               <FormField control={form.control} name="type" render={({ field }) => ( 
                 <FormItem className="col-span-2">
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest">Engine Category</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <FormControl><SelectTrigger className="h-11 font-bold"><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="Single-Engine">Single-Engine</SelectItem>
                       <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
@@ -546,23 +610,23 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
             
             <Separator />
             
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-              <FormField control={form.control} name="initialHobbs" render={({ field }) => ( <FormItem><FormLabel>Initial Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="currentHobbs" render={({ field }) => ( <FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="initialTacho" render={({ field }) => ( <FormItem><FormLabel>Initial Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="currentTacho" render={({ field }) => ( <FormItem><FormLabel>Current Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
+            <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+              <FormField control={form.control} name="initialHobbs" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Initial Hobbs</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="currentHobbs" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Current Hobbs</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="initialTacho" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Initial Tacho</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="currentTacho" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Current Tacho</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black" {...field} /></FormControl></FormItem> )}/>
             </div>
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => ( <FormItem><FormLabel>Next 50h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => ( <FormItem><FormLabel>Next 100h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
+            <div className="grid grid-cols-2 gap-12 bg-primary/5 p-6 rounded-2xl border border-primary/20">
+              <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Next 50h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black text-primary border-primary/30" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Next 100h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black text-primary border-primary/30" {...field} /></FormControl></FormItem> )}/>
             </div>
 
-            <DialogFooter>
-              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Save Changes</Button>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button variant="outline" className="h-11 px-10 text-[10px] font-black uppercase border-slate-300 shadow-sm">Cancel</Button></DialogClose>
+              <Button type="submit" className="h-11 px-10 text-[10px] font-black uppercase shadow-lg">Save Configuration</Button>
             </DialogFooter>
           </form>
         </Form>
@@ -573,7 +637,6 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
 
 function AddMaintenanceLogDialog({ aircraftId, tenantId }: { aircraftId: string; tenantId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm({
@@ -596,37 +659,55 @@ function AddMaintenanceLogDialog({ aircraftId, tenantId }: { aircraftId: string;
   });
 
   const onSubmit = (values: any) => {
-    const colRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
-    addDocumentNonBlocking(colRef, values);
-    toast({ title: 'Log Added' });
-    setIsOpen(false);
-    form.reset();
+    try {
+        const storedLogs = localStorage.getItem(`safeviate.maintenance-logs:${aircraftId}`);
+        const logs = storedLogs ? JSON.parse(storedLogs) as MaintenanceLog[] : [];
+        
+        const newLog: MaintenanceLog = {
+            ...values,
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+        };
+
+        const nextLogs = [newLog, ...logs];
+        localStorage.setItem(`safeviate.maintenance-logs:${aircraftId}`, JSON.stringify(nextLogs));
+        window.dispatchEvent(new Event(`safeviate-maintenance-logs-updated:${aircraftId}`));
+
+        toast({ title: 'Log Registered', description: 'Maintenance event has been documented in the permanent record.' });
+        setIsOpen(false);
+        form.reset();
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to record maintenance event.' });
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2 h-9 px-6 text-xs font-black uppercase shadow-md">
-          <PlusCircle className="h-3.5 w-3.5" /> Add Log Entry
+        <Button size="sm" className="gap-2 h-10 px-8 text-[10px] font-black uppercase shadow-lg">
+          <PlusCircle className="h-4 w-4" /> Register Service Entry
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-xl rounded-3xl p-8">
         <DialogHeader>
-          <DialogTitle>New Maintenance Entry</DialogTitle>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">Technical Record Entry</DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Document the details of the technical intervention or inspection.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-            <FormField control={form.control} name="date" render={({ field }) => ( <FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem> )}/>
-            <FormField control={form.control} name="maintenanceType" render={({ field }) => ( <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Scheduled Inspection">Scheduled Inspection</SelectItem><SelectItem value="Defect Rectification">Defect Rectification</SelectItem><SelectItem value="Component Change">Component Change</SelectItem><SelectItem value="Service Bulletin">Service Bulletin</SelectItem></SelectContent></Select></FormItem> )}/>
-            <FormField control={form.control} name="reference" render={({ field }) => ( <FormItem><FormLabel>Reference #</FormLabel><FormControl><Input placeholder="Internal or Release #..." {...field} /></FormControl></FormItem> )}/>
-            <FormField control={form.control} name="details" render={({ field }) => ( <FormItem><FormLabel>Work Details</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem> )}/>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="ameNo" render={({ field }) => ( <FormItem><FormLabel>AME License</FormLabel><FormControl><Input {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="amoNo" render={({ field }) => ( <FormItem><FormLabel>AMO #</FormLabel><FormControl><Input {...field} /></FormControl></FormItem> )}/>
+                <FormField control={form.control} name="date" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Entry Date</FormLabel><FormControl><Input type="date" className="h-11 font-bold" {...field} /></FormControl></FormItem> )}/>
+                <FormField control={form.control} name="maintenanceType" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Event Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-11 font-bold"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Scheduled Inspection">Scheduled Inspection</SelectItem><SelectItem value="Defect Rectification">Defect Rectification</SelectItem><SelectItem value="Component Change">Component Change</SelectItem><SelectItem value="Service Bulletin">Service Bulletin</SelectItem></SelectContent></Select></FormItem> )}/>
             </div>
-            <DialogFooter>
-              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Save Log</Button>
+            <FormField control={form.control} name="reference" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Reference / Release #</FormLabel><FormControl><Input placeholder="Internal Release # or AMO Reference..." className="h-11 font-mono font-bold" {...field} /></FormControl></FormItem> )}/>
+            <FormField control={form.control} name="details" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Technical Intervention Details</FormLabel><FormControl><Textarea className="min-h-[120px] font-medium p-4 bg-muted/5 border-2" placeholder="Describe the work performed, defects cleared, or components replaced..." {...field} /></FormControl></FormItem> )}/>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="ameNo" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">AME License Number</FormLabel><FormControl><Input className="h-11 font-black text-sm text-primary" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="amoNo" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">AMO Certification #</FormLabel><FormControl><Input className="h-11 font-black text-sm" {...field} /></FormControl></FormItem> )}/>
+            </div>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button variant="outline" className="h-11 px-8 text-[10px] font-black uppercase border-slate-300">Cancel</Button></DialogClose>
+              <Button type="submit" className="h-11 px-8 text-[10px] font-black uppercase shadow-lg">Commit To Record</Button>
             </DialogFooter>
           </form>
         </Form>
@@ -637,7 +718,6 @@ function AddMaintenanceLogDialog({ aircraftId, tenantId }: { aircraftId: string;
 
 function AddComponentDialog({ aircraftId, tenantId }: { aircraftId: string; tenantId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm({
@@ -660,53 +740,59 @@ function AddComponentDialog({ aircraftId, tenantId }: { aircraftId: string; tena
   });
 
   const onSubmit = (values: any) => {
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraftId);
-    const newComponent = { ...values, id: uuidv4(), installDate: new Date().toISOString() };
-    
-    updateDocumentNonBlocking(aircraftRef, {
-      components: arrayUnion(newComponent)
-    });
-    
-    toast({ title: 'Component Added' });
-    setIsOpen(false);
-    form.reset();
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
+        
+        const newComponent = { ...values, id: crypto.randomUUID(), installDate: new Date().toISOString() };
+        
+        const nextAircrafts = aircrafts.map(ac => ac.id === aircraftId ? {
+            ...ac,
+            components: [...(ac.components || []), newComponent]
+        } : ac);
+        
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        
+        toast({ title: 'Component Tracked', description: `Lifecycle monitoring enabled for ${values.name}.` });
+        setIsOpen(false);
+        form.reset();
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to add component to tracking list.' });
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2 h-9 px-6 text-xs font-black uppercase shadow-md">
-          <PlusCircle className="h-3.5 w-3.5" /> Track Component
+        <Button size="sm" className="gap-2 h-10 px-8 text-[10px] font-black uppercase shadow-lg bg-background text-foreground border-2 hover:bg-muted">
+          <PlusCircle className="h-4 w-4" /> Monitor Serialized Part
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-xl rounded-3xl p-8">
         <DialogHeader>
-          <DialogTitle>Add Serialized Component</DialogTitle>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">Serialized Component Lifecycle</DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Register a new life-limited component for automatic time tracking.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-            <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g., Engine, Propeller, Magneto" {...field} /></FormControl></FormItem> )}/>
-            <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem> )}/>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel>TSN (Time Since New)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel>TSO (Time Since OH)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="totalTime" render={({ field }) => ( <FormItem><FormLabel>Current Total Time</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
-              <FormField control={form.control} name="maxHours" render={({ field }) => ( <FormItem><FormLabel>Service Life (Limit)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem> )}/>
+                <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Component Name</FormLabel><FormControl><Input placeholder="e.g., Engine, Propeller" className="h-11 font-bold" {...field} /></FormControl></FormItem> )}/>
+                <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Serial Number</FormLabel><FormControl><Input className="h-11 font-mono font-black uppercase" {...field} /></FormControl></FormItem> )}/>
             </div>
-            <DialogFooter>
-              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Add Component</Button>
+            <div className="grid grid-cols-2 gap-6 bg-muted/10 p-6 rounded-2xl border-2 shadow-inner">
+              <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">TSN (Time Since New)</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">TSO (Time Since OH)</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="totalTime" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Current Total Hours</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black text-primary" {...field} /></FormControl></FormItem> )}/>
+              <FormField control={form.control} name="maxHours" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Service Life Limit</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black text-destructive" {...field} /></FormControl></FormItem> )}/>
+            </div>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button variant="outline" className="h-11 px-10 text-[10px] font-black uppercase border-slate-300 shadow-sm">Cancel</Button></DialogClose>
+              <Button type="submit" className="h-11 px-10 text-[10px] font-black uppercase shadow-lg">Enable Tracking</Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
   );
-}
-
-function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
 }

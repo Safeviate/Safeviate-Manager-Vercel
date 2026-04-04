@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { PilotProfile, Personnel } from '../personnel/page';
 import { ExternalUsersTable } from './external-users-table';
@@ -19,32 +17,50 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, PlusCircle } from 'lucide-react';
 
 export default function ExternalUsersPage() {
-  const firestore = useFirestore();
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
   const { tenantId, isLoading: isProfileLoading } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
 
-  // Fetch all user collections to aggregate external users
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
-  
-  const rolesQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/roles`)) : null), [firestore, tenantId]);
-  const departmentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/departments`)) : null), [firestore, tenantId]);
-  const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null), [firestore, tenantId]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [instructors, setInstructors] = useState<PilotProfile[]>([]);
+  const [students, setStudents] = useState<PilotProfile[]>([]);
+  const [privatePilots, setPrivatePilots] = useState<PilotProfile[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students, isLoading: isLoadingStudents } = useCollection<PilotProfile>(studentsQuery);
-  const { data: privatePilots, isLoading: isLoadingPrivates } = useCollection<PilotProfile>(privatePilotsQuery);
-  
-  const { data: roles } = useCollection<Role>(rolesQuery);
-  const { data: departments } = useCollection<Department>(departmentsQuery);
-  const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+  useEffect(() => {
+    try {
+      const storedPersonnel = localStorage.getItem('safeviate.personnel');
+      if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
 
-  const isLoading = isProfileLoading || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivates;
+      const storedInstructors = localStorage.getItem('safeviate.instructors');
+      if (storedInstructors) setInstructors(JSON.parse(storedInstructors));
+
+      const storedStudents = localStorage.getItem('safeviate.students');
+      if (storedStudents) setStudents(JSON.parse(storedStudents));
+
+      const storedPilots = localStorage.getItem('safeviate.private-pilots');
+      if (storedPilots) setPrivatePilots(JSON.parse(storedPilots));
+      
+      const storedRoles = localStorage.getItem('safeviate.roles');
+      if (storedRoles) setRoles(JSON.parse(storedRoles));
+      
+      const storedDepts = localStorage.getItem('safeviate.departments');
+      if (storedDepts) setDepartments(JSON.parse(storedDepts));
+
+      const storedOrgs = localStorage.getItem('safeviate.external-organizations');
+      if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+    } catch (err: any) {
+      // ignore
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
+
+  const isLoading = isProfileLoading || isLoadingData;
 
   const externalUsers = useMemo(() => {
     const allUsers = [

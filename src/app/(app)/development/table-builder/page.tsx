@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo, MouseEvent, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,14 +8,37 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
 import { useDebounce } from '@/hooks/use-debounce';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Trash2, Plus, Minus, Upload, Library } from 'lucide-react';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogDescription, 
+    DialogFooter, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogTrigger, 
+    DialogClose 
+} from '@/components/ui/dialog';
+import { 
+    Trash2, 
+    Plus, 
+    Minus, 
+    Upload, 
+    Library, 
+    Grid2X2, 
+    Save, 
+    Sparkles, 
+    Pencil, 
+    Maximize,
+    ChevronDown,
+    ArrowRight,
+    Layout,
+    Columns
+} from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import type { LogbookTemplate } from '../../development/logbook-parser/page';
 
 type Cell = {
@@ -53,74 +75,81 @@ const createInitialTable = (rows: number, cols: number): TableData => {
     rows, 
     cols, 
     cells,
-    colWidths: Array(cols).fill(120), // Default width
-    rowHeights: Array(rows).fill(48), // Default height
+    colWidths: Array(cols).fill(120),
+    rowHeights: Array(rows).fill(48),
   };
 };
 
 const PublishDialog = ({ template }: { template: TableTemplate }) => {
     const { toast } = useToast();
-    const firestore = useFirestore();
-    const tenantId = 'safeviate';
     const [selectedPage, setSelectedPage] = useState('');
     const [isOpen, setIsOpen] = useState(false);
 
-    // In a real app, this would come from a config or another Firestore collection.
-    const availablePages = [{ id: 'my-dashboard', name: 'My Dashboard' }];
+    const availablePages = [
+        { id: 'dashboard', name: 'Main Fleet Dashboard' },
+        { id: 'logbook-view', name: 'Logbook Analysis View' },
+        { id: 'custom-report', name: 'Ad-hoc Maintenance Report' }
+    ];
 
     const handlePublish = () => {
-        if (!firestore || !selectedPage) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please select a page to publish to.' });
+        if (!selectedPage) {
+            toast({ variant: 'destructive', title: 'Invalid Operation', description: 'Destination vector must be selected.' });
             return;
         }
 
-        const publishedTableRef = doc(firestore, `tenants/${tenantId}/published-tables`, selectedPage);
-        const dataToPublish = {
-            pageId: selectedPage,
-            tableData: template.tableData,
-        };
+        try {
+            const stored = localStorage.getItem('safeviate.published-tables');
+            const published = stored ? JSON.parse(stored) : {};
+            
+            published[selectedPage] = {
+                pageId: selectedPage,
+                tableData: template.tableData,
+                publishedAt: new Date().toISOString()
+            };
 
-        setDocumentNonBlocking(publishedTableRef, dataToPublish, { merge: true });
+            localStorage.setItem('safeviate.published-tables', JSON.stringify(published));
+            window.dispatchEvent(new Event('safeviate-tables-published'));
 
-        toast({
-            title: 'Table Published',
-            description: `Template "${template.name}" has been published to "${selectedPage}".`,
-        });
-        setIsOpen(false);
+            toast({
+                title: 'Logic Deployed',
+                description: `Schematic "${template.name}" published to ${selectedPage}.`,
+            });
+            setIsOpen(false);
+        } catch (e) {
+            console.error('Failed to publish table', e);
+        }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" variant="secondary"><Upload className="mr-2 h-4 w-4" /> Publish</Button>
+                <Button size="sm" variant="outline" className="h-9 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 hover:bg-primary/5 hover:text-primary transition-all">
+                    <Upload className="h-3.5 w-3.5" /> Deploy
+                </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="rounded-3xl border-0 shadow-2xl p-8">
                 <DialogHeader>
-                    <DialogTitle>Publish &quot;{template.name}&quot;</DialogTitle>
-                    <DialogDescription>
-                        Publishing this table will make it live on the selected page, replacing any existing table.
+                    <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Deploy Schematic</DialogTitle>
+                    <DialogDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-70">
+                        Finalize the logic distribution for this grid to a live system page.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-2">
-                    <Label htmlFor="destination-page">Destination Page</Label>
+                <div className="py-8 space-y-3 text-left">
+                    <Label htmlFor="destination-page" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Destination Vector</Label>
                     <Select onValueChange={setSelectedPage} value={selectedPage}>
-                        <SelectTrigger id="destination-page">
-                            <SelectValue placeholder="Select a page..." />
+                        <SelectTrigger id="destination-page" className="h-14 border-2 rounded-xl font-black uppercase tracking-tight text-base">
+                            <SelectValue placeholder="Select high-level page..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="rounded-xl border-2 shadow-xl">
                             {availablePages.map(page => (
-                                <SelectItem key={page.id} value={page.id}>{page.name}</SelectItem>
+                                <SelectItem key={page.id} value={page.id} className="font-bold uppercase text-[11px]">{page.name}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handlePublish} disabled={!selectedPage}>
-                        Confirm & Publish
-                    </Button>
+                <DialogFooter className="gap-4">
+                    <DialogClose asChild><Button variant="outline" className="h-12 px-8 rounded-xl font-black uppercase text-[10px] tracking-widest">Abort</Button></DialogClose>
+                    <Button onClick={handlePublish} disabled={!selectedPage} className="h-12 px-10 rounded-xl shadow-lg font-black uppercase text-[10px] tracking-widest">Confirm Deployment</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -130,12 +159,14 @@ const PublishDialog = ({ template }: { template: TableTemplate }) => {
 
 export default function TableBuilderPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
-  const tenantId = 'safeviate';
   const [tableData, setTableData] = useState<TableData>(() => createInitialTable(5, 5));
   const [selectedCells, setSelectedCells] = useState<Record<string, boolean>>({});
   const [isEditing, setIsEditing] = useState(true);
   const [templateName, setTemplateName] = useState('');
+  
+  const [savedTemplates, setSavedTemplates] = useState<TableTemplate[]>([]);
+  const [savedLogbookTemplates, setSavedLogbookTemplates] = useState<LogbookTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { rows, cols, cells, colWidths, rowHeights } = tableData;
 
@@ -144,6 +175,24 @@ export default function TableBuilderPage() {
   
   const debouncedColWidths = useDebounce(inputColWidths, 500);
   const debouncedRowHeights = useDebounce(inputRowHeights, 500);
+
+  // Load from LocalStorage
+  useEffect(() => {
+    const loadData = () => {
+        try {
+            const tableStore = localStorage.getItem('safeviate.table-templates');
+            const logbookStore = localStorage.getItem('safeviate.logbook-templates');
+            
+            if (tableStore) setSavedTemplates(JSON.parse(tableStore));
+            if (logbookStore) setSavedLogbookTemplates(JSON.parse(logbookStore));
+        } catch (e) {
+            console.error('Failed to load builder data', e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    loadData();
+  }, []);
 
   useEffect(() => {
     setInputColWidths(tableData.colWidths.map(w => Math.round(w).toString()));
@@ -163,18 +212,6 @@ export default function TableBuilderPage() {
       setTableData(prev => ({...prev, rowHeights: newHeights}));
   }, [debouncedRowHeights]);
 
-
-  const templatesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/table-templates`) : null),
-    [firestore, tenantId]
-  );
-  const { data: savedTemplates, isLoading: isLoadingTemplates } = useCollection<TableTemplate>(templatesQuery);
-
-  const logbookTemplatesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, `tenants/${tenantId}/logbook-templates`) : null),
-    [firestore, tenantId]
-  );
-  const { data: savedLogbookTemplates } = useCollection<LogbookTemplate>(logbookTemplatesQuery);
 
   const resizeHandleRef = useRef<{ type: 'col' | 'row', index: number, initialPos: number, initialSize: number } | null>(null);
 
@@ -255,10 +292,10 @@ export default function TableBuilderPage() {
     });
   };
 
- const handleMerge = () => {
+  const handleMerge = () => {
     const selectionKeys = Object.keys(selectedCells).filter(key => selectedCells[key]);
     if (selectionKeys.length < 2) {
-        toast({ variant: "destructive", title: "Invalid Selection", description: "Select at least two cells to merge." });
+        toast({ variant: "destructive", title: "Invalid Selection", description: "Minimal set of two units required." });
         return;
     }
 
@@ -286,7 +323,7 @@ export default function TableBuilderPage() {
                  }
             }
             if(!isCellInSelection){
-                 toast({ variant: "destructive", title: "Invalid Merge", description: "Selection must form a solid rectangle." });
+                 toast({ variant: "destructive", title: "Geometric Fault", description: "Selection must form a unified quadrilateral." });
                  return;
             }
         }
@@ -318,13 +355,13 @@ export default function TableBuilderPage() {
 
     setTableData(prev => ({ ...prev, cells: newCells }));
     setSelectedCells({});
-    toast({ title: 'Cells Merged' });
+    toast({ title: 'Grid Unified' });
   };
   
   const handleUnmerge = () => {
     const selectionKeys = Object.keys(selectedCells);
     if (selectionKeys.length === 0) {
-      toast({ variant: 'destructive', title: 'No Selection', description: 'Please select a merged cell to unmerge.' });
+      toast({ variant: 'destructive', title: 'Selection Zero', description: 'No units selected for fragmentation.' });
       return;
     }
 
@@ -354,9 +391,9 @@ export default function TableBuilderPage() {
     
     if (didUnmerge) {
         setTableData({ ...tableData, cells: newCells });
-        toast({ title: 'Unmerged Successfully' });
+        toast({ title: 'Fragmentation Complete' });
     } else {
-        toast({ variant: 'destructive', title: 'Not a merged cell', description: 'Please select a merged cell to unmerge.' });
+        toast({ variant: 'destructive', title: 'Solid Unit', description: 'Selection is already at minimum fragmentation.' });
     }
     
     setSelectedCells({});
@@ -379,7 +416,7 @@ export default function TableBuilderPage() {
 
     const { type, index, initialPos, initialSize } = resizeHandleRef.current;
     const delta = type === 'col' ? e.clientX - initialPos : e.clientY - initialPos;
-    const newSize = Math.max(initialSize + delta, 20); // Minimum size
+    const newSize = Math.max(initialSize + delta, 20);
 
     if (type === 'col') {
       setTableData(prev => {
@@ -415,13 +452,13 @@ export default function TableBuilderPage() {
 
   const handleDimensionChange = (type: 'col' | 'row', index: number, value: string) => {
     if (type === 'col') {
-      const newColWidths = [...inputColWidths];
-      newColWidths[index] = value;
-      setInputColWidths(newColWidths);
+      const newWidths = [...inputColWidths];
+      newWidths[index] = value;
+      setInputColWidths(newWidths);
     } else {
-      const newRowHeights = [...inputRowHeights];
-      newRowHeights[index] = value;
-      setInputRowHeights(newRowHeights);
+      const newHeights = [...inputRowHeights];
+      newHeights[index] = value;
+      setInputRowHeights(newHeights);
     }
   };
 
@@ -436,27 +473,36 @@ export default function TableBuilderPage() {
   }, [handleMouseMove, handleMouseUp]);
   
   const handleSaveTemplate = () => {
-    if (!firestore || !templateName.trim()) {
-        toast({ variant: 'destructive', title: 'Missing Name', description: 'Please provide a name for the template.' });
+    if (!templateName.trim()) {
+        toast({ variant: 'destructive', title: 'ID Mandatory', description: 'Synthesize a valid label for this schematic.' });
         return;
     }
-    const templatesCollection = collection(firestore, `tenants/${tenantId}/table-templates`);
-    addDocumentNonBlocking(templatesCollection, { name: templateName, tableData });
-    toast({ title: 'Template Saved', description: `Template "${templateName}" has been saved.` });
+
+    const newTemplate: TableTemplate = {
+        id: crypto.randomUUID(),
+        name: templateName,
+        tableData
+    };
+
+    const nextTemplates = [newTemplate, ...savedTemplates];
+    localStorage.setItem('safeviate.table-templates', JSON.stringify(nextTemplates));
+    setSavedTemplates(nextTemplates);
+    
+    toast({ title: 'Logic Persistent', description: `Schematic "${templateName}" registered.` });
     setTemplateName('');
   };
 
   const handleLoadTemplate = (template: TableTemplate) => {
     setTableData(template.tableData);
     setSelectedCells({});
-    toast({ title: 'Template Loaded', description: `Template "${template.name}" has been loaded.` });
+    toast({ title: 'Interface Reconstructed', description: `Schematic parameters inherited from "${template.name}".` });
   }
 
   const handleDeleteTemplate = (templateId: string) => {
-    if (!firestore) return;
-    const templateRef = doc(firestore, `tenants/${tenantId}/table-templates`, templateId);
-    deleteDocumentNonBlocking(templateRef);
-    toast({ title: 'Template Deleted' });
+    const nextTemplates = savedTemplates.filter(t => t.id !== templateId);
+    localStorage.setItem('safeviate.table-templates', JSON.stringify(nextTemplates));
+    setSavedTemplates(nextTemplates);
+    toast({ title: 'Schematic Purged' });
   };
   
   const handleImportFromLogbook = (logbookTemplate: LogbookTemplate) => {
@@ -489,11 +535,10 @@ export default function TableBuilderPage() {
     
     processColumns(logbookTemplate.columns, 0);
 
-    const newRows = headerRows.length + 5; // Headers + 5 data rows
+    const newRows = headerRows.length + 5;
     const newCols = totalCols;
     const newCells: Cell[] = [];
 
-    // Create header cells
     headerRows.forEach((row, rIndex) => {
         let cIndex = 0;
         row.forEach(headerCell => {
@@ -505,21 +550,16 @@ export default function TableBuilderPage() {
                 colSpan: headerCell.colSpan,
                 hidden: false,
             });
-            // Mark covered cells as hidden
             for (let rs = 0; rs < headerCell.rowSpan; rs++) {
                 for (let cs = 0; cs < headerCell.colSpan; cs++) {
                     if (rs === 0 && cs === 0) continue;
-                    const r = rIndex + rs;
-                    const c = cIndex + cs;
-                    // Find if a cell needs to be added or marked
-                    newCells.push({ r, c, content: '', rowSpan: 1, colSpan: 1, hidden: true });
+                    newCells.push({ r: rIndex + rs, c: cIndex + cs, content: '', rowSpan: 1, colSpan: 1, hidden: true });
                 }
             }
             cIndex += headerCell.colSpan;
         });
     });
 
-    // Create empty data rows
     for (let r = headerRows.length; r < newRows; r++) {
         for (let c = 0; c < newCols; c++) {
             if (!newCells.find(cell => cell.r === r && cell.c === c)) {
@@ -528,10 +568,7 @@ export default function TableBuilderPage() {
         }
     }
     
-    // Sort cells by row then column to ensure correct order
     newCells.sort((a, b) => a.r - b.r || a.c - b.c);
-    
-    // Filter out duplicates that might have been created
     const uniqueCells = newCells.filter((cell, index, self) => 
         index === self.findIndex(c => c.r === cell.r && c.c === cell.c)
     );
@@ -544,200 +581,238 @@ export default function TableBuilderPage() {
         rowHeights: Array(newRows).fill(48),
     });
 
-    toast({ title: 'Logbook Imported', description: `Structure for "${logbookTemplate.name}" loaded into the builder.` });
+    toast({ title: 'Vector Ingested', description: `Logical grid inherited from "${logbookTemplate.name}".` });
   };
 
 
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Table Builder</CardTitle>
-          <CardDescription>
-            Create and manipulate table structures. Click to select, drag handles to resize, and type to edit content.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-                 <div className="flex items-center gap-2">
-                    <Label>Rows ({rows})</Label>
-                    <Button size="icon" variant="outline" onClick={addRow}><Plus className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="outline" onClick={removeRow} disabled={rows <= 1}><Minus className="h-4 w-4" /></Button>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Label>Columns ({cols})</Label>
-                    <Button size="icon" variant="outline" onClick={addColumn}><Plus className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="outline" onClick={removeColumn} disabled={cols <= 1}><Minus className="h-4 w-4" /></Button>
-                </div>
-                 <div className="flex items-center space-x-2">
-                    <Switch id="edit-mode" checked={isEditing} onCheckedChange={setIsEditing} />
-                    <Label htmlFor="edit-mode">Edit Mode</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button onClick={handleMerge} disabled={Object.keys(selectedCells).length < 2 || !isEditing}>Merge Selected</Button>
-                    <Button onClick={handleUnmerge} disabled={Object.keys(selectedCells).length === 0 || !isEditing} variant="outline">Unmerge</Button>
+    <div className="p-8 space-y-12">
+      <div className="flex items-center justify-between">
+          <div className="space-y-4 text-left">
+              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/30 bg-primary/5 px-4 h-7 tracking-widest">
+                  <Grid2X2 className="h-3.5 w-3.5 mr-2" />
+                  Grid Architect Console
+              </Badge>
+              <div>
+                  <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Logic Schematic Builder</h1>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-2 opacity-70">
+                      Parameterize grid geometry and coordinate logic distribution for dynamic interfaces.
+                  </p>
+              </div>
+          </div>
+          <div className="flex items-center gap-4">
+              <div className="flex items-center bg-muted/5 border-2 rounded-2xl p-2 px-4 shadow-inner">
+                <Switch id="edit-mode" checked={isEditing} onCheckedChange={setIsEditing} className="data-[state=checked]:bg-primary" />
+                <Label htmlFor="edit-mode" className="text-[10px] font-black uppercase tracking-widest ml-3 cursor-pointer">Bypass Auth Protect</Label>
+              </div>
+          </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <Card className="lg:col-span-1 rounded-3xl border-0 shadow-2xl overflow-hidden bg-background">
+          <CardHeader className="p-8 pb-4 bg-muted/5 border-b">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3">
+                  <Maximize className="h-4 w-4 text-primary" />
+                  Geometry Matrix
+              </CardTitle>
+          </CardHeader>
+          <CardContent className="p-8 space-y-10">
+              <div className="space-y-4">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Logical Rows</Label>
+                  <div className="flex items-center justify-between bg-muted/10 p-2 rounded-2xl border-2">
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-primary" onClick={removeRow} disabled={rows <= 1}><Minus className="h-5 w-5" /></Button>
+                    <span className="text-2xl font-black font-mono">{rows}</span>
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-primary" onClick={addRow}><Plus className="h-5 w-5" /></Button>
+                  </div>
+              </div>
+              <div className="space-y-4">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Logical Columns</Label>
+                  <div className="flex items-center justify-between bg-muted/10 p-2 rounded-2xl border-2">
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-primary" onClick={removeColumn} disabled={cols <= 1}><Minus className="h-5 w-5" /></Button>
+                    <span className="text-2xl font-black font-mono">{cols}</span>
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-primary" onClick={addColumn}><Plus className="h-5 w-5" /></Button>
+                  </div>
+              </div>
+              <Separator className="my-6 opacity-40" />
+              <div className="space-y-4">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Fragment Control</Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    <Button onClick={handleMerge} disabled={Object.keys(selectedCells).length < 2 || !isEditing} className="h-12 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg">
+                        <Layout className="h-4 w-4" /> Unify Cells
+                    </Button>
+                    <Button onClick={handleUnmerge} disabled={Object.keys(selectedCells).length === 0 || !isEditing} variant="outline" className="h-12 rounded-xl font-black uppercase tracking-widest text-[10px] gap-2 border-2">
+                        <Columns className="h-4 w-4" /> Fragment
+                    </Button>
+                  </div>
+              </div>
+          </CardContent>
+        </Card>
+
+        <div className="lg:col-span-3 space-y-8">
+            <div className="relative group rounded-[2.5rem] border-4 border-slate-50 bg-background shadow-inner p-1 overflow-hidden min-h-[600px] flex items-center justify-center">
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+                <div 
+                    className="grid gap-0 relative bg-white shadow-2xl rounded-sm border-2 border-slate-100"
+                    style={{
+                        gridTemplateColumns: colWidths.map(w => `${w}px`).join(' '),
+                        gridTemplateRows: rowHeights.map(h => `${h}px`).join(' '),
+                    }}
+                >
+                {cells.map((cell) => {
+                    const key = `${cell.r}-${cell.c}`;
+                    const isSelected = selectedCells[key];
+                    if (cell.hidden) return null;
+
+                    return (
+                    <div
+                        key={key}
+                        onClick={() => handleCellClick(cell.r, cell.c)}
+                        className={cn(
+                        'flex items-center justify-center border border-slate-100 text-sm transition-all p-0 relative',
+                        isEditing && 'cursor-crosshair hover:bg-primary/5',
+                        isSelected && 'ring-4 ring-primary ring-inset bg-primary/10 z-10'
+                        )}
+                        style={{
+                        gridRowStart: cell.r + 1,
+                        gridRowEnd: cell.r + 1 + cell.rowSpan,
+                        gridColumnStart: cell.c + 1,
+                        gridColumnEnd: cell.c + 1 + cell.colSpan,
+                        }}
+                    >
+                        <Input
+                            value={cell.content}
+                            onChange={(e) => handleCellContentChange(cell.r, cell.c, e.target.value)}
+                            disabled={!isEditing}
+                            className="w-full h-full bg-transparent border-none text-center font-bold uppercase text-[10px] tracking-widest text-slate-700 p-0 focus-visible:ring-0"
+                            placeholder={isEditing ? '...' : ''}
+                        />
+                    </div>
+                    );
+                })}
+                {isEditing && Array.from({ length: cols }).map((_, index) => (
+                    <div 
+                        key={`col-handle-${index}`}
+                        className="absolute top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors z-20"
+                        style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1}px`}}
+                        onMouseDown={(e) => handleMouseDown(e, 'col', index)}
+                    />
+                ))}
+                {isEditing && Array.from({ length: rows }).map((_, index) => (
+                    <div 
+                        key={`row-handle-${index}`}
+                        className="absolute left-0 right-0 h-1 cursor-row-resize hover:bg-primary/50 transition-colors z-20"
+                        style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1}px`}}
+                        onMouseDown={(e) => handleMouseDown(e, 'row', index)}
+                    />
+                ))}
                 </div>
             </div>
-            
-            <Separator />
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Column Widths (px)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {inputColWidths.map((width, index) => (
-                    <Input 
-                      key={`col-width-${index}`}
-                      type="number"
-                      value={width}
-                      onChange={(e) => handleDimensionChange('col', index, e.target.value)}
-                      className="w-20"
-                      disabled={!isEditing}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Row Heights (px)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {inputRowHeights.map((height, index) => (
-                    <Input 
-                      key={`row-height-${index}`}
-                      type="number"
-                      value={height}
-                      onChange={(e) => handleDimensionChange('row', index, e.target.value)}
-                      className="w-20"
-                      disabled={!isEditing}
-                    />
-                  ))}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card className="rounded-3xl border-0 shadow-2xl overflow-hidden bg-background">
+                    <CardHeader className="p-8 pb-4 bg-muted/5 border-b">
+                        <CardTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                            <Library className="h-5 w-5 text-primary" />
+                            Ingest Sub-Logic
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="w-full h-16 rounded-2xl border-2 border-dashed font-black uppercase tracking-widest text-xs gap-3 hover:bg-primary/5 hover:border-primary/30 transition-all">
+                                    <Sparkles className='h-5 w-5 text-primary' /> Inherit from Axiom Vision
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="rounded-3xl border-0 shadow-2xl p-8 max-w-lg">
+                                <DialogHeader>
+                                    <DialogTitle className="text-2xl font-black uppercase tracking-tighter leading-none">External Schema Matrix</DialogTitle>
+                                    <DialogDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-2">Select a synthesized grid to inherit structure.</DialogDescription>
+                                </DialogHeader>
+                                <ScrollArea className="h-[400px] mt-6 pr-4">
+                                    <div className="space-y-4">
+                                        {(savedLogbookTemplates || []).map(template => (
+                                            <DialogClose key={template.id} asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full h-16 justify-between px-6 rounded-2xl border hover:bg-primary/5 hover:border-primary/20 group/btn transition-all"
+                                                    onClick={() => handleImportFromLogbook(template)}
+                                                >
+                                                    <div className="text-left">
+                                                        <p className="font-black uppercase tracking-tight text-sm text-slate-800">{template.name}</p>
+                                                        <p className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Axiom Vision Schema</p>
+                                                    </div>
+                                                    <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover/btn:opacity-100 -translate-x-2 group-hover/btn:translate-x-0 transition-all" />
+                                                </Button>
+                                            </DialogClose>
+                                        ))}
+                                        {(savedLogbookTemplates || []).length === 0 && (
+                                            <p className="text-center text-[10px] font-black uppercase tracking-widest opacity-30 py-10">Registry Zero: Vision synthesis required.</p>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            </DialogContent>
+                        </Dialog>
+                    </CardContent>
+                </Card>
+
+                <Card className="rounded-3xl border-0 shadow-2xl overflow-hidden bg-background">
+                    <CardHeader className="p-8 pb-4 bg-muted/5 border-b">
+                        <CardTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                            <Save className="h-5 w-5 text-primary" />
+                            Commit Schematic
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-4">
+                        <div className="flex gap-3">
+                            <Input placeholder="Registry Label..." value={templateName} onChange={(e) => setTemplateName(e.target.value)} className="h-14 border-2 rounded-2xl font-black uppercase tracking-tight text-base focus-visible:ring-primary/20 flex-1" />
+                            <Button onClick={handleSaveTemplate} disabled={!templateName.trim()} className="h-14 px-8 rounded-2xl shadow-xl font-black uppercase tracking-widest text-xs">Register</Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-        </CardContent>
-      </Card>
-      
-      <div className="overflow-auto rounded-lg border">
-        <div
-          className="grid gap-0 relative"
-          style={{
-            gridTemplateColumns: colWidths.map(w => `${w}px`).join(' '),
-            gridTemplateRows: rowHeights.map(h => `${h}px`).join(' '),
-          }}
-        >
-          {cells.map((cell) => {
-            const key = `${cell.r}-${cell.c}`;
-            const isSelected = selectedCells[key];
 
-            if (cell.hidden) return null;
+            <div className="space-y-8">
+                <div className="flex items-center gap-4 text-left">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm border border-primary/20">
+                        <ChevronDown className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter">Registered Schematic Library</h3>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">Persistent grid parameters for logical distribution.</p>
+                    </div>
+                </div>
 
-            return (
-              <div
-                key={key}
-                onClick={() => handleCellClick(cell.r, cell.c)}
-                className={cn(
-                  'flex items-center justify-center border text-sm text-muted-foreground transition-colors p-0.5',
-                  isEditing && 'cursor-pointer hover:bg-accent/50',
-                  isSelected && 'ring-2 ring-primary ring-inset bg-blue-100'
-                )}
-                style={{
-                  gridRowStart: cell.r + 1,
-                  gridRowEnd: cell.r + 1 + cell.rowSpan,
-                  gridColumnStart: cell.c + 1,
-                  gridColumnEnd: cell.c + 1 + cell.colSpan,
-                }}
-              >
-                <Input
-                    value={cell.content}
-                    onChange={(e) => handleCellContentChange(cell.r, cell.c, e.target.value)}
-                    disabled={!isEditing}
-                    className="w-full h-full bg-transparent border-none text-center focus-visible:ring-1 focus-visible:ring-ring"
-                    placeholder={isEditing ? '...' : ''}
-                />
-              </div>
-            );
-          })}
-         {isEditing && Array.from({ length: cols }).map((_, index) => (
-            <div 
-                key={`col-handle-${index}`}
-                className="absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50"
-                style={{ left: `${colWidths.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
-                onMouseDown={(e) => handleMouseDown(e, 'col', index)}
-            />
-          ))}
-          {isEditing && Array.from({ length: rows }).map((_, index) => (
-            <div 
-                key={`row-handle-${index}`}
-                className="absolute left-0 right-0 h-1.5 cursor-row-resize hover:bg-primary/50"
-                style={{ top: `${rowHeights.slice(0, index + 1).reduce((a, b) => a + b, 0) - 1.5}px`}}
-                onMouseDown={(e) => handleMouseDown(e, 'row', index)}
-            />
-          ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {savedTemplates.map(template => (
+                        <Card key={template.id} className="flex items-center justify-between p-6 rounded-3xl border-2 hover:border-primary/40 transition-all group shadow-sm bg-background">
+                           <div className="flex items-center gap-4 text-left">
+                               <div className="h-14 w-14 rounded-2xl bg-muted/5 flex items-center justify-center text-primary group-hover:bg-primary/5 transition-colors border-2 shadow-inner">
+                                   <Pencil className="h-6 w-6" />
+                               </div>
+                               <div className="space-y-1">
+                                   <p className="font-black uppercase tracking-tight text-base text-slate-800">{template.name}</p>
+                                   <p className="text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground opacity-50">{template.tableData.rows}x{template.tableData.cols} Geometry Matrix</p>
+                               </div>
+                           </div>
+                           <div className="flex items-center gap-3">
+                                <Button size="sm" variant="ghost" onClick={() => handleLoadTemplate(template)} className="h-9 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-primary/5 hover:text-primary">Recall</Button>
+                                <PublishDialog template={template} />
+                                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-red-600 hover:bg-red-50 h-10 w-10 rounded-xl transition-all" onClick={() => handleDeleteTemplate(template.id)}>
+                                    <Trash2 className="h-5 w-5" />
+                                </Button>
+                           </div>
+                        </Card>
+                    ))}
+                    {savedTemplates.length === 0 && (
+                        <div className="col-span-full py-20 flex flex-col items-center justify-center text-center bg-muted/5 rounded-[3rem] border-4 border-dashed border-slate-50">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-40">Library Empty. Parameterize Schematic to Register.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
       </div>
-      
-      <Card>
-        <CardHeader>
-            <CardTitle>Save & Load Templates</CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-            <div className="flex items-center gap-2">
-                <Input placeholder="New template name..." value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
-                <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>Save Current as Template</Button>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline"><Library className='mr-2 h-4 w-4' /> Import from Logbook</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Import Logbook Structure</DialogTitle>
-                            <DialogDescription>Select a saved logbook template to import its structure into the builder.</DialogDescription>
-                        </DialogHeader>
-                        <ScrollArea className="h-60 mt-4">
-                            <div className="space-y-2">
-                                {(savedLogbookTemplates || []).map(template => (
-                                    <DialogClose key={template.id} asChild>
-                                        <Button
-                                            variant="ghost"
-                                            className="w-full justify-start"
-                                            onClick={() => handleImportFromLogbook(template)}
-                                        >
-                                            {template.name}
-                                        </Button>
-                                    </DialogClose>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </DialogContent>
-                </Dialog>
-            </div>
-             <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Saved Templates</h4>
-                {isLoadingTemplates ? (
-                    <p>Loading templates...</p>
-                ) : (savedTemplates?.length ?? 0) > 0 ? (
-                    <ScrollArea className='h-40 rounded-md border p-2'>
-                        <div className="space-y-2">
-                            {savedTemplates?.map(template => (
-                                <div key={template.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md">
-                                    <span className="font-medium">{template.name}</span>
-                                    <div className="flex gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => handleLoadTemplate(template)}>Load</Button>
-                                        <PublishDialog template={template} />
-                                        <Button size="icon" variant="destructive" className="h-9 w-9" onClick={() => handleDeleteTemplate(template.id)}>
-                                            <Trash2 className='h-4 w-4' />
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                ) : (
-                    <p className='text-sm text-muted-foreground text-center py-4'>No templates saved yet.</p>
-                )}
-            </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

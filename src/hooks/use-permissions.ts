@@ -1,43 +1,53 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useUserProfile } from './use-user-profile';
-import { useTenantConfig } from './use-tenant-config';
 import { menuConfig } from '@/lib/menu-config';
-import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
+import type { Personnel } from '@/app/(app)/users/personnel/page';
 
-type Role = {
-  id: string;
-  permissions?: string[];
+type MePayload = {
+  rolePermissions?: string[];
+  tenant?: {
+    id: string;
+    industry?: string | null;
+    enabledMenus?: string[] | null;
+  } | null;
 };
 
 export const usePermissions = () => {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const { tenant, isLoading: isTenantLoading } = useTenantConfig();
-  const firestore = useFirestore();
+  const [payload, setPayload] = useState<MePayload | null>(null);
+  const [isPermissionsLoading, setIsPermissionsLoading] = useState(true);
 
-  const roleRef = useMemoFirebase(
-    () =>
-      firestore && tenant?.id && userProfile?.role
-        ? doc(firestore, 'tenants', tenant.id, 'roles', userProfile.role)
-        : null,
-    [firestore, tenant?.id, userProfile?.role]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setIsPermissionsLoading(true);
+      try {
+        const response = await fetch('/api/me', { cache: 'no-store' });
+        const data = (await response.json()) as MePayload;
+        if (!cancelled) {
+          setPayload(data);
+        }
+      } catch {
+        if (!cancelled) setPayload(null);
+      } finally {
+        if (!cancelled) setIsPermissionsLoading(false);
+      }
+    };
 
-  const { data: role, isLoading: isRoleLoading } = useDoc<Role>(roleRef);
-
-  const isLoading = isProfileLoading || isTenantLoading || isRoleLoading;
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const effectivePermissions = useMemo(() => {
-    const inheritedPermissions = role?.permissions || [];
-    const overridePermissions = userProfile?.permissions || [];
+    const inheritedPermissions = payload?.rolePermissions || [];
+    const overridePermissions = (userProfile as Personnel | null)?.permissions || [];
     const deniedPermissions = new Set(
-      overridePermissions
-        .filter((permission) => permission.startsWith('!'))
-        .map((permission) => permission.slice(1))
+      overridePermissions.filter((permission) => permission.startsWith('!')).map((permission) => permission.slice(1))
     );
 
     const grantedPermissions = new Set<string>();
@@ -55,52 +65,61 @@ export const usePermissions = () => {
     });
 
     return grantedPermissions;
-  }, [role?.permissions, userProfile?.permissions]);
+  }, [payload?.rolePermissions, userProfile]);
 
-  const hasPermission = useCallback((permissionId: string) => {
-    if (isLoading || !userProfile) return false;
-    
-    const userRole = (userProfile as Personnel).role?.toLowerCase();
-    if (userRole === 'dev' || userRole === 'developer') {
+  const isLoading = isProfileLoading || isPermissionsLoading;
+
+  const hasPermission = useCallback(
+    (permissionId: string) => {
+      if (isLoading || !userProfile) return false;
+
+      const userRole = (userProfile as Personnel).role?.toLowerCase();
+      if (userRole === 'dev' || userRole === 'developer') {
         return true;
-    }
+      }
 
-    return effectivePermissions.has(permissionId);
-  }, [effectivePermissions, isLoading, userProfile]);
+      return effectivePermissions.has(permissionId);
+    },
+    [effectivePermissions, isLoading, userProfile]
+  );
 
-  const canAccessMenuItem = useCallback((item: MenuItem | SubMenuItem, parentItem?: MenuItem) => {
-    if (isLoading || !userProfile) return false;
+  const canAccessMenuItem = useCallback(
+    (item: MenuItem | SubMenuItem, parentItem?: MenuItem) => {
+      if (isLoading || !userProfile) return false;
 
-    const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
-    const itemHref = item.href;
+      const tenant = payload?.tenant;
+      const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
+      const itemHref = item.href;
 
-    const isAviationOnly =
-      itemHref.includes('/bookings')
-      || itemHref.includes('/assets')
-      || itemHref.includes('/admin/mb-config');
-    const isAviationOnlySub = itemHref.includes('/training/student-progress');
+      const isAviationOnly =
+        itemHref.includes('/bookings') ||
+        itemHref.includes('/assets') ||
+        itemHref.includes('/admin/mb-config');
+      const isAviationOnlySub = itemHref.includes('/training/student-progress');
 
-    if ((!isAviation && isAviationOnly) || (!isAviation && isAviationOnlySub)) {
-      return false;
-    }
+      if ((!isAviation && isAviationOnly) || (!isAviation && isAviationOnlySub)) {
+        return false;
+      }
 
-    if (userProfile.accessOverrides?.hiddenMenus?.includes(itemHref)) return false;
+      if (userProfile.accessOverrides?.hiddenMenus?.includes(itemHref)) return false;
 
-    const userRole = (userProfile as Personnel).role?.toLowerCase();
-    if (userRole === 'dev' || userRole === 'developer') {
+      const userRole = (userProfile as Personnel).role?.toLowerCase();
+      if (userRole === 'dev' || userRole === 'developer') {
+        return true;
+      }
+
+      const isEnabledByTenant =
+        !tenant?.enabledMenus ||
+        tenant.enabledMenus.includes(itemHref) ||
+        (parentItem ? tenant.enabledMenus.includes(parentItem.href) : false);
+      if (!isEnabledByTenant) return false;
+
+      if (item.permissionId && !hasPermission(item.permissionId)) return false;
+
       return true;
-    }
-
-    const isEnabledByTenant =
-      !tenant?.enabledMenus
-      || tenant.enabledMenus.includes(itemHref)
-      || (parentItem ? tenant.enabledMenus.includes(parentItem.href) : false);
-    if (!isEnabledByTenant) return false;
-
-    if (item.permissionId && !hasPermission(item.permissionId)) return false;
-
-    return true;
-  }, [hasPermission, isLoading, tenant?.enabledMenus, tenant?.industry, userProfile]);
+    },
+    [hasPermission, isLoading, payload?.tenant, userProfile]
+  );
 
   return {
     permissions: effectivePermissions,

@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, arrayUnion, collection, query, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Send, MessageSquare, UserPlus, X } from 'lucide-react';
@@ -27,16 +25,27 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
   const [newMessage, setNewMessage] = useState('');
   const [assignedUserId, setAssignedUserId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
   
   const { userProfile } = useUserProfile();
-  const firestore = useFirestore();
   const { toast } = useToast();
 
-  const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      const response = await fetch('/api/personnel', { cache: 'no-store' });
+      const payload = await response.json().catch(() => null);
+      if (!cancelled) {
+        setPersonnel(payload?.personnel ?? []);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const assignedUser = useMemo(() => 
     personnel?.find(p => p.id === assignedUserId), 
@@ -44,10 +53,9 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
   );
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !userProfile || !firestore) return;
+    if (!newMessage.trim() || !userProfile) return;
 
     setIsSubmitting(true);
-    const reportRef = doc(firestore, `tenants/${tenantId}/safety-reports`, report.id);
     
     const messageItem: ReportDiscussionItem = {
       id: uuidv4(),
@@ -66,9 +74,21 @@ export function ReportForum({ report, tenantId }: ReportForumProps) {
     }
 
     try {
-      await updateDoc(reportRef, {
-        discussion: arrayUnion(messageItem)
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          report: {
+            ...report,
+            discussion: [...(report.discussion || []), messageItem],
+          },
+        }),
       });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to post this comment right now.');
+      }
       setNewMessage('');
       setAssignedUserId(null);
       toast({ title: 'Comment Posted' });

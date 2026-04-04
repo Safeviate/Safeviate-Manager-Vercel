@@ -16,8 +16,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DocumentUploader } from '@/components/document-uploader';
 import { format } from 'date-fns';
 import { PlusCircle, Trash2, Upload } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
@@ -40,14 +38,11 @@ export function EditAircraftDetailsDialog({ aircraft, tenantId, isOpen, onOpenCh
 }
 
 // Manage Components Dialog
-export function ManageComponentsDialog({ aircraft, tenantId, isOpen, onOpenChange }: { aircraft: Aircraft; tenantId: string; isOpen: boolean; onOpenChange: (isOpen: boolean) => void }) {
-  const firestore = useFirestore();
+export function ManageComponentsDialog({ aircraft, isOpen, onOpenChange }: { aircraft: Aircraft; tenantId: string; isOpen: boolean; onOpenChange: (isOpen: boolean) => void }) {
   const { toast } = useToast();
   const [components, setComponents] = useState<AircraftComponent[]>(aircraft.components || []);
 
   const handleAddComponent = async () => {
-    if (!firestore) return;
-
     const nextComponents = [
       ...components,
       {
@@ -67,168 +62,86 @@ export function ManageComponentsDialog({ aircraft, tenantId, isOpen, onOpenChang
     ];
 
     try {
-      await updateDoc(doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id), { components: nextComponents });
+      const stored = localStorage.getItem('safeviate.aircrafts');
+      if (!stored) return;
+      const aircrafts = JSON.parse(stored) as Aircraft[];
+      const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, components: nextComponents } : a);
+      
+      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+      
       setComponents(nextComponents);
       toast({ title: 'Component Added' });
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Update failed',
-        description: error instanceof Error ? error.message : 'Unable to add this component.',
+        description: 'Unable to add this component locally.',
       });
     }
   };
 
   const handleRemoveComponent = async (componentId: string) => {
-    if (!firestore) return;
-
     const nextComponents = components.filter((component) => component.id !== componentId);
 
     try {
-      await updateDoc(doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id), { components: nextComponents });
+      const stored = localStorage.getItem('safeviate.aircrafts');
+      if (!stored) return;
+      const aircrafts = JSON.parse(stored) as Aircraft[];
+      const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, components: nextComponents } : a);
+      
+      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+
       setComponents(nextComponents);
       toast({ title: 'Component Removed' });
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Update failed',
-        description: error instanceof Error ? error.message : 'Unable to remove this component.',
+        description: 'Unable to remove this component locally.',
       });
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Manage Tracked Components</DialogTitle>
-          <DialogDescription>
-            Add, remove, or edit components for {aircraft.tailNumber}.
-          </DialogDescription>
+      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col p-0">
+        <DialogHeader className="p-6 border-b">
+          <DialogTitle className="text-xl font-black uppercase">Fleet Components</DialogTitle>
+          <DialogDescription className="text-xs font-medium uppercase text-muted-foreground">Manage tracked parts and life-limited components for {aircraft.tailNumber}.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="flex justify-end">
-            <Button onClick={handleAddComponent}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Component
-            </Button>
-          </div>
+        <div className="flex-1 overflow-auto p-6">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Component</TableHead>
-                <TableHead>Serial</TableHead>
-                <TableHead>Install Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-[10px] uppercase font-black">Component Name</TableHead>
+                <TableHead className="text-[10px] uppercase font-black">Serial #</TableHead>
+                <TableHead className="text-[10px] uppercase font-black">Installed At</TableHead>
+                <TableHead className="text-right text-[10px] uppercase font-black">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {components.length > 0 ? components.map((component) => (
-                <TableRow key={component.id}>
-                  <TableCell>{component.name}</TableCell>
-                  <TableCell>{component.serialNumber || 'N/A'}</TableCell>
-                  <TableCell>{component.installDate ? format(new Date(component.installDate), 'PPP') : 'N/A'}</TableCell>
+              {components.map((comp) => (
+                <TableRow key={comp.id}>
+                  <TableCell className="font-bold">{comp.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{comp.serialNumber || 'N/A'}</TableCell>
+                  <TableCell className="text-xs">{comp.installHours}h</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="destructive" size="sm" onClick={() => handleRemoveComponent(component.id)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Remove
+                    <Button variant="ghost" size="sm" onClick={() => handleRemoveComponent(comp.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center h-24">No tracked components.</TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-
-// Manage Documents Dialog
-export function ManageDocumentsDialog({ aircraft, tenantId, isOpen, onOpenChange }: { aircraft: Aircraft; tenantId: string; isOpen: boolean; onOpenChange: (isOpen: boolean) => void }) {
-  const { toast } = useToast();
-  const firestore = useFirestore();
-  const [documents, setDocuments] = useState<Document[]>(aircraft.documents || []);
-
-  const handleDocumentUpdate = async (updatedDocuments: Document[]) => {
-      if (!firestore) return;
-      const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
-
-      try {
-        await updateDoc(aircraftRef, { documents: updatedDocuments });
-        setDocuments(updatedDocuments);
-      } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Update failed',
-          description: error instanceof Error ? error.message : 'Unable to update aircraft documents.',
-        });
-      }
-  };
-  
-  const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
-      const updatedDocs = [...documents, docDetails];
-      void handleDocumentUpdate(updatedDocs);
-      toast({ title: 'Document Added', description: `"${docDetails.name}" has been added to the aircraft.`});
-  };
-
-  const handleDocumentDelete = (docNameToDelete: string) => {
-      const updatedDocs = documents.filter(doc => doc.name !== docNameToDelete);
-      void handleDocumentUpdate(updatedDocs);
-      toast({ title: 'Document Removed', description: `"${docNameToDelete}" has been removed.`});
-  };
-  
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Manage Aircraft Documents</DialogTitle>
-          <DialogDescription>
-            Add or remove documents for {aircraft.tailNumber}.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4 space-y-4">
-            <div className="flex justify-end">
-                <DocumentUploader
-                    onDocumentUploaded={onDocumentUploaded}
-                    trigger={(openDialog) => (
-                        <Button onClick={() => openDialog()}>
-                            <Upload className="mr-2 h-4 w-4" /> Add Document
-                        </Button>
-                    )}
-                />
-            </div>
-             <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Document</TableHead>
-                        <TableHead>Date Uploaded</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {documents.map(doc => (
-                        <TableRow key={doc.name}>
-                            <TableCell>{doc.name}</TableCell>
-                            <TableCell>{format(new Date(doc.uploadDate), 'PPP')}</TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="destructive" size="sm" onClick={() => handleDocumentDelete(doc.name)}>Delete</Button>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                    {documents.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={3} className="text-center h-24">No documents uploaded.</TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
-        </div>
+        <DialogFooter className="p-6 border-t bg-muted/5">
+          <Button onClick={handleAddComponent} className="gap-2 text-[10px] font-black uppercase">
+            <PlusCircle className="h-4 w-4" /> Add Component
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

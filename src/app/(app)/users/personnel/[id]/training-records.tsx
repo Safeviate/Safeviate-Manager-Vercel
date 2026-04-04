@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query, where, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { format } from 'date-fns';
@@ -70,47 +68,52 @@ const MilestoneProgress = ({ totalHours, milestone, warningThreshold }: { totalH
 }
 
 export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
-    const firestore = useFirestore();
+    const [reports, setReports] = useState<StudentProgressReport[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [instructors, setInstructors] = useState<PilotProfile[]>([]);
+    const [milestoneSettings, setMilestoneSettings] = useState<StudentMilestoneSettings | null>(null);
+    const [student, setStudent] = useState<PilotProfile | null>(null);
 
-    const shouldFetch = firestore && studentId;
+    const [isLoadingReports, setIsLoadingReports] = useState(true);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+    const [isLoadingInstructors, setIsLoadingInstructors] = useState(true);
 
-    const progressReportsQuery = useMemoFirebase(
-        () => (shouldFetch ? query(
-            collection(firestore, `tenants/${tenantId}/student-progress-reports`),
-            where('studentId', '==', studentId)
-        ) : null),
-        [firestore, tenantId, studentId, shouldFetch]
-    );
+    useEffect(() => {
+        try {
+            const stds = localStorage.getItem('safeviate.students');
+            if (stds) {
+                const arr = JSON.parse(stds) as PilotProfile[];
+                const s = arr.find(u => u.id === studentId);
+                if (s) setStudent(s);
+            }
+        } catch { }
 
-    const bookingsQuery = useMemoFirebase(
-        () => (shouldFetch ? query(
-            collection(firestore, `tenants/${tenantId}/bookings`),
-            where('studentId', '==', studentId),
-            where('status', '==', 'Completed')
-        ) : null),
-        [firestore, tenantId, studentId, shouldFetch]
-    );
+        try {
+            const ins = localStorage.getItem('safeviate.instructors');
+            if (ins) setInstructors(JSON.parse(ins));
+        } catch { } finally { setIsLoadingInstructors(false); }
 
-    const instructorsQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
-        [firestore, tenantId]
-    );
-    
-    const milestoneSettingsRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'student-milestones') : null),
-        [firestore, tenantId]
-    );
+        try {
+            const rpts = localStorage.getItem('safeviate.student-progress-reports');
+            if (rpts) {
+                const arr = JSON.parse(rpts) as StudentProgressReport[];
+                setReports(arr.filter(r => r.studentId === studentId));
+            }
+        } catch { } finally { setIsLoadingReports(false); }
 
-    const studentRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'tenants', tenantId, 'students', studentId) : null),
-        [firestore, tenantId, studentId]
-    );
+        try {
+            const bks = localStorage.getItem('safeviate.bookings');
+            if (bks) {
+                const arr = JSON.parse(bks) as Booking[];
+                setBookings(arr.filter(b => b.studentId === studentId && b.status === 'Completed'));
+            }
+        } catch { } finally { setIsLoadingBookings(false); }
 
-    const { data: reports, isLoading: isLoadingReports } = useCollection<StudentProgressReport>(progressReportsQuery);
-    const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<PilotProfile>(instructorsQuery);
-    const { data: milestoneSettings } = useDoc<StudentMilestoneSettings>(milestoneSettingsRef);
-    const { data: student } = useDoc<PilotProfile>(studentRef);
+        try {
+            const ms = localStorage.getItem('safeviate.student-milestones');
+            if (ms) setMilestoneSettings(JSON.parse(ms));
+        } catch { }
+    }, [studentId]);
 
     const isLoading = isLoadingReports || isLoadingInstructors || isLoadingBookings;
 

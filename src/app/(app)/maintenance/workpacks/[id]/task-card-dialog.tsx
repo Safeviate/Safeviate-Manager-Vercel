@@ -4,9 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { PlusCircle } from 'lucide-react';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import type { TaskCard } from '@/types/workpack';
 
 const formSchema = z.object({
   taskNumber: z.string().min(1, 'Required'),
@@ -42,7 +41,6 @@ const formSchema = z.object({
 
 export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; tenantId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -57,10 +55,10 @@ export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; t
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!firestore || !tenantId) return;
-    const tcRef = collection(firestore, `tenants/${tenantId}/workpacks/${workpackId}/taskCards`);
-
     try {
+      const stored = localStorage.getItem('safeviate.maintenance-task-cards');
+      const current = stored ? JSON.parse(stored) as TaskCard[] : [];
+
       // Parse parts and tools into the structured format expected by the DB
       const parts = values.partsList?.split('\n').filter(l => l.trim()).map(line => {
         const [pn, sn] = line.split(':').map(s => s.trim());
@@ -69,7 +67,8 @@ export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; t
 
       const tools = values.toolsList?.split(',').map(t => t.trim()).filter(Boolean) || [];
 
-      await addDoc(tcRef, {
+      const newTaskCard: TaskCard = {
+        id: crypto.randomUUID(),
         taskNumber: values.taskNumber,
         taskDescription: values.taskDescription,
         requiresInspector: values.requiresInspector,
@@ -77,12 +76,16 @@ export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; t
         isCompleted: false,
         toolsUsed: tools,
         partsInstalled: parts,
-        createdAt: serverTimestamp(),
-      });
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem('safeviate.maintenance-task-cards', JSON.stringify([...current, newTaskCard]));
+      window.dispatchEvent(new Event('safeviate-maintenance-task-cards-updated'));
+      
       toast({ title: 'Task Card Appended', description: `Card ${values.taskNumber} added.` });
       setIsOpen(false);
       form.reset();
-    } catch {
+    } catch (e: any) {
       toast({ title: 'Error', description: 'Failed to create task card.', variant: 'destructive' });
     }
   };

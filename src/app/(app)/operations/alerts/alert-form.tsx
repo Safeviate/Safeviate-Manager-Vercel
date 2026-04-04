@@ -11,14 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronsUpDown, PlusCircle } from 'lucide-react';
-import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { AlertType } from '@/types/alert';
-import { collection } from 'firebase/firestore';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const alertTypes: AlertType[] = ['Red Tag', 'Yellow Tag', 'Company Notice'];
 
@@ -33,12 +32,18 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface AlertFormProps {
-    tenantId: string;
+    onCreate: (alert: {
+        type: AlertType;
+        title: string;
+        content: string;
+        signatureUrl?: string;
+        mustRead?: boolean;
+        createdBy: string;
+    }) => void;
 }
 
-export function AlertForm({ tenantId }: AlertFormProps) {
-    const firestore = useFirestore();
-    const { user } = useUser();
+export function AlertForm({ onCreate }: AlertFormProps) {
+    const { userProfile } = useUserProfile();
     const { toast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const isMobile = useIsMobile();
@@ -55,22 +60,18 @@ export function AlertForm({ tenantId }: AlertFormProps) {
     });
 
     const onSubmit = (values: FormValues) => {
-        if (!firestore || !user) {
-            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        if (!userProfile) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User profile is not ready.' });
             return;
         }
-
-        const alertData = {
-            ...values,
+        onCreate({
             type: values.type as AlertType,
-            createdAt: new Date().toISOString(),
-            createdBy: user.uid,
-            status: 'Active' as const,
-            readBy: [],
-        };
-        
-        const alertsCollection = collection(firestore, `tenants/${tenantId}/alerts`);
-        addDocumentNonBlocking(alertsCollection, alertData);
+            title: values.title,
+            content: values.content,
+            signatureUrl: values.signatureUrl || undefined,
+            mustRead: values.mustRead,
+            createdBy: userProfile.id,
+        });
         
         toast({ title: 'Alert Created', description: `A new ${values.type} has been posted.` });
         setIsOpen(false);

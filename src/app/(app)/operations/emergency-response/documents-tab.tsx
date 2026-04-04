@@ -1,9 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useMemo, useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,24 +31,41 @@ const REQUIRED_DOCUMENTS = [
 ];
 
 export function DocumentsTab({ tenantId }: DocumentsTabProps) {
-  const firestore = useFirestore();
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
+  const [events, setEvents] = useState<ERPEvent[]>([]);
 
-  const eventsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-events`), orderBy('startedAt', 'desc')) : null),
-    [firestore, tenantId]
-  );
-  const { data: events } = useCollection<ERPEvent>(eventsQuery);
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const response = await fetch('/api/erp-state?category=events', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const parsed = (payload.data || []) as ERPEvent[];
+        setEvents(parsed.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()));
+      } catch {
+        // ignore load errors
+      }
+    };
+    loadEvents();
+  }, []);
+
+  const persistEvents = async (nextEvents: ERPEvent[]) => {
+    setEvents(nextEvents);
+    await fetch('/api/erp-state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: 'events', data: nextEvents }),
+    }).catch(() => null);
+  };
 
   const activeEvent = useMemo(() => events?.find(e => e.status !== 'Closed'), [events]);
 
   const handleToggleDocument = (docId: string, docName: string) => {
-    if (!activeEvent || !firestore) return;
+    if (!activeEvent) return;
 
     const currentDocs = activeEvent.collectedDocuments || [];
     const existingIndex = currentDocs.findIndex(d => d.id === docId);
-    const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
 
     let updatedDocs: ERPCollectedDocument[];
     let logEntry: ERPLogEntry | null = null;
@@ -79,12 +94,13 @@ export function DocumentsTab({ tenantId }: DocumentsTabProps) {
       };
     }
 
-    const updates: any = { collectedDocuments: updatedDocs };
+    const updates: Partial<ERPEvent> = { collectedDocuments: updatedDocs };
     if (logEntry) {
-      updates.log = arrayUnion(logEntry);
+      const currentLog = activeEvent.log || [];
+      updates.log = [...currentLog, logEntry];
     }
-
-    updateDocumentNonBlocking(eventRef, updates);
+    const nextEvents = events.map(e => e.id === activeEvent.id ? { ...e, ...updates } : e);
+    void persistEvents(nextEvents as ERPEvent[]);
     toast({ title: existingIndex > -1 ? 'Status reset' : 'Document Secured' });
   };
 

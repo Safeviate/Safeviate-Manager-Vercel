@@ -403,6 +403,12 @@ export const menuConfig: MenuItem[] = [
         description: 'View all available application permissions.',
         permissionId: 'admin-permissions-view',
       },
+      {
+        href: '/admin/data-portability',
+        label: 'Data Portability',
+        description: 'Full Export/Import of local system state and schematics.',
+        permissionId: 'admin-settings-manage',
+      },
     ],
   },
   {
@@ -424,6 +430,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'development-view',
       },
       {
+        href: '/development/ai-studio',
+        label: 'AI Studio',
+        description: 'Run structured AI workflows from inside the app.',
+        permissionId: 'development-view',
+      },
+      {
         href: '/development/table-builder',
         label: 'Table Builder',
         description: 'Create and manipulate table structures.',
@@ -432,7 +444,7 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/development/cost-predictor',
         label: 'Cost Predictor',
-        description: 'Model Firebase operational costs based on company size and activity.',
+        description: 'Model cloud operational costs based on company size and activity.',
         permissionId: 'development-view',
       },
     ],

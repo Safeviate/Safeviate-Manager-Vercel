@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { collection, query, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Megaphone, Copy, Database, Printer, Pencil } from 'lucide-react';
 import type { ERPMediaTemplate } from '@/types/erp';
@@ -43,20 +41,37 @@ const STANDARD_TEMPLATES: Omit<ERPMediaTemplate, 'id'>[] = [
 ];
 
 export function MediaTab({ tenantId }: MediaTabProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ERPMediaTemplate | null>(null);
+  const [templates, setTemplates] = useState<ERPMediaTemplate[]>([]);
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const response = await fetch('/api/erp-state?category=media', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = await response.json();
+        setTemplates((payload.data || []) as ERPMediaTemplate[]);
+      } catch {
+        // ignore load errors
+      }
+    };
+    loadTemplates();
+  }, []);
+
+  const persistTemplates = async (nextTemplates: ERPMediaTemplate[]) => {
+    setTemplates(nextTemplates);
+    await fetch('/api/erp-state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: 'media', data: nextTemplates }),
+    }).catch(() => null);
+  };
 
   const canAdmin = hasPermission('operations-erp-admin');
-
-  const mediaQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-media`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: templates } = useCollection<ERPMediaTemplate>(mediaQuery);
 
   const sortedTemplates = useMemo(() => {
     if (!templates) return [];
@@ -72,48 +87,40 @@ export function MediaTab({ tenantId }: MediaTabProps) {
     if (!canAdmin) return;
 
     const formData = new FormData(e.currentTarget);
-    const newTemplate = {
+    const newTemplate: ERPMediaTemplate = {
+      id: crypto.randomUUID(),
       type: formData.get('type') as any,
       title: formData.get('title') as string,
       content: formData.get('content') as string,
     };
 
-    if (!firestore) return;
-    addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/erp-media`), newTemplate);
+    const nextTemplates = [newTemplate, ...templates];
+    void persistTemplates(nextTemplates);
     setIsAddOpen(false);
     toast({ title: 'Template Saved' });
   };
 
   const handleUpdateTemplate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!editingTemplate || !firestore || !canAdmin) return;
+    if (!editingTemplate || !canAdmin) return;
     const formData = new FormData(e.currentTarget);
-    const updatedTemplate = {
-      type: formData.get('type') as any,
-      title: formData.get('title') as string,
-      content: formData.get('content') as string,
-    };
+    const formType = formData.get('type') as any;
+    const formTitle = formData.get('title') as string;
+    const formContent = formData.get('content') as string;
 
-    const templateRef = doc(firestore, `tenants/${tenantId}/erp-media`, editingTemplate.id);
-    updateDocumentNonBlocking(templateRef, updatedTemplate);
+    const nextTemplates = templates.map(t => t.id === editingTemplate.id ? { ...t, type: formType, title: formTitle, content: formContent } : t);
+    void persistTemplates(nextTemplates);
     setIsEditOpen(false);
     setEditingTemplate(null);
     toast({ title: 'Template Updated' });
   };
 
   const handleSeedStandardTemplates = async () => {
-    if (!firestore || !canAdmin) return;
+    if (!canAdmin) return;
     
     try {
-      const batch = writeBatch(firestore);
-      const colRef = collection(firestore, `tenants/${tenantId}/erp-media`);
-      
-      STANDARD_TEMPLATES.forEach(template => {
-        const newDocRef = doc(colRef);
-        batch.set(newDocRef, template);
-      });
-
-      await batch.commit();
+      const seeded = STANDARD_TEMPLATES.map(t => ({...t, id: crypto.randomUUID()}));
+      void persistTemplates([...seeded, ...templates]);
       toast({ title: 'Standard Templates Added' });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Seeding Failed', description: error.message });
@@ -141,8 +148,9 @@ export function MediaTab({ tenantId }: MediaTabProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!firestore || !canAdmin) return;
-    await deleteDoc(doc(firestore, `tenants/${tenantId}/erp-media`, id));
+    if (!canAdmin) return;
+    const nextTemplates = templates.filter(t => t.id !== id);
+    void persistTemplates(nextTemplates);
     toast({ title: 'Template Deleted' });
   };
 

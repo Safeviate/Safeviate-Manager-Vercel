@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useEffect, useMemo, useState } from 'react';
 import { PersonnelForm } from './personnel-form';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Role } from '../../admin/roles/page';
@@ -101,53 +99,45 @@ export type Personnel = {
 };
 
 export default function PersonnelPage() {
-  const firestore = useFirestore();
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
   const { tenantId, isLoading: isProfileLoading } = useUserProfile();
   const canCreateUsers = hasPermission('users-create');
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [externalOrgs, setExternalOrgs] = useState<any[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataError, setDataError] = useState<Error | null>(null);
 
-  const personnelQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'personnel'))
-        : null,
-    [firestore, tenantId]
-  );
-  
-  const rolesQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'roles'))
-        : null,
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setIsLoadingData(true);
+      try {
+        const response = await fetch('/api/personnel', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled) {
+          setPersonnel(payload.personnel ?? []);
+          setRoles(payload.roles ?? []);
+          setDepartments(payload.departments ?? []);
+          setExternalOrgs([]);
+          setDataError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDataError(error instanceof Error ? error : new Error('Failed to load personnel data.'));
+        }
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
+      }
+    };
 
-  const departmentsQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'departments'))
-        : null,
-    [firestore, tenantId]
-  );
-  
-  const externalOrgsQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'external-organizations'))
-        : null,
-    [firestore, tenantId]
-  );
-  
-
-  const { data: personnel, isLoading: isLoadingPersonnel, error: personnelError } = useCollection<Personnel>(personnelQuery);
-  const { data: roles, isLoading: isLoadingRoles, error: rolesError } = useCollection<Role>(rolesQuery);
-  const { data: departments, isLoading: isLoadingDepts, error: deptsError } = useCollection<Department>(departmentsQuery);
-  const { data: externalOrgs, isLoading: isLoadingExternalOrgs, error: externalOrgsError } = useCollection<any>(externalOrgsQuery);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const rolesMap = useMemo(() => {
     if (!roles) return new Map<string, string>();
@@ -159,8 +149,8 @@ export default function PersonnelPage() {
     return new Map(departments.map(dept => [dept.id, dept.name]));
   }, [departments]);
 
-  const isLoading = isProfileLoading || isLoadingPersonnel || isLoadingRoles || isLoadingDepts || isLoadingExternalOrgs;
-  const error = personnelError || rolesError || deptsError || externalOrgsError;
+  const isLoading = isProfileLoading || isLoadingData;
+  const error = dataError;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">

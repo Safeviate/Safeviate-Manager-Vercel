@@ -22,8 +22,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { PlusCircle, Trash2, CalendarIcon, Save, CheckCircle2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -56,7 +54,6 @@ interface CorrectiveActionsFormProps {
 }
 
 export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked = false }: CorrectiveActionsFormProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<CapFormValues>({
@@ -72,9 +69,6 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
   });
 
   const onSubmit = async (values: CapFormValues) => {
-    if (!firestore) return;
-
-    const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     const dataToSave = {
         correctiveActions: values.correctiveActions.map(action => ({
             ...action,
@@ -83,7 +77,16 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
     };
     
     try {
-      await updateDoc(reportRef, dataToSave);
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: { ...report, ...dataToSave } }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to save corrective actions.');
+      }
       toast({ title: 'Corrective Actions Saved' });
     } catch (error) {
       toast({

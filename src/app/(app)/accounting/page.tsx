@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { collection, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
@@ -21,29 +19,42 @@ import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function AccountingPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
 
-  // --- Data Fetching ---
-  const bookingsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/bookings`) : null), [firestore, tenantId]);
-  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/instructors`) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/students`) : null), [firestore, tenantId]);
+  // --- Data States ---
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [allUsers, setAllUsers] = useState<(Personnel | PilotProfile)[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: bookings, isLoading: loadingB } = useCollection<Booking>(bookingsQuery);
-  const { data: aircrafts, isLoading: loadingA } = useCollection<Aircraft>(aircraftQuery);
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students } = useCollection<PilotProfile>(studentsQuery);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedBookings = localStorage.getItem('safeviate.bookings');
+        if (storedBookings) setBookings(JSON.parse(storedBookings));
 
-  const allUsers = useMemo(() => [
-    ...(personnel || []),
-    ...(instructors || []),
-    ...(students || [])
-  ], [personnel, instructors, students]);
+        const storedAircrafts = localStorage.getItem('safeviate.aircrafts');
+        if (storedAircrafts) setAircrafts(JSON.parse(storedAircrafts));
+
+        const p1 = JSON.parse(localStorage.getItem('safeviate.personnel') || '[]') as Personnel[];
+        const p2 = JSON.parse(localStorage.getItem('safeviate.instructors') || '[]') as PilotProfile[];
+        const p3 = JSON.parse(localStorage.getItem('safeviate.students') || '[]') as PilotProfile[];
+        setAllUsers([...p1, ...p2, ...p3]);
+    } catch (e) {
+        console.error("Failed to load accounting data", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    const events = ['safeviate-bookings-updated', 'safeviate-aircrafts-updated', 'safeviate-personnel-updated'];
+    events.forEach(e => window.addEventListener(e, loadData));
+    return () => events.forEach(e => window.removeEventListener(e, loadData));
+  }, [loadData]);
 
   // --- State ---
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -51,8 +62,6 @@ export default function AccountingPage() {
 
   // --- Client-Side Processing ---
   const enrichedData = useMemo(() => {
-    if (!bookings) return { unbilled: [], exported: [] };
-
     const completed = bookings.filter(b => b.status === 'Completed' && b.postFlightData && b.preFlightData);
     const sorted = [...completed].sort((a, b) => b.date.localeCompare(a.date));
 
@@ -75,11 +84,11 @@ export default function AccountingPage() {
   };
 
   const handleSageExport = async () => {
-    if (selectedIds.size === 0 || !firestore || !tenantId) return;
+    if (selectedIds.size === 0) return;
 
     try {
       const selectedBookings = enrichedData.unbilled.filter(b => selectedIds.has(b.id));
-      const aircraftMap = new Map(aircrafts?.map(a => [a.id, a]));
+      const aircraftMap = new Map(aircrafts.map(a => [a.id, a]));
       const userMap = new Map(allUsers.map(u => [u.id, `${u.firstName} ${u.lastName}`]));
 
       const headers = ["Reference", "Date", "Customer", "Description", "Duration", "Rate", "Total", "Nominal Code"];
@@ -110,14 +119,18 @@ export default function AccountingPage() {
       link.click();
       document.body.removeChild(link);
 
-      const batch = writeBatch(firestore);
-      selectedBookings.forEach(b => {
-        const ref = doc(firestore, `tenants/${tenantId}/bookings`, b.id);
-        batch.update(ref, { accountingStatus: 'Exported' });
+      // Update local storage status
+      const nextBookings = bookings.map(b => {
+        if (selectedIds.has(b.id)) {
+            return { ...b, accountingStatus: 'Exported' as const };
+        }
+        return b;
       });
-      await batch.commit();
 
-      toast({ title: 'Export Successful', description: `${selectedIds.size} records prepared for Sage.` });
+      localStorage.setItem('safeviate.bookings', JSON.stringify(nextBookings));
+      window.dispatchEvent(new Event('safeviate-bookings-updated'));
+
+      toast({ title: 'Export Successful', description: `${selectedIds.size} records prepared for Sage and updated locally.` });
       setSelectedIds(new Set());
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Export Failed', description: e.message });
@@ -126,13 +139,13 @@ export default function AccountingPage() {
 
   const totalBillable = useMemo(() => {
     return enrichedData.unbilled.reduce((sum, b) => {
-      const ac = aircrafts?.find(a => a.id === b.aircraftId);
+      const ac = aircrafts.find(a => a.id === b.aircraftId);
       const duration = (b.postFlightData?.hobbs || 0) - (b.preFlightData?.hobbs || 0);
       return sum + (duration * (ac?.hourlyRate || 0));
     }, 0);
   }, [enrichedData.unbilled, aircrafts]);
 
-  if (loadingB || loadingA) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
+  if (isLoading) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
 
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
@@ -201,7 +214,7 @@ export default function AccountingPage() {
             <TabsContent value="unbilled" className="m-0 h-full overflow-auto">
               <BillingTable 
                 bookings={enrichedData.unbilled} 
-                aircrafts={aircrafts || []} 
+                aircrafts={aircrafts} 
                 personnel={allUsers}
                 selectedIds={selectedIds}
                 onToggleSelection={toggleSelection}
@@ -212,7 +225,7 @@ export default function AccountingPage() {
             <TabsContent value="exported" className="m-0 h-full overflow-auto">
               <BillingTable 
                 bookings={enrichedData.exported} 
-                aircrafts={aircrafts || []} 
+                aircrafts={aircrafts} 
                 personnel={allUsers}
                 selectedIds={new Set()}
                 onToggleSelection={() => {}}

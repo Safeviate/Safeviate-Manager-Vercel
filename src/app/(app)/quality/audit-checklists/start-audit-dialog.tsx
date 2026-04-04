@@ -1,14 +1,12 @@
-
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, runTransaction } from 'firebase/firestore';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -63,18 +61,19 @@ export function StartAuditDialog({
   trigger,
 }: StartAuditDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { userProfile } = useUserProfile();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newAuditId, setNewAuditId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
 
-  const orgsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
-    [firestore, tenantId]
-  );
-  const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+  useEffect(() => {
+    if (isOpen) {
+        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
+        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+    }
+  }, [isOpen]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -94,45 +93,44 @@ export function StartAuditDialog({
 
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore || !user || !tenantId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Tenant context is not ready yet. Please try again.' });
+    if (!userProfile) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User session not found.' });
         return;
     }
     setIsSubmitting(true);
     
     try {
-        const auditsRef = collection(firestore, `tenants/${tenantId}/quality-audits`);
-        const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'audits');
-
-        const createdAuditId = await runTransaction(firestore, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            const newCount = (counterDoc.data()?.currentNumber || 0) + 1;
-            const newAuditNumber = `AUD-${String(newCount).padStart(4, '0')}`;
-            
-            transaction.set(counterRef, { currentNumber: newCount }, { merge: true });
-
-            // Detect if auditee is an external organization
-            const isExternalOrg = organizations?.some(org => org.id === values.auditeeId);
-
-            const newAuditRef = doc(auditsRef);
-            const newAuditData: Omit<QualityAudit, 'id'> = {
-                templateId: template.id,
-                title: template.title,
-                auditNumber: newAuditNumber,
-                auditorId: user.uid,
-                auditeeId: values.auditeeId,
-                organizationId: isExternalOrg ? values.auditeeId : null,
-                scope: values.scope,
-                auditDate: values.auditDate.toISOString(),
-                status: 'Scheduled',
-                findings: [],
-            };
-            transaction.set(newAuditRef, newAuditData);
-            return newAuditRef.id;
-        });
+        const storedAudits = localStorage.getItem('safeviate.quality-audits');
+        const auditsList = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
         
-        setNewAuditId(createdAuditId);
+        // Simple counter logic (for local storage, we can just use the length or a separate counter)
+        const nextCount = auditsList.length + 1;
+        const newAuditNumber = `AUD-${String(nextCount).padStart(4, '0')}`;
+        
+        // Detect if auditee is an external organization
+        const isExternalOrg = organizations?.some(org => org.id === values.auditeeId);
+
+        const createdId = crypto.randomUUID();
+        const newAuditData: QualityAudit = {
+            id: createdId,
+            templateId: template.id,
+            title: template.title,
+            auditNumber: newAuditNumber,
+            auditorId: userProfile.id,
+            auditeeId: values.auditeeId,
+            organizationId: isExternalOrg ? values.auditeeId : null,
+            scope: values.scope,
+            auditDate: values.auditDate.toISOString(),
+            status: 'Scheduled',
+            findings: [],
+        };
+
+        localStorage.setItem('safeviate.quality-audits', JSON.stringify([newAuditData, ...auditsList]));
+        
+        setNewAuditId(createdId);
         toast({ title: 'Audit Started' });
+        
+        window.dispatchEvent(new Event('safeviate-quality-updated'));
         setIsOpen(false);
 
     } catch (error: any) {
@@ -187,7 +185,7 @@ export function StartAuditDialog({
                                <SelectLabel>Personnel</SelectLabel>
                                {personnel.map(p => (
                                     <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>
-                               ))}
+                                ))}
                            </SelectGroup>
                         </SelectContent>
                    </Select>

@@ -1,12 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Badge } from '@/components/ui/badge';
@@ -44,8 +41,6 @@ import {
   Settings2,
   ChevronDown,
 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, writeBatch, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -196,86 +191,117 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
 }
 
 export default function AuditSchedulePage() {
-  const firestore = useFirestore();
   const isMobile = useIsMobile();
   const { tenantId } = useUserProfile();
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
 
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
+  const [schedule, setSchedule] = useState<AuditScheduleItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
-  const scheduleQuery = useMemoFirebase(
-    () =>
-      firestore && tenantId
-        ? query(collection(firestore, `tenants/${tenantId}/audit-schedule-items`), where('year', '==', currentYear))
-        : null,
-    [firestore, tenantId, currentYear]
-  );
-  
-  const { data: schedule, isLoading } = useCollection<AuditScheduleItem>(scheduleQuery);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedAreas = localStorage.getItem('safeviate.audit-areas');
+        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
+        
+        if (storedAreas) {
+            setAuditAreas(JSON.parse(storedAreas));
+        }
+        if (storedItems) {
+            const items = JSON.parse(storedItems) as AuditScheduleItem[];
+            setSchedule(items.filter(i => i.year === currentYear));
+        }
+    } catch (e) {
+        console.error("Failed to load audit schedule", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [currentYear]);
+
+  useEffect(() => {
+    loadData();
+    window.addEventListener('safeviate-audit-schedule-updated', loadData);
+    return () => window.removeEventListener('safeviate-audit-schedule-updated', loadData);
+  }, [loadData]);
 
   const handleStatusChange = (area: string, month: string, status: AuditScheduleStatus) => {
-    if (!firestore || !tenantId) return;
     setOpenPopoverId(null);
-    const itemsCollection = collection(firestore, `tenants/${tenantId}/audit-schedule-items`);
-    const existingItem = schedule?.find(item => item.area === area && item.month === month);
+    try {
+        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
+        const items = storedItems ? JSON.parse(storedItems) as AuditScheduleItem[] : [];
+        const existingIdx = items.findIndex(item => item.area === area && item.month === month && item.year === currentYear);
 
-    if (existingItem) {
-      const itemRef = doc(itemsCollection, existingItem.id);
-      updateDocumentNonBlocking(itemRef, { status });
-    } else {
-      addDocumentNonBlocking(itemsCollection, {
-        area,
-        month,
-        year: currentYear,
-        status,
-      });
+        let nextItems: AuditScheduleItem[];
+        if (existingIdx > -1) {
+            nextItems = [...items];
+            nextItems[existingIdx] = { ...nextItems[existingIdx], status };
+        } else {
+            nextItems = [...items, {
+                id: crypto.randomUUID(),
+                area,
+                month,
+                year: currentYear,
+                status,
+            }];
+        }
+
+        localStorage.setItem('safeviate.audit-schedule-items', JSON.stringify(nextItems));
+        window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+    } catch (e) {
+        console.error("Failed to update status", e);
     }
   };
 
   const handleAddArea = () => {
-    if (newAreaName.trim() && !auditAreas.includes(newAreaName.trim())) {
-        setAuditAreas(prev => [...prev, newAreaName.trim()]);
+    const trimmed = newAreaName.trim();
+    if (trimmed && !auditAreas.includes(trimmed)) {
+        const nextAreas = [...auditAreas, trimmed];
+        setAuditAreas(nextAreas);
+        localStorage.setItem('safeviate.audit-areas', JSON.stringify(nextAreas));
     }
     setNewAreaName('');
     setIsAddAreaOpen(false);
   }
 
-  const handleEditArea = async (oldName: string, newName: string) => {
-    setAuditAreas(prev => prev.map(area => area === oldName ? newName : area));
+  const handleEditArea = (oldName: string, newName: string) => {
+    const nextAreas = auditAreas.map(area => area === oldName ? newName : area);
+    setAuditAreas(nextAreas);
+    localStorage.setItem('safeviate.audit-areas', JSON.stringify(nextAreas));
     
-    if (!firestore || !tenantId || !schedule) return;
-    const itemsToUpdate = schedule.filter(item => item.area === oldName);
-    if (itemsToUpdate.length === 0) return;
-
-    const batch = writeBatch(firestore);
-    itemsToUpdate.forEach(item => {
-        const itemRef = doc(firestore, `tenants/${tenantId}/audit-schedule-items`, item.id);
-        batch.update(itemRef, { area: newName });
-    });
-    await batch.commit();
+    try {
+        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
+        const items = storedItems ? JSON.parse(storedItems) as AuditScheduleItem[] : [];
+        const nextItems = items.map(item => item.area === oldName ? { ...item, area: newName } : item);
+        localStorage.setItem('safeviate.audit-schedule-items', JSON.stringify(nextItems));
+        window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+    } catch (e) {
+        console.error("Failed to rename area items", e);
+    }
   }
 
-  const handleDeleteArea = async (areaToDelete: string) => {
-    setAuditAreas(prev => prev.filter(area => area !== areaToDelete));
+  const handleDeleteArea = (areaToDelete: string) => {
+    const nextAreas = auditAreas.filter(area => area !== areaToDelete);
+    setAuditAreas(nextAreas);
+    localStorage.setItem('safeviate.audit-areas', JSON.stringify(nextAreas));
 
-    if (!firestore || !schedule) return;
-    const itemsToDelete = schedule.filter(item => item.area === areaToDelete);
-    if (itemsToDelete.length === 0) return;
-
-    const batch = writeBatch(firestore);
-    itemsToDelete.forEach(item => {
-        const itemRef = doc(firestore, `tenants/${tenantId}/audit-schedule-items`, item.id);
-        batch.delete(itemRef);
-    });
-    await batch.commit();
+    try {
+        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
+        const items = storedItems ? JSON.parse(storedItems) as AuditScheduleItem[] : [];
+        const nextItems = items.filter(item => item.area !== areaToDelete);
+        localStorage.setItem('safeviate.audit-schedule-items', JSON.stringify(nextItems));
+        window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+    } catch (e) {
+        console.error("Failed to delete area items", e);
+    }
   }
 
   const getScheduleItem = (area: string, month: string): AuditScheduleStatus => {
-    const found = schedule?.find(item => item.area === area && item.month === month);
+    const found = schedule.find(item => item.area === area && item.month === month);
     return found ? found.status : 'Not Scheduled';
   };
 

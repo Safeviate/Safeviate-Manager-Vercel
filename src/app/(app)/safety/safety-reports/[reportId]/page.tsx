@@ -1,8 +1,6 @@
 'use client';
 
-import { use, useMemo, useState } from 'react';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { use, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,30 +31,60 @@ interface SafetyReportDetailPageProps {
 }
 
 export default function SafetyReportDetailPage({ params }: SafetyReportDetailPageProps) {
-  const resolvedParams = use(params);
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { userProfile, tenantId } = useUserProfile();
   const isMobile = useIsMobile();
+  const resolvedParams = use(params);
   const reportId = resolvedParams.reportId;
+  const [report, setReport] = useState<SafetyReport | null>(null);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [riskMatrixSettings, setRiskMatrixSettings] = useState<RiskMatrixSettings | null>(null);
+  const [isLoadingReport, setIsLoadingReport] = useState(true);
+  const [isLoadingPersonnel, setIsLoadingPersonnel] = useState(true);
+  const [isLoadingRiskMatrix, setIsLoadingRiskMatrix] = useState(true);
   const [activeTab, setActiveTab] = useState('triage');
 
-  const reportRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'safety-reports', reportId) : null),
-    [firestore, tenantId, reportId]
-  );
-  const personnelQuery = useMemoFirebase(
-    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
-    [firestore, tenantId]
-  );
-  const riskMatrixSettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null),
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    let cancelled = false;
 
-  const { data: report, isLoading: isLoadingReport, error } = useDoc<SafetyReport>(reportRef);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: riskMatrixSettings, isLoading: isLoadingRiskMatrix } = useDoc<RiskMatrixSettings>(riskMatrixSettingsRef);
+    const load = async () => {
+      if (!reportId || !tenantId) {
+        setIsLoadingReport(false);
+        setIsLoadingPersonnel(false);
+        setIsLoadingRiskMatrix(false);
+        return;
+      }
+
+      setIsLoadingReport(true);
+      setIsLoadingPersonnel(true);
+      setIsLoadingRiskMatrix(true);
+      try {
+        const [reportResponse, personnelResponse] = await Promise.all([
+          fetch(`/api/safety-reports/${reportId}`, { cache: 'no-store' }),
+          fetch('/api/personnel', { cache: 'no-store' }),
+        ]);
+
+        const reportPayload = await reportResponse.json();
+        const personnelPayload = await personnelResponse.json();
+
+        if (cancelled) return;
+        setReport(reportPayload.report ?? null);
+        setPersonnel(personnelPayload.personnel ?? []);
+        setRiskMatrixSettings(null);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingReport(false);
+          setIsLoadingPersonnel(false);
+          setIsLoadingRiskMatrix(false);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [reportId, tenantId]);
 
   const myMentionsCount = useMemo(() => {
     if (!report?.discussion || !userProfile) return 0;
@@ -89,10 +117,10 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     );
   }
 
-  if (error || !report) {
+  if (!report) {
     return (
       <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
-        <p className="text-muted-foreground">{error ? `Error: ${error.message}` : 'Report not found.'}</p>
+        <p className="text-muted-foreground">Report not found.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/safety/safety-reports">Return to reports list</Link>
         </Button>

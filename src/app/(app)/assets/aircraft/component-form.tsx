@@ -24,10 +24,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Settings2, Tag } from 'lucide-react';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 
 const componentSchema = z.object({
   name: z.string().min(1, 'Component name is required.'),
@@ -47,8 +47,7 @@ interface ComponentFormProps {
   trigger: React.ReactNode;
 }
 
-export function ComponentForm({ tenantId, aircraftId, trigger }: ComponentFormProps) {
-  const firestore = useFirestore();
+export function ComponentForm({ aircraftId, trigger }: ComponentFormProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -66,36 +65,81 @@ export function ComponentForm({ tenantId, aircraftId, trigger }: ComponentFormPr
   });
 
   const onSubmit = (values: FormValues) => {
-    if (!firestore) return;
-    const componentsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
-    addDocumentNonBlocking(componentsRef, values);
-    toast({ title: 'Component Added' });
-    setIsOpen(false);
-    form.reset();
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        if (!stored) return;
+        
+        const aircrafts = JSON.parse(stored) as Aircraft[];
+        const acIndex = aircrafts.findIndex(a => a.id === aircraftId);
+        if (acIndex === -1) return;
+
+        const newComponent: AircraftComponent = {
+            ...values,
+            id: crypto.randomUUID(),
+        };
+
+        const aircraft = aircrafts[acIndex];
+        aircraft.components = [...(aircraft.components || []), newComponent];
+        
+        aircrafts[acIndex] = aircraft;
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(aircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+
+        toast({ title: 'Component Registered', description: `"${values.name}" has been mapped to the airframe serial ${values.serialNumber}.` });
+        setIsOpen(false);
+        form.reset();
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to record component data.' });
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl rounded-3xl p-8">
         <DialogHeader>
-          <DialogTitle>Add Tracked Component</DialogTitle>
-          <DialogDescription>Register a new life-limited part for this aircraft.</DialogDescription>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-primary" />
+            Register Life-Limited Part
+          </DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Add a tracked component with specific maintenance thresholds.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="name" render={({ field }) => ( <FormItem className="col-span-2"><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g. Lycoming IO-360-L2A" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="manufacturer" render={({ field }) => ( <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input placeholder="e.g. Lycoming" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="e.g. L-12345-51A" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="installDate" render={({ field }) => ( <FormItem><FormLabel>Install Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel>Time Since New (TSN)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel>Time Since Overhaul (TSO)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="totalTime" render={({ field }) => ( <FormItem><FormLabel>Total Service Time</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+            <div className="grid grid-cols-2 gap-6">
+              <FormField control={form.control} name="name" render={({ field }) => ( 
+                <FormItem className="col-span-2">
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Component Official Name</FormLabel>
+                    <FormControl><Input placeholder="e.g. Lycoming IO-360-L2A" className="h-11 font-black uppercase" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem> 
+              )} />
+              <FormField control={form.control} name="manufacturer" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Manufacturer</FormLabel><FormControl><Input placeholder="e.g. Lycoming" className="h-11 font-bold" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="serialNumber" render={({ field }) => ( 
+                <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70 flex items-center gap-1.5"><Tag className="h-3 w-3" /> Part Serial Number</FormLabel>
+                    <FormControl><Input placeholder="e.g. L-12345-51A" className="h-11 font-mono font-bold uppercase" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem> 
+              )} />
+              <FormField control={form.control} name="installDate" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Installation Date</FormLabel><FormControl><Input type="date" className="h-11 font-bold" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="tsn" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">TSN (Time Since New)</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="tso" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">TSO (Time Since Overhaul)</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="totalTime" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Total Operational Time</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-black" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
             </div>
-            <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Register Component</Button>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button type="button" variant="outline" className="h-11 px-10 text-[10px] font-black uppercase border-slate-300">Cancel</Button></DialogClose>
+              <Button type="submit" className="h-11 px-10 text-[10px] font-black uppercase shadow-lg">Register Component</Button>
             </DialogFooter>
           </form>
         </Form>

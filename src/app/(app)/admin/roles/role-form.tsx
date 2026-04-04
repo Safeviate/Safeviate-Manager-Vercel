@@ -1,8 +1,6 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,7 +15,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
-import type { RoleCategory } from './page';
+import type { RoleCategory, Role } from './page';
 
 interface RoleFormProps {
   tenantId: string;
@@ -45,7 +42,6 @@ interface RoleFormProps {
 const roleCategories: RoleCategory[] = ["Personnel", "Instructor", "Student", "Private Pilot", "External"];
 
 export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
@@ -108,57 +104,40 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
       return;
     }
 
-    if (!firestore || !tenantId) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not connect to the database.',
-      });
-      return;
-    }
-
-    const roleData = {
+    const roleData: Role = {
+        id: existingRole?.id || crypto.randomUUID(),
         name: roleName,
         category: roleCategory,
         permissions: selectedPermissions,
         requiredDocuments,
     };
 
-    if (existingRole) {
-      const roleRef = doc(firestore, 'tenants', tenantId, 'roles', existingRole.id);
-      try {
-        await updateDoc(roleRef, roleData);
+    try {
+        const stored = localStorage.getItem('safeviate.roles');
+        const roles = stored ? JSON.parse(stored) as Role[] : [];
+        
+        let nextRoles: Role[];
+        if (existingRole) {
+            nextRoles = roles.map(r => r.id === roleData.id ? roleData : r);
+        } else {
+            nextRoles = [...roles, roleData];
+        }
+
+        localStorage.setItem('safeviate.roles', JSON.stringify(nextRoles));
+        window.dispatchEvent(new Event('safeviate-roles-updated'));
+
         toast({
-          title: 'Role Updated',
-          description: `The "${roleName}" role has been updated.`,
+          title: existingRole ? 'Role Updated' : 'Role Added',
+          description: `The "${roleName}" role has been saved.`,
         });
-      } catch {
-        toast({
-          variant: 'destructive',
-          title: 'Save Failed',
-          description: 'The role could not be updated. Please try again.',
-        });
-        return;
-      }
-    } else {
-      const rolesRef = collection(firestore, 'tenants', tenantId, 'roles');
-      try {
-        await addDoc(rolesRef, roleData);
-        toast({
-          title: 'Role Added',
-          description: `The "${roleName}" role has been created.`,
-        });
-      } catch {
+        setIsOpen(false);
+    } catch (e) {
         toast({
           variant: 'destructive',
           title: 'Save Failed',
-          description: 'The role could not be created. Please try again.',
+          description: 'The role could not be saved. Please try again.',
         });
-        return;
-      }
     }
-    
-    setIsOpen(false);
   };
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {

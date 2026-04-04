@@ -24,8 +24,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -86,7 +84,6 @@ interface InvestigationFormProps {
 }
 
 export function InvestigationForm({ report, tenantId, personnel, isStacked = false }: InvestigationFormProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -108,9 +105,6 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
   });
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore) return;
-
-    const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     const dataToSave = {
         ...values,
         investigationTasks: values.investigationTasks.map(task => ({
@@ -120,7 +114,16 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     };
 
     try {
-      await updateDoc(reportRef, dataToSave);
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: { ...report, ...dataToSave } }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to save investigation details.');
+      }
       toast({ title: 'Investigation Details Saved' });
     } catch (error) {
       toast({

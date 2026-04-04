@@ -15,7 +15,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Info, AlertCircle, TrendingUp, Calculator, Users, Plane, MousePointer2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// FIREBASE PRICING CONSTANTS (Blaze Plan - US Central 1)
+// Legacy cloud pricing constants (reference only)
 const COST_PER_100K_READS = 0.06;
 const COST_PER_100K_WRITES = 0.18;
 const FREE_READS_DAILY = 50000;
@@ -181,7 +181,7 @@ export function CostPredictor() {
                 Pricing Context
             </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Estimates based on US-Central-1 Blaze Plan. Standard Firestore behavior 
+Estimates based on the previous cloud pricing model. Standard document-store behavior
                 retrieving full fleet/personnel data on load is accounted for.
             </p>
         </div>

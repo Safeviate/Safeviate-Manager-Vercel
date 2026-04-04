@@ -25,10 +25,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { History, ClipboardCheck } from 'lucide-react';
+import type { MaintenanceLog } from '@/types/maintenance';
 
 const logSchema = z.object({
   maintenanceType: z.string().min(1, 'Maintenance type is required.'),
@@ -47,8 +47,7 @@ interface MaintenanceFormProps {
   trigger: React.ReactNode;
 }
 
-export function MaintenanceForm({ tenantId, aircraftId, trigger }: MaintenanceFormProps) {
-  const firestore = useFirestore();
+export function MaintenanceForm({ aircraftId, trigger }: MaintenanceFormProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -65,35 +64,66 @@ export function MaintenanceForm({ tenantId, aircraftId, trigger }: MaintenanceFo
   });
 
   const onSubmit = (values: FormValues) => {
-    if (!firestore) return;
-    const logsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/maintenanceLogs`);
-    addDocumentNonBlocking(logsRef, { ...values, aircraftId });
-    toast({ title: 'Maintenance Activity Logged' });
-    setIsOpen(false);
-    form.reset();
+    try {
+        const key = `safeviate.maintenance-logs:${aircraftId}`;
+        const stored = localStorage.getItem(key);
+        const logs = stored ? JSON.parse(stored) as MaintenanceLog[] : [];
+        
+        const newLog: MaintenanceLog = {
+            ...values,
+            id: crypto.randomUUID(),
+            aircraftId,
+            createdAt: new Date().toISOString(),
+        };
+
+        const nextLogs = [newLog, ...logs];
+        localStorage.setItem(key, JSON.stringify(nextLogs));
+        window.dispatchEvent(new Event(`safeviate-maintenance-logs-updated:${aircraftId}`));
+
+        toast({ title: 'Maintenance Activity Logged', description: `Activity registered under WO ${values.reference}. Aircraft history updated.` });
+        setIsOpen(false);
+        form.reset();
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to record maintenance activity.' });
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl rounded-3xl p-8">
         <DialogHeader>
-          <DialogTitle>Log Maintenance Activity</DialogTitle>
-          <DialogDescription>Record a new engineering activity in the aircraft history.</DialogDescription>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
+            Certify Maintenance Activity
+          </DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Record a new engineering activity into the permanent airframe history.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="maintenanceType" render={({ field }) => ( <FormItem><FormLabel>Maintenance Type</FormLabel><FormControl><Input placeholder="e.g. 50 Hour Inspection" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="date" render={({ field }) => ( <FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="reference" render={({ field }) => ( <FormItem className="col-span-2"><FormLabel>Reference (Work Order / Invoice)</FormLabel><FormControl><Input placeholder="e.g. WO-12345" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="details" render={({ field }) => ( <FormItem className="col-span-2"><FormLabel>Work Details</FormLabel><FormControl><Textarea placeholder="Describe the work performed..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="ameNo" render={({ field }) => ( <FormItem><FormLabel>AME License No.</FormLabel><FormControl><Input placeholder="e.g. 123456" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="amoNo" render={({ field }) => ( <FormItem><FormLabel>AMO Number</FormLabel><FormControl><Input placeholder="e.g. 1234" {...field} /></FormControl><FormMessage /></FormItem> )} />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+            <div className="grid grid-cols-2 gap-6">
+              <FormField control={form.control} name="maintenanceType" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Category / Type</FormLabel><FormControl><Input placeholder="e.g. 50 Hour Inspection" className="h-11 font-black uppercase" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="date" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Certification Date</FormLabel><FormControl><Input type="date" className="h-11 font-bold" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="reference" render={({ field }) => ( 
+                <FormItem className="col-span-2"><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Reference (Work Order / CRS #)</FormLabel><FormControl><Input placeholder="e.g. WO-12345" className="h-11 font-mono font-bold uppercase" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="details" render={({ field }) => ( 
+                <FormItem className="col-span-2"><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Engineering Work Details</FormLabel><FormControl><Textarea placeholder="Describe the specific work performed and parts replaced..." className="min-h-[120px] font-medium p-4" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="ameNo" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">AME License No.</FormLabel><FormControl><Input placeholder="e.g. 123456" className="h-11 font-mono font-bold" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
+              <FormField control={form.control} name="amoNo" render={({ field }) => ( 
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">AMO Number</FormLabel><FormControl><Input placeholder="e.g. 1234" className="h-11 font-mono font-bold" {...field} /></FormControl><FormMessage /></FormItem> 
+              )} />
             </div>
-            <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Log Activity</Button>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button type="button" variant="outline" className="h-11 px-10 text-[10px] font-black uppercase border-slate-300">Discard Entry</Button></DialogClose>
+              <Button type="submit" className="h-11 px-10 text-[10px] font-black uppercase shadow-lg">Certify & Log Activity</Button>
             </DialogFooter>
           </form>
         </Form>

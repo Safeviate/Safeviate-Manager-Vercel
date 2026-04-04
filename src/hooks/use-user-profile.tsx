@@ -1,12 +1,18 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, limit, setDoc } from 'firebase/firestore';
+import { useSession } from 'next-auth/react';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 
 type UserProfile = PilotProfile | Personnel;
-type UserLink = { email?: string; profilePath: string };
+type DbUserProfile = {
+    id: string;
+    tenantId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+};
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
 
 interface UserProfileContextType {
@@ -28,70 +34,72 @@ export const useUserProfile = () => {
 
 const getTenantOverride = () => {
     if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem(TENANT_OVERRIDE_STORAGE_KEY);
+    try {
+        return window.localStorage.getItem(TENANT_OVERRIDE_STORAGE_KEY);
+    } catch {
+        return null;
+    }
 };
 
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
-    const firestore = useFirestore();
-    const { user: authUser, isUserLoading: isAuthLoading } = useUser();
+    const { data: session, status } = useSession();
+    const [dbProfile, setDbProfile] = useState<DbUserProfile | null>(null);
+    const [dbError, setDbError] = useState<Error | null>(null);
+    const [dbLoading, setDbLoading] = useState(false);
     const [profileRefreshToken, setProfileRefreshToken] = useState(0);
     const [tenantOverride, setTenantOverride] = useState<string | null>(() => getTenantOverride());
+    const authUser = session?.user ?? null;
+    const isAuthLoading = status === 'loading';
 
-    const userLinkRef = useMemoFirebase(
-        () => (firestore && authUser && !authUser.isAnonymous ? doc(firestore, 'users', authUser.uid) : null),
-        [firestore, authUser]
-    );
+    useEffect(() => {
+        if (isAuthLoading) return;
 
-    const { data: userLink, isLoading: isUserLinkLoading, error: userLinkError } = useDoc<UserLink>(userLinkRef);
+        let cancelled = false;
+        const loadProfile = async () => {
+            if (!authUser?.email) {
+                setDbProfile(null);
+                setDbError(null);
+                return;
+            }
 
-    const fallbackUserLinkQuery = useMemoFirebase(
-        () => (
-            firestore && authUser?.email && !authUser.isAnonymous
-                ? query(collection(firestore, 'users'), where('email', '==', authUser.email), limit(1))
-                : null
-        ),
-        [firestore, authUser]
-    );
+            setDbLoading(true);
+            try {
+                const response = await fetch('/api/me', { cache: 'no-store' });
+                const payload = await response.json();
+                if (!cancelled) {
+                    setDbProfile(payload.profile ?? null);
+                    setDbError(null);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setDbError(error instanceof Error ? error : new Error('Failed to load profile.'));
+                    setDbProfile(null);
+                }
+            } finally {
+                if (!cancelled) setDbLoading(false);
+            }
+        };
 
-    const { data: fallbackUserLinks, isLoading: isFallbackUserLinkLoading, error: fallbackUserLinkError } = useCollection<UserLink>(fallbackUserLinkQuery);
-    const resolvedUserLink = userLink ?? fallbackUserLinks?.[0] ?? null;
+        void loadProfile();
 
-    const userProfileRef = useMemoFirebase(
-        () => (firestore && resolvedUserLink?.profilePath ? doc(firestore, resolvedUserLink.profilePath) : null),
-        [firestore, resolvedUserLink, profileRefreshToken]
-    );
+        return () => {
+            cancelled = true;
+        };
+    }, [authUser?.email, isAuthLoading, profileRefreshToken]);
 
-    const { data: userProfileData, isLoading: isProfileDocLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
-
-    const isLoading = isAuthLoading || isUserLinkLoading || isFallbackUserLinkLoading || isProfileDocLoading;
-    const error = (userLinkError || fallbackUserLinkError || profileError) ?? null;
+    const isLoading = isAuthLoading || dbLoading;
+    const error = dbError;
 
     const tenantId = useMemo(() => {
-        if (!userProfileData || !resolvedUserLink?.profilePath) return null;
-        const pathParts = resolvedUserLink.profilePath.split('/');
-        const profileTenantId = pathParts[0] === 'tenants' && pathParts[1] ? pathParts[1] : 'safeviate';
+        if (!dbProfile) return null;
+        const profileTenantId = dbProfile.tenantId || 'safeviate';
         
         // Developer role bypass for tenant switching
-        const isDeveloper = userProfileData?.role?.toLowerCase() === 'dev' || userProfileData?.role?.toLowerCase() === 'developer';
+        const isDeveloper = dbProfile.role?.toLowerCase() === 'dev' || dbProfile.role?.toLowerCase() === 'developer';
         const overrideTenantId = isDeveloper ? tenantOverride : null;
         
         return overrideTenantId || profileTenantId;
-    }, [userProfileData, resolvedUserLink, tenantOverride]);
-
-    useEffect(() => {
-        if (!firestore || !authUser || authUser.isAnonymous || userLink || !resolvedUserLink?.profilePath) {
-            return;
-        }
-
-        void setDoc(
-            doc(firestore, 'users', authUser.uid),
-            {
-                email: authUser.email || resolvedUserLink.email,
-                profilePath: resolvedUserLink.profilePath,
-            },
-            { merge: true }
-        );
-    }, [firestore, authUser, userLink, resolvedUserLink]);
+    }, [dbProfile, tenantOverride]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -112,11 +120,23 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const value = useMemo(() => ({
-        userProfile: userProfileData || null,
-        tenantId,
+        userProfile: dbProfile ? ({
+            id: dbProfile.id,
+            firstName: dbProfile.firstName,
+            lastName: dbProfile.lastName,
+            email: dbProfile.email,
+            role: dbProfile.role,
+        } as UserProfile) : (authUser ? ({
+            id: authUser.id ?? authUser.email ?? 'vercel-user',
+            firstName: authUser.name?.split(' ')[0] ?? 'User',
+            lastName: authUser.name?.split(' ').slice(1).join(' ') || '',
+            email: authUser.email ?? '',
+            role: 'developer',
+        } as UserProfile) : null),
+        tenantId: tenantId || 'safeviate',
         isLoading,
         error,
-    }), [userProfileData, tenantId, isLoading, error]);
+    }), [dbProfile, authUser, tenantId, isLoading, error]);
 
     return (
         <UserProfileContext.Provider value={value}>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -10,10 +9,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Aircraft } from '@/types/aircraft';
 
 const formSchema = z.object({
   make: z.string().min(1, 'Make is required.'),
@@ -27,9 +25,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function NewAircraftForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -42,51 +38,64 @@ export function NewAircraftForm() {
   });
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore) return;
     setIsSubmitting(true);
 
     try {
-      const aircraftsCollection = collection(firestore, `tenants/${tenantId}/aircrafts`);
-      await addDocumentNonBlocking(aircraftsCollection, {
+      const stored = localStorage.getItem('safeviate.aircrafts');
+      const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
+      
+      const newAircraft: Aircraft = {
+        id: crypto.randomUUID(),
         ...values,
-        // Initialize other fields
-        frameHours: 0,
-        engineHours: 0,
         initialHobbs: 0,
         currentHobbs: 0,
         initialTacho: 0,
         currentTacho: 0,
+        tachoAtNext50Inspection: 50,
+        tachoAtNext100Inspection: 100,
         components: [],
         documents: [],
+        type: values.type || 'Single-Engine',
+      };
+
+      const nextAircrafts = [newAircraft, ...aircrafts];
+      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+      
+      // Notify components that the fleet has updated
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+
+      toast({ 
+        title: 'Aircraft Added', 
+        description: `${values.make} ${values.model} (${values.tailNumber}) has been added to the local inventory.` 
       });
-      toast({ title: 'Aircraft Added', description: `${values.make} ${values.model} (${values.tailNumber}) has been added.` });
+      
       router.push('/assets/aircraft');
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save aircraft to local storage.' });
       setIsSubmitting(false);
     }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Add New Aircraft</CardTitle>
-            <CardDescription>Enter the details for the new aircraft in your fleet.</CardDescription>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl mx-auto pt-4 pb-12 px-4 shadow-none">
+        <Card className="rounded-3xl border-2 shadow-sm overflow-hidden">
+          <CardHeader className="bg-muted/5 border-b p-8">
+            <CardTitle className="text-2xl font-black uppercase tracking-tight">Add New Aircraft</CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Register a new physical asset into the flight management system.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Make</FormLabel><FormControl><Input placeholder="e.g., Cessna" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g., 172" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="tailNumber" render={({ field }) => ( <FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="e.g., ZS-ABC" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
+          <CardContent className="space-y-8 p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Manufacturer</FormLabel><FormControl><Input className="h-12 font-bold" placeholder="e.g., Cessna" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Model Variant</FormLabel><FormControl><Input className="h-12 font-bold" placeholder="e.g., 172N" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="tailNumber" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Tail Number (Registration)</FormLabel><FormControl><Input className="h-12 font-black uppercase" placeholder="e.g., ZS-FGE" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Engine Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-12 font-bold"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single-Engine">Single-Engine</SelectItem><SelectItem value="Multi-Engine">Multi-Engine</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
             </div>
           </CardContent>
         </Card>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Add Aircraft'}</Button>
+        <div className="flex justify-end gap-3 pt-4">
+          <Button type="button" variant="outline" className="h-12 px-10 text-[10px] font-black uppercase border-slate-300" onClick={() => router.back()} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" className="h-12 px-10 text-[10px] font-black uppercase shadow-lg" disabled={isSubmitting}>{isSubmitting ? 'Registering...' : 'Register Asset'}</Button>
         </div>
       </form>
     </Form>

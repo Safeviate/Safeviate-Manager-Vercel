@@ -21,8 +21,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -78,7 +76,6 @@ interface TriageFormProps {
 }
 
 export function TriageForm({ report, tenantId, isStacked = false }: TriageFormProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<TriageFormValues>({
@@ -91,10 +88,17 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
   });
 
   const onSubmit = async (values: TriageFormValues) => {
-    if (!firestore) return;
-    const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     try {
-      await updateDoc(reportRef, values);
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: { ...report, ...values } }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to save triage details.');
+      }
       toast({ title: 'Triage Details Saved' });
     } catch (error) {
       toast({

@@ -1,7 +1,6 @@
 'use client';
 
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useEffect, useState, useCallback } from 'react';
 import { DepartmentForm } from './department-form';
 import { DepartmentActions } from './department-actions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,26 +24,37 @@ export type Department = {
 };
 
 export default function DepartmentPage() {
-  const firestore = useFirestore();
   const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
   const { tenantId } = useUserProfile();
   const canManage = hasPermission('admin-departments-manage');
+  
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const departmentsQuery = useMemoFirebase(
-    () =>
-      firestore
-        && tenantId
-        ? query(collection(firestore, 'tenants', tenantId, 'departments'))
-        : null,
-    [firestore, tenantId]
-  );
+  const loadDepartments = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const stored = localStorage.getItem('safeviate.departments');
+        if (stored) {
+            setDepartments(JSON.parse(stored));
+        } else {
+            setDepartments([]);
+        }
+        setError(null);
+    } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load departments.'));
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
-  const {
-    data: departments,
-    isLoading,
-    error,
-  } = useCollection<Department>(departmentsQuery);
+  useEffect(() => {
+    loadDepartments();
+    window.addEventListener('safeviate-departments-updated', loadDepartments);
+    return () => window.removeEventListener('safeviate-departments-updated', loadDepartments);
+  }, [loadDepartments]);
 
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">

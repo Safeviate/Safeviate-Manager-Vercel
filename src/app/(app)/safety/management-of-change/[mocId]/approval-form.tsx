@@ -10,13 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocSignature } from '@/types/moc';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { Label } from '@/components/ui/label';
+import { useSession } from 'next-auth/react';
 
 const signatureSchema = z.object({
   userId: z.string(),
@@ -34,13 +33,11 @@ type ApprovalFormValues = z.infer<typeof approvalFormSchema>;
 
 interface ApprovalFormProps {
   moc: ManagementOfChange;
-  tenantId: string;
   personnel: Personnel[];
 }
 
-export function ApprovalForm({ moc, tenantId, personnel }: ApprovalFormProps) {
-  const firestore = useFirestore();
-  const { user: authUser } = useUser();
+export function ApprovalForm({ moc, personnel }: ApprovalFormProps) {
+  const { data: session } = useSession();
   const { toast } = useToast();
   const [signingRole, setSigningRole] = useState('');
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
@@ -58,7 +55,8 @@ export function ApprovalForm({ moc, tenantId, personnel }: ApprovalFormProps) {
   });
 
   const handleSign = () => {
-    if (!authUser) {
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!email) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to sign.' });
       return;
     }
@@ -71,30 +69,42 @@ export function ApprovalForm({ moc, tenantId, personnel }: ApprovalFormProps) {
         return;
     }
 
-    const currentUser = personnel.find(p => p.id === authUser.uid);
+    const currentUser = personnel.find(p => p.email.trim().toLowerCase() === email);
     
     const newSignature: MocSignature = {
-        userId: authUser.uid,
-        userName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : authUser.displayName || 'Unknown User',
+        userId: currentUser?.id || email,
+        userName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : session?.user?.name || email,
         role: signingRole,
         signatureUrl: signatureDataUrl,
         signedAt: new Date().toISOString(),
     };
     
     const updatedSignatures = [...(moc.signatures || []), newSignature];
-    
-    const mocRef = doc(firestore, 'tenants', tenantId, 'management-of-change', moc.id);
-    updateDocumentNonBlocking(mocRef, { signatures: updatedSignatures });
-    
-    append(newSignature);
 
-    toast({ title: 'MOC Signed', description: 'Your signature has been recorded.' });
-    
-    setSigningRole('');
-    setSignatureDataUrl(null);
+    void fetch(`/api/management-of-change?mocId=${encodeURIComponent(moc.id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ moc: { ...moc, signatures: updatedSignatures } }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error((await response.json())?.error || 'Failed to save signature.');
+        }
+        append(newSignature);
+        toast({ title: 'MOC Signed', description: 'Your signature has been recorded.' });
+        setSigningRole('');
+        setSignatureDataUrl(null);
+      })
+      .catch((error: unknown) => {
+        toast({
+          variant: 'destructive',
+          title: 'Sign Failed',
+          description: error instanceof Error ? error.message : 'Failed to save signature.',
+        });
+      });
   };
   
-  const currentUserHasSigned = moc.signatures?.some(sig => sig.userId === authUser?.uid);
+  const currentUserHasSigned = moc.signatures?.some(sig => sig.userId === session?.user?.email?.trim().toLowerCase() || sig.userId === session?.user?.name);
 
   return (
     <Form {...form}>

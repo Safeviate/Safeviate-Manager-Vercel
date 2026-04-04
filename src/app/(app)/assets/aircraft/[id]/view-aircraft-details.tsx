@@ -1,32 +1,27 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Aircraft } from '@/types/aircraft';
 import { Button } from '@/components/ui/button';
-import { View, Upload, Trash2, CalendarIcon } from 'lucide-react';
+import { Eye, Upload, Trash2, Calendar, ShieldCheck, Gauge, Timer, Box, FileText, Zap, Settings, Edit3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { DocumentUploader } from '@/components/document-uploader';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { useUserProfile } from '@/hooks/use-user-profile';
 import { getDocumentExpiryColor } from '@/lib/document-expiry';
 
-
-const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      {children ? children : <p className="text-base">{value || 'N/A'}</p>}
+const DetailItem = ({ label, value, icon: Icon, children }: { label: string; value?: string | number | null, icon?: any, children?: React.ReactNode }) => (
+    <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-muted/5 border-2 border-transparent hover:border-primary/10 transition-all">
+      <div className="flex items-center gap-2 opacity-50">
+        {Icon && <Icon className="h-3 w-3" />}
+        <p className="text-[10px] font-black uppercase tracking-widest">{label}</p>
+      </div>
+      {children ? children : <p className="text-sm font-black uppercase tracking-tight">{value || 'NOT_SET'}</p>}
     </div>
 );
 
@@ -41,194 +36,160 @@ interface ViewAircraftDetailsProps {
 export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onManageDocuments }: ViewAircraftDetailsProps) {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
-  const firestore = useFirestore();
-  const { tenantId } = useUserProfile();
   const { toast } = useToast();
+  const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
 
-  const expirySettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
-    [firestore, tenantId]
-  );
-  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
+  useEffect(() => {
+    const storedSettings = localStorage.getItem('safeviate.document-expiry-settings');
+    if (storedSettings) {
+        try {
+            setExpirySettings(JSON.parse(storedSettings));
+        } catch (e) {
+            console.error("Failed to load expiry settings", e);
+        }
+    }
+  }, []);
   
   const handleViewImage = (url: string) => {
     setViewingImageUrl(url);
     setIsImageViewerOpen(true);
   };
   
-   const handleDocumentUpdate = (updatedDocuments: NonNullable<Aircraft['documents']>) => {
-    if (!firestore || !tenantId) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not connect to the database.",
-        });
-        return;
-    }
-    const aircraftRef = doc(firestore, 'tenants', tenantId, 'aircrafts', aircraft.id);
-    updateDocumentNonBlocking(aircraftRef, { documents: updatedDocuments });
-  };
-
-  const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
-    const currentDocs = aircraft.documents || [];
-    const updatedDocs = [...currentDocs, docDetails];
-    handleDocumentUpdate(updatedDocs);
-     toast({
-        title: "Document Uploaded",
-        description: `"${docDetails.name}" has been added to the aircraft.`,
-    });
-  };
-
-  const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
-    const currentDocs = aircraft.documents || [];
-    const docIndex = currentDocs.findIndex(d => d.name === docName);
-    
-    if (docIndex > -1) {
-        const updatedDocs = [...currentDocs];
-        updatedDocs[docIndex].expirationDate = date ? date.toISOString() : null;
-        handleDocumentUpdate(updatedDocs);
-    }
-  };
-
-  const handleDocumentDelete = (docNameToDelete: string) => {
-    const currentDocs = aircraft.documents || [];
-    const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
-    handleDocumentUpdate(updatedDocs);
-    toast({
-        title: "Document Deleted",
-        description: `"${docNameToDelete}" has been removed.`,
-    });
-  };
-
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-            <div className="flex justify-between items-start">
-                <div>
-                    <CardTitle>{aircraft.make} {aircraft.model}</CardTitle>
-                    <CardDescription>Tail Number: {aircraft.tailNumber}</CardDescription>
-                </div>
-                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={onEdit}>Edit Details</Button>
-                    <Button variant="outline" onClick={onManageComponents}>Manage Components</Button>
-                    <Button variant="outline" onClick={onManageDocuments}>Manage Documents</Button>
-                </div>
-            </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <DetailItem label="Type" value={aircraft.type} />
-          <DetailItem label="Frame Hours" value={aircraft.frameHours?.toFixed(1)} />
-          <DetailItem label="Engine Hours" value={aircraft.engineHours?.toFixed(1)} />
-          <DetailItem label="Current Hobbs" value={aircraft.currentHobbs?.toFixed(1)} />
-          <DetailItem label="Current Tacho" value={aircraft.currentTacho?.toFixed(1)} />
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-            <CardTitle>Documents</CardTitle>
-            <CardDescription>All documents associated with this aircraft.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {aircraft.documents && aircraft.documents.length > 0 ? (
-                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Upload Date</TableHead>
-                             <TableHead>Expiry Date</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {aircraft.documents.map((doc, index) => {
-                             const statusColor = getDocumentExpiryColor(doc.expirationDate, expirySettings);
-                            return (
-                                <TableRow key={index}>
-                                    <TableCell className="font-medium">{doc.name}</TableCell>
-                                    <TableCell>{format(new Date(doc.uploadDate), 'PPP')}</TableCell>
-                                    <TableCell className="flex items-center gap-2">
-                                        {statusColor && <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: statusColor }} />}
-                                        {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="outline" size="sm" onClick={() => handleViewImage(doc.url)}>
-                                            <View className="mr-2 h-4 w-4" /> View
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
-                    </TableBody>
-                </Table>
-            ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No documents uploaded for this aircraft.</p>
-            )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Tracked Components</CardTitle>
-          <CardDescription>
-            A list of all life-limited or tracked components on this aircraft.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-            {aircraft.components && aircraft.components.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Component</TableHead>
-                            <TableHead>Part No.</TableHead>
-                            <TableHead>Serial No.</TableHead>
-                            <TableHead>TSN</TableHead>
-                            <TableHead>TSO</TableHead>
-                            <TableHead>Install Date</TableHead>
-                            <TableHead>Hours Remaining</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {aircraft.components.map(comp => {
-                           const hoursSinceInstall = aircraft.frameHours ? aircraft.frameHours - comp.installHours : 0;
-                           const hoursRemaining = comp.maxHours ? comp.maxHours - (comp.tso + hoursSinceInstall) : null;
-                            return (
-                                <TableRow key={comp.id}>
-                                    <TableCell className="font-medium">{comp.name}</TableCell>
-                                    <TableCell>{comp.partNumber}</TableCell>
-                                    <TableCell>{comp.serialNumber}</TableCell>
-                                    <TableCell>{comp.tsn?.toFixed(1)}</TableCell>
-                                    <TableCell>{comp.tso?.toFixed(1)}</TableCell>
-                                    <TableCell>{comp.installDate ? format(new Date(comp.installDate), 'PPP') : 'N/A'}</TableCell>
-                                    <TableCell>{hoursRemaining?.toFixed(1) ?? 'N/A'}</TableCell>
-                                </TableRow>
-                            )
-                        })}
-                    </TableBody>
-                </Table>
-            ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No tracked components added.</p>
-            )}
-        </CardContent>
-      </Card>
-
-
-       <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
-            <DialogContent className="max-w-4xl">
-                <DialogHeader>
-                    <DialogTitle>Document Viewer</DialogTitle>
-                </DialogHeader>
-                {viewingImageUrl && (
-                    <div className="relative h-[80vh]">
-                        <Image 
-                            src={viewingImageUrl}
-                            alt="Document" 
-                            fill
-                            style={{ objectFit: 'contain' }}
-                        />
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+            <Card className="rounded-[2.5rem] border-2 shadow-sm overflow-hidden bg-background">
+                <CardHeader className="p-8 border-b bg-muted/5">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-6">
+                            <div className="h-16 w-16 rounded-[1.5rem] bg-primary flex items-center justify-center text-white shadow-xl shadow-primary/20 rotate-3">
+                                <Zap className="h-8 w-8" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-2xl font-black uppercase tracking-tighter">{aircraft.make} {aircraft.model}</CardTitle>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest px-3 border-2">{aircraft.tailNumber}</Badge>
+                                    <Badge className="text-[10px] font-black uppercase tracking-widest px-3 bg-emerald-500 hover:bg-emerald-600 shadow-md">Active Fleet</Badge>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Button variant="outline" onClick={onEdit} className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border-2 gap-2 rounded-2xl shadow-sm hover:bg-muted/50">
+                                <Edit3 className="h-4 w-4" /> Edit Core Data
+                            </Button>
+                        </div>
                     </div>
-                )}
+                </CardHeader>
+                <CardContent className="p-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <DetailItem label="Asset Category" value={aircraft.type} icon={Box} />
+                    <DetailItem label="Airframe Total" value={`${aircraft.frameHours?.toFixed(1) || '0.0'}h`} icon={Settings} />
+                    <DetailItem label="Powerplant Total" value={`${aircraft.engineHours?.toFixed(1) || '0.0'}h`} icon={Zap} />
+                    <DetailItem label="Mechanical Hobbs" value={`${aircraft.currentHobbs?.toFixed(1) || '0.0'}h`} icon={Timer} />
+                    <DetailItem label="Mechanical Tacho" value={`${aircraft.currentTacho?.toFixed(1) || '0.0'}h`} icon={Gauge} />
+                </CardContent>
+            </Card>
+
+            <Card className="rounded-[2.5rem] border-2 shadow-sm overflow-hidden bg-background">
+                <CardHeader className="p-8 border-b bg-muted/5 flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-xl font-black uppercase tracking-tight">Tracked Components</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Critical life-limit and maintenance monitoring.</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={onManageComponents} className="text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 px-4 h-9 rounded-xl">Configure Vault</Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {aircraft.components && aircraft.components.length > 0 ? (
+                        <Table>
+                            <TableHeader className="bg-muted/5">
+                                <TableRow className="hover:bg-transparent border-b-2">
+                                    <TableHead className="px-8 text-[10px] font-black uppercase tracking-widest h-12">Component Identifier</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest h-12 text-center">Part / Serial</TableHead>
+                                    <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-12 px-8">Accrued (TSO)</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {aircraft.components.map(comp => (
+                                    <TableRow key={comp.id} className="hover:bg-muted/5 transition-colors">
+                                        <TableCell className="px-8 py-4">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-sm font-black uppercase tracking-tight">{comp.name}</span>
+                                                <span className="text-[10px] font-bold uppercase text-muted-foreground">{comp.installDate ? format(new Date(comp.installDate), 'dd MMM yyyy') : 'N/A'}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="text-[10px] font-mono font-black border-2 border-slate-200 px-2 py-0.5 rounded-md bg-white shadow-sm">{comp.serialNumber || 'N/A'}</span>
+                                                <span className="text-[9px] font-bold text-muted-foreground/60 uppercase">{comp.partNumber || 'NA'}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="px-8 text-right font-black text-sm text-foreground">{comp.tso?.toFixed(1) || '0.0'}h</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="text-center py-24 flex flex-col items-center justify-center opacity-40">
+                            <Box className="h-10 w-10 mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">No components registered</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+
+        <div className="space-y-8">
+            <Card className="rounded-[2.5rem] border-2 shadow-sm overflow-hidden bg-background">
+                <CardHeader className="p-8 border-b bg-muted/5 flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-xl font-black uppercase tracking-tight">Vault</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Airworthiness Archive.</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={onManageDocuments} className="text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 px-4 h-9 rounded-xl">Archive</Button>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                    {aircraft.documents && aircraft.documents.length > 0 ? (
+                        aircraft.documents.map((doc, index) => {
+                             const statusColor = getDocumentExpiryColor(doc.expirationDate, expirySettings || undefined);
+                            return (
+                                <div key={index} className="group flex items-center justify-between p-4 rounded-3xl border-2 hover:border-primary/20 transition-all bg-muted/5 cursor-pointer" onClick={() => handleViewImage(doc.url)}>
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-2xl bg-white border shadow-sm flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                            <FileText className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black uppercase tracking-tight truncate max-w-[120px]">{doc.name}</span>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {statusColor && <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />}
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase">{doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM y') : 'PERM'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                            )
+                        })
+                    ) : (
+                        <div className="text-center py-16 opacity-30 flex flex-col items-center">
+                            <ShieldCheck className="h-8 w-8 mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Archive Empty</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+      </div>
+      
+       <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+            <DialogContent className="max-w-5xl max-h-[92vh] p-0 overflow-hidden rounded-[2.5rem] border-2 shadow-2xl bg-black/95">
+                <DialogHeader className="p-8 absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+                    <DialogTitle className="text-white text-lg font-black uppercase tracking-tight">Secure Document Viewer</DialogTitle>
+                </DialogHeader>
+                <div className="relative w-full h-[92vh] flex items-center justify-center">
+                    {viewingImageUrl && (
+                        <Image src={viewingImageUrl} alt="Document Intelligence" fill className="object-contain" unoptimized />
+                    )}
+                </div>
             </DialogContent>
         </Dialog>
     </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
     AlertDialog,
@@ -14,7 +13,6 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Eye, Trash2, Mail, Loader2 } from 'lucide-react';
-import { useFirestore, useAuth, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Personnel, PilotProfile } from './page';
 import Link from 'next/link';
@@ -39,8 +37,6 @@ const determineCollection = (userType: UserProfile['userType']): string => {
 }
 
 export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
-  const firestore = useFirestore();
-  const auth = useAuth();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -50,15 +46,18 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const canEdit = hasPermission('users-edit');
 
   const handleDeleteUser = () => {
-    if (!firestore || !tenantId) return;
-    
     const collectionName = determineCollection(user.userType);
-    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    deleteDocumentNonBlocking(userRef);
-
-    const userLinkRef = doc(firestore, 'users', user.id);
-    deleteDocumentNonBlocking(userLinkRef);
-
+    const key = `safeviate.${collectionName}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const arr = JSON.parse(stored) as UserProfile[];
+        const nextArr = arr.filter(u => u.id !== user.id);
+        localStorage.setItem(key, JSON.stringify(nextArr));
+      }
+    } catch {
+      // ignore
+    }
     toast({
         title: 'User Removed',
         description: `The user profile for ${user.firstName} ${user.lastName} is being deleted.`,
@@ -69,12 +68,10 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const handleSendWelcomeEmail = async () => {
     setIsSendingEmail(true);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/send-welcome-email', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           userId: user.id,

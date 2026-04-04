@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -80,7 +78,6 @@ function DeleteBookingButton({
   canDelete: boolean;
   canDeleteCompleted: boolean;
 }) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const isCompleted = booking.status === 'Completed';
 
@@ -89,9 +86,11 @@ function DeleteBookingButton({
     if (!isAllowed) return null;
 
     const handleDelete = () => {
-        if (!firestore) return;
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-        deleteDocumentNonBlocking(bookingRef);
+        void fetch('/api/bookings', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: booking.id }),
+        });
         toast({
             title: 'Booking Deleted',
             description: `Booking #${booking.bookingNumber} is being deleted.`,
@@ -217,36 +216,48 @@ const BookingsTable = ({
 }
 
 export default function BookingsHistoryPage() {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('all');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
 
-  const bookingsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'bookings'), orderBy('bookingNumber', 'desc')) : null),
-    [firestore, tenantId]
-  );
-  const aircraftQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, 'tenants', tenantId, 'aircrafts') : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'personnel')) : null), [firestore, tenantId]);
-  const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'instructors')) : null), [firestore, tenantId]);
-  const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'students')) : null), [firestore, tenantId]);
-  const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'private-pilots')) : null), [firestore, tenantId]);
-
-  const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-  const { data: aircraft } = useCollection<Aircraft>(aircraftQuery);
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students } = useCollection<PilotProfile>(studentsQuery);
-  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/schedule-data', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled) {
+          setBookings(payload?.bookings ?? []);
+          setAircraft(payload?.aircraft ?? []);
+          setPersonnel(payload?.personnel ?? []);
+        }
+      } catch {
+        if (!cancelled) {
+          setBookings([]);
+          setAircraft([]);
+          setPersonnel([]);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingBookings(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const userMap = useMemo(() => {
-    if (!personnel || !instructors || !students || !privatePilots) return new Map<string, string>();
-    const allUsers = [...personnel, ...instructors, ...students, ...privatePilots];
-    const map = new Map(allUsers.map((person) => [person.id, `${person.firstName} ${person.lastName}`]));
+    if (!personnel) return new Map<string, string>();
+    const map = new Map(personnel.map((person) => [person.id, `${person.firstName} ${person.lastName}`]));
     map.set('DEVELOPER_MODE', 'System (Developer)');
     return map;
-  }, [personnel, instructors, students, privatePilots]);
+  }, [personnel]);
 
   const enrichedBookings = useMemo((): EnrichedBooking[] => {
     if (!bookings || !aircraft || userMap.size === 0) return [];

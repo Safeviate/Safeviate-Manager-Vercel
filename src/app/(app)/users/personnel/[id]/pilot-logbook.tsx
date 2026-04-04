@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -17,34 +15,42 @@ interface PilotLogbookProps {
 }
 
 export function PilotLogbook({ userId, tenantId, role }: PilotLogbookProps) {
-    const firestore = useFirestore();
+    const [rawBookings, setRawBookings] = useState<Booking[]>([]);
+    const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+    const [isLoadingAircrafts, setIsLoadingAircrafts] = useState(true);
 
-    const bookingsQuery = useMemoFirebase(
-        () => {
-            if (!firestore) return null;
-            if (role === 'private') {
-                return query(
-                    collection(firestore, `tenants/${tenantId}/bookings`),
-                    where('status', '==', 'Completed')
-                );
+    useEffect(() => {
+        try {
+            const bks = localStorage.getItem('safeviate.bookings');
+            if (bks) {
+                const parsed = JSON.parse(bks) as Booking[];
+                const completed = parsed.filter(b => b.status === 'Completed');
+                
+                if (role === 'private') {
+                    setRawBookings(completed);
+                } else {
+                    const field = role === 'instructor' ? 'instructorId' : 'studentId';
+                    setRawBookings(completed.filter(b => b[field] === userId));
+                }
             }
-            const field = role === 'instructor' ? 'instructorId' : 'studentId';
-            return query(
-                collection(firestore, `tenants/${tenantId}/bookings`),
-                where(field, '==', userId),
-                where('status', '==', 'Completed')
-            );
-        },
-        [firestore, tenantId, userId, role]
-    );
+        } catch {
+            // ignore
+        } finally {
+            setIsLoadingBookings(false);
+        }
+    }, [tenantId, userId, role]);
 
-    const aircraftQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
-        [firestore, tenantId]
-    );
-
-    const { data: rawBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-    const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftQuery);
+    useEffect(() => {
+        try {
+            const acs = localStorage.getItem('safeviate.aircrafts');
+            if (acs) setAircrafts(JSON.parse(acs));
+        } catch {
+            // ignore
+        } finally {
+            setIsLoadingAircrafts(false);
+        }
+    }, [tenantId]);
 
     const aircraftMap = useMemo(() => {
         if (!aircrafts) return new Map();

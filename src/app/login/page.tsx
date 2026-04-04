@@ -6,16 +6,23 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth, initiateEmailSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { signIn } from 'next-auth/react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoginLoading, setIsLoginLoading] = useState(false);
-  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+
+  const getLoginErrorMessage = (errorMessage?: string) => {
+    if (!errorMessage) return 'Incorrect email or password.';
+    if (errorMessage === 'CredentialsSignin') {
+      return 'Login failed. Check email/password, and ensure AUTH_SEED_EMAIL + AUTH_SEED_PASSWORD are set in local .env.local.';
+    }
+    return errorMessage;
+  };
 
   const handleUserLogin = async () => {
     if (!email || !password) {
@@ -29,9 +36,16 @@ export default function LoginPage() {
 
     setIsLoginLoading(true);
     try {
-      await initiateEmailSignIn(auth, email, password);
-      
-      localStorage.setItem('impersonatedUser', email);
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
       toast({
         title: 'Login Successful',
         description: `Welcome back to Safeviate.`,
@@ -42,7 +56,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'Incorrect email or password.',
+        description: getLoginErrorMessage(error?.message),
       });
     } finally {
       setIsLoginLoading(false);

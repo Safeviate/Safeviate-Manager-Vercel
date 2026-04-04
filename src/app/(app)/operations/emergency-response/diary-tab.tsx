@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { collection, query, orderBy, doc, arrayUnion } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +28,6 @@ interface DiaryTabProps {
 }
 
 export function DiaryTab({ tenantId }: DiaryTabProps) {
-  const firestore = useFirestore();
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -54,33 +51,46 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
     }
   }, [newLogEntry]);
 
-  const triggersQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-triggers`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: triggers } = useCollection<ERPTrigger>(triggersQuery);
+  const [triggers, setTriggers] = useState<ERPTrigger[]>([]);
+  const [events, setEvents] = useState<ERPEvent[]>([]);
+  const personnel: Personnel[] = [];
+  const instructors: PilotProfile[] = [];
+  const students: PilotProfile[] = [];
+  const privatePilots: PilotProfile[] = [];
 
-  const personnelQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
-    [firestore, tenantId]
-  );
-  const instructorsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null),
-    [firestore, tenantId]
-  );
-  const studentsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/students`)) : null),
-    [firestore, tenantId]
-  );
-  const privatePilotsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null),
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const [triggersResponse, eventsResponse] = await Promise.all([
+          fetch('/api/erp-state?category=triggers', { cache: 'no-store' }),
+          fetch('/api/erp-state?category=events', { cache: 'no-store' }),
+        ]);
 
-  const { data: personnel } = useCollection<Personnel>(personnelQuery);
-  const { data: instructors } = useCollection<PilotProfile>(instructorsQuery);
-  const { data: students } = useCollection<PilotProfile>(studentsQuery);
-  const { data: privatePilots } = useCollection<PilotProfile>(privatePilotsQuery);
+        if (triggersResponse.ok) {
+          const payload = await triggersResponse.json();
+          setTriggers((payload.data || []) as ERPTrigger[]);
+        }
+
+        if (eventsResponse.ok) {
+          const payload = await eventsResponse.json();
+          const parsedEvents = (payload.data || []) as ERPEvent[];
+          setEvents(parsedEvents.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()));
+        }
+      } catch {
+        // ignore load errors
+      }
+    };
+    loadState();
+  }, []);
+
+  const persistEvents = async (nextEvents: ERPEvent[]) => {
+    setEvents(nextEvents);
+    await fetch('/api/erp-state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: 'events', data: nextEvents }),
+    }).catch(() => null);
+  };
 
   const allUsers = useMemo(() => {
     return [
@@ -139,12 +149,6 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
     }
   ], [incerfaContacts, alerfaContacts]);
 
-  const eventsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-events`), orderBy('startedAt', 'desc')) : null),
-    [firestore, tenantId]
-  );
-  const { data: events } = useCollection<ERPEvent>(eventsQuery);
-
   const activeEvent = useMemo(() => events?.find(e => e.status !== 'Closed'), [events]);
   const viewingEvent = useMemo(() => events?.find(e => e.id === selectedEventId), [events, selectedEventId]);
 
@@ -179,16 +183,18 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
       });
     }
 
-    const newEvent = {
+    const newEvent: ERPEvent = {
+      id: crypto.randomUUID(),
       title,
       status: isMock ? 'Mock' : 'Active' as ERPEventStatus,
       startedAt: new Date().toISOString(),
       completedTasks: [],
-      log: initialLog
+      log: initialLog,
+      collectedDocuments: []
     };
 
-    if (!firestore) return;
-    addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/erp-events`), newEvent);
+    const nextEvents = [newEvent, ...events];
+    void persistEvents(nextEvents);
     setIsStartOpen(false);
     setSelectedTriggerId(null);
     toast({ title: isMock ? 'Mock Started' : 'ERP ACTIVATED', variant: isMock ? 'default' : 'destructive' });
@@ -196,7 +202,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
   const handleAddLog = (customDesc?: string, milestoneOverride?: boolean) => {
     const desc = customDesc || newLogEntry.trim();
-    if (!desc || !activeEvent || !firestore || !canManage) return;
+    if (!desc || !activeEvent || !canManage) return;
 
     const entry: ERPLogEntry = {
       id: uuidv4(),
@@ -207,10 +213,17 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
       isMilestone: milestoneOverride !== undefined ? milestoneOverride : isMilestone
     };
 
-    const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
-    updateDocumentNonBlocking(eventRef, {
-      log: arrayUnion(entry)
+    const nextEvents = events.map(e => {
+      if (e.id === activeEvent.id) {
+        return {
+          ...e,
+          log: [...(e.log || []), entry]
+        };
+      }
+      return e;
     });
+
+    void persistEvents(nextEvents);
 
     if (!customDesc) {
       setNewLogEntry('');
@@ -220,10 +233,9 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
   };
 
   const handleToggleTask = (taskId: string, label: string) => {
-    if (!activeEvent || !firestore || !canManage) return;
+    if (!activeEvent || !canManage) return;
 
     const isCompleted = activeEvent.completedTasks?.includes(taskId);
-    const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
 
     if (!isCompleted) {
       const entry: ERPLogEntry = {
@@ -235,24 +247,28 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         isMilestone: true
       };
 
-      updateDocumentNonBlocking(eventRef, {
-        completedTasks: arrayUnion(taskId),
-        log: arrayUnion(entry)
+      const nextEvents = events.map(e => {
+        if (e.id === activeEvent.id) {
+          return {
+            ...e,
+            completedTasks: [...(e.completedTasks || []), taskId],
+            log: [...(e.log || []), entry]
+          };
+        }
+        return e;
       });
+      void persistEvents(nextEvents);
       toast({ title: "Timeline updated" });
     } else {
       const updatedTasks = (activeEvent.completedTasks || []).filter(id => id !== taskId);
-      updateDocumentNonBlocking(eventRef, {
-        completedTasks: updatedTasks
-      });
+      const nextEvents = events.map(e => e.id === activeEvent.id ? { ...e, completedTasks: updatedTasks } : e);
+      void persistEvents(nextEvents);
     }
   };
 
   const handleCloseERP = () => {
-    if (!activeEvent || !firestore || !canManage) return;
+    if (!activeEvent || !canManage) return;
 
-    const eventRef = doc(firestore, `tenants/${tenantId}/erp-events`, activeEvent.id);
-    
     const finalLog: ERPLogEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
@@ -262,12 +278,20 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
       isMilestone: true
     };
 
-    updateDocumentNonBlocking(eventRef, {
-      status: 'Closed',
-      endedAt: new Date().toISOString(),
-      summary: closingSummary,
-      log: arrayUnion(finalLog)
+    const nextEvents = events.map(e => {
+      if (e.id === activeEvent.id) {
+        return {
+          ...e,
+          status: 'Closed' as ERPEventStatus,
+          endedAt: new Date().toISOString(),
+          summary: closingSummary,
+          log: [...(e.log || []), finalLog]
+        };
+      }
+      return e;
     });
+
+    void persistEvents(nextEvents);
 
     setIsCloseOpen(false);
     setClosingSummary('');

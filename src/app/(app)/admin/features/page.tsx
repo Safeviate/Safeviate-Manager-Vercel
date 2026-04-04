@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Label } from '@/components/ui/label';
@@ -43,28 +41,12 @@ const defaultFindingLevels: FindingLevel[] = [
 ];
 
 export default function FeaturesPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
   
-  // --- Feature Management State & Logic ---
-  const featureSettingsId = 'features';
-  const featureSettingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', featureSettingsId) : null),
-    [firestore, tenantId]
-  );
-  const { data: featureSettings, isLoading: isLoadingFeatures } = useDoc<FeatureSettings>(featureSettingsRef, {
-    initialData: { id: featureSettingsId, preFlightChecklistRequired: true, enableExternalCompanyTabs: true },
-  });
+  const [featureSettings, setFeatureSettings] = useState<FeatureSettings | null>(null);
+  const [findingLevelsSettings, setFindingLevelsSettings] = useState<FindingLevelsSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // --- Finding Levels State & Logic ---
-  const findingLevelsId = 'finding-levels';
-  const findingLevelsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', findingLevelsId) : null),
-    [firestore, tenantId]
-  );
-  const { data: findingLevelsSettings, isLoading: isLoadingFindingLevels } = useDoc<FindingLevelsSettings>(findingLevelsRef);
-  
   const [newLevelName, setNewLevelName] = useState('');
   const [newLevelColor, setNewLevelColor] = useState('#808080');
   const [newLevelForegroundColor, setNewLevelForegroundColor] = useState('#ffffff');
@@ -72,18 +54,54 @@ export default function FeaturesPage() {
   
   const debouncedLevelColors = useDebounce(levelColors, 500);
 
-  useEffect(() => {
-    if (findingLevelsSettings?.levels) {
-        const initialColors = (findingLevelsSettings.levels).reduce((acc, l) => {
-            acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
-            return acc;
-        }, {} as Record<string, { bg: string, fg: string }>);
-        setLevelColors(initialColors);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedFeatures = localStorage.getItem('safeviate.feature-settings');
+        const storedLevels = localStorage.getItem('safeviate.finding-levels-settings');
+
+        if (storedFeatures) {
+            setFeatureSettings(JSON.parse(storedFeatures));
+        } else {
+            const defFeatures = { id: 'features', preFlightChecklistRequired: true, enableExternalCompanyTabs: true };
+            localStorage.setItem('safeviate.feature-settings', JSON.stringify(defFeatures));
+            setFeatureSettings(defFeatures);
+        }
+
+        if (storedLevels) {
+            const levels = JSON.parse(storedLevels) as FindingLevelsSettings;
+            setFindingLevelsSettings(levels);
+            const initialColors = (levels.levels || []).reduce((acc, l) => {
+                acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
+                return acc;
+            }, {} as Record<string, { bg: string, fg: string }>);
+            setLevelColors(initialColors);
+        } else {
+            const defLevels = { id: 'finding-levels', levels: defaultFindingLevels };
+            localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(defLevels));
+            setFindingLevelsSettings(defLevels);
+            const initialColors = defaultFindingLevels.reduce((acc, l) => {
+                acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
+                return acc;
+            }, {} as Record<string, { bg: string, fg: string }>);
+            setLevelColors(initialColors);
+        }
+    } catch (e) {
+        console.error("Failed to load feature data", e);
+    } finally {
+        setIsLoading(false);
     }
-  }, [findingLevelsSettings]);
+  }, []);
 
   useEffect(() => {
-      if (!findingLevelsRef || !findingLevelsSettings?.levels || Object.keys(debouncedLevelColors).length === 0 || isLoadingFindingLevels) return;
+    loadData();
+    const events = ['safeviate-feature-settings-updated', 'safeviate-finding-levels-updated'];
+    events.forEach(e => window.addEventListener(e, loadData));
+    return () => events.forEach(e => window.removeEventListener(e, loadData));
+  }, [loadData]);
+
+  useEffect(() => {
+      if (!findingLevelsSettings?.levels || Object.keys(debouncedLevelColors).length === 0 || isLoading) return;
 
       const hasChanged = findingLevelsSettings.levels.some(l => 
         (l.color !== debouncedLevelColors[l.id]?.bg && debouncedLevelColors[l.id]?.bg) ||
@@ -96,13 +114,17 @@ export default function FeaturesPage() {
             color: debouncedLevelColors[l.id]?.bg || l.color,
             foregroundColor: debouncedLevelColors[l.id]?.fg || l.foregroundColor
         }));
-        setDocumentNonBlocking(findingLevelsRef, { levels: newLevels }, { merge: true });
+        const nextSettings = { ...findingLevelsSettings, levels: newLevels };
+        localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(nextSettings));
+        window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
       }
-  }, [debouncedLevelColors, findingLevelsSettings, findingLevelsRef, isLoadingFindingLevels]);
+  }, [debouncedLevelColors, findingLevelsSettings, isLoading]);
 
   const handleToggleChange = (feature: keyof Omit<FeatureSettings, 'id'>, value: boolean) => {
-    if (!featureSettingsRef) return;
-    setDocumentNonBlocking(featureSettingsRef, { [feature]: value }, { merge: true });
+    const nextSettings = { ...(featureSettings || { id: 'features', preFlightChecklistRequired: true, enableExternalCompanyTabs: true }), [feature]: value };
+    setFeatureSettings(nextSettings);
+    localStorage.setItem('safeviate.feature-settings', JSON.stringify(nextSettings));
+    window.dispatchEvent(new Event('safeviate-feature-settings-updated'));
   };
   
   const handleAddLevel = () => {
@@ -110,7 +132,6 @@ export default function FeaturesPage() {
       toast({ variant: 'destructive', title: 'Invalid Name', description: 'Please enter a name for the finding level.' });
       return;
     }
-    if (!findingLevelsRef) return;
 
     const currentLevels = findingLevelsSettings?.levels || defaultFindingLevels;
     if (currentLevels.some(l => l.name.toLowerCase() === newLevelName.trim().toLowerCase())) {
@@ -126,7 +147,10 @@ export default function FeaturesPage() {
     };
 
     const updatedLevels = [...currentLevels, newLevel];
-    setDocumentNonBlocking(findingLevelsRef, { levels: updatedLevels }, { merge: true });
+    const nextSettings = { ...(findingLevelsSettings || { id: 'finding-levels', levels: [] }), levels: updatedLevels };
+    localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(nextSettings));
+    window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
+
     toast({ title: 'Finding Level Added', description: `Level "${newLevel.name}" has been added.` });
     setNewLevelName('');
     setNewLevelColor('#808080');
@@ -134,18 +158,17 @@ export default function FeaturesPage() {
   }
 
   const handleRemoveLevel = (levelIdToRemove: string) => {
-    if (!findingLevelsRef) return;
     const currentLevels = findingLevelsSettings?.levels || defaultFindingLevels;
     const updatedLevels = currentLevels.filter(l => l.id !== levelIdToRemove);
-    setDocumentNonBlocking(findingLevelsRef, { levels: updatedLevels }, { merge: true });
+    const nextSettings = { ...(findingLevelsSettings || { id: 'finding-levels', levels: [] }), levels: updatedLevels };
+    localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(nextSettings));
+    window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
     toast({ title: 'Finding Level Removed' });
   };
 
   const handleLevelColorChange = (levelId: string, type: 'bg' | 'fg', color: string) => {
     setLevelColors(prev => ({...prev, [levelId]: { ...prev[levelId], [type]: color }}));
   }
-  
-  const isLoading = isLoadingFeatures || isLoadingFindingLevels;
 
   if (isLoading) {
       return (

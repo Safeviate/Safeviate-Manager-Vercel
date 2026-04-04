@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -23,15 +22,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Settings2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 
 const componentFormSchema = z.object({
   name: z.string().min(1, 'Component name is required.'),
@@ -52,7 +50,6 @@ interface AddComponentDialogProps {
 }
 
 export function AddComponentDialog({ aircraftId, isOpen, setIsOpen }: AddComponentDialogProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
 
@@ -70,43 +67,70 @@ export function AddComponentDialog({ aircraftId, isOpen, setIsOpen }: AddCompone
   });
 
   const onSubmit = async (values: ComponentFormValues) => {
-    if (!firestore || !tenantId) return;
-    const componentsRef = collection(firestore, `tenants/${tenantId}/aircrafts/${aircraftId}/components`);
-    addDocumentNonBlocking(componentsRef, {
-      ...values,
-      installDate: values.installDate.toISOString(),
-    });
-    toast({ title: 'Component Added' });
-    setIsOpen(false);
-    form.reset();
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        if (!stored) throw new Error("Fleet record not found.");
+        
+        const aircrafts = JSON.parse(stored) as Aircraft[];
+        const acIndex = aircrafts.findIndex(a => a.id === aircraftId);
+        if (acIndex === -1) throw new Error("Aircraft not found.");
+
+        const newComponent: AircraftComponent = {
+            ...values,
+            id: crypto.randomUUID(),
+            installDate: values.installDate.toISOString(),
+        };
+
+        const aircraft = aircrafts[acIndex];
+        aircraft.components = [...(aircraft.components || []), newComponent];
+        
+        aircrafts[acIndex] = aircraft;
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(aircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+
+        toast({ title: 'Component Registered', description: `"${values.name}" has been added to the airframe inventory.` });
+        setIsOpen(false);
+        form.reset();
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Registration Failed', description: e.message || 'Failed to save component.' });
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl rounded-3xl p-8">
         <DialogHeader>
-          <DialogTitle>Add Tracked Component</DialogTitle>
-          <DialogDescription>
-            Register a new component for maintenance tracking.
+          <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-primary" />
+            Track New Component
+          </DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Register a serialized asset for specialized maintenance tracking.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g., Engine No. 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+            <FormField control={form.control} name="name" render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Component Official Name</FormLabel><FormControl><Input placeholder="e.g. Engine No. 1" className="h-11 font-black uppercase" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="manufacturer" render={({ field }) => (<FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+              <FormField control={form.control} name="manufacturer" render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Manufacturer</FormLabel><FormControl><Input className="h-11 font-bold" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="serialNumber" render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Serial Number</FormLabel><FormControl><Input className="h-11 font-mono font-bold uppercase" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
             </div>
             <FormField
               control={form.control}
               name="installDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Install Date</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Installation Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                        <Button variant="outline" className={cn("h-11 pl-4 text-left font-bold border-2", !field.value && "text-muted-foreground")}>
                           {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -120,12 +144,12 @@ export function AddComponentDialog({ aircraftId, isOpen, setIsOpen }: AddCompone
               )}
             />
             <div className="grid grid-cols-3 gap-4">
-              <FormField control={form.control} name="tsn" render={({ field }) => (<FormItem><FormLabel>TSN</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="tso" render={({ field }) => (<FormItem><FormLabel>TSO</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
-              <FormField control={form.control} name="totalTime" render={({ field }) => (<FormItem><FormLabel>Total Time</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>)} />
+              <FormField control={form.control} name="tsn" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">TSN (Total)</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold" {...field} /></FormControl></FormItem>)} />
+              <FormField control={form.control} name="tso" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">TSO (Overhaul)</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold" {...field} /></FormControl></FormItem>)} />
+              <FormField control={form.control} name="totalTime" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-70">Current Airframe Time</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold" {...field} /></FormControl></FormItem>)} />
             </div>
             <DialogFooter className="pt-4">
-              <Button type="submit">Save Component</Button>
+              <Button type="submit" className="h-11 px-10 text-[10px] font-black uppercase shadow-lg">Save Component Record</Button>
             </DialogFooter>
           </form>
         </Form>

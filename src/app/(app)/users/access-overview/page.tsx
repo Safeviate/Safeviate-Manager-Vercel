@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,15 +13,23 @@ import Link from 'next/link';
 import { MainPageHeader } from '@/components/page-header';
 
 export default function AccessOverviewPage() {
-  const firestore = useFirestore();
   const tenantId = 'safeviate';
   const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
 
-  const rolesQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/roles`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: roles, isLoading: isLoadingRoles } = useCollection<Role>(rolesQuery);
+  useEffect(() => {
+    try {
+      const storedRoles = localStorage.getItem('safeviate.roles');
+      if (storedRoles) {
+        setRoles(JSON.parse(storedRoles));
+      }
+    } catch (e: any) {
+      // ignore
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  }, []);
 
   const isLoading = isLoadingTenant || isLoadingRoles;
 

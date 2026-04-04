@@ -13,24 +13,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
     CheckCircle2, 
     XCircle, 
-    AlertTriangle, 
     GraduationCap, 
     PlayCircle,
-    ChevronRight,
     Trophy,
     ShieldAlert
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+import { useToast as useSafeToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { ExamTemplate, ExamResult } from '@/types/training';
 import type { Personnel, PilotProfile } from '@/app/(app)/users/personnel/page';
@@ -49,9 +44,8 @@ interface TakeExamDialogProps {
 type ExamState = 'setup' | 'taking' | 'finished';
 
 export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tenantId, isMockOnly = false }: TakeExamDialogProps) {
-  const firestore = useFirestore();
   const { userProfile } = useUserProfile();
-  const { toast } = useToast();
+  const { toast } = useSafeToast();
 
   const [state, setState] = useState<ExamState>('setup');
   const [selectedStudentId, setSelectedStudentId] = useState<string>(userProfile?.id || '');
@@ -93,7 +87,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
     const selectedStudent = personnel.find(p => p.id === selectedStudentId);
 
     const examResult: ExamResult = {
-      id: '', // Will be set by Firestore
+      id: '', // Will be set by LocalStorage
       templateId: template.id,
       templateTitle: template.title,
       studentId: selectedStudentId,
@@ -105,19 +99,30 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
       isMock: isMockOnly,
     };
 
-    // ONLY save to Firestore if it is NOT a mock exam
-    if (!isMockOnly && firestore) {
-      const resultsCol = collection(firestore, `tenants/${tenantId}/student-exam-results`);
-      addDocumentNonBlocking(resultsCol, examResult);
-      toast({ 
-        title: 'Official Result Recorded', 
-        description: 'This result has been added to the student training file.' 
-      });
+    if (!isMockOnly) {
+      try {
+        const storedResults = localStorage.getItem('safeviate.student-exam-results');
+        const results = storedResults ? JSON.parse(storedResults) : [];
+        const finalResult = { ...examResult, id: crypto.randomUUID() };
+        const nextResults = [finalResult, ...results];
+        localStorage.setItem('safeviate.student-exam-results', JSON.stringify(nextResults));
+        
+        window.dispatchEvent(new Event('safeviate-exams-updated'));
+        
+        toast({ 
+          title: 'Official Result Recorded', 
+          description: 'This result has been added to the student training file.' 
+        });
+        setResult(finalResult);
+      } catch (e) {
+        console.error('Failed to save exam result', e);
+        setResult(examResult);
+      }
     } else {
       toast({ title: 'Practice Run Complete' });
+      setResult(examResult);
     }
 
-    setResult(examResult);
     setState('finished');
   };
 
@@ -125,48 +130,58 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetExam(); onOpenChange(open); }}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 border-b bg-muted/5 shrink-0">
+      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
+        <DialogHeader className="p-8 border-b bg-muted/5 shrink-0">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <DialogTitle className="text-xl flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-primary" />
-                {template.title}
-              </DialogTitle>
-              <DialogDescription>{template.subject} • Pass Mark: {template.passingScore}%</DialogDescription>
+            <div className="space-y-4 text-left">
+              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/30 bg-primary/5 px-4 h-7">
+                <GraduationCap className="h-3.5 w-3.5 mr-2" />
+                Axiom Assessment Center
+              </Badge>
+              <div>
+                <DialogTitle className="text-3xl font-black uppercase tracking-tighter leading-none">
+                  {template.title}
+                </DialogTitle>
+                <DialogDescription className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-2 opacity-70">
+                    {template.subject} • Target Proficiency: <span className="text-primary font-black">{template.passingScore}%</span>
+                </DialogDescription>
+              </div>
             </div>
             {state === 'taking' && (
-                <div className="text-right">
-                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Progress</p>
-                    <p className="text-lg font-mono font-bold">{Object.keys(answers).length} / {template.questions.length}</p>
+                <div className="text-right bg-background border-2 rounded-2xl p-5 shadow-sm min-w-[120px]">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Item Index</p>
+                    <div className="flex items-baseline justify-end gap-1">
+                        <span className="text-3xl font-mono font-black text-primary">{Object.keys(answers).length}</span>
+                        <span className="text-sm font-black opacity-30">/ {template.questions.length}</span>
+                    </div>
                 </div>
             )}
           </div>
-          {state === 'taking' && <Progress value={progress} className="h-1.5 mt-4" />}
+          {state === 'taking' && <Progress value={progress} className="h-2.5 mt-8 bg-muted rounded-full overflow-hidden border-2" />}
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-hidden bg-background">
           {state === 'setup' && (
-            <div className="p-10 space-y-8 max-w-md mx-auto">
-              <div className="space-y-4">
+            <div className="p-12 space-y-10 max-w-lg mx-auto">
+              <div className="space-y-6 text-left">
                 {isMockOnly ? (
-                    <div className="p-4 border rounded-xl bg-primary/5 border-primary/20 flex items-start gap-3">
-                        <ShieldAlert className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div className="p-6 border-2 border-dashed rounded-2xl bg-amber-50/30 border-amber-200 flex items-start gap-4 text-left">
+                        <ShieldAlert className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                            <p className="font-bold text-sm">Practice Mode Enabled</p>
-                            <p className="text-xs text-muted-foreground italic">Your score will be shown at the end, but no permanent record will be created.</p>
+                            <p className="font-black text-sm uppercase tracking-tight text-amber-900">Practice Mode Engagement</p>
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700 opacity-70">Performance data will be verified locally but no persistent training record will be generated.</p>
                         </div>
                     </div>
                 ) : (
-                  <div className="space-y-2 pt-2">
-                    <Label>Assign Official Result To Student</Label>
+                  <div className="space-y-3 pt-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-left block">Authorized Student Personnel</Label>
                     <Select onValueChange={setSelectedStudentId} value={selectedStudentId}>
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className="h-14 font-black uppercase tracking-tight text-sm border-2 rounded-xl focus:ring-primary/20 bg-muted/5">
                         <SelectValue placeholder="Select student..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl">
                         {students.map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
+                          <SelectItem key={s.id} value={s.id} className="font-bold uppercase text-xs">{s.firstName} {s.lastName}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -174,42 +189,53 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
                 )}
               </div>
 
-              <div className="p-4 rounded-lg bg-muted/30 border border-dashed text-center">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  This exam contains <span className="font-bold text-foreground">{template.questions.length} questions</span>. 
-                  Once submitted, the {isMockOnly ? 'results will not be saved' : 'record will be finalized'}.
+              <div className="p-6 rounded-2xl bg-muted/20 border-2 border-slate-100 text-center">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground leading-relaxed">
+                  This evaluation contains <span className="font-black text-foreground">{template.questions.length} discrete items</span>. 
+                  Once initiated, the session {isMockOnly ? 'will remain transient' : 'will be recorded as an official certificate'}.
                 </p>
               </div>
 
-              <Button onClick={handleStart} className="w-full h-14 text-lg gap-2 shadow-lg" size="lg">
-                <PlayCircle className="h-5 w-5" /> {isMockOnly ? 'Start Practice Run' : 'Start Official Exam'}
+              <Button onClick={handleStart} className="w-full h-16 text-xl font-black uppercase tracking-tighter gap-3 shadow-2xl rounded-2xl transition-transform hover:scale-[1.02] active:scale-[0.98]" size="lg">
+                <PlayCircle className="h-6 w-6" /> {isMockOnly ? 'Start Practice Run' : 'Initiate Official Cert'}
               </Button>
             </div>
           )}
 
           {state === 'taking' && (
             <ScrollArea type="always" className="h-full">
-              <div className="p-6 pr-8 space-y-10 pb-24">
+              <div className="p-10 pr-12 space-y-16 pb-32">
                 {template.questions.map((q, idx) => (
-                  <div key={q.id} className="space-y-4">
-                    <div className="flex gap-4">
-                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0 border-primary text-primary font-bold">
+                  <div key={q.id} className="space-y-8 group/q text-left">
+                    <div className="flex gap-8 items-start">
+                      <Badge variant="outline" className="h-12 w-12 rounded-2xl p-0 flex items-center justify-center shrink-0 border-2 border-primary text-primary font-black text-xl shadow-md bg-background">
                         {idx + 1}
                       </Badge>
-                      <p className="text-base font-medium pt-0.5">{q.text}</p>
+                      <p className="text-2xl font-black uppercase tracking-tight text-foreground/90 group-hover/q:text-primary transition-colors leading-tight flex-1">{q.text}</p>
                     </div>
                     <RadioGroup 
                       value={answers[q.id]} 
                       onValueChange={(val) => setAnswers(prev => ({ ...prev, [q.id]: val }))}
-                      className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-10"
+                      className="grid grid-cols-1 md:grid-cols-2 gap-5 pl-[5rem]"
                     >
                       {q.options.map(opt => (
-                        <div key={opt.id} className={cn(
-                            "flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer hover:bg-muted/50",
-                            answers[q.id] === opt.id ? "bg-primary/5 border-primary" : "bg-background"
-                        )}>
-                          <RadioGroupItem value={opt.id} id={opt.id} />
-                          <Label htmlFor={opt.id} className="text-sm font-normal cursor-pointer flex-1">{opt.text}</Label>
+                        <div 
+                          key={opt.id} 
+                          className={cn(
+                            "flex items-center space-x-5 p-6 rounded-3xl border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden group/opt",
+                            answers[q.id] === opt.id 
+                                ? "bg-primary/5 border-primary shadow-xl ring-2 ring-primary/10 scale-[1.01]" 
+                                : "bg-background border-slate-100 hover:border-primary/30 hover:bg-muted/30"
+                          )} 
+                          onClick={() => setAnswers(prev => ({ ...prev, [q.id]: opt.id }))}
+                        >
+                          <RadioGroupItem value={opt.id} id={opt.id} className="h-6 w-6 border-2 border-slate-300 data-[state=checked]:border-primary" />
+                          <Label htmlFor={opt.id} className="text-sm font-black uppercase tracking-tight cursor-pointer flex-1 leading-snug text-left">{opt.text}</Label>
+                          {answers[q.id] === opt.id && (
+                              <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                                  <CheckCircle2 className="h-6 w-6 text-primary animate-in zoom-in" />
+                              </div>
+                          )}
                         </div>
                       ))}
                     </RadioGroup>
@@ -220,64 +246,72 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
           )}
 
           {state === 'finished' && result && (
-            <div className="p-10 flex flex-col items-center justify-center text-center space-y-6">
+            <div className="p-14 flex flex-col items-center justify-center text-center space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
               <div className={cn(
-                "h-24 w-24 rounded-full flex items-center justify-center shadow-xl animate-in zoom-in duration-500",
-                result.passed ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                "h-32 w-32 rounded-[2.5rem] flex items-center justify-center shadow-2xl animate-in zoom-in duration-700 rotate-6",
+                result.passed ? "bg-green-100 text-green-600 border-4 border-green-200" : "bg-red-100 text-red-600 border-4 border-red-200"
               )}>
-                {result.passed ? <Trophy className="h-12 w-12" /> : <XCircle className="h-12 w-12" />}
+                {result.passed ? <Trophy className="h-16 w-16" /> : <XCircle className="h-16 w-16" />}
               </div>
               
-              <div className="space-y-2">
-                <h3 className="text-3xl font-black">{result.passed ? 'EXAM PASSED' : 'EXAM FAILED'}</h3>
-                <p className="text-muted-foreground">Final Score: <span className={cn("font-black text-xl", result.passed ? 'text-green-600' : 'text-red-600')}>{result.score}%</span></p>
-                <p className="text-xs uppercase font-bold tracking-widest opacity-50">Target to Pass: {result.passingScore}%</p>
+              <div className="space-y-4">
+                <h3 className="text-5xl font-black uppercase tracking-tighter">{result.passed ? 'Assessment Certified' : 'Review Required'}</h3>
+                <div className="flex flex-col items-center gap-1">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Verified Attainment Level</p>
+                    <p className={cn("text-8xl font-black font-mono tracking-tighter", result.passed ? 'text-green-600' : 'text-red-700')}>
+                        {result.score}<span className="text-3xl ml-1">%</span>
+                    </p>
+                </div>
+                <Badge variant="outline" className="text-[11px] font-black uppercase tracking-widest border-2 py-1.5 px-6 rounded-full shadow-sm">
+                    Certification Floor: {result.passingScore}%
+                </Badge>
               </div>
 
-              <div className="w-full max-w-sm p-4 bg-muted/20 rounded-xl border space-y-3">
-                <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Student</span>
-                    <span className="font-bold">{result.studentName}</span>
+              <div className="w-full max-w-lg bg-muted/5 p-8 rounded-[2rem] border-2 border-slate-100 shadow-inner grid grid-cols-2 gap-8">
+                <div className="space-y-1 text-left">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Authorized Candidate</p>
+                    <p className="font-black text-base uppercase truncate leading-none">{result.studentName}</p>
                 </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Type</span>
-                    <Badge variant={result.isMock ? "secondary" : "default"} className="h-5 py-0 text-[10px] font-black">
-                        {result.isMock ? 'PRACTICE / MOCK' : 'OFFICIAL RECORD'}
+                <div className="space-y-1 text-right">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Record Type</p>
+                    <Badge variant={result.isMock ? "secondary" : "default"} className="h-7 px-4 py-0 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                        {result.isMock ? 'Practice Mock' : 'Official Cert'}
                     </Badge>
                 </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Completed</span>
-                    <span className="font-mono text-xs">{format(new Date(result.date), 'dd MMM yyyy HH:mm')}</span>
+                <div className="col-span-2 space-y-1 text-left border-t border-slate-200/50 pt-6">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Validation Timestamp</p>
+                    <p className="font-mono text-xs font-black text-muted-foreground uppercase">{format(new Date(result.date), 'dd MMMM yyyy • HH:mm:ss')}</p>
                 </div>
               </div>
 
               {result.isMock && (
-                <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-center gap-2 text-[10px] text-amber-800">
-                    <ShieldAlert className="h-3 w-3" />
-                    <span>This practice session is not saved. Once you close this window, the result will be discarded.</span>
+                <div className="p-5 bg-amber-50 border-2 border-amber-100 rounded-2xl flex items-center gap-4 text-[10px] text-amber-800 font-black uppercase tracking-widest max-w-md shadow-sm">
+                    <ShieldAlert className="h-6 w-6 shrink-0" />
+                    <span>Transitory Assessment Session. Data will be purged upon termination of this dialog.</span>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <DialogFooter className="p-6 border-t bg-muted/5 shrink-0 gap-2">
-          {state === 'taking' ? (
-            <Button 
-                onClick={handleSubmit} 
-                disabled={Object.keys(answers).length < template.questions.length}
-                className="w-full md:w-auto px-10"
-            >
-              Submit Examination
-            </Button>
-          ) : state === 'finished' ? (
-            <Button onClick={() => onOpenChange(false)} className="w-full md:w-auto px-10">Close and Return</Button>
-          ) : (
-            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-          )}
+        <DialogFooter className="p-8 border-t bg-muted/5 shrink-0 gap-4">
+          <div className="flex w-full gap-4">
+            {state === 'taking' ? (
+                <Button 
+                    onClick={handleSubmit} 
+                    disabled={Object.keys(answers).length < template.questions.length}
+                    className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl rounded-2xl"
+                >
+                Submit Full Examination
+                </Button>
+            ) : state === 'finished' ? (
+                <Button onClick={() => onOpenChange(false)} className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl rounded-2xl">Return to Overview</Button>
+            ) : (
+                <DialogClose asChild><Button variant="outline" className="h-14 px-8 text-xs font-black uppercase tracking-widest rounded-2xl border-2 flex-1">Abort Session</Button></DialogClose>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-

@@ -1,5 +1,7 @@
 'use client';
 
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useFirestore, useAuth } from '@/firebase';
 import { Loader2, PlusCircle, ChevronsUpDown } from 'lucide-react';
 import type { Role } from '@/app/(app)/admin/roles/page';
 import type { Department } from '@/app/(app)/admin/department/page';
@@ -34,8 +34,6 @@ export function PersonnelForm({
   trigger,
   onClose,
 }: PersonnelFormProps) {
-  const firestore = useFirestore();
-  const auth = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,41 +86,46 @@ export function PersonnelForm({
     setIsSubmitting(true);
 
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-
       if (existingPersonnel) {
-        if (!firestore) return;
-        
         const collectionName = existingPersonnel.userType === 'Instructor' ? 'instructors' : 
                              existingPersonnel.userType === 'Student' ? 'students' : 
                              existingPersonnel.userType === 'Private Pilot' ? 'private-pilots' : 'personnel';
         
-        const userRef = doc(firestore, `tenants/${tenantId}/${collectionName}`, existingPersonnel.id);
-        await updateDoc(userRef, {
-          userNumber: userNumber || null,
-          firstName,
-          lastName,
-          email,
-          department: selectedDepartment || null,
-          role: selectedRole,
-          organizationId: organizationId === 'internal' ? null : organizationId,
-          isErpIncerfaContact: !!isIncerfaContact,
-          isErpAlerfaContact: !!isAlerfaContact,
-          updatedAt: new Date().toISOString(),
-        });
+        const key = `safeviate.${collectionName}`;
+        try {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const arr = JSON.parse(stored) as any[];
+            const updatedProfile = {
+              ...existingPersonnel,
+              userNumber: userNumber || null,
+              firstName,
+              lastName,
+              email,
+              department: selectedDepartment || null,
+              role: selectedRole,
+              organizationId: organizationId === 'internal' ? null : organizationId,
+              isErpIncerfaContact: !!isIncerfaContact,
+              isErpAlerfaContact: !!isAlerfaContact,
+              updatedAt: new Date().toISOString(),
+            };
+            const nextArr = arr.map(u => u.id === existingPersonnel.id ? updatedProfile : u);
+            localStorage.setItem(key, JSON.stringify(nextArr));
+          }
+        } catch {
+          // ignore
+        }
         toast({ title: 'User Updated' });
       } else {
         const response = await fetch('/api/admin/create-personnel', {
           method: 'POST',
           headers: { 
-            'Content-Type': 'application/json',
-            ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             tenantId,
             firstName,
             lastName,
-            email,
             email,
             userNumber: userNumber || null,
             department: selectedDepartment || null,

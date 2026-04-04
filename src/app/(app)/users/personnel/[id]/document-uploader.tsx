@@ -30,6 +30,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>(restrictedMode || 'file');
+  const [isUploading, setIsUploading] = useState(false);
 
   // Form state
   const [fileName, setFileName] = useState(defaultFileName);
@@ -140,7 +141,33 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     // The useEffect will re-request camera access
   };
 
-  const handleUpload = () => {
+  const dataUrlToFile = async (dataUrl: string, name: string) => {
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    return new File([blob], name, {
+      type: blob.type || 'image/jpeg',
+    });
+  };
+
+  const uploadToServer = async (selectedFile: File, displayName: string) => {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('displayName', displayName);
+
+    const response = await fetch('/api/uploads', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(payload.error || 'Upload failed');
+    }
+
+    return response.json();
+  };
+
+  const handleUpload = async () => {
     if (!fileName.trim()) {
         toast({
           variant: 'destructive',
@@ -150,31 +177,42 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         return;
     }
 
-    if (uploadMode === 'file') {
+    try {
+      setIsUploading(true);
+      let selectedFile: File;
+
+      if (uploadMode === 'file') {
         if (!file) {
-            toast({ variant: 'destructive', title: 'No File Selected', description: 'Please select a file to upload.' });
-            return;
+          toast({ variant: 'destructive', title: 'No File Selected', description: 'Please select a file to upload.' });
+          return;
         }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            finishUpload(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-    } else if (uploadMode === 'camera') {
+        selectedFile = file;
+      } else {
         if (!capturedImage) {
-            toast({ variant: 'destructive', title: 'No Photo Taken', description: 'Please take a photo to upload.' });
-            return;
+          toast({ variant: 'destructive', title: 'No Photo Taken', description: 'Please take a photo to upload.' });
+          return;
         }
-        finishUpload(capturedImage);
+        selectedFile = await dataUrlToFile(capturedImage, `${fileName}.jpg`);
+      }
+
+      const uploaded = await uploadToServer(selectedFile, fileName);
+      finishUpload(uploaded.url, uploaded.uploadDate);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: error instanceof Error ? error.message : 'Could not upload document.',
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
   
-  const finishUpload = (dataUrl: string) => {
-    const uploadDate = new Date().toISOString();
+  const finishUpload = (url: string, uploadDate: string) => {
     onDocumentUploaded({
         name: fileName,
-        url: dataUrl,
-        uploadDate: uploadDate,
+        url,
+        uploadDate,
         expirationDate: null,
     });
 
@@ -261,7 +299,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         </div>
         <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleUpload}>Upload</Button>
+            <Button onClick={handleUpload} disabled={isUploading}>{isUploading ? 'Uploading...' : 'Upload'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

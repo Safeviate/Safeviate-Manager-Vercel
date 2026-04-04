@@ -16,14 +16,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, CheckCircle2 } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AiExamGenerator } from './ai-exam-generator';
+import { 
+    Info, 
+    BookOpen, 
+    Target, 
+    MessageSquare, 
+    PlusCircle, 
+    Trash2, 
+    CheckCircle2,
+    ChevronDown,
+    ListTodo
+} from 'lucide-react';
 
 const optionSchema = z.object({
   id: z.string(),
@@ -93,15 +98,18 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
       <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col overflow-hidden">
         <ScrollArea className="flex-1">
           <div className="space-y-8 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Exam Title</FormLabel>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Axiom Assessment Title
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., PPL Air Law & Operational Procedures" {...field} />
+                      <Input placeholder="e.g., PPL Air Law & Operational Procedures" {...field} className="h-12 font-bold bg-muted/5 border-2 border-slate-200 focus-visible:ring-primary/20 rounded-xl" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -112,9 +120,12 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
                 name="subject"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subject Area</FormLabel>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Target className="h-3.5 w-3.5" />
+                        Subject Category
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Theoretical Knowledge" {...field} />
+                      <Input placeholder="e.g., Theoretical Knowledge" {...field} className="h-12 font-bold bg-muted/5 border-2 border-slate-200 focus-visible:ring-primary/20 rounded-xl" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -125,9 +136,12 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
                 name="passingScore"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Passing Score (%)</FormLabel>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Minimum Mastery (%)
+                    </FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" {...field} className="h-12 font-mono font-black text-lg bg-muted/5 border-2 border-slate-200 focus-visible:ring-primary/20 rounded-xl" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -138,9 +152,12 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
                 name="description"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Evaluation Briefing
+                    </FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Optional details about the exam format or scope..." {...field} />
+                      <Textarea placeholder="Optional details about the exam format or scope..." {...field} className="min-h-[100px] font-medium p-4 bg-muted/5 border-2 border-slate-200 focus-visible:ring-primary/20 rounded-xl" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -151,14 +168,21 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
             <Separator />
 
             <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold">Questions</h3>
-                <div className="flex items-center gap-2">
+              <div className="flex justify-between items-center bg-muted/5 p-4 rounded-2xl border-2 border-dashed">
+                <div>
+                    <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                        <ListTodo className="h-4 w-4 text-primary" />
+                        Assessment Items ({questionFields.length})
+                    </h3>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Construct or generate the evaluation pool.</p>
+                </div>
+                <div className="flex items-center gap-3">
                     <AiExamGenerator onGenerated={handleGeneratedQuestions} />
                     <Button
                         type="button"
-                        variant="outline"
+                        variant="default"
                         size="sm"
+                        className="h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg rounded-xl"
                         onClick={() =>
                             appendQuestion({
                             id: uuidv4(),
@@ -211,10 +235,10 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
   const correctOptionId = watch(`questions.${questionIndex}.correctOptionId`);
 
   return (
-    <Card className="bg-muted/10 border-muted">
-      <CardHeader className="py-4 flex flex-row items-start justify-between space-y-0">
-        <div className="flex items-center gap-3 flex-1 mr-4">
-          <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0 border-primary text-primary font-bold">
+    <Card className="bg-background border-2 border-slate-200 shadow-sm rounded-2xl overflow-hidden group hover:border-primary/30 transition-all duration-300">
+      <CardHeader className="py-5 px-6 flex flex-row items-start justify-between space-y-0 bg-muted/5 group-hover:bg-primary/5">
+        <div className="flex items-center gap-4 flex-1 mr-4">
+          <Badge variant="outline" className="h-8 w-8 rounded-full p-0 flex items-center justify-center shrink-0 border-2 border-primary text-primary font-black text-sm shadow-sm bg-background">
             {questionIndex + 1}
           </Badge>
           <FormField
@@ -223,18 +247,18 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
             render={({ field }) => (
               <FormItem className="flex-1 space-y-0">
                 <FormControl>
-                  <Input placeholder="Enter question text..." {...field} className="font-bold border-none bg-transparent shadow-none focus-visible:ring-0 px-0 h-auto" />
+                  <Input placeholder="Enter question text..." {...field} className="text-base font-black uppercase tracking-tight border-none bg-transparent shadow-none focus-visible:ring-0 px-0 h-auto placeholder:text-muted-foreground/30" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        <Button type="button" variant="ghost" size="icon" onClick={onRemove} className="text-destructive h-8 w-8">
+        <Button type="button" variant="ghost" size="icon" onClick={onRemove} className="text-destructive h-9 w-9 rounded-full hover:bg-destructive/10 transition-colors">
           <Trash2 className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4 pt-0">
+      <CardContent className="space-y-6 p-6 pt-2">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center gap-2">
@@ -255,11 +279,11 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
           <RadioGroup
             value={correctOptionId}
             onValueChange={(val) => setValue(`questions.${questionIndex}.correctOptionId`, val)}
-            className="space-y-2"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
             {optionFields.map((option, oIndex) => (
-              <div key={option.id} className="flex items-center gap-3 group">
-                <RadioGroupItem value={option.id} id={`q${questionIndex}-o${oIndex}`} className="shrink-0" />
+              <div key={option.id} className="flex items-center gap-3 group/opt">
+                <RadioGroupItem value={option.id} id={`q${questionIndex}-o${oIndex}`} className="shrink-0 h-5 w-5 border-2 border-slate-300 data-[state=checked]:border-primary data-[state=checked]:text-primary" />
                 <div className="flex-1 relative">
                     <FormField
                     control={control}
@@ -271,8 +295,10 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
                             placeholder={`Option ${oIndex + 1}`}
                             {...field}
                             className={cn(
-                                "h-9 text-sm bg-background transition-all pr-10",
-                                correctOptionId === option.id && "border-green-500 ring-1 ring-green-500 bg-green-50/30"
+                                "h-11 text-sm font-bold bg-background transition-all pr-10 border-2 rounded-xl",
+                                correctOptionId === option.id 
+                                    ? "border-green-500 bg-green-50/50 shadow-[0_0_0_1px_rgba(34,197,94,0.5)]" 
+                                    : "border-slate-200 hover:border-slate-300"
                             )}
                             />
                         </FormControl>
@@ -280,7 +306,7 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
                     )}
                     />
                     {correctOptionId === option.id && (
-                        <CheckCircle2 className="h-4 w-4 text-green-600 absolute right-3 top-1/2 -translate-y-1/2" />
+                        <CheckCircle2 className="h-5 w-5 text-green-600 absolute right-3 top-1/2 -translate-y-1/2 animate-in zoom-in duration-300" />
                     )}
                 </div>
                 <Button
@@ -289,9 +315,9 @@ function QuestionItem({ questionIndex, onRemove }: { questionIndex: number; onRe
                   size="icon"
                   onClick={() => removeOption(oIndex)}
                   disabled={optionFields.length <= 2}
-                  className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-10 w-10 text-muted-foreground opacity-0 group-hover/opt:opacity-100 transition-opacity rounded-full hover:text-destructive hover:bg-destructive/5"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}

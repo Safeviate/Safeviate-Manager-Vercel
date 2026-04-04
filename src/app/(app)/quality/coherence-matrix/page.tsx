@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, writeBatch, doc, deleteDoc } from 'firebase/firestore';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
@@ -124,8 +122,6 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
     const [isMultiImageMode, setIsMultiImageMode] = useState(false);
     const [targetFamily, setTargetFamily] = useState<RegulationFamily>(regulationFamily);
     const [targetHeader, setTargetHeader] = useState('');
-    
-    const firestore = useFirestore();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -165,11 +161,6 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
     };
 
     const processAndSave = async (input: SummarizeDocumentInput) => {
-        if (!firestore) {
-            toast({ variant: 'destructive', title: 'Database not available' });
-            return;
-        }
-
         setIsProcessing(true);
         try {
             const { requirements } = await callAiFlow<
@@ -182,22 +173,21 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                 return;
             }
 
-            const batch = writeBatch(firestore);
-            const collectionRef = collection(firestore, `tenants/${tenantId}/compliance-matrix`);
+            const storedItems = localStorage.getItem('safeviate.compliance-matrix');
+            const currentItems = storedItems ? JSON.parse(storedItems) : [];
             
-            requirements.forEach(req => {
-                const docRef = doc(collectionRef);
-                batch.set(docRef, {
-                    ...req,
-                    organizationId: organizationId,
-                    regulationFamily: targetFamily,
-                    regulationCode: normalizeRegulationCode(req.regulationCode),
-                    parentRegulationCode: normalizeRegulationCode(req.parentRegulationCode) || normalizeRegulationCode(targetHeader),
-                    regulationStatement: req.regulationStatement?.trim() || normalizeRegulationCode(req.regulationCode),
-                });
-            });
+            const newItems = requirements.map(req => ({
+                ...req,
+                id: crypto.randomUUID(),
+                organizationId: organizationId,
+                regulationFamily: targetFamily,
+                regulationCode: normalizeRegulationCode(req.regulationCode),
+                parentRegulationCode: normalizeRegulationCode(req.parentRegulationCode) || normalizeRegulationCode(targetHeader),
+                regulationStatement: req.regulationStatement?.trim() || normalizeRegulationCode(req.regulationCode),
+            }));
 
-            await batch.commit();
+            localStorage.setItem('safeviate.compliance-matrix', JSON.stringify([...currentItems, ...newItems]));
+            window.dispatchEvent(new Event('safeviate-compliance-updated'));
 
             toast({
                 title: 'Matrix Populated',
@@ -373,7 +363,6 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
 }
 
 export default function CoherenceMatrixPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
   const { matrixTheme } = useTheme();
@@ -390,15 +379,40 @@ export default function CoherenceMatrixPage() {
   const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
   const [formMode, setFormMode] = useState<'item' | 'header' | 'subheader'>('item');
 
-  const complianceQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/compliance-matrix`)) : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-  const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null), [firestore, tenantId]);
+  const [complianceItems, setComplianceItems] = useState<ComplianceRequirement[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: complianceItems, isLoading: isLoadingItems } = useCollection<ComplianceRequirement>(complianceQuery);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedCompliance = localStorage.getItem('safeviate.compliance-matrix');
+        const storedPersonnel = localStorage.getItem('safeviate.personnel');
+        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
 
-  const isLoading = isLoadingItems || isLoadingPersonnel || isLoadingOrgs;
+        if (storedCompliance) setComplianceItems(JSON.parse(storedCompliance));
+        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
+        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+    } catch (e) {
+        console.error("Failed to load matrix data", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    window.addEventListener('safeviate-compliance-updated', loadData);
+    window.addEventListener('safeviate-personnel-updated', loadData);
+    window.addEventListener('safeviate-external-organizations-updated', loadData);
+    return () => {
+        window.removeEventListener('safeviate-compliance-updated', loadData);
+        window.removeEventListener('safeviate-personnel-updated', loadData);
+        window.removeEventListener('safeviate-external-organizations-updated', loadData);
+    }
+  }, [loadData]);
+
 
   const naturalSort = (a: string, b: string) => {
     const re = /(\d+)/g;
@@ -427,23 +441,6 @@ export default function CoherenceMatrixPage() {
     setIsFormOpen(true);
   };
 
-  const handleDeleteItem = async (item: ComplianceRequirement) => {
-    if (!firestore || !tenantId || !complianceItems) return;
-
-    const batch = writeBatch(firestore);
-    const idsToDelete = new Set<string>([
-      item.id,
-      ...collectDescendantIds(item.regulationCode, complianceItems),
-    ]);
-
-    idsToDelete.forEach((id) => {
-      batch.delete(doc(firestore, `tenants/${tenantId}/compliance-matrix`, id));
-    });
-
-    await batch.commit();
-    toast({ title: "Success", description: "Compliance item has been deleted." });
-  };
-
   const collectDescendantIds = (
       parentCode: string,
       items: ComplianceRequirement[],
@@ -463,18 +460,43 @@ export default function CoherenceMatrixPage() {
           ...collectDescendantIds(child.regulationCode, items, nextVisited),
       ]);
   };
+
+  const handleDeleteItem = async (item: ComplianceRequirement) => {
+    try {
+        const storedItems = localStorage.getItem('safeviate.compliance-matrix');
+        const items = storedItems ? JSON.parse(storedItems) as ComplianceRequirement[] : [];
+        
+        const idsToDelete = new Set<string>([
+          item.id,
+          ...collectDescendantIds(item.regulationCode, items),
+        ]);
+
+        const nextItems = items.filter(i => !idsToDelete.has(i.id));
+        localStorage.setItem('safeviate.compliance-matrix', JSON.stringify(nextItems));
+        window.dispatchEvent(new Event('safeviate-compliance-updated'));
+        toast({ title: "Success", description: "Compliance item has been deleted." });
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+    }
+  };
   
   const handleDeleteSection = async (parentItem: ComplianceRequirement) => {
-      if (!firestore || !tenantId || !complianceItems) return;
-      const batch = writeBatch(firestore);
-      const parentRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, parentItem.id);
-      batch.delete(parentRef);
-      collectDescendantIds(parentItem.regulationCode, complianceItems).forEach((id) => {
-          const childRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, id);
-          batch.delete(childRef);
-      });
-      await batch.commit();
-      toast({ title: "Section Deleted" });
+      try {
+          const storedItems = localStorage.getItem('safeviate.compliance-matrix');
+          const items = storedItems ? JSON.parse(storedItems) as ComplianceRequirement[] : [];
+          
+          const idsToDelete = new Set<string>([
+              parentItem.id,
+              ...collectDescendantIds(parentItem.regulationCode, items),
+          ]);
+          
+          const nextItems = items.filter(i => !idsToDelete.has(i.id));
+          localStorage.setItem('safeviate.compliance-matrix', JSON.stringify(nextItems));
+          window.dispatchEvent(new Event('safeviate-compliance-updated'));
+          toast({ title: "Section Deleted" });
+      } catch (e: any) {
+          toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+      }
   }
 
   const currentOrgItems = (complianceItems || []).filter(item =>

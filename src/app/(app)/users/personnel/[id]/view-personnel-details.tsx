@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Personnel, PilotProfile } from '../page';
+
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
@@ -17,8 +18,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { format } from 'date-fns';
 import { DocumentUploader } from '@/components/document-uploader';
-import { useFirestore, useAuth, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { DocumentExpirySettings } from '../../../admin/document-dates/page';
@@ -77,8 +76,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const firestore = useFirestore();
-  const auth = useAuth();
+  const firestore = null; // Mock
   const { hasPermission } = usePermissions();
   const { tenantId } = useUserProfile();
 
@@ -88,11 +86,18 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     setHiddenMenus(user.accessOverrides?.hiddenMenus || []);
   }, [user]);
 
-  const expirySettingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'document-expiry') : null),
-    [firestore, tenantId]
-  );
-  const { data: expirySettings } = useDoc<DocumentExpirySettings>(expirySettingsRef);
+  const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
+
+  useEffect(() => {
+      try {
+          const stored = localStorage.getItem('safeviate.document-expiry');
+          if (stored) {
+              setExpirySettings(JSON.parse(stored));
+          }
+      } catch {
+          // ignore
+      }
+  }, []);
 
   const handleViewImage = (url: string) => {
     setViewingImageUrl(url);
@@ -100,13 +105,27 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   };
   
   const handleDocumentUpdate = (updatedDocuments: Document[]) => {
-    if (!firestore || !tenantId) return;
     const collectionName = isPilotProfile(user) ? 
         user.userType === 'Student' ? 'students' : 
         user.userType === 'Instructor' ? 'instructors' : 'private-pilots' 
         : 'personnel';
-    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
-    updateDocumentNonBlocking(userRef, { documents: updatedDocuments });
+        
+    const key = `safeviate.${collectionName}`;
+    try {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+            const arr = JSON.parse(stored) as UserProfile[];
+            const nextArr = arr.map(u => {
+                if (u.id === user.id) {
+                    return { ...u, documents: updatedDocuments };
+                }
+                return u;
+            });
+            localStorage.setItem(key, JSON.stringify(nextArr));
+        }
+    } catch {
+        // ignore
+    }
   };
 
   const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
@@ -145,12 +164,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const handleSendWelcomeEmail = async () => {
     setIsSendingEmail(true);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/send-welcome-email', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           userId: user.id,
@@ -198,7 +215,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   }, [role, user.documents]);
 
   const handleToggleMenuOverride = async (href: string, hidden: boolean, subHrefs?: string[]) => {
-    if (!firestore || !tenantId || !canEdit) return;
+    if (!canEdit) return;
     
     const currentHidden = hiddenMenus;
     let newHidden: string[];
@@ -212,9 +229,21 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     }
     
     const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
-    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    
+    const key = `safeviate.${collectionName}`;
     try {
-      await updateDoc(userRef, { 'accessOverrides.hiddenMenus': newHidden });
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const arr = JSON.parse(stored) as UserProfile[];
+        const nextArr = arr.map(u => {
+            if (u.id === user.id) {
+                return { ...u, accessOverrides: { ...u.accessOverrides, hiddenMenus: newHidden } };
+            }
+            return u;
+        });
+        localStorage.setItem(key, JSON.stringify(nextArr));
+      }
+
       setHiddenMenus(newHidden);
       window.dispatchEvent(new Event('safeviate-profile-updated'));
       toast({ title: hidden ? "Access Restricted" : "Access Restored" });
@@ -228,7 +257,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   };
 
   const handlePermissionToggle = async (permissionId: string, checked: boolean) => {
-    if (!firestore || !tenantId || !canEdit) return;
+    if (!canEdit) return;
     const currentPermissions = user.permissions || [];
     const isInherited = role?.permissions?.includes(permissionId);
 
@@ -248,9 +277,19 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
         : [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
 
     const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
-    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    const key = `safeviate.${collectionName}`;
     try {
-      await updateDoc(userRef, { permissions: newPermissions });
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const arr = JSON.parse(stored) as UserProfile[];
+        const nextArr = arr.map(u => {
+            if (u.id === user.id) {
+                return { ...u, permissions: newPermissions };
+            }
+            return u;
+        });
+        localStorage.setItem(key, JSON.stringify(nextArr));
+      }
       toast({ title: "Access Level Updated" });
     } catch {
       toast({

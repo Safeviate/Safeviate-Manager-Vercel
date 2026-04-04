@@ -1,7 +1,6 @@
 'use client';
 
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,15 +11,20 @@ import { GraduationCap } from 'lucide-react';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function StudentProgressPage() {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
+  const [students, setStudents] = useState<PilotProfile[]>([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(true);
 
-  const studentsQuery = useMemoFirebase(
-    () => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null,
-    [firestore, tenantId]
-  );
-  
-  const { data: students, isLoading: isLoadingStudents, error } = useCollection<PilotProfile>(studentsQuery);
+  useEffect(() => {
+    try {
+        const storedStudents = localStorage.getItem('safeviate.students');
+        if (storedStudents) setStudents(JSON.parse(storedStudents));
+    } catch (e) {
+        console.error('Failed to load students', e);
+    } finally {
+        setIsLoadingStudents(false);
+    }
+  }, []);
 
   if (isLoadingStudents) {
     return (
@@ -35,9 +39,7 @@ export default function StudentProgressPage() {
     );
   }
 
-  if (error) {
-      return <p className="max-w-[1200px] mx-auto w-full text-destructive text-center p-8">Error: {error.message}</p>
-  }
+
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">

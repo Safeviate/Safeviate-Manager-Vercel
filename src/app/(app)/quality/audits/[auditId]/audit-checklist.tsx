@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -8,9 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, writeBatch, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { QualityAudit, QualityAuditChecklistTemplate, AuditChecklistItem, CorrectiveActionPlan } from '@/types/quality';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
@@ -18,7 +15,6 @@ import { FileUp, Camera, Trash2, ZoomIn, Edit, Save, ShieldCheck } from 'lucide-
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
-import { Separator } from '@/components/ui/separator';
 import type { FindingLevel } from '@/app/(app)/admin/features/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -73,7 +69,6 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel }: AuditChecklistProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
@@ -122,26 +117,29 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
 
 
     const onSubmit = (values: FormValues) => {
-        if (!firestore) return;
-        const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
-        
-        const filledFindings = values.findings.map(f => {
-            if (f.finding === 'Not Applicable') {
-                 return { ...f, level: undefined };
-            }
-            return f;
-        });
+        try {
+            const storedAudits = localStorage.getItem('safeviate.quality-audits');
+            const audits = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
+            
+            const filledFindings = values.findings.map(f => {
+                if (f.finding === 'Not Applicable') {
+                     return { ...f, level: undefined };
+                }
+                return f;
+            });
 
-        updateDocumentNonBlocking(auditRef, { findings: filledFindings });
-        toast({ title: "Findings Saved", description: "Your audit progress has been recorded." });
+            const nextAudits = audits.map(a => a.id === audit.id ? { ...a, findings: filledFindings } : a);
+            localStorage.setItem('safeviate.quality-audits', JSON.stringify(nextAudits));
+            
+            window.dispatchEvent(new Event('safeviate-quality-updated'));
+            toast({ title: "Findings Saved", description: "Your audit progress has been recorded." });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Error', description: e.message });
+        }
     };
 
     const handleFinalizeAudit = async () => {
-        if (!firestore) return;
-        
         const values = form.getValues();
-        const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
-
         const applicableItems = values.findings.filter(f => f.finding !== 'Not Applicable');
         const compliantItems = applicableItems.filter(f => f.finding === 'Compliant');
         const nonCompliantFindings = values.findings.filter(f => f.finding === 'Non Compliant');
@@ -151,30 +149,31 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
             : 100;
 
         try {
-            const batch = writeBatch(firestore);
-
-            const auditUpdateData = {
+            // Update Audit
+            const storedAudits = localStorage.getItem('safeviate.quality-audits');
+            const auditsList = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
+            const nextAudits = auditsList.map(a => a.id === audit.id ? { 
+                ...a, 
                 findings: values.findings,
                 status: 'Finalized' as const,
-                complianceScore: complianceScore,
-            };
-            batch.update(auditRef, auditUpdateData);
+                complianceScore: complianceScore 
+            } : a);
+            localStorage.setItem('safeviate.quality-audits', JSON.stringify(nextAudits));
 
-            const capsCollectionRef = collection(firestore, `tenants/${tenantId}/corrective-action-plans`);
-            nonCompliantFindings.forEach(finding => {
-                const newCapRef = doc(capsCollectionRef);
-                const capData: Omit<CorrectiveActionPlan, 'id'> = {
-                    auditId: audit.id,
-                    findingId: finding.checklistItemId,
-                    rootCauseAnalysis: '',
-                    status: 'Open',
-                    actions: [],
-                };
-                batch.set(newCapRef, capData);
-            });
+            // Create CAPS
+            const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
+            const currentCaps = storedCaps ? JSON.parse(storedCaps) : [];
+            const newCaps = nonCompliantFindings.map(finding => ({
+                id: crypto.randomUUID(),
+                auditId: audit.id,
+                findingId: finding.checklistItemId,
+                rootCauseAnalysis: '',
+                status: 'Open',
+                actions: [],
+            }));
+            localStorage.setItem('safeviate.corrective-action-plans', JSON.stringify([...newCaps, ...currentCaps]));
 
-            await batch.commit();
-
+            window.dispatchEvent(new Event('safeviate-quality-updated'));
             toast({
                 title: "Audit Finalized",
                 description: `Score: ${complianceScore}%. ${nonCompliantFindings.length} CAPs created.`
@@ -200,6 +199,8 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
 
         const currentEvidence = form.getValues(`findings.${itemIndex}.evidence`) || [];
         form.setValue(`findings.${itemIndex}.evidence`, [...currentEvidence, { url: docDetails.url, description: docDetails.name }]);
+        // Trigger auto-save or wait for manual? The original said "All changes are saved to the server" but there's a manual "Save Draft" button.
+        // I'll stick to the original behavior and wait for "Save Draft".
     };
 
     const renderChecklistItem = (item: AuditChecklistItem) => {
@@ -411,7 +412,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                         <div className="shrink-0 flex items-center justify-between p-4 border-t bg-muted/5 no-print">
                             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground italic">
                                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                                <span>Audit in progress. All changes are saved to the server.</span>
+                                <span>Audit in progress. All changes are saved locally.</span>
                             </div>
                             <div className="flex gap-3">
                                 <Button type="submit" variant="outline" size="sm" className="h-10 px-8 gap-2 font-black uppercase border-slate-300 shadow-sm">
@@ -447,7 +448,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                     </DialogHeader>
                     {viewingImageUrl && (
                         <div className="flex-1 relative min-h-[60vh] mt-4">
-                            <Image src={viewingImageUrl} alt="Evidence" fill className="object-contain"/>
+                            <Image src={viewingImageUrl} alt="Evidence" fill className="object-contain" unoptimized/>
                         </div>
                     )}
                 </DialogContent>

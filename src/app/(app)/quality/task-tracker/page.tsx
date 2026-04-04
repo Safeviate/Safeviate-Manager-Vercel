@@ -1,13 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ListTodo } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -37,27 +34,56 @@ type UnifiedTask = {
 };
 
 export default function TaskTrackerPage() {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-tasks-view' });
   const isMobile = useIsMobile();
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
 
-  const mocsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null), [firestore, tenantId]);
-  const safetyReportsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null), [firestore, tenantId]);
-  const capsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null), [firestore, tenantId]);
-  const auditsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null), [firestore, tenantId]);
-  const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-  const orgsQuery = useMemoFirebase(() => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null), [firestore, tenantId]);
+  const [mocs, setMocs] = useState<ManagementOfChange[]>([]);
+  const [safetyReports, setSafetyReports] = useState<SafetyReport[]>([]);
+  const [caps, setCaps] = useState<CorrectiveActionPlan[]>([]);
+  const [audits, setAudits] = useState<QualityAudit[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: mocs, isLoading: isLoadingMocs } = useCollection<ManagementOfChange>(mocsQuery);
-  const { data: safetyReports, isLoading: isLoadingSafetyReports } = useCollection<SafetyReport>(safetyReportsQuery);
-  const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
-  const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const storedMocs = localStorage.getItem('safeviate.management-of-change');
+        const storedSafety = localStorage.getItem('safeviate.safety-reports');
+        const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
+        const storedAudits = localStorage.getItem('safeviate.quality-audits');
+        const storedPersonnel = localStorage.getItem('safeviate.personnel');
+        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
 
-  const isLoading = isLoadingMocs || isLoadingSafetyReports || isLoadingCaps || isLoadingAudits || isLoadingPersonnel || isLoadingOrgs;
+        if (storedMocs) setMocs(JSON.parse(storedMocs));
+        if (storedSafety) setSafetyReports(JSON.parse(storedSafety));
+        if (storedCaps) setCaps(JSON.parse(storedCaps));
+        if (storedAudits) setAudits(JSON.parse(storedAudits));
+        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
+        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+    } catch (e) {
+        console.error("Failed to load task data", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    // Reactivity for all sources
+    const events = [
+        'safeviate-moc-updated',
+        'safeviate-safety-reports-updated',
+        'safeviate-quality-updated',
+        'safeviate-personnel-updated',
+        'safeviate-external-organizations-updated'
+    ];
+    events.forEach(event => window.addEventListener(event, loadData));
+    return () => events.forEach(event => window.removeEventListener(event, loadData));
+  }, [loadData]);
+
 
   const allTasks = useMemo((): UnifiedTask[] => {
     if (isLoading || !personnel) return [];

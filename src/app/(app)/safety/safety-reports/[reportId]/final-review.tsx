@@ -14,8 +14,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { Signature, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -82,7 +80,6 @@ interface FinalReviewProps {
 }
 
 export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isStacked = false }: FinalReviewProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -106,10 +103,17 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
   });
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore) return;
-    const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     try {
-      await updateDoc(reportRef, { initialHazards: values.hazards });
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: { ...report, initialHazards: values.hazards } }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to save final review.');
+      }
       toast({ title: 'Final Review Saved' });
     } catch (error) {
       toast({
@@ -122,7 +126,7 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
 
   const handleSignReport = async () => {
     const currentUser = personnel[0]; // Logic for current user auth needed here
-    if (!currentUser || !firestore) return;
+    if (!currentUser) return;
 
     const newSignature = {
         userId: currentUser.id,
@@ -135,9 +139,17 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
     const currentSignatures = form.getValues('signatures') || [];
     form.setValue('signatures', [...currentSignatures, newSignature]);
 
-    const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     try {
-      await updateDoc(reportRef, { signatures: [...currentSignatures, newSignature] });
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: { ...report, signatures: [...currentSignatures, newSignature] } }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to sign this report right now.');
+      }
       toast({title: "Report Signed"});
     } catch (error) {
       toast({

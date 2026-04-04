@@ -1,14 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Eye, Trash2, ShieldAlert, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, FileWarning, ChevronDown } from 'lucide-react';
+import { PlusCircle, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,7 +44,6 @@ const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destr
 };
 
 function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: string, reportNumber: string, tenantId: string }) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
 
@@ -54,10 +51,17 @@ function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: st
 
     if (!canDelete) return null;
 
-    const handleDelete = () => {
-        if (!firestore) return;
-        const reportRef = doc(firestore, `tenants/${tenantId}/safety-reports`, reportId);
-        deleteDocumentNonBlocking(reportRef);
+    const handleDelete = async () => {
+        const response = await fetch('/api/safety-reports', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reportId }),
+        });
+
+        if (!response.ok) {
+            const payload = await response.json().catch(() => null);
+            throw new Error(payload?.error || 'Unable to delete this report right now.');
+        }
         toast({
             title: 'Report Deleted',
             description: `Safety Report #${reportNumber} is being deleted.`,
@@ -252,32 +256,44 @@ function SafetyRecommendationsDialog({ reports }: { reports: SafetyReport[] }) {
 }
 
 export default function SafetyReportsPage() {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'safety-reports-manage' });
   const isMobile = useIsMobile();
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
+  const [allReports, setAllReports] = useState<SafetyReport[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(true);
 
   const canManageAll = hasPermission('safety-reports-manage');
 
-  const reportsQuery = useMemoFirebase(
-    () => {
-        if (!firestore || !tenantId) return null;
-        return query(collection(firestore, `tenants/${tenantId}/safety-reports`), orderBy('submittedAt', 'desc'));
-    },
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    let cancelled = false;
 
-  const orgsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
-    [firestore, tenantId]
-  );
+    const load = async () => {
+      if (!tenantId) {
+        setIsLoadingReports(false);
+        return;
+      }
 
-  const { data: allReports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
-  const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+      setIsLoadingReports(true);
+      try {
+        const response = await fetch('/api/safety-reports', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled) {
+          setAllReports(payload.reports ?? []);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingReports(false);
+      }
+    };
 
-  const isLoading = isLoadingReports || isLoadingOrgs;
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
+  const isLoading = isLoadingReports;
 
   const renderOrgCard = (orgId: string | 'internal') => {
     const filteredReports = (allReports || []).filter(r => 

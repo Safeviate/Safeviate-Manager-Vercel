@@ -1,16 +1,14 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { doc, updateDoc, collection, addDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { SecureSignaturePad } from '@/components/secure-signature-pad';
-import { useFirestore, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, PenTool, Upload, FileText, ImageIcon, Loader2 } from 'lucide-react';
+import { ShieldCheck, PenTool, Link2, FileText, ImageIcon } from 'lucide-react';
 import type { TaskCard } from '@/types/workpack';
 
 interface TaskCardItemProps {
@@ -19,45 +17,50 @@ interface TaskCardItemProps {
 }
 
 export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
-  const firestore = useFirestore();
-  const { tenantId } = useUserProfile();
-  const { user: authUser } = useUser();
+  const { tenantId, userProfile } = useUserProfile();
   const { toast } = useToast();
-  const { uploadFile, isUploading } = useStorageUpload();
   
   const [isSigning, setIsSigning] = useState(false);
   const [signMode, setSignMode] = useState<'MECHANIC' | 'INSPECTOR'>('MECHANIC');
+  const [attachmentUrl, setAttachmentUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isPendingInspection = taskCard.isCompleted && taskCard.requiresInspector && !taskCard.isInspected;
   const isFullyClosed = taskCard.isCompleted && (!taskCard.requiresInspector || taskCard.isInspected);
 
   const handleSignOff = async (signatureBase64: string, credentials: { pin: string }) => {
-    if (!firestore || !tenantId) return;
-    
-    const signaturesRef = collection(firestore, `tenants/${tenantId}/workpacks/${workpackId}/taskCards/${taskCard.id}/signatures`);
-    const tcRef = doc(firestore, `tenants/${tenantId}/workpacks/${workpackId}/taskCards`, taskCard.id);
-
     try {
-      await addDoc(signaturesRef, {
+      const storedTcs = localStorage.getItem('safeviate.maintenance-task-cards');
+      const currentTcs = storedTcs ? JSON.parse(storedTcs) as TaskCard[] : [];
+      
+      const storedSignatures = localStorage.getItem('safeviate.maintenance-task-card-signatures');
+      const currentSignatures = storedSignatures ? JSON.parse(storedSignatures) : [];
+
+      const newSignature = {
+        id: crypto.randomUUID(),
+        taskCardId: taskCard.id,
         signatureImage: signatureBase64,
-        signatoryUserId: authUser?.uid ?? 'unknown',
-        role: signMode, 
-        timestamp: serverTimestamp(),
+        signatoryUserId: userProfile?.id ?? 'unknown',
+        role: signMode,
+        timestamp: new Date().toISOString(),
         authMethod: 'PIN_VALIDATED'
+      };
+
+      localStorage.setItem('safeviate.maintenance-task-card-signatures', JSON.stringify([...currentSignatures, newSignature]));
+
+      const nextTcs = currentTcs.map(tc => {
+          if (tc.id === taskCard.id) {
+              if (signMode === 'MECHANIC') {
+                  return { ...tc, isCompleted: true, completedAt: new Date().toISOString() };
+              } else if (signMode === 'INSPECTOR') {
+                  return { ...tc, isInspected: true, inspectedAt: new Date().toISOString() };
+              }
+          }
+          return tc;
       });
 
-      if (signMode === 'MECHANIC') {
-        await updateDoc(tcRef, {
-          isCompleted: true,
-          completedAt: serverTimestamp()
-        });
-      } else if (signMode === 'INSPECTOR') {
-        await updateDoc(tcRef, {
-          isInspected: true,
-          inspectedAt: serverTimestamp()
-        });
-      }
+      localStorage.setItem('safeviate.maintenance-task-cards', JSON.stringify(nextTcs));
+      window.dispatchEvent(new Event('safeviate-maintenance-task-cards-updated'));
 
       toast({ title: 'Task Certified', description: `Your ${signMode.toLowerCase()} signature was secured.` });
       setIsSigning(false);
@@ -66,29 +69,43 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !tenantId || !firestore) return;
+  const handleAddAttachmentUrl = () => {
+    const url = attachmentUrl.trim();
+    if (!url) {
+      toast({ title: 'No URL Provided', description: 'Paste an evidence link first.', variant: 'destructive' });
+      return;
+    }
 
     try {
-      const ext = file.name.split('.').pop();
-      const path = `tenants/${tenantId}/workpacks/${workpackId}/media/${taskCard.id}_${Date.now()}.${ext}`;
-      const downloadURL = await uploadFile(file, path);
+      const storedTcs = localStorage.getItem('safeviate.maintenance-task-cards');
+      const currentTcs = storedTcs ? JSON.parse(storedTcs) as TaskCard[] : [];
       
-      const tcRef = doc(firestore, `tenants/${tenantId}/workpacks/${workpackId}/taskCards`, taskCard.id);
-      await updateDoc(tcRef, {
-        attachments: arrayUnion({
-          id: Date.now().toString(),
-          url: downloadURL,
-          name: file.name,
-          type: file.type.includes('pdf') ? 'PDF' : 'IMAGE'
-        })
+      const nextTcs = currentTcs.map(tc => {
+          if (tc.id === taskCard.id) {
+              const currentAttachments = tc.attachments || [];
+              return {
+                  ...tc,
+                  attachments: [
+                      ...currentAttachments,
+                      {
+                        id: Date.now().toString(),
+                        url,
+                        name: 'Evidence link',
+                        type: 'LINK' as const
+                      }
+                  ]
+              };
+          }
+          return tc;
       });
 
-      toast({ title: 'Attachment Added', description: 'Evidence was securely attached.' });
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      localStorage.setItem('safeviate.maintenance-task-cards', JSON.stringify(nextTcs));
+      window.dispatchEvent(new Event('safeviate-maintenance-task-cards-updated'));
+
+      toast({ title: 'Attachment Added', description: 'The evidence link was attached.' });
+      setAttachmentUrl('');
     } catch (e: any) {
-      toast({ title: 'Upload Failed', description: e.message, variant: 'destructive' });
+      toast({ title: 'Attachment Failed', description: e.message, variant: 'destructive' });
     }
   };
 
@@ -165,7 +182,7 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
               onClick={() => { setSignMode('INSPECTOR'); setIsSigning(true); }}
               className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-xs font-black uppercase shadow-md gap-2"
             >
-              <ShieldCheck className="h-4 w-4" /> Inspector Sign-Off
+               <ShieldCheck className="h-4 w-4" /> Inspector Sign-Off
             </Button>
           )}
         </div>
@@ -189,11 +206,18 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
       {/* Attachments Actions */}
       {!isFullyClosed && !isSigning && (
         <CardFooter className="px-4 md:px-6 py-3 bg-muted/10 border-t flex justify-end">
-           <input type="file" ref={fileInputRef} className="hidden" accept="image/*,.pdf" onChange={handleFileUpload} />
-           <Button variant="outline" size="sm" className="text-xs font-bold gap-2" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
-             {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-             Attach Evidence
-           </Button>
+           <div className="flex w-full gap-2">
+             <Input
+               value={attachmentUrl}
+               onChange={(e) => setAttachmentUrl(e.target.value)}
+               placeholder="Paste evidence URL"
+               className="h-9 text-xs"
+             />
+             <Button variant="outline" size="sm" className="text-xs font-bold gap-2" onClick={handleAddAttachmentUrl}>
+                <Link2 className="h-3 w-3" />
+                Attach Link
+             </Button>
+           </div>
         </CardFooter>
       )}
       

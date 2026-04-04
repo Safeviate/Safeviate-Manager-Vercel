@@ -9,10 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Settings2 } from 'lucide-react';
 import type { Aircraft } from '@/types/aircraft';
-import { doc } from 'firebase/firestore';
-import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
@@ -21,47 +18,64 @@ interface AircraftTableProps {
   tenantId: string;
 }
 
-export function AircraftTable({ aircraft, tenantId }: AircraftTableProps) {
-  const firestore = useFirestore();
+export function AircraftTable({ aircraft }: AircraftTableProps) {
   const { toast } = useToast();
 
   const handleDelete = (id: string, tail: string) => {
-    if (!firestore) return;
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, id);
-    deleteDocumentNonBlocking(aircraftRef);
-    toast({ title: 'Aircraft Deleted', description: `${tail} has been removed from the fleet.` });
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        if (!stored) return;
+        
+        const aircrafts = JSON.parse(stored) as Aircraft[];
+        const nextAircrafts = aircrafts.filter(a => a.id !== id);
+        
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        
+        toast({ title: 'Aircraft Removed', description: `${tail} has been permanently deleted from the local inventory.` });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Failed to remove aircraft from storage.' });
+    }
   };
 
   if (aircraft.length === 0) {
-    return <div className="text-center p-8 text-muted-foreground italic">No aircraft registered in the fleet.</div>;
+    return (
+        <div className="text-center p-20 bg-muted/5 rounded-3xl border-2 border-dashed m-8">
+            <p className="text-sm font-black uppercase tracking-widest text-muted-foreground opacity-50 italic">No aircraft registered in the fleet inventory.</p>
+        </div>
+    );
   }
 
   return (
     <Table>
-      <TableHeader>
+      <TableHeader className="bg-muted/30 sticky top-0 z-10">
         <TableRow>
-          <TableHead className="text-xs uppercase font-bold">Tail Number</TableHead>
-          <TableHead className="text-xs uppercase font-bold">Make/Model</TableHead>
-          <TableHead className="text-xs uppercase font-bold text-right">Hobbs</TableHead>
-          <TableHead className="text-xs uppercase font-bold text-right">Tacho</TableHead>
-          <TableHead className="text-xs uppercase font-bold">Status</TableHead>
-          <TableHead className="text-right text-xs uppercase font-bold">Actions</TableHead>
+          <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Tail Number</TableHead>
+          <TableHead className="text-[10px] uppercase font-black tracking-widest">Manufacturer / Model</TableHead>
+          <TableHead className="text-[10px] uppercase font-black tracking-widest text-right">Current Hobbs</TableHead>
+          <TableHead className="text-[10px] uppercase font-black tracking-widest text-right">Current Tacho</TableHead>
+          <TableHead className="text-[10px] uppercase font-black tracking-widest">Status</TableHead>
+          <TableHead className="text-right text-[10px] uppercase font-black tracking-widest pr-8">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {aircraft.map((ac) => (
-          <TableRow key={ac.id}>
-            <TableCell className="font-bold text-primary">{ac.tailNumber}</TableCell>
-            <TableCell className="text-xs">{ac.make} {ac.model}</TableCell>
-            <TableCell className="text-right font-mono text-xs">{ac.currentHobbs?.toFixed(1) || '0.0'}</TableCell>
-            <TableCell className="text-right font-mono text-xs">{ac.currentTacho?.toFixed(1) || '0.0'}</TableCell>
-            <TableCell><Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]">Airworthy</Badge></TableCell>
-            <TableCell className="text-right">
+          <TableRow key={ac.id} className="hover:bg-muted/5 transition-colors group">
+            <TableCell className="font-black text-primary px-8 text-sm uppercase tracking-tight">{ac.tailNumber}</TableCell>
+            <TableCell className="text-xs font-black uppercase tracking-tight opacity-70">{ac.make} {ac.model}</TableCell>
+            <TableCell className="text-right font-mono text-[11px] font-black">{ac.currentHobbs?.toFixed(1) || '0.0'}</TableCell>
+            <TableCell className="text-right font-mono text-[11px] font-black">{ac.currentTacho?.toFixed(1) || '0.0'}</TableCell>
+            <TableCell>
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-black uppercase h-7 px-4 shadow-sm">
+                    Airworthy
+                </Badge>
+            </TableCell>
+            <TableCell className="text-right pr-8">
               <div className="flex justify-end gap-2">
                 <ViewActionButton href={`/assets/aircraft/${ac.id}`} />
                 <DeleteActionButton
-                  title="Delete Aircraft?"
-                  description={`This will permanently remove ${ac.tailNumber} and all its technical records.`}
+                  title="Remove Aircraft?"
+                  description={`This will permanently remove ${ac.tailNumber} and all its associated technical records from the local system.`}
                   onDelete={() => handleDelete(ac.id, ac.tailNumber)}
                   srLabel="Delete aircraft"
                 />

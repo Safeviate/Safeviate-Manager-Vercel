@@ -1,8 +1,6 @@
 'use client';
 
-import { use } from 'react';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { use, useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -18,16 +16,26 @@ interface StudentDetailPageProps {
 
 export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   const resolvedParams = use(params);
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const studentId = resolvedParams.reportId;
 
-  const studentRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/students`, studentId) : null),
-    [firestore, tenantId, studentId]
-  );
-  
-  const { data: student, isLoading, error } = useDoc<PilotProfile>(studentRef);
+  const [student, setStudent] = useState<PilotProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+        const storedStudents = localStorage.getItem('safeviate.students');
+        if (storedStudents) {
+            const arr = JSON.parse(storedStudents);
+            const found = arr.find((s: any) => s.id === studentId);
+            setStudent(found);
+        }
+    } catch (e) {
+        console.error('Failed to load student', e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [studentId]);
 
   if (isLoading) {
     return (
@@ -38,9 +46,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
     );
   }
   
-  if (error) {
-      return <div className="max-w-[1200px] mx-auto w-full text-center py-10 text-destructive">Error: {error.message}</div>
-  }
+
   
   if (!student) {
       return <div className="max-w-[1200px] mx-auto w-full text-center py-10">Student not found.</div>

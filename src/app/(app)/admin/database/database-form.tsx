@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { doc } from 'firebase/firestore';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,8 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useFirestore } from '@/firebase';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { menuConfig } from '@/lib/menu-config';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -19,7 +16,6 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
 export function DatabaseForm() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   
   // Menu visibility state for Safeviate (default all enabled)
@@ -36,6 +32,20 @@ export function DatabaseForm() {
   }, []);
 
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(allHrefs);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('safeviate.tenant-config');
+    if (stored) {
+        try {
+            const config = JSON.parse(stored);
+            if (config.enabledMenus) {
+                setEnabledHrefs(new Set(config.enabledMenus));
+            }
+        } catch (e) {
+            console.error("Failed to parse tenant config", e);
+        }
+    }
+  }, []);
 
   const toggleMenu = (href: string, subHrefs?: string[]) => {
     const newEnabled = new Set(enabledHrefs);
@@ -65,84 +75,76 @@ export function DatabaseForm() {
   };
 
   const handleCreateTenant = () => {
-    if (!firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Firestore is not initialized.',
-      });
-      return;
-    }
     try {
       const tenantId = 'safeviate';
-      const tenantRef = doc(firestore, 'tenants', tenantId);
+      const config = {
+        id: tenantId,
+        name: 'Safeviate',
+        enabledMenus: Array.from(enabledHrefs),
+      };
 
-      setDocumentNonBlocking(
-        tenantRef,
-        {
-          id: tenantId,
-          name: 'Safeviate',
-          enabledMenus: Array.from(enabledHrefs),
-        },
-        { merge: true }
-      );
+      localStorage.setItem('safeviate.tenant-config', JSON.stringify(config));
+      window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
 
       toast({
         title: 'Setup Updated',
-        description: 'Organization branding and menu configurations have been saved.',
+        description: 'Organization branding and menu configurations have been saved locally.',
       });
     } catch (e: any) {
       console.error(e);
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
-        description:
-          e.message || 'There was a problem with the database operation.',
+        description: e.message || 'There was a problem saving the configuration.',
       });
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Permission Select</CardTitle>
-        <CardDescription>
+    <Card className="rounded-3xl border-2 shadow-none overflow-hidden">
+      <CardHeader className="bg-muted/5 border-b p-8">
+        <CardTitle className="text-2xl font-black uppercase tracking-tight">Permission Management</CardTitle>
+        <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Manage the primary organization profile and control which functional modules are enabled for your portal.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-4">
-            <h3 className="text-lg font-medium font-headline">Module Access Control</h3>
-            <p className="text-sm text-muted-foreground">Select the sections of the application that should be visible to your organization members.</p>
+      <CardContent className="space-y-8 p-8">
+        <div className="space-y-6">
+            <div className="space-y-1">
+                <h3 className="text-sm font-black uppercase tracking-tight">Module Access Control</h3>
+                <p className="text-xs text-muted-foreground">Select the sections of the application that should be visible to your organization members.</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {menuConfig.map((menu) => {
                     const subHrefs = menu.subItems?.map(s => s.href) || [];
                     const isEnabled = enabledHrefs.has(menu.href);
                     
                     return (
-                        <div key={menu.href} className="space-y-2 p-3 border rounded-md bg-muted/5">
-                            <div className="flex items-center space-x-2">
+                        <div key={menu.href} className="space-y-4 p-4 border-2 rounded-2xl bg-muted/5 transition-all hover:bg-muted/10">
+                            <div className="flex items-center space-x-3">
                                 <Checkbox 
                                     id={`safe-menu-${menu.href}`} 
                                     checked={isEnabled}
                                     onCheckedChange={() => toggleMenu(menu.href, subHrefs)}
+                                    className="h-5 w-5 border-2 rounded-md"
                                 />
-                                <Label htmlFor={`safe-menu-${menu.href}`} className="font-bold cursor-pointer flex items-center gap-2">
+                                <Label htmlFor={`safe-menu-${menu.href}`} className="text-xs font-black uppercase tracking-widest cursor-pointer flex items-center gap-2">
                                     <menu.icon className="h-4 w-4 text-primary" />
                                     {menu.label}
                                 </Label>
                             </div>
                             
                             {menu.subItems && (
-                                <div className="pl-6 space-y-1 pt-1 border-l ml-2">
+                                <div className="pl-8 space-y-2 pt-1 border-l-2 ml-2.5">
                                     {menu.subItems.map((sub) => (
-                                        <div key={sub.href} className="flex items-center space-x-2">
+                                        <div key={sub.href} className="flex items-center space-x-3">
                                             <Checkbox 
                                                 id={`safe-sub-${sub.href}`} 
                                                 checked={enabledHrefs.has(sub.href)}
                                                 onCheckedChange={() => toggleSubMenu(menu.href, sub.href)}
+                                                className="h-4 w-4 border-2 rounded-sm"
                                             />
-                                            <Label htmlFor={`safe-sub-${sub.href}`} className="text-xs cursor-pointer">
+                                            <Label htmlFor={`safe-sub-${sub.href}`} className="text-[11px] font-bold uppercase tracking-tight cursor-pointer text-muted-foreground">
                                                 {sub.label}
                                             </Label>
                                         </div>
@@ -157,8 +159,8 @@ export function DatabaseForm() {
         
         <Separator />
         
-        <div className="flex justify-end">
-            <Button onClick={handleCreateTenant} size="lg">Save Permission Selections</Button>
+        <div className="flex justify-end pt-4">
+            <Button onClick={handleCreateTenant} className="h-12 px-12 text-[10px] font-black uppercase shadow-lg">Save Authorization Pattern</Button>
         </div>
       </CardContent>
     </Card>

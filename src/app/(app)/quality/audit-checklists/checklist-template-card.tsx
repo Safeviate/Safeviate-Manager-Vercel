@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import { FileText, Pencil, PlayCircle, Trash2, MoreHorizontal, ChevronsUpDown } from 'lucide-react';
 import { NewChecklistDialog } from './new-checklist-dialog';
 import { StartAuditDialog } from './start-audit-dialog';
-import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -21,7 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 interface ChecklistTemplateCardProps {
-    category: string; // Changed from departmentName for consistency with audit-checklists-manager
+    category: string;
     templates: QualityAuditChecklistTemplate[];
     tenantId: string;
     departments: Department[];
@@ -29,23 +27,26 @@ interface ChecklistTemplateCardProps {
 }
 
 export function ChecklistTemplateCard({ category, templates, tenantId, departments, personnel }: ChecklistTemplateCardProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const isMobile = useIsMobile();
 
     const handleDelete = (templateId: string, templateTitle: string) => {
-        if (!firestore || !tenantId) {
-            toast({ variant: 'destructive', title: 'Unable to delete', description: 'Tenant context is not ready yet.' });
-            return;
+        try {
+            const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
+            const currentTemplates = storedTemplates ? JSON.parse(storedTemplates) as QualityAuditChecklistTemplate[] : [];
+            const nextTemplates = currentTemplates.filter(t => t.id !== templateId);
+            localStorage.setItem('safeviate.quality-audit-templates', JSON.stringify(nextTemplates));
+            
+            window.dispatchEvent(new Event('safeviate-quality-templates-updated'));
+            toast({ title: "Template Deleted", description: `"${templateTitle}" has been removed.`});
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
         }
-        const templateRef = doc(firestore, `tenants/${tenantId}/quality-audit-templates`, templateId);
-        deleteDocumentNonBlocking(templateRef);
-        toast({ title: "Template Deleted", description: `"${templateTitle}" has been removed.`});
     }
 
   return (
     <AccordionItem value={category}>
-      <AccordionTrigger className="text-xl font-semibold">{category}</AccordionTrigger> {/* Removed diagnostic onClick and display */}
+      <AccordionTrigger className="text-xl font-semibold">{category}</AccordionTrigger>
       <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {templates.map((template) => (
           <Card key={template.id} className="flex flex-col">

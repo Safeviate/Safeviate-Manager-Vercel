@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -16,24 +14,34 @@ interface StudentLogbookProps {
 }
 
 export function StudentLogbook({ studentId, tenantId }: StudentLogbookProps) {
-    const firestore = useFirestore();
+    const [rawBookings, setRawBookings] = useState<Booking[]>([]);
+    const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+    const [isLoadingAircrafts, setIsLoadingAircrafts] = useState(true);
 
-    const bookingsQuery = useMemoFirebase(
-        () => (firestore ? query(
-            collection(firestore, `tenants/${tenantId}/bookings`),
-            where('studentId', '==', studentId),
-            where('status', '==', 'Completed')
-        ) : null),
-        [firestore, tenantId, studentId]
-    );
+    useEffect(() => {
+        try {
+            const bks = localStorage.getItem('safeviate.bookings');
+            if (bks) {
+                setRawBookings((JSON.parse(bks) as Booking[]).filter(b => b.studentId === studentId && b.status === 'Completed'));
+            }
+        } catch {
+            // ignore
+        } finally {
+            setIsLoadingBookings(false);
+        }
+    }, [tenantId, studentId]);
 
-    const aircraftQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
-        [firestore, tenantId]
-    );
-
-    const { data: rawBookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsQuery);
-    const { data: aircrafts, isLoading: isLoadingAircrafts } = useCollection<Aircraft>(aircraftQuery);
+    useEffect(() => {
+        try {
+            const acs = localStorage.getItem('safeviate.aircrafts');
+            if (acs) setAircrafts(JSON.parse(acs) as Aircraft[]);
+        } catch {
+            // ignore
+        } finally {
+            setIsLoadingAircrafts(false);
+        }
+    }, [tenantId]);
 
     const aircraftMap = useMemo(() => {
         if (!aircrafts) return new Map();

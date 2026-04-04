@@ -1,8 +1,6 @@
 'use client';
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,8 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { recalculateNavlogLegs, calculateRouteTotals, DEFAULT_FLIGHT_PARAMS } from '@/lib/flight-planner';
 import type { FlightParams } from '@/lib/flight-planner';
-import { collection } from 'firebase/firestore';
-import { useCollection, useMemoFirebase } from '@/firebase';
 import type { TrainingRoute } from '@/types/booking';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Library, Search } from 'lucide-react';
@@ -60,7 +56,6 @@ function InlineInput({
 }
 
 export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightChange }: NavlogBuilderProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const legs = booking.navlog?.legs || [];
 
@@ -77,19 +72,35 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [searchRoute, setSearchRoute] = useState('');
 
-    const routesQuery = useMemoFirebase(() => (
-        firestore && tenantId ? collection(firestore, `tenants/${tenantId}/trainingRoutes`) : null
-    ), [firestore, tenantId]);
-    const { data: trainingRoutes } = useCollection<TrainingRoute>(routesQuery);
+    const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const loadRoutes = async () => {
+            try {
+                const response = await fetch('/api/training-routes', { cache: 'no-store' });
+                const payload = await response.json();
+                if (!cancelled) setTrainingRoutes(payload?.routes ?? []);
+            } catch {
+                if (!cancelled) setTrainingRoutes([]);
+            }
+        };
+        void loadRoutes();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleImportRoute = async (route: TrainingRoute) => {
-        if (!firestore) return;
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         try {
-            await updateDoc(bookingRef, {
-                'navlog.legs': route.legs,
-                'navlog.hazards': route.hazards
+            const response = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking: { ...booking, navlog: { ...(booking.navlog || {}), legs: route.legs, hazards: route.hazards } } }),
             });
+            if (!response.ok) {
+                throw new Error((await response.json())?.error || 'Failed to import route.');
+            }
             setIsImportOpen(false);
             toast({ title: 'Route Imported', description: route.name });
         } catch (e: any) {
@@ -142,14 +153,14 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
     };
 
     const handleRemoveLeg = async (legId: string) => {
-        if (!firestore) return;
         const updatedLegs = legs.filter((l) => l.id !== legId);
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
-
         try {
-            await updateDoc(bookingRef, {
-                'navlog.legs': updatedLegs,
+            const response = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking: { ...booking, navlog: { ...(booking.navlog || {}), legs: updatedLegs } } }),
             });
+            if (!response.ok) throw new Error((await response.json())?.error || 'Update failed');
             toast({ title: 'Leg Removed' });
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
@@ -157,28 +168,40 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
     };
 
     const handleUpdateLeg = useCallback(async (legId: string, updates: Partial<NavlogLeg>) => {
-        if (!firestore) return;
         const updatedLegs = legs.map((l) => (l.id === legId ? { ...l, ...updates } : l));
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         try {
-            await updateDoc(bookingRef, { 'navlog.legs': updatedLegs });
+            const response = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking: { ...booking, navlog: { ...(booking.navlog || {}), legs: updatedLegs } } }),
+            });
+            if (!response.ok) throw new Error((await response.json())?.error || 'Update failed');
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
         }
-    }, [firestore, legs, tenantId, booking.id, toast]);
+    }, [legs, booking, toast]);
 
     const handleSaveParams = async () => {
-        if (!firestore) return;
-        const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, booking.id);
         try {
-            await updateDoc(bookingRef, {
-                'navlog.globalTas': params.tas,
-                'navlog.globalWindDirection': params.windDirection,
-                'navlog.globalWindSpeed': params.windSpeed,
-                'navlog.globalFuelBurn': params.fuelBurnPerHour,
-                'navlog.globalFuelBurnUnit': fuelUnit,
-                'navlog.globalFuelOnBoard': params.fuelOnBoard,
+            const response = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        navlog: {
+                            ...(booking.navlog || {}),
+                            globalTas: params.tas,
+                            globalWindDirection: params.windDirection,
+                            globalWindSpeed: params.windSpeed,
+                            globalFuelBurn: params.fuelBurnPerHour,
+                            globalFuelBurnUnit: fuelUnit,
+                            globalFuelOnBoard: params.fuelOnBoard,
+                        },
+                    },
+                }),
             });
+            if (!response.ok) throw new Error((await response.json())?.error || 'Save failed');
             toast({ title: 'Flight Parameters Saved' });
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Save Failed', description: e.message });

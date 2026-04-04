@@ -6,8 +6,6 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -578,14 +576,11 @@ export interface ImplementationFormHandle {
 }
 
 export const ImplementationForm = forwardRef<ImplementationFormHandle, ImplementationFormProps>(({ moc, tenantId, personnel }, ref) => {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const { matrixTheme } = useTheme();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const formKey = useMemo(() => moc.id || uuidv4(), [moc.id]);
-
-    const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
-    const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
+    const riskMatrixSettings = null;
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -598,10 +593,24 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
     });
 
     const onSubmit = (values: FormValues) => {
-        if (!firestore) return;
-        const mocRef = doc(firestore, 'tenants', tenantId, 'management-of-change', moc.id);
-        updateDocumentNonBlocking(mocRef, { phases: mapDatesToStrings(values.phases) });
-        toast({ title: 'Strategy Saved', description: 'The implementation plan has been synchronised.' });
+        void fetch(`/api/management-of-change?mocId=${encodeURIComponent(moc.id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ moc: { ...moc, phases: mapDatesToStrings(values.phases) } }),
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error((await response.json())?.error || 'Failed to save strategy.');
+                }
+                toast({ title: 'Strategy Saved', description: 'The implementation plan has been synchronised.' });
+            })
+            .catch((error: unknown) => {
+                toast({
+                    variant: 'destructive',
+                    title: 'Save Failed',
+                    description: error instanceof Error ? error.message : 'Failed to save strategy.',
+                });
+            });
     };
 
     const handleAnalyze = async () => {

@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -45,14 +43,20 @@ interface AuditActionsProps {
 }
 
 function AuditActions({ audit, tenantId }: AuditActionsProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
 
     const handleDelete = () => {
-        if (!firestore) return;
-        const auditRef = doc(firestore, `tenants/${tenantId}/quality-audits`, audit.id);
-        deleteDocumentNonBlocking(auditRef);
-        toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} has been removed.`});
+        try {
+            const storedAudits = localStorage.getItem('safeviate.quality-audits');
+            const currentAudits = storedAudits ? JSON.parse(storedAudits) : [];
+            const nextAudits = currentAudits.filter((a: any) => a.id !== audit.id);
+            localStorage.setItem('safeviate.quality-audits', JSON.stringify(nextAudits));
+            
+            window.dispatchEvent(new Event('safeviate-quality-updated'));
+            toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} has been removed.`});
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
     }
     
     return (
@@ -128,42 +132,45 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
 }
 
 export default function AuditsPage() {
-    const firestore = useFirestore();
     const { tenantId } = useUserProfile();
     const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-audits-view-all' });
     const isMobile = useIsMobile();
     const [activeOrgTab, setActiveOrgTab] = useState('internal');
     const [activeStatusTab, setActiveStatusTab] = useState('active');
 
-    const auditsQuery = useMemoFirebase(
-        () => {
-            if (!firestore || !tenantId) return null;
-            return query(collection(firestore, `tenants/${tenantId}/quality-audits`), orderBy('auditDate', 'desc'));
-        },
-        [firestore, tenantId]
-    );
+    const [audits, setAudits] = useState<QualityAudit[]>([]);
+    const [personnel, setPersonnel] = useState<Personnel[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const personnelQuery = useMemoFirebase(
-        () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
-        [firestore, tenantId]
-    );
-    const departmentsQuery = useMemoFirebase(
-        () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/departments`) : null),
-        [firestore, tenantId]
-    );
-    const orgsQuery = useMemoFirebase(
-        () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/external-organizations`) : null),
-        [firestore, tenantId]
-    );
+    const loadData = () => {
+        try {
+            const storedAudits = localStorage.getItem('safeviate.quality-audits');
+            if (storedAudits) setAudits(JSON.parse(storedAudits));
+            
+            const storedPersonnel = localStorage.getItem('safeviate.personnel');
+            if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
+            
+            const storedDepts = localStorage.getItem('safeviate.departments');
+            if (storedDepts) setDepartments(JSON.parse(storedDepts));
+            
+            const storedOrgs = localStorage.getItem('safeviate.external-organizations');
+            if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+        } catch (e) {
+            console.error('Failed to load local quality data', e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
-    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-    const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
-    const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+    useEffect(() => {
+        loadData();
+        window.addEventListener('safeviate-quality-updated', loadData);
+        return () => window.removeEventListener('safeviate-quality-updated', loadData);
+    }, []);
 
     const showTabs = useTabVisibility('audits', shouldShowOrganizationTabs);
-
-    const isLoading = isLoadingAudits || isLoadingPersonnel || isLoadingDepts || isLoadingOrgs;
 
     const enrichedAudits = useMemo((): EnrichedAudit[] => {
         if (!audits || !personnel || !departments || !organizations) return [];

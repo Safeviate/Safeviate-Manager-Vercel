@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { doc, collection, query, getDocs, where, writeBatch } from 'firebase/firestore';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Input } from '@/components/ui/input';
@@ -34,28 +32,38 @@ const DEFAULT_TOPICS = [
 ];
 
 export default function ExamTopicsPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const tenantId = 'safeviate';
   
+  const [settings, setSettings] = useState<ExamTopicsSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [newTopic, setNewTopic] = useState('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const settingsRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
-    [firestore, tenantId]
-  );
-
-  const { data: settings, isLoading } = useDoc<ExamTopicsSettings>(settingsRef);
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const stored = localStorage.getItem('safeviate.exam-topics');
+        if (stored) {
+            setSettings(JSON.parse(stored));
+        } else {
+            const def = { id: 'exam-topics', topics: DEFAULT_TOPICS };
+            localStorage.setItem('safeviate.exam-topics', JSON.stringify(def));
+            setSettings(def);
+        }
+    } catch (e) {
+        console.error("Failed to load exam topics", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!isLoading && !settings && firestore && settingsRef) {
-        // Seed initial topics if none exist
-        setDocumentNonBlocking(settingsRef, { id: 'exam-topics', topics: DEFAULT_TOPICS }, { merge: false });
-    }
-  }, [isLoading, settings, firestore, settingsRef]);
+    loadData();
+    window.addEventListener('safeviate-exam-topics-updated', loadData);
+    return () => window.removeEventListener('safeviate-exam-topics-updated', loadData);
+  }, [loadData]);
 
   const handleAddTopic = () => {
     if (!newTopic.trim()) return;
@@ -65,19 +73,19 @@ export default function ExamTopicsPage() {
     }
 
     const updatedTopics = [...(settings?.topics || []), newTopic.trim()].sort();
-    if (settingsRef) {
-        setDocumentNonBlocking(settingsRef, { topics: updatedTopics }, { merge: true });
-        setNewTopic('');
-        toast({ title: 'Topic Added' });
-    }
+    const nextSettings = { id: 'exam-topics', topics: updatedTopics };
+    localStorage.setItem('safeviate.exam-topics', JSON.stringify(nextSettings));
+    window.dispatchEvent(new Event('safeviate-exam-topics-updated'));
+    setNewTopic('');
+    toast({ title: 'Topic Added' });
   };
 
-  const handleDeleteTopic = async (topicToDelete: string) => {
+  const handleDeleteTopic = (topicToDelete: string) => {
     const updatedTopics = (settings?.topics || []).filter(t => t !== topicToDelete);
-    if (settingsRef) {
-        setDocumentNonBlocking(settingsRef, { topics: updatedTopics }, { merge: true });
-        toast({ title: 'Topic Removed' });
-    }
+    const nextSettings = { id: 'exam-topics', topics: updatedTopics };
+    localStorage.setItem('safeviate.exam-topics', JSON.stringify(nextSettings));
+    window.dispatchEvent(new Event('safeviate-exam-topics-updated'));
+    toast({ title: 'Topic Removed' });
   };
 
   const handleStartEdit = (index: number, value: string) => {
@@ -86,7 +94,7 @@ export default function ExamTopicsPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (editingIndex === null || !settings || !settingsRef || !firestore) return;
+    if (editingIndex === null || !settings) return;
     
     const oldName = settings.topics[editingIndex];
     const newName = editingValue.trim();
@@ -103,24 +111,22 @@ export default function ExamTopicsPage() {
         updatedTopics[editingIndex] = newName;
         updatedTopics.sort();
         
-        // 2. Perform a migration of all questions in the bank
-        const poolCol = collection(firestore, `tenants/${tenantId}/question-pool`);
-        const q = query(poolCol, where('topic', '==', oldName));
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-            const batch = writeBatch(firestore);
-            snapshot.docs.forEach(d => {
-                batch.update(d.ref, { topic: newName });
-            });
-            await batch.commit();
-            toast({ title: 'Database Synced', description: `Updated ${snapshot.size} questions to the new category name.` });
+        // 2. Perform a migration of all questions in the bank (locally)
+        const storedQuestions = localStorage.getItem('safeviate.question-pool');
+        if (storedQuestions) {
+            const questions = JSON.parse(storedQuestions) as any[];
+            const updatedQuestions = questions.map(q => q.topic === oldName ? { ...q, topic: newName } : q);
+            localStorage.setItem('safeviate.question-pool', JSON.stringify(updatedQuestions));
+            window.dispatchEvent(new Event('safeviate-question-pool-updated'));
+            toast({ title: 'Database Synced', description: `Updated local questions to the new category name.` });
         }
 
-        setDocumentNonBlocking(settingsRef, { topics: updatedTopics }, { merge: true });
+        const nextSettings = { id: 'exam-topics', topics: updatedTopics };
+        localStorage.setItem('safeviate.exam-topics', JSON.stringify(nextSettings));
+        window.dispatchEvent(new Event('safeviate-exam-topics-updated'));
+        
         setEditingIndex(null);
         toast({ title: 'Topic Updated' });
-
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
     } finally {

@@ -26,8 +26,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { collection, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
 
@@ -52,7 +50,6 @@ interface AircraftFormProps {
 
 export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: AircraftFormProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
   const isEditing = Boolean(existingAircraft);
 
@@ -71,54 +68,64 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!firestore) return;
-
     try {
-      const payload = {
-        ...values,
-        frameHours: values.currentHobbs,
-        engineHours: values.currentTacho,
-      };
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
+        
+        let nextAircrafts: Aircraft[];
+        if (existingAircraft) {
+            nextAircrafts = aircrafts.map(ac => ac.id === existingAircraft.id ? { 
+                ...ac, 
+                ...values,
+                frameHours: values.currentHobbs,
+                engineHours: values.currentTacho,
+            } : ac);
+        } else {
+            const newAircraft: Aircraft = {
+                ...values,
+                id: values.tailNumber.replace('-', '').toUpperCase() + '-' + crypto.randomUUID().slice(0, 4),
+                frameHours: values.currentHobbs,
+                engineHours: values.currentTacho,
+                components: [],
+                documents: [],
+                initialHobbs: values.currentHobbs,
+                initialTacho: values.currentTacho,
+                organizationId: tenantId,
+            };
+            nextAircrafts = [...aircrafts, newAircraft];
+        }
 
-      if (existingAircraft) {
-        await updateDoc(doc(firestore, `tenants/${tenantId}/aircrafts`, existingAircraft.id), payload);
-        toast({ title: 'Aircraft Updated', description: `${values.tailNumber} has been updated.` });
-        onCancel?.();
-      } else {
-        const colRef = collection(firestore, `tenants/${tenantId}/aircrafts`);
-        await addDoc(colRef, {
-          ...payload,
-          components: [],
-          documents: [],
-        });
-        toast({ title: 'Aircraft Added', description: `${values.tailNumber} has been added to the fleet.` });
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+
+        toast({ title: isEditing ? 'Aircraft Updated' : 'Aircraft Added', description: `${values.tailNumber} has been ${isEditing ? 'updated' : 'added to the fleet'}.` });
         setIsOpen(false);
-        form.reset();
-      }
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+        if (!isEditing) form.reset();
+        onCancel?.();
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save aircraft.' });
     }
   };
 
   const formContent = (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="make" render={({ field }) => (
-            <FormItem><FormLabel>Make</FormLabel><FormControl><Input placeholder="e.g. Cessna" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Manufacturer</FormLabel><FormControl><Input placeholder="e.g. Cessna" className="h-11 font-bold" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="model" render={({ field }) => (
-            <FormItem><FormLabel>Model</FormLabel><FormControl><Input placeholder="e.g. 172" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Model</FormLabel><FormControl><Input placeholder="e.g. 172" className="h-11 font-bold" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="tailNumber" render={({ field }) => (
-            <FormItem><FormLabel>Tail Number</FormLabel><FormControl><Input placeholder="ZS-ABC" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tail Number</FormLabel><FormControl><Input placeholder="ZS-ABC" className="h-11 font-black text-sm uppercase" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="type" render={({ field }) => (
-            <FormItem><FormLabel>Engine Type</FormLabel>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Engine Type</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                <FormControl><SelectTrigger className="h-11 font-bold"><SelectValue /></SelectTrigger></FormControl>
                 <SelectContent>
                   <SelectItem value="Single-Engine">Single-Engine</SelectItem>
                   <SelectItem value="Multi-Engine">Multi-Engine</SelectItem>
@@ -129,27 +136,23 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
         </div>
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="currentHobbs" render={({ field }) => (
-            <FormItem><FormLabel>Current Hobbs</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Hobbs</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="currentTacho" render={({ field }) => (
-            <FormItem><FormLabel>Current Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Tacho</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="tachoAtNext50Inspection" render={({ field }) => (
-            <FormItem><FormLabel>Next 50h Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Next 50h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold text-primary" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="tachoAtNext100Inspection" render={({ field }) => (
-            <FormItem><FormLabel>Next 100h Tacho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Next 100h Tacho Target</FormLabel><FormControl><Input type="number" step="0.1" className="h-11 font-mono font-bold text-primary" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </div>
-        <DialogFooter>
-          {isEditing ? (
-            <Button type="button" variant="outline" onClick={() => onCancel?.()}>Cancel</Button>
-          ) : (
-            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-          )}
-          <Button type="submit">{isEditing ? 'Save Changes' : 'Save Aircraft'}</Button>
+        <DialogFooter className="pt-4">
+          <DialogClose asChild><Button variant="outline" className="h-11 px-8 text-[10px] font-black uppercase border-slate-300">Cancel</Button></DialogClose>
+          <Button type="submit" className="h-11 px-8 text-[10px] font-black uppercase shadow-lg">{isEditing ? 'Save Changes' : 'Register Asset'}</Button>
         </DialogFooter>
       </form>
     </Form>
@@ -160,10 +163,10 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
       return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>{trigger}</DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
-              <DialogTitle>Edit Aircraft</DialogTitle>
-              <DialogDescription>Update the technical details for this aircraft.</DialogDescription>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight">Edit Physical Asset</DialogTitle>
+              <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Update the technical details for this aircraft.</DialogDescription>
             </DialogHeader>
             {formContent}
           </DialogContent>
@@ -177,15 +180,15 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
+        <Button className="h-11 px-8 text-[10px] font-black uppercase shadow-lg gap-2">
+          <PlusCircle className="h-4 w-4" />
           Add Aircraft
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Add New Aircraft</DialogTitle>
-          <DialogDescription>Enter the technical details for the new fleet asset.</DialogDescription>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">Add New Aircraft</DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Enter the technical details for the new fleet asset.</DialogDescription>
         </DialogHeader>
         {formContent}
       </DialogContent>

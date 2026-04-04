@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,8 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
@@ -40,7 +39,6 @@ const componentSchema = z.object({
 type FormValues = z.infer<typeof componentSchema>;
 
 interface ComponentFormProps {
-  tenantId: string;
   aircraftId: string;
   isOpen?: boolean;
   setIsOpen?: (open: boolean) => void;
@@ -48,18 +46,11 @@ interface ComponentFormProps {
   trigger?: React.ReactNode;
 }
 
-export function ComponentForm({ tenantId, aircraftId, isOpen, setIsOpen, existingComponent, trigger }: ComponentFormProps) {
-  const firestore = useFirestore();
+export function ComponentForm({ aircraftId, isOpen, setIsOpen, existingComponent, trigger }: ComponentFormProps) {
   const { toast } = useToast();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const dialogOpen = isOpen ?? internalIsOpen;
   const handleOpenChange = setIsOpen ?? setInternalIsOpen;
-
-  const aircraftRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'tenants', tenantId, 'aircrafts', aircraftId) : null),
-    [firestore, tenantId, aircraftId]
-  );
-  const { data: aircraft } = useDoc<Aircraft>(aircraftRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(componentSchema),
@@ -79,25 +70,40 @@ export function ComponentForm({ tenantId, aircraftId, isOpen, setIsOpen, existin
   });
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore || !aircraftRef || !aircraft) return;
-
-    const nextComponent: AircraftComponent = {
-      ...values,
-      id: existingComponent?.id || uuidv4(),
-    };
-    const updatedComponents = (aircraft.components || []).filter((component) => component.id !== existingComponent?.id);
-    updatedComponents.push(nextComponent);
-
     try {
-      await updateDoc(aircraftRef, { components: updatedComponents });
-      toast({ title: existingComponent ? 'Component Updated' : 'Component Added' });
-      handleOpenChange(false);
-      form.reset();
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        if (!stored) return;
+        const aircrafts = JSON.parse(stored) as Aircraft[];
+        
+        const nextComponent: AircraftComponent = {
+          ...values,
+          id: existingComponent?.id || uuidv4(),
+        };
+
+        const nextAircrafts = aircrafts.map(a => {
+            if (a.id === aircraftId) {
+                const currentComponents = a.components || [];
+                const otherComponents = currentComponents.filter(c => c.id !== nextComponent.id);
+                return { ...a, components: [...otherComponents, nextComponent] };
+            }
+            return a;
+        });
+
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+
+        toast({ 
+            title: existingComponent ? 'Component Updated' : 'Component Registered',
+            description: `The tracking metadata for ${values.name} has been synchronized.`
+        });
+        
+        handleOpenChange(false);
+        form.reset();
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: existingComponent ? 'Update failed' : 'Create failed',
-        description: error instanceof Error ? error.message : 'Unable to save this component.',
+        title: 'Save Failed',
+        description: 'Unable to commit the component update to local storage.',
       });
     }
   };
@@ -105,30 +111,54 @@ export function ComponentForm({ tenantId, aircraftId, isOpen, setIsOpen, existin
   return (
     <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{existingComponent ? 'Edit Component' : 'Track New Component'}</DialogTitle>
-          <DialogDescription>Enter maintenance details for lifecyle tracking.</DialogDescription>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-2 shadow-2xl">
+        <DialogHeader className="p-8 border-b bg-muted/5">
+          <DialogTitle className="text-xl font-black uppercase tracking-tight">
+            {existingComponent ? 'Refine Tracked Entity' : 'Initialize Component Tracking'}
+          </DialogTitle>
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+            Configure life-limit parameters and installation metadata for precision tracking.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Component Name</FormLabel><FormControl><Input placeholder="e.g. Magneto" {...field} /></FormControl><FormMessage /></FormItem> )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="manufacturer" render={({ field }) => ( <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex-1 overflow-auto p-8">
+            <FormField control={form.control} name="name" render={({ field }) => ( 
+                <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest">Part Nomenclature</FormLabel>
+                    <FormControl><Input className="h-10 font-bold" placeholder="e.g. Right Magneto" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem> 
+            )} />
+            
+            <div className="grid grid-cols-2 gap-6">
+              <FormField control={form.control} name="manufacturer" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Manufacturer</FormLabel><FormControl><Input className="h-10 font-bold" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="serialNumber" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Serial Number</FormLabel><FormControl><Input className="h-10 font-mono font-bold" {...field} /></FormControl><FormMessage /></FormItem> )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="partNumber" render={({ field }) => ( <FormItem><FormLabel>Part Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="installDate" render={({ field }) => ( <FormItem><FormLabel>Install Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            
+            <div className="grid grid-cols-2 gap-6">
+              <FormField control={form.control} name="partNumber" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Part Number</FormLabel><FormControl><Input className="h-10 font-mono font-bold" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="installDate" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest">Install Date</FormLabel><FormControl><Input className="h-10 font-bold" type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel>TSN</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel>TSO</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="totalTime" render={({ field }) => ( <FormItem><FormLabel>Total Time</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            
+            <div className="grid grid-cols-3 gap-6 bg-muted/5 p-4 rounded-2xl border-2">
+              <FormField control={form.control} name="tsn" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-center block">TSN (New)</FormLabel><FormControl><Input className="h-10 font-mono font-black text-center" type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="tso" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-center block">TSO (Overhaul)</FormLabel><FormControl><Input className="h-10 font-mono font-black text-center" type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="totalTime" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-center block">Total Accrued</FormLabel><FormControl><Input className="h-10 font-mono font-black text-center border-primary/20 bg-primary/5 text-primary" type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
             </div>
-            <DialogFooter>
-              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">{existingComponent ? 'Save Component' : 'Add Component'}</Button>
+
+            <FormField control={form.control} name="notes" render={({ field }) => ( 
+                <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest">Technical Notes / Service Bulletins</FormLabel>
+                    <FormControl><Textarea className="min-h-[80px] font-medium" placeholder="Record ADs, SBs, or physical condition notes..." {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem> 
+            )} />
+
+            <DialogFooter className="pt-6 border-t mt-4">
+              <DialogClose asChild><Button type="button" variant="outline" className="text-[10px] font-black uppercase">Cancel</Button></DialogClose>
+              <Button type="submit" className="text-[10px] font-black uppercase px-10 shadow-lg">
+                {existingComponent ? 'Update Tracking Data' : 'Initialize Tracking'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

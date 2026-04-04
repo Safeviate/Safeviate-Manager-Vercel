@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useEffect, useMemo, useState } from 'react';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import type { SafetyReport } from '@/types/safety-report';
@@ -31,29 +29,52 @@ export type UnifiedMessage = {
 };
 
 export function useDashboardData() {
-    const firestore = useFirestore();
     const { userProfile, tenantId, isLoading: isProfileLoading } = useUserProfile();
     const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
-    
-    const personnelQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null), [firestore, tenantId]);
-    const instructorsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/instructors`)) : null), [firestore, tenantId]);
-    const studentsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/students`)) : null), [firestore, tenantId]);
-    const privatePilotsQuery = useMemoFirebase(() => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/private-pilots`)) : null), [firestore, tenantId]);
-    
-    const mocsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/management-of-change`)) : null, [firestore, tenantId]);
-    const auditsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/quality-audits`)) : null, [firestore, tenantId]);
-    const reportsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/safety-reports`)) : null, [firestore, tenantId]);
-    const capsQuery = useMemoFirebase(() => firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`)) : null, [firestore, tenantId]);
 
-    const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<any>(personnelQuery);
-    const { data: instructors, isLoading: isLoadingInstructors } = useCollection<any>(instructorsQuery);
-    const { data: students, isLoading: isLoadingStudents } = useCollection<any>(studentsQuery);
-    const { data: privatePilots, isLoading: isLoadingPrivatePilots } = useCollection<any>(privatePilotsQuery);
+    const [personnel, setPersonnel] = useState<any[]>([]);
+    const [instructors, setInstructors] = useState<any[]>([]);
+    const [students, setStudents] = useState<any[]>([]);
+    const [privatePilots, setPrivatePilots] = useState<any[]>([]);
+    const [mocs, setMocs] = useState<ManagementOfChange[]>([]);
+    const [audits, setAudits] = useState<QualityAudit[]>([]);
+    const [reports, setReports] = useState<SafetyReport[]>([]);
+    const [caps, setCaps] = useState<CorrectiveActionPlan[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
-    const { data: mocs, isLoading: isLoadingMocs } = useCollection<ManagementOfChange>(mocsQuery);
-    const { data: audits, isLoading: isLoadingAudits } = useCollection<QualityAudit>(auditsQuery);
-    const { data: reports, isLoading: isLoadingReports } = useCollection<SafetyReport>(reportsQuery);
-    const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
+    useEffect(() => {
+        let cancelled = false;
+
+        const load = async () => {
+            if (!tenantId) {
+                setIsLoadingData(false);
+                return;
+            }
+
+            setIsLoadingData(true);
+            try {
+                const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+                const payload = await response.json();
+                if (!cancelled) {
+                    setPersonnel(payload.personnel ?? []);
+                    setInstructors(payload.instructors ?? []);
+                    setStudents(payload.students ?? []);
+                    setPrivatePilots(payload.privatePilots ?? []);
+                    setMocs(payload.mocs ?? []);
+                    setAudits(payload.audits ?? []);
+                    setReports(payload.reports ?? []);
+                    setCaps(payload.caps ?? []);
+                }
+            } finally {
+                if (!cancelled) setIsLoadingData(false);
+            }
+        };
+
+        void load();
+        return () => {
+            cancelled = true;
+        };
+    }, [tenantId]);
 
     const allUsers = useMemo(() => [
         ...(personnel || []),
@@ -63,7 +84,7 @@ export function useDashboardData() {
     ], [personnel, instructors, students, privatePilots]);
 
     const allTasks = useMemo((): UnifiedTask[] => {
-        if (isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps || !allUsers) return [];
+        if (isLoadingData || !allUsers) return [];
     
         const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
         const tasks: UnifiedTask[] = [];
@@ -132,7 +153,7 @@ export function useDashboardData() {
     
         return tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     
-      }, [mocs, reports, caps, audits, allUsers, isLoadingMocs, isLoadingAudits, isLoadingReports, isLoadingCaps]);
+      }, [mocs, reports, caps, audits, allUsers, isLoadingData]);
 
     const myTasks = useMemo(() => {
         if (!userProfile || !allTasks) return [];
@@ -162,7 +183,7 @@ export function useDashboardData() {
         return messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [reports, userProfile]);
 
-    const isLoading = isProfileLoading || isLoadingTenant || isLoadingPersonnel || isLoadingInstructors || isLoadingStudents || isLoadingPrivatePilots || isLoadingMocs || isLoadingAudits || isLoadingReports || isLoadingCaps;
+    const isLoading = isProfileLoading || isLoadingTenant || isLoadingData;
 
     return {
         myTasks,

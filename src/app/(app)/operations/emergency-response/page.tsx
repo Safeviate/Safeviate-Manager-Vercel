@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Phone, AlertCircle, Megaphone, ScrollText, HelpCircle, FileSearch, Calculator } from 'lucide-react';
@@ -20,17 +18,24 @@ import type { ExternalOrganization } from '@/types/quality';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 
 export default function EmergencyResponsePage() {
-  const firestore = useFirestore();
   const { tenantId } = useUserProfile();
   const { shouldShowOrganizationTabs } = useOrganizationScope();
   const [activeCompanyTab, setActiveCompanyTab] = useState('internal');
   const [activeTab, setActiveTab] = useState('diary');
+  
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
 
-  const organizationsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: organizations } = useCollection<ExternalOrganization>(organizationsQuery);
+  useEffect(() => {
+    // Local storage mock fallback
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('safeviate.external-organizations');
+        if (stored) setOrganizations(JSON.parse(stored));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, []);
 
   const tabs = [
     { value: 'diary', label: 'Live Diary', icon: ScrollText },

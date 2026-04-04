@@ -11,16 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { collection, doc, runTransaction, arrayUnion } from 'firebase/firestore';
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking, OverrideLog, TrainingRoute } from '@/types/booking';
 import { Trash2, ShieldAlert, Lock, Eye, MapIcon } from 'lucide-react';
-import { onSnapshot } from 'firebase/firestore';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
@@ -62,7 +59,6 @@ interface BookingFormProps {
 }
 
 export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, pilots, allBookingsForAircraft, existingBooking, refreshBookings }: BookingFormProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
     const { userProfile } = useUserProfile();
@@ -71,13 +67,21 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     // Fetch Training Routes
     const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
     useEffect(() => {
-        if (!firestore || !tenantId) return;
-        const q = collection(firestore, `tenants/${tenantId}/trainingRoutes`);
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setTrainingRoutes(snapshot.docs.map(d => ({ ...d.data(), id: d.id } as TrainingRoute)));
-        });
-        return unsubscribe;
-    }, [firestore, tenantId]);
+        let cancelled = false;
+        const loadRoutes = async () => {
+            if (!tenantId) return;
+            const response = await fetch('/api/training-routes', { cache: 'no-store' });
+            const payload = await response.json();
+            if (!cancelled) {
+                setTrainingRoutes(payload.routes ?? []);
+            }
+        };
+
+        void loadRoutes();
+        return () => {
+            cancelled = true;
+        };
+    }, [tenantId]);
 
     // PERMISSIONS: Can user edit/save?
     const canManageSchedule = hasPermission('bookings-schedule-manage');
@@ -122,7 +126,6 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const watchStatus = form.watch('status');
 
     const onSubmit = async (data: z.infer<typeof bookingFormSchema>) => {
-        if (!firestore) return;
         if (!canManageSchedule) {
             toast({ variant: 'destructive', title: 'Permission Denied', description: 'You do not have permission to manage the schedule.' });
             return;
@@ -222,33 +225,25 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 reason: reason,
                 timestamp: new Date().toISOString()
             };
-            bookingData.overrides = arrayUnion(log);
+            const currentOverrides = Array.isArray(existingBooking?.overrides) ? existingBooking?.overrides : [];
+            bookingData.overrides = [...currentOverrides, log];
         }
 
         try {
             if (existingBooking) {
-                const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, existingBooking.id);
-                updateDocumentNonBlocking(bookingRef, bookingData);
+                await fetch('/api/bookings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking: { ...bookingData, id: existingBooking.id, bookingNumber: existingBooking.bookingNumber } }),
+                });
                 toast({ title: 'Booking Updated' });
             } else {
-                const counterRef = doc(firestore, `tenants/${tenantId}/counters`, 'bookings');
-                const bookingsCollection = collection(firestore, `tenants/${tenantId}/bookings`);
-                
-                await runTransaction(firestore, async (transaction) => {
-                    const counterDoc = await transaction.get(counterRef);
-                    const newCount = (counterDoc.data()?.currentNumber || 0) + 1;
-                    transaction.set(counterRef, { currentNumber: newCount });
-                    
-                    const newBookingRef = doc(bookingsCollection);
-                    transaction.set(newBookingRef, {
-                        ...bookingData,
-                        id: newBookingRef.id,
-                        bookingNumber: String(newCount).padStart(5, '0'),
-                        preFlight: false,
-                        postFlight: false,
-                        createdById: userProfile?.id || null,
-                    });
+                const response = await fetch('/api/bookings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking: { ...bookingData, preFlight: false, postFlight: false, createdById: userProfile?.id || null } }),
                 });
+                await response.json();
                 toast({ title: 'Booking Created' });
             }
             refreshBookings();
@@ -261,11 +256,14 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     };
     
     const handleDelete = async () => {
-        if (!firestore || !existingBooking) return;
+        if (!existingBooking) return;
         setIsSubmitting(true);
         try {
-            const bookingRef = doc(firestore, `tenants/${tenantId}/bookings`, existingBooking.id);
-            await deleteDocumentNonBlocking(bookingRef);
+            await fetch('/api/bookings', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingId: existingBooking.id }),
+            });
             toast({ title: 'Booking Deleted' });
             refreshBookings();
             setIsOpen(false);

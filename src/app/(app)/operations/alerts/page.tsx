@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { collection, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,27 +14,70 @@ import { ListFilter } from 'lucide-react';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 
 export default function AlertsPage() {
-  const firestore = useFirestore();
-  const { tenantId } = useUserProfile();
+  const { userProfile } = useUserProfile();
   const [activeTab, setActiveTab] = useState('red-tags');
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { hasPermission } = usePermissions();
   const canCreateAlerts = hasPermission('operations-alerts-create');
   const canEditAlerts = hasPermission('operations-alerts-edit');
+  const storageKey = `safeviate.alerts.${userProfile?.organizationId || 'default'}`;
 
-  const alertsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(
-      collection(firestore, `tenants/${tenantId}/alerts`),
-      where('status', '==', 'Active')
-    ) : null),
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      setAlerts(raw ? (JSON.parse(raw) as Alert[]) : []);
+    } catch {
+      setAlerts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [storageKey]);
 
-  const { data: alerts, isLoading } = useCollection<Alert>(alertsQuery);
+  const persistAlerts = (next: Alert[]) => {
+    setAlerts(next);
+    localStorage.setItem(storageKey, JSON.stringify(next));
+  };
 
-  const redTags = useMemo(() => alerts?.filter(a => a.type === 'Red Tag') || [], [alerts]);
-  const yellowTags = useMemo(() => alerts?.filter(a => a.type === 'Yellow Tag') || [], [alerts]);
-  const companyNotices = useMemo(() => alerts?.filter(a => a.type === 'Company Notice') || [], [alerts]);
+  const handleCreateAlert = (payload: {
+    type: Alert['type'];
+    title: string;
+    content: string;
+    signatureUrl?: string;
+    mustRead?: boolean;
+    createdBy: string;
+  }) => {
+    const next: Alert[] = [
+      {
+        id: crypto.randomUUID(),
+        type: payload.type,
+        title: payload.title,
+        content: payload.content,
+        createdAt: new Date().toISOString(),
+        createdBy: payload.createdBy,
+        status: 'Active',
+        signatureUrl: payload.signatureUrl,
+        mustRead: payload.mustRead,
+        readBy: [],
+      },
+      ...alerts,
+    ];
+    persistAlerts(next);
+  };
+
+  const handleArchiveAlert = (alertId: string) => {
+    const next = alerts.map((alert) =>
+      alert.id === alertId ? { ...alert, status: 'Archived' as const } : alert
+    );
+    persistAlerts(next);
+  };
+
+  const activeAlerts = useMemo(() => alerts.filter((alert) => alert.status === 'Active'), [alerts]);
+
+  const redTags = useMemo(() => activeAlerts.filter(a => a.type === 'Red Tag'), [activeAlerts]);
+  const yellowTags = useMemo(() => activeAlerts.filter(a => a.type === 'Yellow Tag'), [activeAlerts]);
+  const companyNotices = useMemo(() => activeAlerts.filter(a => a.type === 'Company Notice'), [activeAlerts]);
 
   const tabs = [
     { value: 'red-tags', label: 'Red Tags', count: redTags.length },
@@ -59,7 +100,7 @@ export default function AlertsPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
             <MainPageHeader 
               title="Operations Alerts"
-              actions={canCreateAlerts && <AlertForm tenantId={tenantId || ''} />}
+              actions={canCreateAlerts && <AlertForm onCreate={handleCreateAlert} />}
             />
             
             <ResponsiveTabRow
@@ -78,7 +119,7 @@ export default function AlertsPage() {
               <TabsContent value="red-tags" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-20">
                   {redTags.length > 0 ? (
-                    redTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId || ''} canManage={canEditAlerts} />)
+                    redTags.map(alert => <AlertCard key={alert.id} alert={alert} canManage={canEditAlerts} onArchive={handleArchiveAlert} />)
                   ) : (
                     <Card className="flex h-64 items-center justify-center shadow-none border bg-background">
                       <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">No active red tags.</p>
@@ -89,7 +130,7 @@ export default function AlertsPage() {
               <TabsContent value="yellow-tags" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-20">
                   {yellowTags.length > 0 ? (
-                    yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId || ''} canManage={canEditAlerts} />)
+                    yellowTags.map(alert => <AlertCard key={alert.id} alert={alert} canManage={canEditAlerts} onArchive={handleArchiveAlert} />)
                   ) : (
                     <Card className="flex h-64 items-center justify-center shadow-none border bg-background">
                       <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">No active yellow tags.</p>
@@ -100,7 +141,7 @@ export default function AlertsPage() {
               <TabsContent value="company-notices" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-4 py-4 sm:px-6 sm:pb-20">
                   {companyNotices.length > 0 ? (
-                    companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} tenantId={tenantId || ''} canManage={canEditAlerts} />)
+                    companyNotices.map(alert => <AlertCard key={alert.id} alert={alert} canManage={canEditAlerts} onArchive={handleArchiveAlert} />)
                   ) : (
                     <Card className="flex h-64 items-center justify-center shadow-none border bg-background">
                       <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">No active company notices.</p>

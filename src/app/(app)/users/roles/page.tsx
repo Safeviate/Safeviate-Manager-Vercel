@@ -1,8 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useMemo, useState, useEffect } from 'react';
 import { RoleForm } from '../../admin/roles/role-form';
 import { RoleActions } from '../../admin/roles/role-actions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,23 +24,26 @@ export type Role = {
 };
 
 export default function RolesPage() {
-  const firestore = useFirestore();
   const isMobile = useIsMobile();
   const tenantId = 'safeviate'; // Hardcoded for now
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
-  const rolesQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'tenants', tenantId, 'roles'))
-        : null,
-    [firestore]
-  );
-
-  const {
-    data: roles,
-    isLoading,
-    error,
-  } = useCollection<Role>(rolesQuery);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('safeviate.roles');
+      if (stored) {
+        setRoles(JSON.parse(stored));
+      } else {
+        setRoles([]);
+      }
+    } catch (e: any) {
+      setError(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">

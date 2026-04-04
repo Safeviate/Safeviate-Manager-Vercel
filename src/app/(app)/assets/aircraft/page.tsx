@@ -1,7 +1,6 @@
 'use client';
 
-import { collection, query } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AircraftList } from './aircraft-list';
@@ -12,18 +11,34 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function AircraftFleetPage() {
-  const firestore = useFirestore();
   const { hasPermission } = usePermissions();
   const { tenantId } = useUserProfile();
+  const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const canManageAssets = hasPermission('assets-create') || hasPermission('assets-edit');
 
-  const aircraftQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/aircrafts`)) : null),
-    [firestore, tenantId]
-  );
+  const loadAircrafts = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        if (stored) {
+            setAircrafts(JSON.parse(stored));
+        } else {
+            setAircrafts([]);
+        }
+    } catch (e) {
+        console.error("Failed to load aircrafts", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
-  const { data: aircrafts, isLoading } = useCollection<Aircraft>(aircraftQuery);
+  useEffect(() => {
+    loadAircrafts();
+    window.addEventListener('safeviate-aircrafts-updated', loadAircrafts);
+    return () => window.removeEventListener('safeviate-aircrafts-updated', loadAircrafts);
+  }, [loadAircrafts]);
 
   if (isLoading) {
     return (
@@ -35,7 +50,7 @@ export default function AircraftFleetPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader 
           title="Aircraft Fleet"

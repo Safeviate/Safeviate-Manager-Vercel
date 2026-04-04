@@ -1,9 +1,7 @@
 'use client';
 
-import { use, useMemo, useEffect } from 'react';
+import { use, useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle2 } from 'lucide-react';
@@ -24,45 +22,51 @@ interface AuditDetailPageProps {
 
 export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const resolvedParams = use(params);
-  const firestore = useFirestore();
   const router = useRouter();
   const { tenantId, userProfile } = useUserProfile();
   const { hasPermission } = usePermissions();
   const auditId = resolvedParams.auditId;
 
-  const auditRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'quality-audits', auditId) : null),
-    [firestore, tenantId, auditId]
-  );
-  const { data: audit, isLoading: isLoadingAudit, error: auditError } = useDoc<QualityAudit>(auditRef);
+  const [audit, setAudit] = useState<QualityAudit | null>(null);
+  const [template, setTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
+  const [findingLevelsSettings, setFindingLevelsSettings] = useState<FindingLevelsSettings | null>(null);
+  const [caps, setCaps] = useState<CorrectiveActionPlan[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const templateRef = useMemoFirebase(
-      () => (firestore && tenantId && audit?.templateId ? doc(firestore, 'tenants', tenantId, 'quality-audit-templates', audit.templateId) : null),
-      [firestore, tenantId, audit?.templateId]
-  );
-  const { data: template, isLoading: isLoadingTemplate } = useDoc<QualityAuditChecklistTemplate>(templateRef);
-  
-  const findingLevelsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'finding-levels') : null),
-    [firestore, tenantId]
-  );
-  const { data: findingLevelsSettings, isLoading: isLoadingFindingLevels } = useDoc<FindingLevelsSettings>(findingLevelsRef);
-
-  const capsQuery = useMemoFirebase(
-      () => (firestore && tenantId && auditId ? query(collection(firestore, `tenants/${tenantId}/corrective-action-plans`), where('auditId', '==', auditId)) : null),
-      [firestore, tenantId, auditId]
-  );
-  const { data: caps, isLoading: isLoadingCaps } = useCollection<CorrectiveActionPlan>(capsQuery);
-
-  const personnelQuery = useMemoFirebase(
-      () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/personnel`)) : null),
-      [firestore, tenantId]
-  );
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
+  useEffect(() => {
+    try {
+        const storedAudits = localStorage.getItem('safeviate.quality-audits');
+        const audits = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
+        const foundAudit = audits.find(a => a.id === auditId);
+        
+        if (foundAudit) {
+            setAudit(foundAudit);
+            
+            const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
+            const templates = storedTemplates ? JSON.parse(storedTemplates) as QualityAuditChecklistTemplate[] : [];
+            setTemplate(templates.find(t => t.id === foundAudit.templateId) || null);
+            
+            const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
+            const allCaps = storedCaps ? JSON.parse(storedCaps) as CorrectiveActionPlan[] : [];
+            setCaps(allCaps.filter(c => c.auditId === auditId));
+        }
+        
+        const storedPersonnel = localStorage.getItem('safeviate.personnel');
+        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
+        
+        const storedSettings = localStorage.getItem('safeviate.finding-levels');
+        if (storedSettings) setFindingLevelsSettings(JSON.parse(storedSettings));
+    } catch (e) {
+        console.error('Failed to load local audit details', e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [auditId]);
 
   // SECURITY: Scoped visibility guard
   useEffect(() => {
-    if (!isLoadingAudit && audit && userProfile) {
+    if (!isLoading && audit && userProfile) {
         const canViewAll = hasPermission('quality-audits-view-all');
         const userOrgId = userProfile.organizationId;
         
@@ -70,15 +74,12 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
             router.push('/quality/audits');
         }
     }
-  }, [isLoadingAudit, audit, userProfile, hasPermission, router]);
-
-  const isLoading = isLoadingAudit || isLoadingTemplate || isLoadingFindingLevels || isLoadingCaps || isLoadingPersonnel;
+  }, [isLoading, audit, userProfile, hasPermission, router]);
 
   const enrichedAudit = useMemo(() => {
     if (!audit || !template) return null;
     return { ...audit, template };
   }, [audit, template]);
-
 
   if (isLoading) {
     return (
@@ -89,10 +90,10 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     );
   }
 
-  if (auditError || !audit || !enrichedAudit) {
+  if (!audit || !enrichedAudit) {
     return (
       <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
-        <p className="text-muted-foreground mb-4">{auditError ? `Error: ${auditError.message}` : "Audit record not found."}</p>
+        <p className="text-muted-foreground mb-4">Audit record not found.</p>
         <BackNavButton href="/quality/audits" text="Back to Audits" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
       </div>
     );

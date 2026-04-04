@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '@/lib/server/firebase-admin';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
 import { getPublicBaseUrl } from '@/lib/server/site-url';
+import { getDb } from '@/db';
+import { personnel, tenants, users } from '@/db/schema';
+import { hash } from 'bcryptjs';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: Request) {
   try {
@@ -31,54 +34,71 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required user information.' }, { status: 400 });
     }
 
-    const auth = getFirebaseAdminAuth();
-    const firestore = getFirebaseAdminFirestore();
+    const db = getDb();
+    await db.insert(tenants).values({ id: tenantId, name: tenantId, updatedAt: new Date() }).onConflictDoNothing();
 
-    // 2. Create Auth User
-    const userRecord = await auth.createUser({
+    const uid = `user_${email.replace(/[^a-z0-9]+/g, '_')}`;
+    const tempPassword = password;
+    const passwordHash = await hash(tempPassword, 12);
+
+    await db.insert(users).values({
+      id: uid,
+      tenantId,
       email,
-      password,
-      displayName: `${firstName} ${lastName}`,
+      passwordHash,
+      firstName,
+      lastName,
+      role,
+      profilePath: `tenants/${tenantId}/personnel/${uid}`,
+      updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: users.email,
+      set: {
+        id: uid,
+        tenantId,
+        passwordHash,
+        firstName,
+        lastName,
+        role,
+        profilePath: `tenants/${tenantId}/personnel/${uid}`,
+        updatedAt: new Date(),
+      },
     });
 
-    const uid = userRecord.uid;
-
-    // 3. Determine target collection
-    const collectionName = userType === 'Instructor' ? 'instructors' : 
-                         userType === 'Student' ? 'students' : 
-                         userType === 'Private Pilot' ? 'private-pilots' : 'personnel';
-
-    // 4. Create Profile in Firestore
-    await firestore.doc(`tenants/${tenantId}/${collectionName}/${uid}`).set({
+    await db.insert(personnel).values({
       id: uid,
+      tenantId,
+      userNumber: userNumber || null,
       firstName,
       lastName,
       email,
-      userType,
-      role,
       department: department || null,
-      userNumber: userNumber || null,
-      organizationId: organizationId || null,
-      isErpIncerfaContact: !!isErpIncerfaContact,
-      isErpAlerfaContact: !!isErpAlerfaContact,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      role,
+      permissions: [],
+      accessOverrides: null,
+      userType: userType || 'Personnel',
+      updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: personnel.id,
+      set: {
+        tenantId,
+        userNumber: userNumber || null,
+        firstName,
+        lastName,
+        email,
+        department: department || null,
+        role,
+        permissions: [],
+        accessOverrides: null,
+        userType: userType || 'Personnel',
+        updatedAt: new Date(),
+      },
     });
 
-    // 5. Create Global User Link
-    await firestore.doc(`users/${uid}`).set({
-      email,
-      profilePath: `tenants/${tenantId}/${collectionName}/${uid}`
-    });
-
-    // 6. Manual onboarding trigger
     const baseUrl = getPublicBaseUrl(request);
-    const setupLink = await auth.generatePasswordResetLink(email, {
-      url: `${baseUrl}/login`,
-      handleCodeInApp: true,
-    });
+    const setupLink = `${baseUrl}/login`;
 
-    const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink });
+    const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink, tempPassword });
     
     if (!emailResult.success) {
       // Throwing here ensures the catch block runs and the frontend shows a red error

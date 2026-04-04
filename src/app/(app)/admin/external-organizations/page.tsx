@@ -1,9 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
-import { collection, query, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,7 +17,6 @@ import { DeleteActionButton, EditActionButton } from '@/components/record-action
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function ExternalOrganizationsPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
@@ -28,18 +24,34 @@ export default function ExternalOrganizationsPage() {
   
   const canManage = hasPermission('admin-external-orgs-manage');
 
-  const orgsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
-    [firestore, tenantId]
-  );
-  
-  const { data: organizations, isLoading } = useCollection<ExternalOrganization>(orgsQuery);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<ExternalOrganization | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+
+  const loadOrgs = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const stored = localStorage.getItem('safeviate.external-organizations');
+        if (stored) {
+            setOrganizations(JSON.parse(stored));
+        }
+    } catch (e) {
+        console.error("Failed to load external orgs", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrgs();
+    window.addEventListener('safeviate-external-orgs-updated', loadOrgs);
+    return () => window.removeEventListener('safeviate-external-orgs-updated', loadOrgs);
+  }, [loadOrgs]);
 
   const handleOpenForm = (org: ExternalOrganization | null = null) => {
     setEditingOrg(org);
@@ -55,43 +67,62 @@ export default function ExternalOrganizationsPage() {
       return;
     }
 
-    if (!firestore || !tenantId) return;
+    try {
+        const stored = localStorage.getItem('safeviate.external-organizations');
+        const orgs = stored ? JSON.parse(stored) as ExternalOrganization[] : [];
+        
+        let nextOrgs: ExternalOrganization[];
+        if (editingOrg) {
+            nextOrgs = orgs.map(o => o.id === editingOrg.id ? { ...o, name, contactEmail: email, address } : o);
+        } else {
+            const newOrg: ExternalOrganization = {
+                id: crypto.randomUUID(),
+                name,
+                contactEmail: email,
+                address,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            nextOrgs = [...orgs, newOrg];
+        }
 
-    const data = { name, contactEmail: email, address };
-
-    if (editingOrg) {
-      const orgRef = doc(firestore, `tenants/${tenantId}/external-organizations`, editingOrg.id);
-      updateDocumentNonBlocking(orgRef, data);
-      toast({ title: 'Organization Updated' });
-    } else {
-      const colRef = collection(firestore, `tenants/${tenantId}/external-organizations`);
-      addDocumentNonBlocking(colRef, data);
-      toast({ title: 'Organization Created' });
+        localStorage.setItem('safeviate.external-organizations', JSON.stringify(nextOrgs));
+        window.dispatchEvent(new Event('safeviate-external-orgs-updated'));
+        toast({ title: editingOrg ? 'Organization Updated' : 'Organization Created' });
+        setIsFormOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save organization.' });
     }
-
-    setIsFormOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore || !tenantId) return;
-    const orgRef = doc(firestore, `tenants/${tenantId}/external-organizations`, id);
-    deleteDocumentNonBlocking(orgRef);
-    toast({ title: 'Organization Deleted' });
+    try {
+        const stored = localStorage.getItem('safeviate.external-organizations');
+        if (stored) {
+            const orgs = JSON.parse(stored) as ExternalOrganization[];
+            const nextOrgs = orgs.filter(o => o.id !== id);
+            localStorage.setItem('safeviate.external-organizations', JSON.stringify(nextOrgs));
+            window.dispatchEvent(new Event('safeviate-external-orgs-updated'));
+            toast({ title: 'Organization Deleted' });
+        }
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete organization.' });
+    }
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col gap-6 h-full p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">External Organizations</h1>
-          <p className="text-muted-foreground">Manage external companies involved in quality audits.</p>
+          <h1 className="text-3xl font-black tracking-tight uppercase">External Organizations</h1>
+          <p className="text-xs text-muted-foreground italic font-medium">Manage external companies involved in quality audits.</p>
         </div>
         {canManage && (
           <Button
             onClick={() => handleOpenForm()}
             variant={isMobile ? "outline" : "default"}
             size={isMobile ? "sm" : "default"}
-            className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : undefined}
+            className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "font-black uppercase text-[10px] h-9 tracking-tight"}
           >
             <span className="flex items-center gap-2">
               <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "mr-2 h-4 w-4"} /> Add Organization
@@ -101,25 +132,25 @@ export default function ExternalOrganizationsPage() {
         )}
       </div>
 
-      <Card>
+      <Card className="shadow-none border overflow-hidden">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/30">
               <TableRow>
-                <TableHead>Organization Name</TableHead>
-                <TableHead>Contact Email</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-wider">Organization Name</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-wider">Contact Email</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-wider">Address</TableHead>
+                <TableHead className="text-right text-[10px] font-black uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center p-8">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center p-8 text-[10px] font-black uppercase tracking-widest italic text-muted-foreground">Loading...</TableCell></TableRow>
               ) : (organizations || []).map(org => (
-                <TableRow key={org.id}>
-                  <TableCell className="font-medium">{org.name}</TableCell>
-                  <TableCell>{org.contactEmail || 'N/A'}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{org.address || 'N/A'}</TableCell>
+                <TableRow key={org.id} className="hover:bg-muted/5 transition-colors">
+                  <TableCell className="font-bold text-sm uppercase tracking-tight">{org.name}</TableCell>
+                  <TableCell className="text-xs font-medium">{org.contactEmail || 'N/A'}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{org.address || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <EditActionButton onClick={() => handleOpenForm(org)} label="Edit organization" />
@@ -133,7 +164,7 @@ export default function ExternalOrganizationsPage() {
                 </TableRow>
               ))}
               {(!organizations || organizations.length === 0) && !isLoading && (
-                <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">No external organizations found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center h-48 text-[10px] font-black uppercase tracking-widest italic text-muted-foreground bg-muted/5">No external organizations found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

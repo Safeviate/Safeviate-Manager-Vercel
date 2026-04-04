@@ -1,11 +1,8 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -85,7 +82,6 @@ interface ComplianceItemFormProps {
 }
 
 export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tenantId, defaultRegulationFamily, availableParentHeaders = [], mode = 'item' }: ComplianceItemFormProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const topLevelHeaderValue = '__top_level__';
 
@@ -111,7 +107,6 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
     });
 
     const onSubmit = async (values: any) => {
-        if (!firestore) return;
         const normalizedCode = normalizeRegulationCode(values.regulationCode);
         const splitInput = splitCompositeRegulationInput(values.regulationCode);
         
@@ -147,16 +142,25 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
                 nextAuditDate: values.nextAuditDate ? values.nextAuditDate.toISOString() : null,
             };
 
-        if (existingItem) {
-            const docRef = doc(firestore, `tenants/${tenantId}/compliance-matrix`, existingItem.id);
-            await updateDocumentNonBlocking(docRef, dataToSave);
-            toast({ title: "Success", description: "Compliance item updated." });
-        } else {
-            const collectionRef = collection(firestore, `tenants/${tenantId}/compliance-matrix`);
-            await addDocumentNonBlocking(collectionRef, dataToSave);
-            toast({ title: "Success", description: "New compliance item added." });
+        try {
+            const storedItems = localStorage.getItem('safeviate.compliance-matrix');
+            const items = storedItems ? JSON.parse(storedItems) as ComplianceRequirement[] : [];
+            
+            if (existingItem) {
+                const nextItems = items.map(i => i.id === existingItem.id ? { ...i, ...dataToSave } : i);
+                localStorage.setItem('safeviate.compliance-matrix', JSON.stringify(nextItems));
+                toast({ title: "Success", description: "Compliance item updated." });
+            } else {
+                const newItem = { ...dataToSave, id: crypto.randomUUID() };
+                localStorage.setItem('safeviate.compliance-matrix', JSON.stringify([...items, newItem]));
+                toast({ title: "Success", description: "New compliance item added." });
+            }
+            
+            window.dispatchEvent(new Event('safeviate-compliance-updated'));
+            onFormSubmit();
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
         }
-        onFormSubmit();
     };
 
     return (

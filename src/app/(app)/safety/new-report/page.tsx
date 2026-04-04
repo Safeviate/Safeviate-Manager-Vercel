@@ -2,15 +2,12 @@
 
 import { useState } from 'react';
 import { NewSafetyReportForm, type NewSafetyReportValues } from './new-safety-report-form';
-import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, doc, runTransaction } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import type { SafetyReport } from '@/types/safety-report';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Aircraft } from '@/types/aircraft';
-import { useCollection } from '@/firebase';
+import { useEffect, useState as useReactState } from 'react';
 
 const getReportTypePrefix = (type: NewSafetyReportValues['reportType']): string => {
     switch (type) {
@@ -23,20 +20,32 @@ const getReportTypePrefix = (type: NewSafetyReportValues['reportType']): string 
 }
 
 export default function NewSafetyReportPage() {
-  const firestore = useFirestore();
-  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { tenantId } = useUserProfile();
-  const aircraftsRef = useMemoFirebase(
-    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/aircrafts`) : null),
-    [firestore, tenantId]
-  );
-  const { data: aircrafts } = useCollection<Aircraft>(aircraftsRef);
+  const [aircrafts, setAircrafts] = useReactState<Aircraft[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/schedule-data', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled) setAircrafts(payload?.aircraft ?? []);
+      } catch {
+        if (!cancelled) setAircrafts([]);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleNewReport = async (values: NewSafetyReportValues) => {
-    if (!firestore || !user || !tenantId) {
+    if (!tenantId) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to file a report.' });
       return;
     }
@@ -44,41 +53,37 @@ export default function NewSafetyReportPage() {
     setIsSubmitting(true);
 
     try {
-        const reportPrefix = getReportTypePrefix(values.reportType);
-        const reportsRef = collection(firestore, `tenants/${tenantId}/safety-reports`);
-        const counterRef = doc(firestore, `tenants/${tenantId}/counters`, `safety-reports-${reportPrefix}`);
-
-        const newReportId = await runTransaction(firestore, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            let newReportNumberSuffix = 1;
-            if (counterDoc.exists()) {
-                newReportNumberSuffix = (counterDoc.data().currentNumber || 0) + 1;
-            }
-            
-            const newReportNumber = `${reportPrefix}-${String(newReportNumberSuffix).padStart(3, '0')}`;
-            transaction.set(counterRef, { currentNumber: newReportNumberSuffix }, { merge: true });
-
-            const newReportRef = doc(reportsRef);
-            
-            const reportData: Omit<SafetyReport, 'id'> = {
-                reportNumber: newReportNumber,
-                reportType: values.reportType,
-                status: 'Open',
-                submittedBy: user.uid,
-                submittedByName: values.isAnonymous ? 'Anonymous' : user.displayName || user.email || 'Unknown User',
-                submittedAt: new Date().toISOString(),
-                isAnonymous: values.isAnonymous,
-                eventDate: format(values.eventDate, 'yyyy-MM-dd'),
-                eventTime: values.eventTime,
-                location: values.location,
-                description: values.description,
-                phaseOfFlight: values.phaseOfFlight,
-                systemOrComponent: values.systemOrComponent,
-            };
-
-            transaction.set(newReportRef, reportData);
-            return newReportRef.id;
+        const response = await fetch('/api/safety-reports', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            report: {
+              reportNumber: `${getReportTypePrefix(values.reportType)}-${String(Date.now()).slice(-4)}`,
+              reportType: values.reportType,
+              status: 'Open',
+              submittedBy: 'vercel-user',
+              submittedByName: values.isAnonymous ? 'Anonymous' : 'Vercel User',
+              submittedAt: new Date().toISOString(),
+              isAnonymous: values.isAnonymous,
+              eventDate: format(values.eventDate, 'yyyy-MM-dd'),
+              eventTime: values.eventTime,
+              location: values.location,
+              description: values.description,
+              phaseOfFlight: values.phaseOfFlight,
+              systemOrComponent: values.systemOrComponent,
+            },
+          }),
         });
+
+        if (!response.ok) {
+          throw new Error((await response.json())?.error || 'Failed to submit report.');
+        }
+
+        const payload = await response.json();
+        const newReportId = payload?.report?.id;
+        if (!newReportId) {
+          throw new Error('Report was saved but no report id was returned.');
+        }
 
       toast({
         title: 'Report Submitted',

@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { collection, query, doc, deleteDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import type { ERPTrigger } from '@/types/erp';
@@ -18,18 +16,35 @@ interface TriggersTabProps {
 }
 
 export function TriggersTab({ tenantId }: TriggersTabProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [triggers, setTriggers] = useState<ERPTrigger[]>([]);
+
+  useEffect(() => {
+    const loadTriggers = async () => {
+      try {
+        const response = await fetch('/api/erp-state?category=triggers', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = await response.json();
+        setTriggers((payload.data || []) as ERPTrigger[]);
+      } catch {
+        // ignore load errors
+      }
+    };
+    loadTriggers();
+  }, []);
+
+  const persistTriggers = async (nextTriggers: ERPTrigger[]) => {
+    setTriggers(nextTriggers);
+    await fetch('/api/erp-state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: 'triggers', data: nextTriggers }),
+    }).catch(() => null);
+  };
 
   const canAdmin = hasPermission('operations-erp-admin');
-
-  const triggersQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/erp-triggers`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: triggers } = useCollection<ERPTrigger>(triggersQuery);
 
   const handleAddTrigger = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -37,21 +52,23 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
 
     const formData = new FormData(e.currentTarget);
     const checklistRaw = formData.get('checklist') as string;
-    const newTrigger = {
+    const newTrigger: ERPTrigger = {
+      id: crypto.randomUUID(),
       eventType: formData.get('eventType') as string,
       criteria: formData.get('criteria') as string,
       checklist: checklistRaw.split('\n').filter(l => l.trim()),
     };
 
-    if (!firestore) return;
-    addDocumentNonBlocking(collection(firestore, `tenants/${tenantId}/erp-triggers`), newTrigger);
+    const nextTriggers = [newTrigger, ...triggers];
+    void persistTriggers(nextTriggers);
     setIsAddOpen(false);
     toast({ title: 'Trigger Defined' });
   };
 
   const handleDelete = async (id: string) => {
-    if (!firestore || !canAdmin) return;
-    await deleteDoc(doc(firestore, `tenants/${tenantId}/erp-triggers`, id));
+    if (!canAdmin) return;
+    const nextTriggers = triggers.filter(t => t.id !== id);
+    void persistTriggers(nextTriggers);
     toast({ title: 'Trigger Deleted' });
   };
 

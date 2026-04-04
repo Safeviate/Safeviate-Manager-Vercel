@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { doc, collection, query, updateDoc } from 'firebase/firestore';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronsUpDown } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -89,14 +88,18 @@ const determineCollection = (userType: UserProfile['userType']): string => {
 }
 
 export function EditPersonnelForm({ tenantId, user, roles, departments, logbookTemplates, onCancel }: EditPersonnelFormProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   
-  const orgsQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
-    [firestore, tenantId]
-  );
-  const { data: organizations } = useCollection<ExternalOrganization>(orgsQuery);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+
+  useEffect(() => {
+      try {
+          const stored = localStorage.getItem('safeviate.external-organizations');
+          if (stored) setOrganizations(JSON.parse(stored));
+      } catch {
+          // ignore
+      }
+  }, []);
 
   const [isContactOpen, setIsContactOpen] = useState(true);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
@@ -134,10 +137,8 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
         return;
     }
 
-    if (!firestore || !tenantId) return;
-    
     const collectionName = determineCollection(formData.userType);
-    const userRef = doc(firestore, 'tenants', tenantId, collectionName, user.id);
+    const key = `safeviate.${collectionName}`;
     
     let dataToUpdate: Partial<PersonnelFormState> = { ...formData };
     if (!isPilotProfile(formData)) {
@@ -148,7 +149,19 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     }
 
     try {
-      await updateDoc(userRef, dataToUpdate);
+      const stored = localStorage.getItem(key);
+      if (stored) {
+          const arr = JSON.parse(stored) as UserProfile[];
+          const nextArr = arr.map(u => {
+              if (u.id === user.id) {
+                  return { ...u, ...dataToUpdate };
+              }
+              return u;
+          });
+          localStorage.setItem(key, JSON.stringify(nextArr));
+      }
+      
+      window.dispatchEvent(new Event('safeviate-profile-updated'));
       toast({ title: 'User Updated' });
       onCancel();
     } catch {

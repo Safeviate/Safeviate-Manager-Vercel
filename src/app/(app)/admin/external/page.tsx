@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { collection, query, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,7 +19,6 @@ import { DeleteActionButton, EditActionButton } from '@/components/record-action
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export default function ExternalCompaniesPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
@@ -29,18 +26,34 @@ export default function ExternalCompaniesPage() {
   
   const canManage = hasPermission('admin-external-orgs-manage');
 
-  const orgsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/external-organizations`)) : null),
-    [firestore, tenantId]
-  );
-  
-  const { data: organizations, isLoading: isLoadingOrgs } = useCollection<ExternalOrganization>(orgsQuery);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<ExternalOrganization | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+
+  const loadOrgs = useCallback(() => {
+    setIsLoadingOrgs(true);
+    try {
+        const stored = localStorage.getItem('safeviate.external-organizations');
+        if (stored) {
+            setOrganizations(JSON.parse(stored));
+        }
+    } catch (e) {
+        console.error("Failed to load external orgs", e);
+    } finally {
+        setIsLoadingOrgs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrgs();
+    window.addEventListener('safeviate-external-orgs-updated', loadOrgs);
+    return () => window.removeEventListener('safeviate-external-orgs-updated', loadOrgs);
+  }, [loadOrgs]);
 
   const handleOpenForm = (org: ExternalOrganization | null = null) => {
     setEditingOrg(org);
@@ -56,28 +69,47 @@ export default function ExternalCompaniesPage() {
       return;
     }
 
-    if (!firestore || !tenantId) return;
+    try {
+        const stored = localStorage.getItem('safeviate.external-organizations');
+        const orgs = stored ? JSON.parse(stored) as ExternalOrganization[] : [];
+        
+        let nextOrgs: ExternalOrganization[];
+        if (editingOrg) {
+            nextOrgs = orgs.map(o => o.id === editingOrg.id ? { ...o, name, contactEmail: email, address } : o);
+        } else {
+            const newOrg: ExternalOrganization = {
+                id: crypto.randomUUID(),
+                name,
+                contactEmail: email,
+                address,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            nextOrgs = [...orgs, newOrg];
+        }
 
-    const data = { name, contactEmail: email, address };
-
-    if (editingOrg) {
-      const orgRef = doc(firestore, `tenants/${tenantId}/external-organizations`, editingOrg.id);
-      updateDocumentNonBlocking(orgRef, data);
-      toast({ title: 'Organization Updated' });
-    } else {
-      const colRef = collection(firestore, `tenants/${tenantId}/external-organizations`);
-      addDocumentNonBlocking(colRef, data);
-      toast({ title: 'Organization Created' });
+        localStorage.setItem('safeviate.external-organizations', JSON.stringify(nextOrgs));
+        window.dispatchEvent(new Event('safeviate-external-orgs-updated'));
+        toast({ title: editingOrg ? 'Organization Updated' : 'Organization Created' });
+        setIsFormOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save organization.' });
     }
-
-    setIsFormOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore || !tenantId) return;
-    const orgRef = doc(firestore, `tenants/${tenantId}/external-organizations`, id);
-    deleteDocumentNonBlocking(orgRef);
-    toast({ title: 'Organization Deleted' });
+    try {
+        const stored = localStorage.getItem('safeviate.external-organizations');
+        if (stored) {
+            const orgs = JSON.parse(stored) as ExternalOrganization[];
+            const nextOrgs = orgs.filter(o => o.id !== id);
+            localStorage.setItem('safeviate.external-organizations', JSON.stringify(nextOrgs));
+            window.dispatchEvent(new Event('safeviate-external-orgs-updated'));
+            toast({ title: 'Organization Deleted' });
+        }
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete organization.' });
+    }
   };
 
   return (

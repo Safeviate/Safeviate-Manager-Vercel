@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
@@ -43,7 +41,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function QuestionBankPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
@@ -53,23 +50,40 @@ export default function QuestionBankPage() {
   const [editingItem, setEditingItem] = useState<QuestionBankItem | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const topicsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'exam-topics') : null),
-    [firestore, tenantId]
-  );
-  const { data: topicsData, isLoading: isLoadingTopics } = useDoc<ExamTopicsSettings>(topicsRef);
+  const [topicsData, setTopicsData] = useState<ExamTopicsSettings | null>(null);
+  const [poolItems, setPoolItems] = useState<QuestionBankItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingTopics, setIsLoadingTopics] = useState(true);
+
+  useEffect(() => {
+    const load = () => {
+        try {
+            const storedTopics = localStorage.getItem('safeviate.exam-topics');
+            if (storedTopics) setTopicsData(JSON.parse(storedTopics));
+            
+            const storedPool = localStorage.getItem('safeviate.question-pool');
+            if (storedPool) setPoolItems(JSON.parse(storedPool).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        } catch (e) {
+            console.error('Local storage load failed', e);
+        } finally {
+            setIsLoading(false);
+            setIsLoadingTopics(false);
+        }
+    };
+    load();
+
+    const handleUpdate = () => {
+        load();
+    };
+    window.addEventListener('safeviate-question-bank-updated', handleUpdate);
+    return () => window.removeEventListener('safeviate-question-bank-updated', handleUpdate);
+  }, []);
 
   useEffect(() => {
     if (topicsData?.topics?.length && !selectedTopic) {
         setSelectedTopic(topicsData.topics[0]);
     }
   }, [topicsData, selectedTopic]);
-
-  const poolQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, 'tenants', tenantId, 'question-pool'), orderBy('createdAt', 'desc')) : null),
-    [firestore, tenantId]
-  );
-  const { data: poolItems, isLoading } = useCollection<QuestionBankItem>(poolQuery);
 
   const filteredItems = useMemo(() => {
     if (!poolItems) return [];
@@ -81,26 +95,28 @@ export default function QuestionBankPage() {
   }, [poolItems, searchQuery, selectedTopic]);
 
   const handleAiGenerated = async (questions: any[]) => {
-    if (!firestore || !tenantId) return;
-    
     const targetTopic = selectedTopic;
-    const batch = writeBatch(firestore);
-    const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
-
-    questions.forEach(q => {
-        const docRef = doc(poolCol);
-        batch.set(docRef, {
+    try {
+        const storedPool = localStorage.getItem('safeviate.question-pool');
+        const currentPool = storedPool ? JSON.parse(storedPool) : [];
+        const newItems = questions.map(q => ({
             ...q,
+            id: crypto.randomUUID(),
             topic: targetTopic,
             createdAt: new Date().toISOString()
+        }));
+        const nextPool = [...newItems, ...currentPool];
+        localStorage.setItem('safeviate.question-pool', JSON.stringify(nextPool));
+        setPoolItems(nextPool);
+        
+        window.dispatchEvent(new Event('safeviate-question-bank-updated'));
+        toast({ 
+            title: 'Bank Populated', 
+            description: `${questions.length} questions added to the ${targetTopic} database.` 
         });
-    });
-
-    await batch.commit();
-    toast({ 
-        title: 'Bank Populated', 
-        description: `${questions.length} questions added to the ${targetTopic} database.` 
-    });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Populate Failed' });
+    }
   };
 
   if (isLoadingTopics || (isLoading && !poolItems)) {
@@ -285,16 +301,18 @@ export default function QuestionBankPage() {
 }
 
 function DeleteQuestionButton({ item, tenantId, selectedTopic }: { item: QuestionBankItem, tenantId: string, selectedTopic: string }) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async () => {
-        if (!firestore || !tenantId) return;
         setIsDeleting(true);
         try {
-            const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', item.id);
-            await deleteDocumentNonBlocking(docRef);
+            const storedPool = localStorage.getItem('safeviate.question-pool');
+            const currentPool = storedPool ? JSON.parse(storedPool) : [];
+            const nextPool = currentPool.filter((p: any) => p.id !== item.id);
+            localStorage.setItem('safeviate.question-pool', JSON.stringify(nextPool));
+            
+            window.dispatchEvent(new Event('safeviate-question-bank-updated'));
             toast({ title: 'Question Deleted', description: `Removed from ${selectedTopic} bank.` });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -341,7 +359,6 @@ interface UpsertQuestionDialogProps {
 }
 
 function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingItem }: UpsertQuestionDialogProps) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const isMobile = useIsMobile();
     
@@ -381,11 +398,11 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             return;
         }
 
-        if (!firestore || !tenantId) return;
         setIsSaving(true);
 
         try {
             const data = {
+                id: editingItem?.id || crypto.randomUUID(),
                 topic,
                 text,
                 options,
@@ -393,15 +410,20 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                 createdAt: editingItem?.createdAt || new Date().toISOString()
             };
 
+            const storedPool = localStorage.getItem('safeviate.question-pool');
+            const currentPool = storedPool ? JSON.parse(storedPool) : [];
+            
+            let nextPool;
             if (editingItem) {
-                const docRef = doc(firestore, 'tenants', tenantId, 'question-pool', editingItem.id);
-                updateDocumentNonBlocking(docRef, data);
+                nextPool = currentPool.map((p: any) => p.id === editingItem.id ? data : p);
                 toast({ title: 'Question Updated' });
             } else {
-                const poolCol = collection(firestore, 'tenants', tenantId, 'question-pool');
-                addDocumentNonBlocking(poolCol, data);
+                nextPool = [data, ...currentPool];
                 toast({ title: 'Question Added' });
             }
+            
+            localStorage.setItem('safeviate.question-pool', JSON.stringify(nextPool));
+            window.dispatchEvent(new Event('safeviate-question-bank-updated'));
             onOpenChange(false);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Save Failed', description: error.message });

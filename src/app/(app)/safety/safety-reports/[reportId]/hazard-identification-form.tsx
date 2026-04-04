@@ -16,8 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport, ReportHazard, ReportRisk } from '@/types/safety-report';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import { PlusCircle, Trash2, Save, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
@@ -261,12 +259,8 @@ interface HazardIdentificationFormProps {
 }
 
 export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, isStacked = false }: HazardIdentificationFormProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
-
-  const riskMatrixRef = useMemoFirebase(() => (firestore ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null), [firestore, tenantId]);
-  const { data: riskMatrixSettings } = useDoc<RiskMatrixSettings>(riskMatrixRef);
-  const activeRiskMatrixColors = riskMatrixColors ?? riskMatrixSettings?.colors;
+  const activeRiskMatrixColors = riskMatrixColors;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(hazardIdentificationSchema),
@@ -281,10 +275,17 @@ export function HazardIdentificationForm({ report, tenantId, riskMatrixColors, i
   });
 
   const onSubmit = async (values: FormValues) => {
-    if (!firestore) return;
-    const reportRef = doc(firestore, 'tenants', tenantId, 'safety-reports', report.id);
     try {
-      await updateDoc(reportRef, values);
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: { ...report, ...values } }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to save hazard identification.');
+      }
       toast({ title: 'Hazard Identification Saved' });
     } catch (error) {
       toast({

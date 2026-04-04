@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from '@/components/page-header';
 import { Label } from '@/components/ui/label';
@@ -11,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useUserProfile } from '@/hooks/use-user-profile';
 import { Clock, Phone } from 'lucide-react';
 
 export type OverdueMonitorSettings = {
@@ -29,58 +26,72 @@ const defaultSettings: OverdueMonitorSettings = {
 };
 
 export default function OverdueSettingsPage() {
-  const firestore = useFirestore();
-  const { tenantId } = useUserProfile();
   const { toast } = useToast();
-
-  const settingsRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, `tenants/${tenantId}/settings`, 'overdue-monitor') : null),
-    [firestore, tenantId]
-  );
-
-  const { data: settings, isLoading } = useDoc<OverdueMonitorSettings>(settingsRef);
 
   const [isEnabled, setIsEnabled] = useState(defaultSettings.isEnabled);
   const [thresholdMinutes, setThresholdMinutes] = useState(defaultSettings.thresholdMinutes);
   const [contactPhone, setContactPhone] = useState(defaultSettings.contactPhone);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const stored = localStorage.getItem('safeviate.overdue-monitor-settings');
+        if (stored) {
+            const parsed = JSON.parse(stored) as OverdueMonitorSettings;
+            setIsEnabled(parsed.isEnabled);
+            setThresholdMinutes(parsed.thresholdMinutes);
+            setContactPhone(parsed.contactPhone);
+        } else {
+            localStorage.setItem('safeviate.overdue-monitor-settings', JSON.stringify(defaultSettings));
+        }
+    } catch (e) {
+        console.error("Failed to load overdue settings", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (settings) {
-      setIsEnabled(settings.isEnabled);
-      setThresholdMinutes(settings.thresholdMinutes);
-      setContactPhone(settings.contactPhone);
-    }
-  }, [settings]);
+    loadData();
+    window.addEventListener('safeviate-overdue-monitor-settings-updated', loadData);
+    return () => window.removeEventListener('safeviate-overdue-monitor-settings-updated', loadData);
+  }, [loadData]);
 
   const handleSave = () => {
-    if (!settingsRef) return;
+    try {
+        const settings: OverdueMonitorSettings = {
+            id: 'overdue-monitor',
+            isEnabled,
+            thresholdMinutes: Number(thresholdMinutes),
+            contactPhone,
+        };
 
-    setDocumentNonBlocking(settingsRef, {
-      id: 'overdue-monitor',
-      isEnabled,
-      thresholdMinutes: Number(thresholdMinutes),
-      contactPhone,
-    }, { merge: true });
+        localStorage.setItem('safeviate.overdue-monitor-settings', JSON.stringify(settings));
+        window.dispatchEvent(new Event('safeviate-overdue-monitor-settings-updated'));
 
-    toast({
-      title: 'Settings Saved',
-      description: 'The overdue aircraft monitor has been updated.',
-    });
+        toast({
+            title: 'Settings Saved',
+            description: 'The overdue aircraft monitor has been updated.',
+        });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save settings.' });
+    }
   };
 
   if (isLoading) {
-    return <div className="max-w-2xl mx-auto space-y-6"><Skeleton className="h-[400px] w-full" /></div>;
+    return <div className="max-w-2xl mx-auto space-y-6 px-1 py-12"><Skeleton className="h-[400px] w-full" /></div>;
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 px-1">
-      <Card className="shadow-none border border-amber-900/20">
-        <MainPageHeader title="Overdue Settings" />
+      <Card className="shadow-none border border-amber-900/20 mt-12 bg-white/50 backdrop-blur-sm">
+        <MainPageHeader title="Safety Monitor Thresholds" />
         <CardContent className="space-y-8 pt-6">
           <div className="flex items-center justify-between space-x-4 rounded-xl border border-primary/10 p-5 bg-primary/5">
             <div className="space-y-1">
-              <Label htmlFor="monitor-toggle" className="text-sm font-bold text-foreground">Enable Safety Monitor</Label>
-              <p className="text-[10px] text-muted-foreground font-medium">
+              <Label htmlFor="monitor-toggle" className="text-[10px] font-black uppercase text-foreground tracking-widest">Enable Safety Monitor</Label>
+              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tight opacity-75">
                 Activate the global alert for flights past their end time.
               </p>
             </div>
@@ -93,7 +104,7 @@ export default function OverdueSettingsPage() {
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+              <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 Alert Threshold (Minutes)
               </Label>
@@ -102,15 +113,15 @@ export default function OverdueSettingsPage() {
                 value={thresholdMinutes}
                 onChange={(e) => setThresholdMinutes(Number(e.target.value))}
                 placeholder="e.g., 5"
-                className="h-11 bg-background"
+                className="h-12 bg-background font-black text-lg border-2"
               />
-              <p className="text-[10px] text-muted-foreground font-medium italic">
+              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tight opacity-75 italic leading-relaxed">
                 The number of minutes to wait after the scheduled end time before showing the alert.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+              <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 <Phone className="h-3.5 w-3.5" />
                 Operations Fallback Number
               </Label>
@@ -119,16 +130,16 @@ export default function OverdueSettingsPage() {
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
                 placeholder="e.g., 555-0199"
-                className="h-11 bg-background"
+                className="h-12 bg-background font-black text-lg border-2"
               />
-              <p className="text-[10px] text-muted-foreground font-medium italic leading-relaxed">
+              <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tight opacity-75 italic leading-relaxed">
                 This number is displayed only if no specific contact numbers are found in the instructor or student profiles.
               </p>
             </div>
           </div>
 
           <div className="pt-4 flex justify-end">
-            <Button onClick={handleSave} className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold h-10 px-8 shadow-sm">
+            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground font-black h-12 px-12 shadow-lg text-[11px] uppercase tracking-widest transition-all">
               Save Configuration
             </Button>
           </div>

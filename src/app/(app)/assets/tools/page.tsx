@@ -1,10 +1,9 @@
 'use client';
 
-import { collection, query } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MainPageHeader } from '@/components/page-header';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { AddToolDialog } from './add-tool-dialog';
@@ -12,18 +11,32 @@ import { ToolList } from './tool-list';
 import type { Tool } from '@/types/tool';
 
 export default function ToolsPage() {
-  const firestore = useFirestore();
   const { hasPermission } = usePermissions();
   const { tenantId } = useUserProfile();
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const canManageAssets = hasPermission('assets-create') || hasPermission('assets-edit');
 
-  const toolsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? query(collection(firestore, `tenants/${tenantId}/tools`)) : null),
-    [firestore, tenantId]
-  );
+  const loadTools = useCallback(() => {
+    setIsLoading(true);
+    try {
+        const stored = localStorage.getItem('safeviate.assets-tools');
+        if (stored) {
+            setTools(JSON.parse(stored));
+        }
+    } catch (e) {
+        console.error("Failed to load tools", e);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
-  const { data: tools, isLoading } = useCollection<Tool>(toolsQuery);
+  useEffect(() => {
+    loadTools();
+    window.addEventListener('safeviate-assets-tools-updated', loadTools);
+    return () => window.removeEventListener('safeviate-assets-tools-updated', loadTools);
+  }, [loadTools]);
 
   if (isLoading) {
     return (

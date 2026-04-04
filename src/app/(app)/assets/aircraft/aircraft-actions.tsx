@@ -1,8 +1,6 @@
-
 'use client';
 
 import { useState } from 'react';
-import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
     AlertDialog,
@@ -15,7 +13,6 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
 import { AircraftForm } from './aircraft-form';
@@ -27,16 +24,27 @@ interface AircraftActionsProps {
 }
 
 export function AircraftActions({ tenantId, aircraft, canEdit }: AircraftActionsProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleDelete = () => {
-    if (!firestore || !tenantId) return;
-    const aircraftRef = doc(firestore, `tenants/${tenantId}/aircrafts`, aircraft.id);
-    deleteDocumentNonBlocking(aircraftRef);
-    toast({ title: 'Aircraft Deleted' });
-    setIsDeleteDialogOpen(false);
+    try {
+        const stored = localStorage.getItem('safeviate.aircrafts');
+        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
+        
+        const nextAircrafts = aircrafts.filter(ac => ac.id !== aircraft.id);
+        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        
+        // Also cleanup maintenance logs for this aircraft
+        localStorage.removeItem(`safeviate.maintenance-logs:${aircraft.id}`);
+        
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        
+        toast({ title: 'Aircraft Deleted', description: `${aircraft.tailNumber} has been removed from the fleet.` });
+        setIsDeleteDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete aircraft.' });
+    }
   };
 
   if (!canEdit) return null;
@@ -48,8 +56,8 @@ export function AircraftActions({ tenantId, aircraft, canEdit }: AircraftActions
         organizationId={aircraft.organizationId || null}
         existingAircraft={aircraft}
         trigger={
-          <Button variant="outline" size="sm">
-            <Pencil className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" className="h-8 px-4 text-[10px] font-black uppercase border-slate-300 shadow-sm">
+            <Pencil className="mr-2 h-3.5 w-3.5" />
             Edit
           </Button>
         }
@@ -58,24 +66,25 @@ export function AircraftActions({ tenantId, aircraft, canEdit }: AircraftActions
       <Button
         variant="destructive"
         size="sm"
+        className="h-8 px-4 text-[10px] font-black uppercase shadow-sm"
         onClick={() => setIsDeleteDialogOpen(true)}
       >
-        <Trash2 className="mr-2 h-4 w-4" />
+        <Trash2 className="mr-2 h-3.5 w-3.5" />
         Delete
       </Button>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will permanently remove {aircraft.tailNumber} from your fleet records.
+                <AlertDialogTitle className="text-xl font-black uppercase tracking-tight">Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription className="text-sm">
+                    This will permanently remove <span className="font-bold text-foreground">{aircraft.tailNumber}</span> and all its associated maintenance history from your fleet records.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                    Delete
+                <AlertDialogCancel className="text-[10px] font-black uppercase h-10 px-8 border-slate-300">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className='bg-destructive text-destructive-foreground hover:bg-destructive/90 text-[10px] font-black uppercase h-10 px-8'>
+                    Confirm Deletion
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

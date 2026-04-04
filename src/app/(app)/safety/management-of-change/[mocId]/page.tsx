@@ -1,13 +1,11 @@
 'use client';
 
-import { use, useMemo, useState, useRef } from 'react';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Printer, Zap, PlusCircle, ShieldCheck, WandSparkles, ChevronDown, MoreHorizontal, FileText, CheckCircle2, History } from 'lucide-react';
+import { Printer, PlusCircle, ShieldCheck, WandSparkles, ChevronDown, MoreHorizontal, FileText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -15,12 +13,7 @@ import type { ManagementOfChange } from '@/types/moc';
 import { ImplementationForm, type ImplementationFormHandle } from './implementation-form';
 import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import type { Department } from '@/app/(app)/admin/department/page';
-import type { RiskMatrixSettings } from '@/types/risk';
-import { useUserProfile } from '@/hooks/use-user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,38 +36,49 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
 
 export default function MocDetailPage({ params }: MocDetailPageProps) {
   const resolvedParams = use(params);
-  const firestore = useFirestore();
-  const { tenantId } = useUserProfile();
   const isMobile = useIsMobile();
   const mocId = resolvedParams.mocId;
   const [activeTab, setActiveTab] = useState('implementation');
   const implementationFormRef = useRef<ImplementationFormHandle>(null);
+  const [moc, setMoc] = useState<ManagementOfChange | null>(null);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const mocRef = useMemoFirebase(
-    () => (firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'management-of-change', mocId) : null),
-    [firestore, tenantId, mocId]
-  );
-  
-  const personnelQuery = useMemoFirebase(
-    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/personnel`) : null),
-    [firestore, tenantId]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [mocResponse, personnelResponse] = await Promise.all([
+          fetch(`/api/management-of-change?mocId=${encodeURIComponent(mocId)}`, { cache: 'no-store' }),
+          fetch('/api/personnel', { cache: 'no-store' }),
+        ]);
 
-  const departmentsQuery = useMemoFirebase(
-    () => (firestore && tenantId ? collection(firestore, `tenants/${tenantId}/departments`) : null),
-    [firestore, tenantId]
-  );
-  
-  const riskMatrixSettingsRef = useMemoFirebase(() => (
-    firestore && tenantId ? doc(firestore, 'tenants', tenantId, 'settings', 'risk-matrix-config') : null
-  ), [firestore, tenantId]);
+        const mocPayload = await mocResponse.json();
+        const personnelPayload = await personnelResponse.json();
 
-  const { data: moc, isLoading: isLoadingMoc, error } = useDoc<ManagementOfChange>(mocRef);
-  const { data: personnel, isLoading: isLoadingPersonnel } = useCollection<Personnel>(personnelQuery);
-  const { data: departments, isLoading: isLoadingDepts } = useCollection<Department>(departmentsQuery);
-  const { data: riskMatrixSettings, isLoading: isLoadingRiskMatrix } = useDoc<RiskMatrixSettings>(riskMatrixSettingsRef);
+        if (!cancelled) {
+          setMoc(mocPayload?.moc ?? null);
+          setPersonnel(personnelPayload?.personnel ?? []);
+          setDepartments(personnelPayload?.departments ?? []);
+          setError(mocPayload?.error ? new Error(mocPayload.error) : null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error('Failed to load MOC.'));
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
 
-  const isLoading = isLoadingMoc || isLoadingPersonnel || isLoadingDepts || isLoadingRiskMatrix;
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [mocId]);
 
   const personnelMap = useMemo(() => {
     if (!personnel) return new Map();
@@ -102,7 +106,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   if (error || !moc) {
     return (
       <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
-        <p className="text-muted-foreground">{error ? `Error: ${error.message}` : "MOC not found."}</p>
+        <p className="text-muted-foreground">{error ? `Error: ${error.message}` : 'MOC not found.'}</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/safety/management-of-change">Return to list</Link>
         </Button>
@@ -133,7 +137,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                 </div>
             </CardHeader>
 
-            <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
+                    <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
                 <div className="flex flex-col gap-4">
                     {/* UNIFIED MOBILE TACTICAL DROPDOWN */}
                     {isMobile ? (
@@ -249,13 +253,13 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                     ref={implementationFormRef}
                     key={moc.id}
                     moc={moc}
-                    tenantId={tenantId || ''}
+                    tenantId={'safeviate'}
                     personnel={personnel || []}
                 />
             </TabsContent>
             
             <TabsContent value="approval" className="m-0 outline-none">
-                <ApprovalForm moc={moc} tenantId={tenantId || ''} personnel={personnel || []} />
+                <ApprovalForm moc={moc} personnel={personnel || []} />
             </TabsContent>
         </div>
       </Tabs>
@@ -277,8 +281,8 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
             </div>
         </div>
         <Separator className="my-10" />
-        <ImplementationForm moc={moc} tenantId={tenantId!} personnel={personnel || []} />
-        <ApprovalForm moc={moc} tenantId={tenantId!} personnel={personnel || []} />
+        <ImplementationForm moc={moc} tenantId={'safeviate'} personnel={personnel || []} />
+        <ApprovalForm moc={moc} personnel={personnel || []} />
       </div>
     </div>
   );
