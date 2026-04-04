@@ -28,21 +28,31 @@ export default function InstructorsPage() {
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    try {
-      const storedInstructors = localStorage.getItem('safeviate.instructors');
-      if (storedInstructors) setInstructors(JSON.parse(storedInstructors));
-      
-      const storedRoles = localStorage.getItem('safeviate.roles');
-      if (storedRoles) setRoles(JSON.parse(storedRoles));
-      
-      const storedDepts = localStorage.getItem('safeviate.departments');
-      if (storedDepts) setDepartments(JSON.parse(storedDepts));
-    } catch (err: any) {
-      setError(err);
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, []);
+    let cancelled = false;
+    const load = async () => {
+      setIsLoadingData(true);
+      try {
+        const response = await fetch('/api/personnel', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled) {
+          const personnel = payload.personnel ?? [];
+          setInstructors(personnel.filter((person: PilotProfile) => person.userType === 'Instructor'));
+          setRoles(payload.roles ?? []);
+          setDepartments(payload.departments ?? []);
+          setError(null);
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err);
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const isLoading = isProfileLoading || isLoadingData;
 
