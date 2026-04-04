@@ -144,7 +144,7 @@ const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-accent-foreground': '#1e293b',
   'sidebar-border': '#94a3b8',
 };
-const defaultSidebarBackgroundImage = '/sidebar-background.png';
+const defaultSidebarBackgroundImage = '/safeviate-background.png';
 const defaultHeaderColors: HeaderThemeColors = {
   'header-background': '#171514',
   'header-foreground': '#f3efe8',

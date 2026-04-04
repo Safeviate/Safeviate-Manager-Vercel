@@ -262,6 +262,7 @@ export default function SafetyReportsPage() {
   const isMobile = useIsMobile();
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
   const [allReports, setAllReports] = useState<SafetyReport[]>([]);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoadingReports, setIsLoadingReports] = useState(true);
 
   const canManageAll = hasPermission('safety-reports-manage');
@@ -292,6 +293,24 @@ export default function SafetyReportsPage() {
       cancelled = true;
     };
   }, [tenantId]);
+
+  useEffect(() => {
+    const loadOrganizations = () => {
+      if (typeof window === 'undefined') return;
+      try {
+        const stored = window.localStorage.getItem('safeviate.external-organizations');
+        setOrganizations(stored ? (JSON.parse(stored) as ExternalOrganization[]) : []);
+      } catch {
+        setOrganizations([]);
+      }
+    };
+
+    loadOrganizations();
+    window.addEventListener('safeviate-external-organizations-updated', loadOrganizations);
+    return () => {
+      window.removeEventListener('safeviate-external-organizations-updated', loadOrganizations);
+    };
+  }, []);
 
   const isLoading = isLoadingReports;
 
