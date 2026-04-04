@@ -16,8 +16,8 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:studio": "dotenv -e .env.local -- prisma studio",
-    "prisma:studio:prod": "dotenv -e .env.production -- prisma studio"
+    "prisma:studio": "node scripts/prisma-studio.cjs",
+    "prisma:studio:prod": "node scripts/prisma-studio.cjs --prod"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
