@@ -418,19 +418,19 @@ export default function VehicleUsagePage() {
             <div className="grid gap-4 md:grid-cols-3">
               <Card className="shadow-none">
                 <CardHeader className="pb-2">
-                  <CardDescription>Total Vehicles</CardDescription>
+                  <CardDescription className="text-foreground/80">Total Vehicles</CardDescription>
                   <CardTitle className="text-3xl">{stats.totalVehicles}</CardTitle>
                 </CardHeader>
               </Card>
               <Card className="shadow-none border-border bg-muted/40">
                 <CardHeader className="pb-2">
-                  <CardDescription>Currently Booked Out</CardDescription>
+                  <CardDescription className="text-foreground/80">Currently Booked Out</CardDescription>
                   <CardTitle className="text-3xl text-foreground">{stats.bookedOutCount}</CardTitle>
                 </CardHeader>
               </Card>
               <Card className="shadow-none border-border bg-muted/20">
                 <CardHeader className="pb-2">
-                  <CardDescription>Available Now</CardDescription>
+                  <CardDescription className="text-foreground/80">Available Now</CardDescription>
                   <CardTitle className="text-3xl text-foreground">{stats.availableCount}</CardTitle>
                 </CardHeader>
               </Card>
@@ -461,11 +461,11 @@ export default function VehicleUsagePage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="flex items-center gap-2 text-foreground/80">
                         <CarFront className="h-4 w-4" />
                         <span>{vehicle.type || 'Vehicle'}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="flex items-center gap-2 text-foreground/80">
                         <Clock3 className="h-4 w-4" />
                         <span>Current odometer: {vehicle.currentOdometer.toFixed(0)} km</span>
                       </div>
@@ -475,11 +475,11 @@ export default function VehicleUsagePage() {
                             <LogOut className="h-4 w-4 text-primary" />
                             Active usage
                           </div>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/80">
                             Out by {activeRecord.bookedOutByName} on {format(new Date(activeRecord.bookedOutAt), 'dd MMM yyyy HH:mm')}
                           </p>
-                          <p className="text-muted-foreground">Purpose: {activeRecord.purpose || 'Not specified'}</p>
-                          <p className="text-muted-foreground">Destination: {activeRecord.destination || 'Not specified'}</p>
+                          <p className="text-foreground/80">Purpose: {activeRecord.purpose || 'Not specified'}</p>
+                          <p className="text-foreground/80">Destination: {activeRecord.destination || 'Not specified'}</p>
                           {canManageVehicleUsage ? (
                             <BookInDialog usageRecord={activeRecord} actorName={actorName} onBookIn={handleBookIn} />
                           ) : null}
