@@ -181,7 +181,7 @@ const SidebarItems = () => {
                     ? departmentBasedUserSubItems
                     : item.subItems || [];
                 const subItems = configuredSubItems.filter((sub) => canAccessMenuItem(sub, item));
-                const activeSubItem = subItems.find((sub) => pathname === (sub.href.split('?')[0] || sub.href));
+                const activeSubItem = subItems.find((sub) => pathname === sub.href || pathname === sub.href.split('?')[0]);
                 const rememberedSubHref = lastSubmenuByParent[item.href];
                 const rememberedSubItem = subItems.find((sub) => sub.href === rememberedSubHref);
                 const isOpen = openParents[item.href] ?? false;
@@ -225,20 +225,19 @@ const SidebarItems = () => {
                                         <SidebarMenuSubItem key={subItem.href}>
                                             <SidebarMenuSubButton
                                               asChild
-                                              isActive={pathname === subItem.href || selectedSubItem?.href === subItem.href}
+                                              isActive={pathname === subItem.href || selectedSubItem?.href === subItem.href || pathname === subItem.href.split('?')[0]}
                                             >
-                                                <button
-                                                  type="button"
+                                                <Link
+                                                  href={subItem.href}
                                                   onClick={() => {
                                                     setOpenMobile(false);
                                                     setLastSubmenuByParent(item.href, subItem.href);
                                                     setDismissedParents((dismissed) => ({ ...dismissed, [item.href]: false }));
                                                     setOpenParents((current) => ({ ...current, [item.href]: true }));
-                                                    router.push(subItem.href);
                                                   }}
                                                 >
                                                     <span>{subItem.label}</span>
-                                                </button>
+                                                </Link>
                                             </SidebarMenuSubButton>
                                         </SidebarMenuSubItem>
                                     ))}
