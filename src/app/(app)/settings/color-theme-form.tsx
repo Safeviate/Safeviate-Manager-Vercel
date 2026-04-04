@@ -74,7 +74,18 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         const tenantConfig = configPayload?.config ?? null;
 
         if (tenant) {
-          setTenants([{ ...tenant, ...(tenantConfig || {}) }]);
+          const mergedTenant = { ...tenant, ...(tenantConfig || {}) } as Tenant;
+          if (!mergedTenant.theme) {
+            try {
+              const localTenant = JSON.parse(localStorage.getItem('safeviate.tenant-config') || '{}');
+              if (localTenant?.theme) {
+                mergedTenant.theme = localTenant.theme;
+              }
+            } catch {
+              // no-op: local fallback is optional
+            }
+          }
+          setTenants([mergedTenant]);
         } else {
           setTenants([]);
         }
@@ -143,51 +154,52 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
   const handleApplyTenantTheme = (tenantId: string) => {
     const tenant = tenants?.find(t => t.id === tenantId);
-    if (!tenant?.theme) {
+    const effectiveTheme = tenant?.theme;
+    if (!effectiveTheme) {
         toast({ variant: "destructive", title: "Theme Not Found", description: "The selected tenant does not have a configured theme." });
         return;
     }
     
     const themeToApply: SavedTheme = {
         name: tenant.name,
-        colors: (tenant.theme.main as any) || {
-            primary: tenant.theme.primaryColour || theme.primary,
+        colors: (effectiveTheme.main as any) || {
+            primary: effectiveTheme.primaryColour || theme.primary,
             'primary-foreground': theme['primary-foreground'],
-            background: tenant.theme.backgroundColour || theme.background,
-            accent: tenant.theme.accentColour || theme.accent,
+            background: effectiveTheme.backgroundColour || theme.background,
+            accent: effectiveTheme.accentColour || theme.accent,
         },
-        buttonColors: (tenant.theme.button as any) || {
-            'button-primary-background': tenant.theme.primaryColour || buttonTheme['button-primary-background'],
+        buttonColors: (effectiveTheme.button as any) || {
+            'button-primary-background': effectiveTheme.primaryColour || buttonTheme['button-primary-background'],
             'button-primary-foreground': buttonTheme['button-primary-foreground'],
-            'button-primary-accent': tenant.theme.accentColour || buttonTheme['button-primary-accent'],
+            'button-primary-accent': effectiveTheme.accentColour || buttonTheme['button-primary-accent'],
             'button-primary-accent-foreground': buttonTheme['button-primary-accent-foreground'],
         },
-        cardColors: (tenant.theme.card as any) || { 
-            card: tenant.theme.backgroundColour || cardTheme.card, 
+        cardColors: (effectiveTheme.card as any) || { 
+            card: effectiveTheme.backgroundColour || cardTheme.card, 
             'card-foreground': cardTheme['card-foreground'],
             'card-border': cardTheme['card-border']
         },
-        popoverColors: (tenant.theme.popover as any) || { 
-            popover: tenant.theme.backgroundColour || popoverTheme.popover, 
+        popoverColors: (effectiveTheme.popover as any) || { 
+            popover: effectiveTheme.backgroundColour || popoverTheme.popover, 
             'popover-foreground': popoverTheme['popover-foreground'],
             'popover-accent': popoverTheme['popover-accent'],
             'popover-accent-foreground': popoverTheme['popover-accent-foreground'],
         },
-        sidebarColors: (tenant.theme.sidebar as any) || {
-            'sidebar-background': tenant.theme.backgroundColour || sidebarTheme['sidebar-background'],
+        sidebarColors: (effectiveTheme.sidebar as any) || {
+            'sidebar-background': effectiveTheme.backgroundColour || sidebarTheme['sidebar-background'],
             'sidebar-foreground': sidebarTheme['sidebar-foreground'],
-            'sidebar-accent': tenant.theme.accentColour || sidebarTheme['sidebar-accent'],
+            'sidebar-accent': effectiveTheme.accentColour || sidebarTheme['sidebar-accent'],
             'sidebar-accent-foreground': sidebarTheme['sidebar-accent-foreground'],
             'sidebar-border': sidebarTheme['sidebar-border'],
         },
-        sidebarBackgroundImage: tenant.theme.sidebarBackgroundImage || sidebarBackgroundImage,
-        headerColors: (tenant.theme.header as any) || { 
-            'header-background': tenant.theme.backgroundColour || headerTheme['header-background'], 
+        sidebarBackgroundImage: effectiveTheme.sidebarBackgroundImage || sidebarBackgroundImage,
+        headerColors: (effectiveTheme.header as any) || { 
+            'header-background': effectiveTheme.backgroundColour || headerTheme['header-background'], 
             'header-foreground': headerTheme['header-foreground'], 
             'header-border': headerTheme['header-border'] 
         },
-        swimlaneColors: (tenant.theme.swimlane as any) || swimlaneTheme,
-        matrixColors: (tenant.theme.matrix as any) || matrixTheme,
+        swimlaneColors: (effectiveTheme.swimlane as any) || swimlaneTheme,
+        matrixColors: (effectiveTheme.matrix as any) || matrixTheme,
         scale: scale,
     };
 
@@ -284,7 +296,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                 </SelectTrigger>
                 <SelectContent>
                     {(tenants || []).map(tenant => (
-                        <SelectItem key={tenant.id} value={tenant.id} disabled={!tenant.theme} className="font-bold text-[10px] uppercase">
+                        <SelectItem key={tenant.id} value={tenant.id} className="font-bold text-[10px] uppercase">
                             {tenant.name}
                         </SelectItem>
                     ))}
