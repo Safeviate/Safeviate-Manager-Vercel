@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,16 +10,8 @@ import { MainPageHeader } from '@/components/page-header';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserProfile } from '@/hooks/use-user-profile';
-
-const ColorThemeForm = dynamic(
-  () => import('../../settings/color-theme-form').then((module) => module.ColorThemeForm),
-  { ssr: false }
-);
-
-const VisibilityManager = dynamic(
-  () => import('./visibility-manager').then((module) => module.VisibilityManager),
-  { ssr: false }
-);
+import { ColorThemeForm } from '../../settings/color-theme-form';
+import { VisibilityManager } from './visibility-manager';
 
 export default function PageFormatPage() {
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
