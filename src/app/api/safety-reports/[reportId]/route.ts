@@ -1,21 +1,12 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureCoreSchema, getBootstrapDbState } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
 async function getTenantId() {
-  const { bootstrapMode } = await getBootstrapDbState();
-  if (bootstrapMode) {
-    await ensureCoreSchema();
-    return 'safeviate';
-  }
-
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return null;
-
-  await ensureCoreSchema();
 
   await prisma.tenant.upsert({
     where: { id: 'safeviate' },

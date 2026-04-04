@@ -1,6 +1,5 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureCoreSchema, getBootstrapDbState } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -12,23 +11,13 @@ const PRIVATE_PILOT_TYPES = new Set(['Private Pilot']);
 export async function GET() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
-  const { bootstrapMode } = await getBootstrapDbState();
 
-  if (!email && !bootstrapMode) {
+  if (!email) {
     return NextResponse.json(
       { bookings: [], aircrafts: [], personnel: [], instructors: [], students: [], privatePilots: [], mocs: [], audits: [], reports: [], caps: [], risks: [] },
       { status: 200 }
     );
   }
-
-  if (bootstrapMode) {
-    return NextResponse.json(
-      { bookings: [], aircrafts: [], personnel: [], instructors: [], students: [], privatePilots: [], mocs: [], audits: [], reports: [], caps: [], risks: [] },
-      { status: 200 }
-    );
-  }
-
-  await ensureCoreSchema();
 
   await prisma.tenant.upsert({
     where: { id: 'safeviate' },

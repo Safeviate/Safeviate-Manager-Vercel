@@ -2,7 +2,6 @@ import NextAuth, { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { getBootstrapDbState } from '@/lib/server/bootstrap-db';
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
@@ -21,12 +20,6 @@ export const authOptions: NextAuthOptions = {
         const seedPassword = process.env.AUTH_SEED_PASSWORD?.trim();
 
         if (!email || !password) return null;
-
-        const { hasUsers } = await getBootstrapDbState();
-        if (!hasUsers) {
-          console.warn('[AUTH] Users table is not available yet; allowing bootstrap to continue without credentials login.');
-          return null;
-        }
 
         if (!seedEmail) {
           console.warn('[AUTH] Missing AUTH_SEED_EMAIL in runtime env.');
