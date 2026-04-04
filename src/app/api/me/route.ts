@@ -3,15 +3,47 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
+async function hasUsersTable() {
+  try {
+    const rows = await prisma.$queryRawUnsafe<{ exists: string | null }[]>(
+      `SELECT to_regclass('public.users') AS exists`
+    );
+    return Boolean(rows[0]?.exists);
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   const authUserId = session?.user?.id?.trim();
-  const userCount = await prisma.user.count();
-  const bootstrapMode = userCount === 0;
+  const bootstrapMode = !(await hasUsersTable());
 
   if (!email && !bootstrapMode) {
     return NextResponse.json({ profile: null }, { status: 200 });
+  }
+
+  if (bootstrapMode) {
+    return NextResponse.json(
+      {
+        profile: {
+          id: 'bootstrap-admin',
+          tenantId: 'safeviate',
+          email: email || 'bootstrap@safeviate.local',
+          firstName: 'Bootstrap',
+          lastName: 'Admin',
+          role: 'developer',
+          profilePath: null,
+          passwordHash: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        tenant: { id: 'safeviate', name: 'Safeviate', createdAt: new Date(), updatedAt: new Date() },
+        rolePermissions: ['*'],
+      },
+      { status: 200 }
+    );
   }
 
   await prisma.tenant.upsert({
@@ -44,25 +76,10 @@ export async function GET() {
     });
   }
 
-  if (!profile && bootstrapMode) {
-    profile = {
-      id: 'bootstrap-admin',
-      tenantId: 'safeviate',
-      email: 'bootstrap@safeviate.local',
-      firstName: 'Bootstrap',
-      lastName: 'Admin',
-      role: 'developer',
-      profilePath: null,
-      passwordHash: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as any;
-  }
-
-  const tenant = await prisma.tenant.findUnique({ where: { id: profile.tenantId } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: profile.tenantId } }).catch(() => null);
   const role = await prisma.role.findFirst({
     where: { tenantId: profile.tenantId, id: profile.role },
-  });
+  }).catch(() => null);
 
   return NextResponse.json(
     {

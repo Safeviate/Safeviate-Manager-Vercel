@@ -28,14 +28,16 @@ export async function authenticateAiRequest() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
 
-  const userCount = await prisma.user.count();
-  const bootstrapMode = userCount === 0;
+  const userTableRows = await prisma.$queryRawUnsafe<{ exists: string | null }[]>(
+    `SELECT to_regclass('public.users') AS exists`
+  ).catch(() => []);
+  const bootstrapMode = !Boolean(userTableRows[0]?.exists);
 
   if (!email && !bootstrapMode) {
     return { ok: false as const, status: 401, error: 'You must be signed in to use AI tools.' };
   }
 
-  if (bootstrapMode && !email) {
+  if (bootstrapMode) {
     return {
       ok: true as const,
       tenantId: 'safeviate',

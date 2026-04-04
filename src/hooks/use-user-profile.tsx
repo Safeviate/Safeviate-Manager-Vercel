@@ -56,12 +56,6 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
         let cancelled = false;
         const loadProfile = async () => {
-            if (!authUser?.email) {
-                setDbProfile(null);
-                setDbError(null);
-                return;
-            }
-
             setDbLoading(true);
             try {
                 const response = await fetch('/api/me', { cache: 'no-store' });
