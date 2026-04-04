@@ -491,7 +491,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
           <div className="border-b px-4 py-3"> {/* Reduced padding from px-6 py-4 to px-4 py-3 */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
-                <h3 className="font-headline text-2xl font-semibold">Response History</h3>
+                <h2 className="font-headline text-2xl font-semibold">Response History</h2>
                 <p className="text-sm text-muted-foreground">Review archived ERP sessions and reopen them in read-only mode.</p>
               </div>
               {canManage && (

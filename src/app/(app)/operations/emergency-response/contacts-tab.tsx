@@ -116,7 +116,7 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
   return (
     <div className="space-y-6">
       <div className="border-b px-6 py-6">
-        <h3 className="font-headline text-2xl font-semibold">Emergency Contacts</h3>
+        <h2 className="font-headline text-2xl font-semibold">Emergency Contacts</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Priority contact details for internal responders, authorities, and external support.
         </p>

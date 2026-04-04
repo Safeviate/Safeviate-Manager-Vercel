@@ -8,7 +8,7 @@ export function PhasesTab() {
   return (
     <div className="space-y-6">
       <div className="border-b px-6 py-6">
-        <h3 className="font-headline text-2xl font-semibold">Emergency Phases Guide</h3>
+        <h2 className="font-headline text-2xl font-semibold">Emergency Phases Guide</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Standardized ICAO terminology used for Search and Rescue notification and escalation.
         </p>

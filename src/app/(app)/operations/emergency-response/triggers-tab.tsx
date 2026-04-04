@@ -75,7 +75,7 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
   return (
     <div className="space-y-6">
       <div className="border-b px-6 py-6">
-        <h3 className="font-headline text-2xl font-semibold">Response Triggers</h3>
+        <h2 className="font-headline text-2xl font-semibold">Response Triggers</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Internal company policies that dictate when the ERP must be initiated.
         </p>

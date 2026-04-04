@@ -109,9 +109,9 @@ export function DocumentsTab({ tenantId }: DocumentsTabProps) {
       <div className="px-6 py-6">
         <div className="flex items-center gap-2">
           {activeEvent ? <ShieldAlert className="h-5 w-5 text-destructive" /> : <FileCheck className="h-5 w-5 text-primary" />}
-          <h3 className="font-headline text-2xl font-semibold">
+          <h2 className="font-headline text-2xl font-semibold">
             {activeEvent ? 'Document Collection Tracker' : 'Evidence & Docs'}
-          </h3>
+          </h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {activeEvent

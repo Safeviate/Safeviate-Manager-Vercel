@@ -157,7 +157,7 @@ export function MediaTab({ tenantId }: MediaTabProps) {
   return (
     <div className="space-y-6">
       <div className="border-b px-6 py-6">
-        <h3 className="font-headline text-2xl font-semibold">Media Release</h3>
+        <h2 className="font-headline text-2xl font-semibold">Media Release</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Standardized statements for managing public information during a crisis.
         </p>

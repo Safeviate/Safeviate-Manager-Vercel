@@ -60,7 +60,7 @@ export function EstimatorTab() {
   return (
     <div className="space-y-6">
       <div className="border-b px-6 py-6">
-        <h3 className="font-headline text-2xl font-semibold">Safety &amp; Search Estimator</h3>
+        <h2 className="font-headline text-2xl font-semibold">Safety &amp; Search Estimator</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Mathematical tools to assist in determining emergency phases and potential search areas.
         </p>

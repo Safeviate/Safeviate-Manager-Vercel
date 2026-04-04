@@ -112,7 +112,7 @@ export function ComponentList({ components, isLoading, aircraftId, tenantId }: C
                         </Button>
                       } 
                     />
-                    <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2 text-destructive hover:bg-destructive hover:text-white transition-all hover:border-destructive" onClick={() => handleDelete(comp.id)}>
+                    <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all hover:border-destructive" onClick={() => handleDelete(comp.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

@@ -265,7 +265,7 @@ export default function TrainingRoutesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="ghost" className="text-[10px] font-black uppercase">Cancel</Button></DialogClose>
-            <Button onClick={confirmAddHazard} className="bg-destructive text-[10px] font-black uppercase text-white hover:bg-destructive/90">Add Marker</Button>
+            <Button onClick={confirmAddHazard} className="bg-destructive text-[10px] font-black uppercase text-destructive-foreground hover:bg-destructive/90">Add Marker</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
