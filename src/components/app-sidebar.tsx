@@ -247,7 +247,11 @@ const SidebarItems = () => {
                 return (
                     <React.Fragment key={item.href}>
                         <SidebarMenuItem>{content}</SidebarMenuItem>
-                        {index < filteredItems.length - 1 && <SidebarSeparator className="my-0 opacity-50" />}
+                        {index < filteredItems.length - 1 && (
+                          <SidebarMenuItem aria-hidden="true" className="pointer-events-none">
+                            <SidebarSeparator className="my-0 opacity-50" />
+                          </SidebarMenuItem>
+                        )}
                     </React.Fragment>
                 );
             })}
