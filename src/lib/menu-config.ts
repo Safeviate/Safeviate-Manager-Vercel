@@ -305,12 +305,6 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'users-view',
     subItems: [
       {
-        href: '/users/access-overview',
-        label: 'Access Overview',
-        description: 'View a matrix of what users and roles can access.',
-        permissionId: 'admin-permissions-view',
-      },
-      {
         href: '/users/external',
         label: 'External',
         permissionId: 'users-view',
@@ -401,6 +395,12 @@ export const menuConfig: MenuItem[] = [
         href: '/admin/permissions',
         label: 'Permissions List',
         description: 'View all available application permissions.',
+        permissionId: 'admin-permissions-view',
+      },
+      {
+        href: '/users/access-overview',
+        label: 'Access Overview',
+        description: 'View a matrix of what users and roles can access.',
         permissionId: 'admin-permissions-view',
       },
       {
