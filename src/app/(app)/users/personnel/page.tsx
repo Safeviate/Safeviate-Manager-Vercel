@@ -183,9 +183,21 @@ export default function PersonnelPage() {
   const selectedRoleId = searchParams.get('role');
   const filteredPersonnel = useMemo(() => {
     if (!selectedRoleId) return personnel || [];
-    return (personnel || []).filter((person) => person.role === selectedRoleId);
-  }, [personnel, selectedRoleId]);
-  const selectedRoleName = selectedRoleId ? rolesMap.get(selectedRoleId) || selectedRoleId : null;
+    const roleMatch = (roles || []).find(
+      (role) =>
+        role.id === selectedRoleId ||
+        role.name.toLowerCase() === selectedRoleId.toLowerCase()
+    );
+    if (!roleMatch) return personnel || [];
+    return (personnel || []).filter(
+      (person) => person.role === roleMatch.id || person.role === roleMatch.name
+    );
+  }, [personnel, roles, selectedRoleId]);
+  const selectedRoleName = selectedRoleId
+    ? rolesMap.get(selectedRoleId) ||
+      roles.find((role) => role.name.toLowerCase() === selectedRoleId.toLowerCase())?.name ||
+      selectedRoleId
+    : null;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
