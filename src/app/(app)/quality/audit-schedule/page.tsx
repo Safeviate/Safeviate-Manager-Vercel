@@ -364,7 +364,7 @@ export default function AuditSchedulePage() {
                                         key={month} 
                                         className={cn(
                                             "flex h-11 flex-col items-center justify-center border-b px-1 text-[10px] font-mono font-bold uppercase tracking-wider leading-none",
-                                            isCurrentMonth ? "bg-white/10 text-white" : "text-white/60"
+                                            isCurrentMonth ? "bg-white/10 text-white" : "text-white/80"
                                         )}
                                     >
                                         <span>{month}</span>
@@ -403,7 +403,11 @@ export default function AuditSchedulePage() {
                                                     onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
                                                 >
                                                     <PopoverTrigger asChild>
-                                                        <div className="w-full h-full cursor-pointer flex items-center justify-center">
+                                                        <button
+                                                            type="button"
+                                                            className="w-full h-full cursor-pointer flex items-center justify-center"
+                                                            aria-label={`Set schedule status for ${area} in ${month}. Current status: ${status}.`}
+                                                        >
                                                             <Badge
                                                                 className={cn(
                                                                     "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
@@ -412,7 +416,7 @@ export default function AuditSchedulePage() {
                                                             >
                                                                 {status === 'Not Scheduled' ? '' : status}
                                                             </Badge>
-                                                        </div>
+                                                        </button>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-48 p-0" align="center">
                                                         <StatusSelector

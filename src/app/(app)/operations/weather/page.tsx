@@ -647,7 +647,7 @@ export default function WeatherPage() {
                 </div>
                 Sync Windy Account
             </DialogTitle>
-            <DialogDescription className="text-white/60 font-bold uppercase text-[10px] tracking-widest pt-1">
+            <DialogDescription className="text-white/80 font-bold uppercase text-[10px] tracking-widest pt-1">
                 Unlock Premium Map Features
             </DialogDescription>
           </DialogHeader>
