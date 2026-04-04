@@ -2,7 +2,7 @@
 
 import { useState, useMemo, Suspense, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import type { Personnel, PilotProfile } from '../page';
+import type { Personnel, PilotProfile } from '../personnel-directory-page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { EditPersonnelForm } from './edit-personnel-form';

@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
-import type { Personnel, PilotProfile } from '../page';
+import type { Personnel, PilotProfile } from '../personnel-directory-page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import type { ExternalOrganization } from '@/types/quality';

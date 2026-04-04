@@ -1,7 +1,7 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 async function getTenantId() {
   const session = await getServerSession(authOptions);
@@ -16,20 +16,22 @@ async function getTenantId() {
   return currentUser?.tenantId || 'safeviate';
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const tenantId = await getTenantId();
   if (!tenantId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   await prisma.role.deleteMany({
-    where: { id: params.id, tenantId },
+    where: { id, tenantId },
   });
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const tenantId = await getTenantId();
   if (!tenantId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -46,7 +48,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   const role = await prisma.role.updateMany({
-    where: { id: params.id, tenantId },
+    where: { id, tenantId },
     data: {
       name,
       category,

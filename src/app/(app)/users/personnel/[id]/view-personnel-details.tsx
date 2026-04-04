@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Personnel, PilotProfile } from '../page';
+import type { Personnel, PilotProfile } from '../personnel-directory-page';
 
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';

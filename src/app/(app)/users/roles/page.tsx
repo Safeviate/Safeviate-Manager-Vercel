@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { RoleForm } from '../../admin/roles/role-form';
 import { RoleActions } from '../../admin/roles/role-actions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,24 +15,21 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-export type Role = {
-  id: string;
-  name: string;
-  category?: string;
-  permissions: string[];
-};
+import { useUserProfile } from '@/hooks/use-user-profile';
+import type { Role as AdminRole } from '../../admin/roles/page';
 
 export default function RolesPage() {
   const isMobile = useIsMobile();
-  const tenantId = 'safeviate'; // Hardcoded for now
-  const [roles, setRoles] = useState<Role[]>([]);
+  const { tenantId: resolvedTenantId } = useUserProfile();
+  const tenantId = resolvedTenantId || 'safeviate';
+  const [roles, setRoles] = useState<AdminRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('safeviate.roles');
+      const scopedKey = `safeviate.roles:${tenantId}`;
+      const stored = localStorage.getItem(scopedKey) || localStorage.getItem('safeviate.roles');
       if (stored) {
         setRoles(JSON.parse(stored));
       } else {
@@ -43,7 +40,7 @@ export default function RolesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
@@ -63,8 +60,8 @@ export default function RolesPage() {
               ) : error ? (
                 <div className="p-6 text-center font-semibold text-destructive">{error.message}</div>
               ) : roles && roles.length > 0 ? (
-                roles.map((role) => (
-                  <div key={role.id} className="border-b px-4 py-4">
+                  roles.map((role) => (
+                    <div key={role.id} className="border-b px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1 space-y-3">
                         <p className="text-sm font-bold leading-snug text-foreground break-words">{role.name}</p>

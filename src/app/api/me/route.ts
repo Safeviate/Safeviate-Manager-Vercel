@@ -41,6 +41,10 @@ export async function GET() {
     });
   }
 
+  if (!profile) {
+    return NextResponse.json({ profile: null }, { status: 200 });
+  }
+
   const tenant = await prisma.tenant.findUnique({ where: { id: profile.tenantId } }).catch(() => null);
   const role = await prisma.role.findFirst({
     where: {

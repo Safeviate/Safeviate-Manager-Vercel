@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Eye, Trash2, Mail, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Personnel, PilotProfile } from './page';
+import type { Personnel, PilotProfile } from './personnel-directory-page';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/use-permissions';
 
