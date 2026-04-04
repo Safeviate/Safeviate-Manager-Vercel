@@ -330,7 +330,7 @@ export default function DocumentDatesPage() {
                   </div>
 
                   <div className="rounded-xl border bg-muted/5 p-4 shadow-inner">
-                    <h4 className="text-[9px] font-black uppercase tracking-widest mb-3 text-foreground/75">Active Warning Periods</h4>
+                    <h4 className="text-[9px] font-black uppercase tracking-widest mb-3 text-foreground/90">Active Warning Periods</h4>
                     <div className="space-y-2">
                       {(expirySettings?.warningPeriods || []).length > 0 ? (
                         (expirySettings?.warningPeriods || []).map(({ period, color }) => (
@@ -339,7 +339,7 @@ export default function DocumentDatesPage() {
                               <div className="relative h-6 w-6 rounded-full border" style={{ backgroundColor: periodColors[period] || color }}>
                                 <Input type="color" value={periodColors[period] || color} onChange={(e) => setPeriodColors(prev => ({...prev, [period]: e.target.value}))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0" />
                               </div>
-                              <span className="text-[10px] font-black uppercase tracking-tight">{period} DAYS BEFORE EXPIRY</span>
+                              <span className="text-[10px] font-black uppercase tracking-tight text-foreground/90">{period} DAYS BEFORE EXPIRY</span>
                             </div>
                             <Button size="icon" variant="ghost" aria-label={`Remove ${period} day warning period`} className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemovePeriod(period)}>
                               <Trash2 className="h-4 w-4" />
@@ -347,7 +347,7 @@ export default function DocumentDatesPage() {
                           </div>
                         ))
                       ) : (
-                        <p className="text-[10px] font-bold text-foreground/75 text-center py-6 italic uppercase tracking-widest bg-background/50 rounded-lg">No warning periods defined.</p>
+                        <p className="text-[10px] font-bold text-foreground/90 text-center py-6 italic uppercase tracking-widest bg-background/50 rounded-lg">No warning periods defined.</p>
                       )}
                     </div>
                   </div>

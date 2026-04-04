@@ -137,11 +137,11 @@ export default function ManagementOfChangePage() {
                     <Table>
                         <TableHeader className="bg-muted/30 sticky top-0 z-10">
                             <TableRow>
-                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">MOC #</TableHead>
-                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Title</TableHead>
-                                <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
-                                <TableHead className={cn("text-[10px] uppercase font-bold tracking-wider", isMobile && "hidden")}>Proposed</TableHead>
-                                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider text-foreground/90">MOC #</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider text-foreground/90">Title</TableHead>
+                                <TableHead className="text-[10px] uppercase font-bold tracking-wider text-foreground/90">Status</TableHead>
+                                <TableHead className={cn("text-[10px] uppercase font-bold tracking-wider text-foreground/90", isMobile && "hidden")}>Proposed</TableHead>
+                                <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider text-foreground/90">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -152,7 +152,7 @@ export default function ManagementOfChangePage() {
                                         <TableCell className="text-sm font-medium">{moc.title}</TableCell>
                                         <TableCell><Badge variant="outline" className="text-[10px] font-bold uppercase border-primary/20 bg-primary/5 text-primary">{moc.status}</Badge></TableCell>
                                         <TableCell className={cn("text-sm font-medium whitespace-nowrap", isMobile && "hidden")}>{format(new Date(moc.proposalDate), 'dd MMM yy')}</TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right text-foreground">
                                             <MocActions moc={moc} tenantId={tenantId || ''} />
                                         </TableCell>
                                     </TableRow>

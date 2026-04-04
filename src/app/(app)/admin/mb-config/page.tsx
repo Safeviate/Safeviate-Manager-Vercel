@@ -314,16 +314,16 @@ const WBCalculator = () => {
           />
           <div className="bg-muted/10 px-6 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active:</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/85">Active:</span>
               <span className="text-sm font-black uppercase">{loadedAircraft?.tailNumber || graphConfig.modelName}</span>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-right">
-                <p className="text-[9px] font-black uppercase text-muted-foreground leading-none mb-1">Total Weight</p>
+                <p className="text-[9px] font-black uppercase text-foreground/80 leading-none mb-1">Total Weight</p>
                 <p className="text-xl font-black text-foreground leading-none">{results.weight} lbs</p>
               </div>
               <div className="text-right">
-                <p className="text-[9px] font-black uppercase text-muted-foreground leading-none mb-1">Take-off CG</p>
+                <p className="text-[9px] font-black uppercase text-foreground/80 leading-none mb-1">Take-off CG</p>
                 <p className="text-xl font-black text-foreground leading-none">{results.cg} in</p>
               </div>
               <Badge variant={results.isSafe ? 'default' : 'destructive'} className="h-8 px-4 font-black uppercase">
