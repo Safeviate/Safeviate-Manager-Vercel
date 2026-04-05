@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { Fragment, useEffect, useMemo } from 'react';
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { FlightSession } from '@/types/flight-session';
@@ -47,6 +47,31 @@ const createAircraftIcon = (
     iconSize: [128, 36],
     iconAnchor: [20, 20],
   });
+
+const getTrailStyle = (session: FlightSession, isStale: boolean) => {
+  if (isStale) {
+    return {
+      color: '#f59e0b',
+      weight: 3,
+      opacity: 0.75,
+      dashArray: '8 8',
+    };
+  }
+
+  if (session.onCourse === false) {
+    return {
+      color: '#ef4444',
+      weight: 4,
+      opacity: 0.85,
+    };
+  }
+
+  return {
+    color: '#10b981',
+    weight: 4,
+    opacity: 0.8,
+  };
+};
 
 function FitBounds({ sessions }: { sessions: FlightSession[] }) {
   const map = useMap();
@@ -96,29 +121,42 @@ export function FleetTrackerMap({ sessions }: { sessions: FlightSession[] }) {
       {positionedSessions.map((session) => {
         const position = session.lastPosition!;
         const stale = isFlightSessionStale(session);
+        const breadcrumbPoints = (session.breadcrumb || [])
+          .filter((point) => point?.latitude !== undefined && point?.longitude !== undefined)
+          .map((point) => [point.latitude, point.longitude] as [number, number]);
 
         return (
-          <Marker
-            key={session.id}
-            position={[position.latitude, position.longitude]}
-            icon={createAircraftIcon(session.aircraftRegistration, position.headingTrue, session.onCourse, stale) || DefaultIcon}
-          >
-            <Popup>
-              <div className="space-y-1 text-xs">
-                <p className="font-black uppercase">{session.aircraftRegistration}</p>
-                <p className="font-medium text-muted-foreground">{session.pilotName}</p>
-                <p>
-                  {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
-                </p>
-                <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
-                <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)}°` : 'Unavailable'}</p>
-                <p>Status: {stale ? 'Stale' : 'Live'}</p>
-                <p>Course: {session.onCourse === undefined || session.onCourse === null ? 'Unavailable' : session.onCourse ? 'On Course' : 'Off Course'}</p>
-                <p>XTK: {session.crossTrackErrorNm != null ? `${session.crossTrackErrorNm.toFixed(2)} NM` : 'Unavailable'}</p>
-                <p>Updated: {session.updatedAt}</p>
-              </div>
-            </Popup>
-          </Marker>
+          <Fragment key={session.id}>
+            {breadcrumbPoints.length > 1 && (
+              <Polyline
+                positions={breadcrumbPoints}
+                pathOptions={getTrailStyle(session, stale)}
+              />
+            )}
+            <Marker
+              position={[position.latitude, position.longitude]}
+              icon={createAircraftIcon(session.aircraftRegistration, position.headingTrue, session.onCourse, stale) || DefaultIcon}
+            >
+              <Popup>
+                <div className="space-y-1 text-xs">
+                  <p className="font-black uppercase">{session.aircraftRegistration}</p>
+                  <p className="font-medium text-muted-foreground">{session.pilotName}</p>
+                  <p>
+                    {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
+                  </p>
+                  <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
+                  <p>Altitude: {position.altitude != null ? `${Math.round(position.altitude)} m` : 'Unavailable'}</p>
+                  <p>Speed: {session.groundSpeedKt != null ? `${session.groundSpeedKt.toFixed(0)} kt` : position.speedKt != null ? `${position.speedKt.toFixed(0)} kt` : 'Unavailable'}</p>
+                  <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)}°` : 'Unavailable'}</p>
+                  <p>Trail points: {breadcrumbPoints.length}</p>
+                  <p>Status: {stale ? 'Stale' : 'Live'}</p>
+                  <p>Course: {session.onCourse === undefined || session.onCourse === null ? 'Unavailable' : session.onCourse ? 'On Course' : 'Off Course'}</p>
+                  <p>XTK: {session.crossTrackErrorNm != null ? `${session.crossTrackErrorNm.toFixed(2)} NM` : 'Unavailable'}</p>
+                  <p>Updated: {session.updatedAt}</p>
+                </div>
+              </Popup>
+            </Marker>
+          </Fragment>
         );
       })}
     </MapContainer>

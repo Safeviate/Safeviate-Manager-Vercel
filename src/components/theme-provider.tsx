@@ -72,6 +72,8 @@ export type SavedTheme = {
   scale?: number;
 };
 
+export type UiMode = 'classic' | 'modern';
+
 type ThemeContextType = {
   theme: ThemeColors;
   setThemeValue: (key: keyof ThemeColors, value: string) => void;
@@ -91,6 +93,8 @@ type ThemeContextType = {
   setSwimlaneThemeValue: (key: keyof SwimlaneThemeColors, value: string) => void;
   matrixTheme: MatrixThemeColors;
   setMatrixThemeValue: (key: keyof MatrixThemeColors, value: string) => void;
+  uiMode: UiMode;
+  setUiMode: (mode: UiMode) => void;
   scale: number;
   setScale: (scale: number) => void;
   savedThemes: SavedTheme[];
@@ -240,6 +244,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(defaultHeaderColors);
   const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(defaultSwimlaneColors);
   const [matrixTheme, setMatrixTheme] = useState<MatrixThemeColors>(defaultMatrixColors);
+  const [uiMode, setUiModeState] = useState<UiMode>('classic');
   const [scale, setScaleState] = useState<number>(defaultScale);
   // Browser-only presets for the current tenant, separate from shared tenant branding.
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([]);
@@ -319,6 +324,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setHeaderTheme(nextHeaderTheme);
     setSwimlaneTheme(nextSwimlaneTheme);
     setMatrixTheme(nextMatrixTheme);
+    setUiModeState('classic');
     setScaleState(nextScale);
     setSavedThemes(nextSavedThemes);
   }, [tenant?.theme]);
@@ -346,6 +352,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const newTheme = { ...state, [prop]: value };
     setter(newTheme);
     document.documentElement.style.setProperty(`--${String(prop)}`, hexToHsl(value));
+  };
+
+  const setUiMode = (_mode: UiMode) => {
+    setUiModeState('classic');
   };
 
   const setScale = (newScale: number) => {
@@ -405,12 +415,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setHeaderTheme(newHeaderTheme);
     setSwimlaneTheme(newSwimlaneTheme);
     setMatrixTheme(newMatrixTheme);
+    setUiModeState('classic');
     setScaleState(newScale);
-    try {
-      window.localStorage.setItem(SCALE_KEY, JSON.stringify(newScale));
-    } catch {
-      // Ignore browser storage failures and keep the in-memory value.
-    }
     
     applyColorsToDOM(newTheme);
     applyColorsToDOM(newButtonTheme);
@@ -490,6 +496,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       ...(tenant?.theme?.swimlane || {}),
     });
     setMatrixTheme(normalizeMatrixTheme(tenant?.theme?.matrix || {}));
+    setUiModeState('classic');
     const nextScale = resolveScale(tenant?.theme?.scale);
     setScaleState(nextScale);
     try {
@@ -519,6 +526,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSwimlaneThemeValue,
     matrixTheme,
     setMatrixThemeValue,
+    uiMode,
+    setUiMode,
     scale,
     setScale,
     savedThemes,

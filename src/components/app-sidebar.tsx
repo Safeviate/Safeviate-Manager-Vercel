@@ -19,7 +19,7 @@ import {
   SidebarMobile,
   SidebarMobileContent,
 } from '@/components/ui/sidebar';
-import { Plane, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
+import { LogOut, ChevronDown, ChevronDown as BrandChevron } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,7 +41,6 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const USERS_STATIC_SUB_ITEMS: SubMenuItem[] = [
@@ -246,11 +245,11 @@ const SidebarItems = () => {
                 return (
                     <React.Fragment key={item.href}>
                         <SidebarMenuItem>{content}</SidebarMenuItem>
-                        {index < filteredItems.length - 1 && (
-                          <SidebarMenuItem aria-hidden="true" className="pointer-events-none">
-                            <SidebarSeparator className="my-0 opacity-50" />
-                          </SidebarMenuItem>
-                        )}
+
+
+
+
+
                     </React.Fragment>
                 );
             })}
@@ -320,12 +319,10 @@ const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSha
 export function AppSidebarMobile() {
     const { openMobile, setOpenMobile } = useSidebar();
     const isMobile = useIsMobile();
-    const { tenant } = useTenantConfig();
     const { userProfile } = useUserProfile();
   
     if (!isMobile) return null;
 
-    const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
     const userDisplayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Developer';
     const userFallback = userDisplayName.charAt(0).toUpperCase();
   
@@ -336,18 +333,13 @@ export function AppSidebarMobile() {
             <SheetTitle className="sr-only">Main Menu</SheetTitle>
           </SheetHeader>
           <SidebarHeader>
-            <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-                {isAviation ? (
-                  <Plane className="size-5 text-primary-foreground" />
-                ) : (
-                  <ShieldCheck className="size-5 text-primary-foreground" />
-                )}
+            <div className="app-sidebar-brand flex items-center gap-2 px-2 py-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="app-sidebar-brand-label truncate font-headline text-lg">Safeviate</span>
               </div>
-              <span className="font-headline text-lg">Safeviate</span>
             </div>
           </SidebarHeader>
-          <SidebarSeparator className="my-1" />
+
           <SidebarContent>
             <SidebarItems />
           </SidebarContent>
@@ -360,27 +352,20 @@ export function AppSidebarMobile() {
 }
 
 export function AppSidebar() {
-  const { tenant } = useTenantConfig();
   const { userProfile } = useUserProfile();
-  const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
   const userDisplayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Developer';
   const userFallback = userDisplayName.charAt(0).toUpperCase();
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-            {isAviation ? (
-              <Plane className="size-5 text-primary-foreground" />
-            ) : (
-              <ShieldCheck className="size-5 text-primary-foreground" />
-            )}
+        <div className="app-sidebar-brand flex items-center gap-2 px-2 py-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="app-sidebar-brand-label truncate font-headline text-lg">Safeviate</span>
           </div>
-          <span className="font-headline text-lg">Safeviate</span>
         </div>
       </SidebarHeader>
-      <SidebarSeparator className="my-1" />
+
       <SidebarContent>
         <SidebarItems />
       </SidebarContent>

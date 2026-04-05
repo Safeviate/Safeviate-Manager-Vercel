@@ -8,6 +8,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { getBackConfig } from '@/lib/back-navigation';
+import { Bell, Search, ChevronDown } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const findCurrentItem = (
   items: (MenuItem | SubMenuItem)[],
@@ -54,6 +57,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { userProfile } = useUserProfile();
   const title = getTitle(pathname);
 
   const segments = pathname.split('/').filter(Boolean);
@@ -69,9 +73,12 @@ export function AppHeader() {
     }
   };
 
+  const userDisplayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'User';
+  const userFallback = userDisplayName.charAt(0).toUpperCase();
+
   return (
-    <header className="sticky top-0 z-20 flex h-14 min-w-0 items-center gap-3 border-b bg-header px-3 text-header-foreground sm:px-6 shadow-sm">
-      <div className="flex items-center gap-2">
+    <header className="app-topbar sticky top-0 z-20 flex h-14 min-w-0 items-center justify-between gap-3 border-none bg-header px-3 text-header-foreground sm:px-6 shadow-none">
+      <div className="flex min-w-0 items-center gap-3">
         {isDetailPage ? (
           <Button 
             variant="outline" 
@@ -84,11 +91,29 @@ export function AppHeader() {
         ) : (
           <SidebarTrigger className={cn(isMobile ? '' : 'hidden')} />
         )}
+        {!isDetailPage && title && (
+          <h1 className="truncate text-base font-bold tracking-tight sm:text-lg uppercase opacity-90">{title}</h1>
+        )}
       </div>
-      
-      {!isDetailPage && title && (
-        <h1 className="truncate text-base font-bold tracking-tight sm:text-lg uppercase opacity-90">{title}</h1>
-      )}
+
+      <div className="app-topbar-actions flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="app-topbar-icon hidden md:inline-flex">
+          <Search className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="app-topbar-icon">
+          <Bell className="h-4 w-4" />
+        </Button>
+        <div className="app-topbar-profile flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-1.5 py-1">
+          <Avatar className="h-7 w-7">
+            <AvatarImage
+              src={`https://picsum.photos/seed/${userDisplayName}/64/64`}
+              alt={`${userDisplayName} profile avatar`}
+            />
+            <AvatarFallback>{userFallback}</AvatarFallback>
+          </Avatar>
+          <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 md:block" />
+        </div>
+      </div>
     </header>
   );
 }

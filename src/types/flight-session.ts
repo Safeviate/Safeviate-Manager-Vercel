@@ -31,10 +31,13 @@ export interface FlightSession {
   endedAt?: string;
   updatedAt: string;
   lastPosition?: FlightPosition;
+  breadcrumb?: FlightPosition[];
   distanceToNextNm?: number;
   bearingToNext?: number;
   etaToNextMinutes?: number;
   groundSpeedKt?: number;
+  crossTrackErrorNm?: number;
+  onCourse?: boolean;
 }
 
 export interface ActiveLegState {
