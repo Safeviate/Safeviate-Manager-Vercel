@@ -266,7 +266,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             Organization Branding
                         </h2>
                         <p className='text-[9px] font-black uppercase italic text-foreground/75'>
-                            Set the shared tenant branding that appears on every device.
+                            Set the shared tenant branding that appears across every device.
                         </p>
                     </div>
                     <Button onClick={handleSaveToOrganization} className="w-full sm:w-auto text-[10px] font-black uppercase h-9 px-8 shadow-md">
