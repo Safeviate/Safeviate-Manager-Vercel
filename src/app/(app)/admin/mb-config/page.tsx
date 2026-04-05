@@ -250,7 +250,7 @@ const WBCalculator = () => {
     } catch (e) { toast({ variant: 'destructive', title: 'Save Failed' }); }
   };
 
-  const handleSaveToAircraft = (aircraftId: string) => {
+  const handleSaveToAircraft = async (aircraftId: string) => {
     try {
         const ac = aircrafts.find(a => a.id === aircraftId);
         if (!ac) return;

@@ -56,7 +56,7 @@ export default function OverdueSettingsPage() {
     return () => window.removeEventListener('safeviate-overdue-monitor-settings-updated', loadData);
   }, [loadData]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
         const settings: OverdueMonitorSettings = {
             id: 'overdue-monitor',
