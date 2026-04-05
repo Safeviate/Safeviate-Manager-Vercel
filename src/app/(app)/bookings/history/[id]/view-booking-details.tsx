@@ -44,6 +44,27 @@ const AeronauticalMap = dynamic(
 );
 
 const FUEL_WEIGHT_PER_GALLON = 6;
+const DEFAULT_GRAPH_CONFIG = {
+    xMin: 80,
+    xMax: 94,
+    yMin: 1295,
+    yMax: 2600,
+    envelope: [
+        { x: 82, y: 1400 },
+        { x: 82, y: 1950 },
+        { x: 86.5, y: 2450 },
+        { x: 93, y: 2450 },
+        { x: 93, y: 1400 },
+        { x: 82, y: 1400 },
+    ] as { x: number; y: number }[],
+};
+const DEFAULT_BASIC_EMPTY = { weight: 1416, moment: 120360, arm: 85 };
+const DEFAULT_STATIONS = [
+    { id: 2, name: 'Pilot & Front Pax', weight: 340, arm: 85.5, type: 'standard' },
+    { id: 3, name: 'Fuel', weight: 288, arm: 95, type: 'fuel', gallons: 48, maxGallons: 50 },
+    { id: 4, name: 'Rear Pax', weight: 0, arm: 118.1, type: 'standard' },
+    { id: 5, name: 'Baggage', weight: 0, arm: 142.8, type: 'standard' },
+];
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -206,8 +227,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const student = personnel.find((person) => person.id === booking.studentId);
         return student ? `${student.firstName} ${student.lastName}` : booking.studentId;
     }, [personnel, booking.studentId]);
-
-    const [stations, setStations] = useState<any[]>([]);
+    const [graphConfig, setGraphConfig] = useState(DEFAULT_GRAPH_CONFIG);
+    const [basicEmpty, setBasicEmpty] = useState(DEFAULT_BASIC_EMPTY);
+    const [stations, setStations] = useState<any[]>(DEFAULT_STATIONS);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
 
     useEffect(() => {
@@ -221,20 +243,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             }
 
             try {
-                const [scheduleRes, personnelRes] = await Promise.all([
-                    fetch('/api/schedule-data'),
-                    fetch('/api/personnel'),
+                const [aircraftRes, usersRes] = await Promise.all([
+                    fetch(`/api/aircraft/${booking.aircraftId}`),
+                    fetch('/api/users'),
                 ]);
 
-                if (!scheduleRes.ok) throw new Error('Failed to load aircraft data.');
-                if (!personnelRes.ok) throw new Error('Failed to load personnel data.');
+                if (!aircraftRes.ok) throw new Error('Failed to load aircraft data.');
+                if (!usersRes.ok) throw new Error('Failed to load personnel data.');
 
-                const scheduleData = await scheduleRes.json();
-                const peopleData = await personnelRes.json();
+                const aircraftData = await aircraftRes.json();
+                const peopleData = await usersRes.json();
 
                 if (!cancelled) {
-                    setAircrafts(scheduleData.aircraft || []);
-                    setPersonnel(peopleData.personnel || []);
+                    setAircrafts(aircraftData?.aircraft ? [aircraftData.aircraft] : []);
+                    setPersonnel(peopleData.users || peopleData.personnel || []);
                 }
             } catch {
                 if (!cancelled) {
@@ -273,19 +295,40 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [postFlight, setPostFlight] = useState<PostFlightData>(booking.postFlightData || { hobbs: 0, tacho: 0, fuelUpliftGallons: 0, fuelUpliftLitres: 0, oilUplift: 0, defects: '' });
 
     useEffect(() => {
-        if (aircraft) {
-            if (booking.massAndBalance?.stations && booking.massAndBalance.stations.length > 0) {
-                setStations(booking.massAndBalance.stations);
-            } else if (aircraft.stations) {
-                setStations(aircraft.stations);
-            }
+        if (aircraft?.cgEnvelope?.length) {
+            const envelope = aircraft.cgEnvelope.map((point) => ({ x: point.cg, y: point.weight }));
+            setGraphConfig({
+                xMin: Math.min(...envelope.map((point) => point.x)) - 2,
+                xMax: Math.max(...envelope.map((point) => point.x)) + 2,
+                yMin: Math.min(...envelope.map((point) => point.y)) - 200,
+                yMax: Math.max(...envelope.map((point) => point.y)) + 200,
+                envelope,
+            });
+        } else {
+            setGraphConfig(DEFAULT_GRAPH_CONFIG);
+        }
+
+        const arm = aircraft?.emptyWeight && aircraft.emptyWeight > 0
+            ? (aircraft.emptyWeightMoment || 0) / aircraft.emptyWeight
+            : DEFAULT_BASIC_EMPTY.arm;
+        setBasicEmpty({
+            weight: aircraft?.emptyWeight && aircraft.emptyWeight > 0 ? aircraft.emptyWeight : DEFAULT_BASIC_EMPTY.weight,
+            moment: aircraft?.emptyWeight && aircraft.emptyWeight > 0 ? (aircraft.emptyWeightMoment || 0) : DEFAULT_BASIC_EMPTY.moment,
+            arm: parseFloat(arm.toFixed(2)),
+        });
+
+        if (booking.massAndBalance?.stations && booking.massAndBalance.stations.length > 0) {
+            setStations(booking.massAndBalance.stations);
+        } else if (aircraft?.stations && aircraft.stations.length > 0) {
+            setStations(aircraft.stations);
+        } else {
+            setStations(DEFAULT_STATIONS);
         }
     }, [aircraft, booking.massAndBalance?.stations]);
 
     useEffect(() => {
-        if (!aircraft || !aircraft.emptyWeight || !aircraft.emptyWeightMoment) return;
-        let totalMom = aircraft.emptyWeightMoment;
-        let totalWt = aircraft.emptyWeight;
+        let totalMom = parseFloat(String(basicEmpty.moment)) || 0;
+        let totalWt = parseFloat(String(basicEmpty.weight)) || 0;
         stations.forEach(st => {
             const wt = parseFloat(String(st.weight)) || 0;
             const arm = parseFloat(String(st.arm)) || 0;
@@ -295,10 +338,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const cg = totalWt > 0 ? (totalMom / totalWt) : 0;
         const roundedCg = parseFloat(cg.toFixed(2));
         const roundedWeight = parseFloat(totalWt.toFixed(1));
-        const envelope = aircraft.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
-        const safe = envelope.length > 2 ? isPointInPolygon({ x: roundedCg, y: roundedWeight }, envelope) : false;
+        const safe = graphConfig.envelope.length > 2
+            ? isPointInPolygon({ x: roundedCg, y: roundedWeight }, graphConfig.envelope)
+            : false;
         setResults({ cg: roundedCg, weight: roundedWeight, isSafe: safe });
-    }, [stations, aircraft]);
+    }, [stations, basicEmpty, graphConfig.envelope]);
 
     const handleStationWeightChange = (id: number, weight: string) => {
         const val = parseFloat(weight) || 0;
@@ -308,6 +352,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 return { ...s, weight: val, gallons: parseFloat((val / FUEL_WEIGHT_PER_GALLON).toFixed(1)) };
             }
             return { ...s, weight: val };
+        }));
+    };
+
+    const handleGallonsChange = (id: number, gallons: string) => {
+        const val = parseFloat(gallons) || 0;
+        setStations(prev => prev.map(s => {
+            if (s.id !== id || s.type !== 'fuel') return s;
+            return { ...s, gallons: val, weight: parseFloat((val * FUEL_WEIGHT_PER_GALLON).toFixed(1)) };
         }));
     };
 
@@ -419,20 +471,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     if (loadingAc || loadingPeople) return <Skeleton className="h-64 w-full" />;
 
-    const envelope = aircraft?.cgEnvelope?.map(p => ({ x: p.cg, y: p.weight })) || [];
+    const envelope = graphConfig.envelope;
     const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
     const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-    const fXMin = allX.length > 0 ? Math.min(...allX) - 2 : 0;
-    const fXMax = allX.length > 0 ? Math.max(...allX) + 2 : 100;
-    const fYMin = allY.length > 0 ? Math.min(...allY) - 100 : 0;
-    const fYMax = allY.length > 0 ? Math.max(...allY) + 100 : 2000;
+    const fXMin = allX.length > 0 ? Math.min(graphConfig.xMin, ...allX) - 1 : graphConfig.xMin;
+    const fXMax = allX.length > 0 ? Math.max(graphConfig.xMax, ...allX) + 1 : graphConfig.xMax;
+    const fYMin = allY.length > 0 ? Math.min(graphConfig.yMin, ...allY) - 100 : graphConfig.yMin;
+    const fYMax = allY.length > 0 ? Math.max(graphConfig.yMax, ...allY) + 100 : graphConfig.yMax;
 
     return (
         <Card className="flex h-full min-h-0 flex-1 flex-col shadow-none border overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
-                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId}`}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
                     status={booking.status}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
@@ -663,13 +715,36 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Loading & Logs</Button>
                                             </div>
                                             <div className="space-y-4">
+                                                <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Basic Empty</p>
+                                                    <p className="text-sm font-black">{basicEmpty.weight} lbs @ {basicEmpty.arm} in</p>
+                                                </div>
                                                 {stations.map(s => (
                                                     <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background">
                                                         <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
-                                                        <div className="flex items-center gap-2">
-                                                            <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} className="h-8 text-xs font-bold" />
-                                                            <div className="text-[10px] font-bold text-muted-foreground w-8">LBS</div>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} className="h-8 text-xs font-bold" placeholder="Weight" />
+                                                            <Input type="number" value={s.arm ?? ''} readOnly className="h-8 text-xs font-bold bg-muted/30" placeholder="Arm" />
                                                         </div>
+                                                        {s.type === 'fuel' && (
+                                                            <div className="space-y-2 pt-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Input type="number" value={s.gallons ?? ''} onChange={(e) => handleGallonsChange(s.id, e.target.value)} className="h-8 text-xs font-bold" placeholder="Gallons" />
+                                                                    <div className="text-[10px] font-bold text-muted-foreground">
+                                                                        MAX: {s.maxGallons || 50}
+                                                                    </div>
+                                                                </div>
+                                                                <input
+                                                                    type="range"
+                                                                    min="0"
+                                                                    max={s.maxGallons || 50}
+                                                                    step="0.1"
+                                                                    value={s.gallons || 0}
+                                                                    onChange={(e) => handleGallonsChange(s.id, e.target.value)}
+                                                                    className="w-full h-2 accent-yellow-600 rounded-full cursor-pointer"
+                                                                />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>

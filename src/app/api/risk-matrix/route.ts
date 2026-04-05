@@ -12,11 +12,16 @@ async function getTenantId() {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ configuration: null }, { status: 200 });
-  const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`, tenantId);
-  const data = (rows[0]?.data as any) || {};
-  return NextResponse.json({ configuration: data['risk-matrix'] ?? null }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ configuration: null }, { status: 200 });
+    const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`, tenantId);
+    const data = (rows[0]?.data as any) || {};
+    return NextResponse.json({ configuration: data['risk-matrix'] ?? null }, { status: 200 });
+  } catch (error) {
+    console.error('[risk-matrix] fallback to null configuration:', error);
+    return NextResponse.json({ configuration: null }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {

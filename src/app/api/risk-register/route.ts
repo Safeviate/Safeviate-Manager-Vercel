@@ -13,10 +13,15 @@ async function getTenantId() {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ risks: [] }, { status: 200 });
-  const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM risks WHERE tenant_id = $1 ORDER BY created_at ASC`, tenantId);
-  return NextResponse.json({ risks: rows.map((row) => row.data) }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ risks: [] }, { status: 200 });
+    const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM risks WHERE tenant_id = $1 ORDER BY created_at ASC`, tenantId);
+    return NextResponse.json({ risks: rows.map((row) => row.data) }, { status: 200 });
+  } catch (error) {
+    console.error('[risk-register] fallback to empty list:', error);
+    return NextResponse.json({ risks: [] }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {

@@ -88,6 +88,17 @@ const PALETTE_PRESETS: PalettePreset[] = [
 
 const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
 
+function readLocalTenantOverride() {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const stored = window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
+    return stored ? (JSON.parse(stored) as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
@@ -141,9 +152,10 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         const configPayload = await configResponse.json().catch(() => ({}));
         const tenant = mePayload?.tenant;
         const tenantConfig = configPayload?.config ?? null;
+        const localOverride = readLocalTenantOverride();
 
         if (tenant) {
-          const mergedTenant = { ...tenant, ...(tenantConfig || {}) } as Tenant;
+          const mergedTenant = { ...tenant, ...(tenantConfig || {}), ...(localOverride || {}) } as Tenant;
           setTenants([mergedTenant]);
         } else {
           setTenants([]);
@@ -270,7 +282,10 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
             'sidebar-accent-foreground': sidebarTheme['sidebar-accent-foreground'],
             'sidebar-border': sidebarTheme['sidebar-border'],
         },
-        sidebarBackgroundImage: effectiveTheme.sidebarBackgroundImage || sidebarBackgroundImage,
+        sidebarBackgroundImage:
+          effectiveTheme.sidebarBackgroundImage !== undefined
+            ? effectiveTheme.sidebarBackgroundImage
+            : sidebarBackgroundImage,
         headerColors: (effectiveTheme.header as any) || { 
             'header-background': effectiveTheme.backgroundColour || headerTheme['header-background'], 
             'header-foreground': headerTheme['header-foreground'], 

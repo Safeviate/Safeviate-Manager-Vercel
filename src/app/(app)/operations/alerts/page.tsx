@@ -33,7 +33,12 @@ export default function AlertsPage() {
         const payload = await res.json().catch(() => ({}));
         if (!cancelled) {
           const next = Array.isArray(payload.alerts) ? payload.alerts : [];
-          setAlerts(next.filter((alert: Alert & { organizationId?: string | null }) => (alert as any).organizationId === organizationId));
+          setAlerts(
+            next.filter((alert: Alert & { organizationId?: string | null }) => {
+              const alertOrg = (alert as any).organizationId;
+              return alertOrg == null || alertOrg === organizationId;
+            })
+          );
         }
       } catch {
         if (!cancelled) setAlerts([]);
@@ -54,11 +59,15 @@ export default function AlertsPage() {
     const isExisting = alerts.some((item) => item.id === alert.id);
     const url = isExisting ? `/api/alerts/${alert.id}` : '/api/alerts';
     const method = isExisting ? 'PATCH' : 'POST';
-    await fetch(url, {
+    const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ alert }),
     });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || 'Failed to save alert.');
+    }
     window.dispatchEvent(new Event('safeviate-alerts-updated'));
   };
 

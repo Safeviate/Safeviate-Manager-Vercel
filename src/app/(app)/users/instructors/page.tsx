@@ -68,6 +68,7 @@ export default function InstructorsPage() {
                 tenantId={tenantId || ''} 
                 roles={roles || []} 
                 departments={departments || []} 
+                defaultUserType="Instructor"
                 trigger={
                    <Button
                        disabled={!canCreateUsers || isProfileLoading}

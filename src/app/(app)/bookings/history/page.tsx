@@ -35,6 +35,8 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
   creatorName?: string;
+  instructorName?: string;
+  studentName?: string;
   fullStartTime?: Date;
   aircraft?: Aircraft;
 };
@@ -153,6 +155,8 @@ const BookingsTable = ({
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">#</TableHead>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">Aircraft</TableHead>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">Creator</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Instructor</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Student</TableHead>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">Start Time</TableHead>
                       <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Flight Time</TableHead>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
@@ -170,6 +174,8 @@ const BookingsTable = ({
                                 <TableCell className="font-bold text-sm text-foreground whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
                                 <TableCell className="font-black text-sm uppercase text-foreground">{b.aircraftTailNumber}</TableCell>
                                 <TableCell className="font-bold text-sm text-foreground">{b.creatorName}</TableCell>
+                                <TableCell className="font-bold text-sm text-foreground">{b.instructorName || 'N/A'}</TableCell>
+                                <TableCell className="font-bold text-sm text-foreground">{b.studentName || 'N/A'}</TableCell>
                                 <TableCell className="font-medium text-sm text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
                                 <TableCell className="text-right font-black text-sm text-foreground whitespace-nowrap">
                                     {flightHours !== null ? (
@@ -222,19 +228,23 @@ export default function BookingsHistoryPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
-  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [personnel, setPersonnel] = useState<Array<Personnel | PilotProfile>>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch('/api/schedule-data', { cache: 'no-store' });
-        const payload = await response.json();
+        const [scheduleResponse, usersResponse] = await Promise.all([
+          fetch('/api/schedule-data', { cache: 'no-store' }),
+          fetch('/api/users', { cache: 'no-store' }),
+        ]);
+        const schedulePayload = await scheduleResponse.json();
+        const usersPayload = await usersResponse.json();
         if (!cancelled) {
-          setBookings(payload?.bookings ?? []);
-          setAircraft(payload?.aircraft ?? []);
-          setPersonnel(payload?.personnel ?? []);
+          setBookings(schedulePayload?.bookings ?? []);
+          setAircraft(schedulePayload?.aircraft ?? []);
+          setPersonnel(usersPayload?.users ?? usersPayload?.personnel ?? []);
         }
       } catch {
         if (!cancelled) {
@@ -252,7 +262,7 @@ export default function BookingsHistoryPage() {
     };
   }, [tenantId]);
 
-  const userMap = useMemo(() => {
+    const userMap = useMemo(() => {
     if (!personnel) return new Map<string, string>();
     const map = new Map(personnel.map((person) => [person.id, `${person.firstName} ${person.lastName}`]));
     map.set('DEVELOPER_MODE', 'System (Developer)');
@@ -267,10 +277,12 @@ export default function BookingsHistoryPage() {
     return bookings.map(b => {
       const bookingAircraft = aircraftMap.get(b.aircraftId);
       const fullStartTime = b.date && b.startTime ? parse(`${b.date} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
-      return {
+        return {
         ...b,
         aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
         creatorName: userMap.get(b.createdById || '') || 'Unknown Creator',
+        instructorName: userMap.get(b.instructorId || '') || (b.instructorId ? b.instructorId : undefined),
+        studentName: userMap.get(b.studentId || '') || (b.studentId ? b.studentId : undefined),
         fullStartTime: fullStartTime,
         aircraft: bookingAircraft,
       };

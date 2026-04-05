@@ -1,13 +1,13 @@
 import { PersonnelDirectoryPage } from '../../personnel/personnel-directory-page';
 
 type RoleUsersPageProps = {
-  params: {
+  params: Promise<{
     roleId: string;
-  };
+  }>;
 };
 
-export default function RoleUsersPage({ params }: RoleUsersPageProps) {
-  const { roleId } = params;
+export default async function RoleUsersPage({ params }: RoleUsersPageProps) {
+  const { roleId } = await params;
 
   return (
     <PersonnelDirectoryPage

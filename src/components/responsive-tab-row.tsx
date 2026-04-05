@@ -28,6 +28,7 @@ type ResponsiveTabRowProps = {
   className?: string;
   action?: ReactNode;
   joinedDesktopTabs?: boolean;
+  flatTabs?: boolean;
 };
 
 export function ResponsiveTabRow({
@@ -38,6 +39,7 @@ export function ResponsiveTabRow({
   className,
   action,
   joinedDesktopTabs = false,
+  flatTabs = false,
 }: ResponsiveTabRowProps) {
   const isMobile = useIsMobile();
 
@@ -72,7 +74,7 @@ export function ResponsiveTabRow({
       ) : (
         <div className="flex items-center justify-between gap-3">
           <TabsList className={cn(
-            `${HEADER_TAB_LIST_CLASS} bg-transparent border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center`,
+            flatTabs ? "bg-transparent border-0 shadow-none p-0 gap-2 justify-start overflow-x-auto no-scrollbar flex items-center" : `${HEADER_TAB_LIST_CLASS} bg-transparent border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center`,
             joinedDesktopTabs ? "gap-0 !rounded-none border border-input overflow-hidden" : "gap-2"
           )}>
             {options.map((option) => {
@@ -82,10 +84,14 @@ export function ResponsiveTabRow({
                   key={option.value}
                   value={option.value}
                   className={cn(
-                    `${HEADER_TAB_TRIGGER_CLASS} border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground`,
-                    joinedDesktopTabs
+                    flatTabs
+                      ? "rounded-md border border-input bg-transparent px-5 py-2 text-[10px] font-black uppercase tracking-widest shadow-none data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                      : `${HEADER_TAB_TRIGGER_CLASS} border bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`,
+                    joinedDesktopTabs && !flatTabs
                       ? "!rounded-none border-0 border-r border-input last:border-r-0 data-[state=active]:rounded-none"
-                      : "rounded-md"
+                      : flatTabs
+                        ? "shadow-none data-[state=active]:shadow-none"
+                        : "rounded-md shadow-none data-[state=active]:shadow-none"
                   )}
                 >
                   {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
@@ -106,6 +112,7 @@ type OrganizationTabsRowProps = {
   activeTab: string;
   onTabChange: (value: string) => void;
   className?: string;
+  flatTabs?: boolean;
 };
 
 export function OrganizationTabsRow({
@@ -113,6 +120,7 @@ export function OrganizationTabsRow({
   activeTab,
   onTabChange,
   className,
+  flatTabs = false,
 }: OrganizationTabsRowProps) {
   return (
     <ResponsiveTabRow
@@ -120,6 +128,7 @@ export function OrganizationTabsRow({
       onValueChange={onTabChange}
       placeholder="Select Organization"
       className={className}
+      flatTabs={flatTabs}
       options={[
         { value: 'internal', label: 'Internal', icon: Building },
         ...organizations.map((organization) => ({

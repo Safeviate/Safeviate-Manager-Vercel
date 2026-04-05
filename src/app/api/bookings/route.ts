@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureBookingsSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -23,71 +24,97 @@ async function getTenantId() {
 }
 
 export async function POST(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
-  const incoming = body?.booking ?? {};
-  const id = incoming.id || randomUUID();
+    const body = await request.json().catch(() => null);
+    const incoming = body?.booking ?? {};
+    const id = incoming.id || randomUUID();
 
-  const countRows = await prisma.$queryRawUnsafe<{ count: number }[]>(
-    `SELECT COUNT(*)::int AS count FROM bookings WHERE tenant_id = $1`,
-    tenantId
-  );
-  const bookingNumber = String((countRows[0]?.count ?? 0) + 1).padStart(5, '0');
+    await ensureBookingsSchema();
 
-  const data = {
-    ...incoming,
-    id,
-    bookingNumber,
-  };
+    const count = await prisma.bookingRecord.count({ where: { tenantId } });
+    const bookingNumber = String(count + 1).padStart(5, '0');
 
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO bookings (id, tenant_id, data, created_at, updated_at)
-     VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-     ON CONFLICT (id) DO NOTHING`,
-    id,
-    tenantId,
-    JSON.stringify(data)
-  );
+    const data = {
+      ...incoming,
+      id,
+      bookingNumber,
+    };
 
-  return NextResponse.json({ booking: data }, { status: 201 });
+    await prisma.bookingRecord.upsert({
+      where: { id },
+      create: {
+        id,
+        tenantId,
+        data,
+      },
+      update: {
+        data,
+      },
+    });
+
+    return NextResponse.json({ booking: data }, { status: 201 });
+  } catch (error) {
+    console.error('[bookings] failed to save booking:', error);
+    return NextResponse.json({ error: 'Failed to save booking.' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
-  const incoming = body?.booking ?? {};
-  const bookingId = incoming.id;
+    const body = await request.json().catch(() => null);
+    const incoming = body?.booking ?? {};
+    const bookingId = incoming.id;
 
-  if (!bookingId) {
-    return NextResponse.json({ error: 'Missing booking id.' }, { status: 400 });
+    if (!bookingId) {
+      return NextResponse.json({ error: 'Missing booking id.' }, { status: 400 });
+    }
+
+    await ensureBookingsSchema();
+
+    await prisma.bookingRecord.upsert({
+      where: { id: bookingId },
+      create: {
+        id: bookingId,
+        tenantId,
+        data: incoming,
+      },
+      update: {
+        data: incoming,
+      },
+    });
+
+    return NextResponse.json({ booking: incoming }, { status: 200 });
+  } catch (error) {
+    console.error('[bookings] failed to update booking:', error);
+    return NextResponse.json({ error: 'Failed to update booking.' }, { status: 500 });
   }
-
-  await prisma.$executeRawUnsafe(
-    `UPDATE bookings SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
-    bookingId,
-    JSON.stringify(incoming),
-    tenantId
-  );
-
-  return NextResponse.json({ booking: incoming }, { status: 200 });
 }
 
 export async function DELETE(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
-  const bookingId = body?.bookingId;
+    const body = await request.json().catch(() => null);
+    const bookingId = body?.bookingId;
 
-  if (!bookingId) {
-    return NextResponse.json({ error: 'Missing booking id.' }, { status: 400 });
+    if (!bookingId) {
+      return NextResponse.json({ error: 'Missing booking id.' }, { status: 400 });
+    }
+
+    await ensureBookingsSchema();
+
+    await prisma.bookingRecord.deleteMany({ where: { id: bookingId, tenantId } });
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[bookings] failed to delete booking:', error);
+    return NextResponse.json({ error: 'Failed to delete booking.' }, { status: 500 });
   }
-
-  await prisma.$executeRawUnsafe(`DELETE FROM bookings WHERE id = $1 AND tenant_id = $2`, bookingId, tenantId);
-
-  return NextResponse.json({ ok: true }, { status: 200 });
 }

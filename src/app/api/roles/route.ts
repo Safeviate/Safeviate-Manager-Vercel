@@ -17,17 +17,22 @@ async function getTenantId() {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) {
+      return NextResponse.json({ roles: [] }, { status: 200 });
+    }
+
+    const roles = await prisma.role.findMany({
+      where: { tenantId },
+      orderBy: { name: 'asc' },
+    });
+
+    return NextResponse.json({ roles }, { status: 200 });
+  } catch (error) {
+    console.error('[roles] fallback to empty list:', error);
     return NextResponse.json({ roles: [] }, { status: 200 });
   }
-
-  const roles = await prisma.role.findMany({
-    where: { tenantId },
-    orderBy: { name: 'asc' },
-  });
-
-  return NextResponse.json({ roles }, { status: 200 });
 }
 
 export async function POST(request: Request) {

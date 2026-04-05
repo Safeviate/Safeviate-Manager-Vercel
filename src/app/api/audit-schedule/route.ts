@@ -31,16 +31,21 @@ async function getConfig(tenantId: string) {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) {
+      return NextResponse.json({ areas: DEFAULT_AUDIT_AREAS, items: [] }, { status: 200 });
+    }
+
+    const config = await getConfig(tenantId);
+    return NextResponse.json({
+      areas: Array.isArray(config['audit-areas']) && config['audit-areas'].length ? config['audit-areas'] : DEFAULT_AUDIT_AREAS,
+      items: Array.isArray(config['audit-schedule-items']) ? config['audit-schedule-items'] : [],
+    });
+  } catch (error) {
+    console.error('[audit-schedule] fallback to defaults:', error);
     return NextResponse.json({ areas: DEFAULT_AUDIT_AREAS, items: [] }, { status: 200 });
   }
-
-  const config = await getConfig(tenantId);
-  return NextResponse.json({
-    areas: Array.isArray(config['audit-areas']) && config['audit-areas'].length ? config['audit-areas'] : DEFAULT_AUDIT_AREAS,
-    items: Array.isArray(config['audit-schedule-items']) ? config['audit-schedule-items'] : [],
-  });
 }
 
 export async function POST(request: Request) {

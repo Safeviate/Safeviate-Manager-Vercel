@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
+import { ensureTenantConfigSchema } from '@/lib/server/bootstrap-db';
 
 export async function GET() {
   try {
@@ -9,12 +10,13 @@ export async function GET() {
       return NextResponse.json({ config: null }, { status: 200 });
     }
 
-    const configRows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-      `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
-      auth.tenantId
-    );
+    await ensureTenantConfigSchema();
+    const configRow = await prisma.tenantConfig.findUnique({
+      where: { tenantId: auth.tenantId },
+      select: { data: true },
+    });
 
-    return NextResponse.json({ config: configRows[0]?.data ?? null }, { status: 200 });
+    return NextResponse.json({ config: configRow?.data ?? null }, { status: 200 });
   } catch (error) {
     console.error('[tenant-config] fallback to empty config:', error);
     return NextResponse.json({ config: null }, { status: 200 });
@@ -40,13 +42,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Invalid config payload.' }, { status: 400 });
     }
 
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at)
-       VALUES ($1, $2::jsonb, NOW(), NOW())
-       ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-      auth.tenantId,
-      JSON.stringify(config)
-    );
+    await ensureTenantConfigSchema();
+    await prisma.tenantConfig.upsert({
+      where: { tenantId: auth.tenantId },
+      create: {
+        tenantId: auth.tenantId,
+        data: config,
+      },
+      update: {
+        data: config,
+      },
+    });
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {

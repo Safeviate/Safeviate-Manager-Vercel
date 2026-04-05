@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
 import { getPublicBaseUrl } from '@/lib/server/site-url';
+import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
 import { prisma } from '@/lib/prisma';
 import { hash } from 'bcryptjs';
 import { Prisma } from '@prisma/client';
@@ -21,8 +22,16 @@ export async function POST(request: Request) {
     const {
       tenantId, email, firstName, lastName,
       userType, role, department, userNumber,
-      organizationId, isErpIncerfaContact, isErpAlerfaContact
+      organizationId, isErpIncerfaContact, isErpAlerfaContact,
+      canBeInstructor, canBeStudent,
     } = body;
+    const normalizedUserType = userType || 'Personnel';
+    const resolvedCanBeInstructor = typeof canBeInstructor === 'boolean'
+      ? canBeInstructor
+      : normalizedUserType === 'Instructor';
+    const resolvedCanBeStudent = typeof canBeStudent === 'boolean'
+      ? canBeStudent
+      : normalizedUserType === 'Student';
 
     const password = body.password || Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
 
@@ -35,6 +44,8 @@ export async function POST(request: Request) {
       update: { updatedAt: new Date() },
       create: { id: tenantId, name: tenantId },
     });
+
+    await ensurePersonnelSchema();
 
     const uid = `user_${email.replace(/[^a-z0-9]+/g, '_')}`;
     const tempPassword = password;
@@ -77,7 +88,9 @@ export async function POST(request: Request) {
         role,
         permissions: [],
         accessOverrides: Prisma.JsonNull,
-        userType: userType || 'Personnel',
+        userType: normalizedUserType,
+        canBeInstructor: resolvedCanBeInstructor,
+        canBeStudent: resolvedCanBeStudent,
         isErpIncerfaContact: !!isErpIncerfaContact,
         isErpAlerfaContact: !!isErpAlerfaContact,
         updatedAt: new Date(),
@@ -94,7 +107,9 @@ export async function POST(request: Request) {
         role,
         permissions: [],
         accessOverrides: Prisma.JsonNull,
-        userType: userType || 'Personnel',
+        userType: normalizedUserType,
+        canBeInstructor: resolvedCanBeInstructor,
+        canBeStudent: resolvedCanBeStudent,
         isErpIncerfaContact: !!isErpIncerfaContact,
         isErpAlerfaContact: !!isErpAlerfaContact,
       },
@@ -115,7 +130,14 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, uid, message: 'User created and invite sent.' });
+    return NextResponse.json({
+      ok: true,
+      uid,
+      message: emailResult.diagnostics?.hasApiKey === false
+        ? 'User created. Email invite was skipped because mail is not configured.'
+        : 'User created and invite sent.',
+      diagnostics: emailResult.diagnostics || null,
+    });
   } catch (error: any) {
     console.error('User creation failed:', error);
     return NextResponse.json({ error: error.message || 'Internal server error during user creation.' }, { status: 500 });

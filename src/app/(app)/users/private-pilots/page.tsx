@@ -82,6 +82,7 @@ export default function PrivatePilotsPage() {
                 tenantId={tenantId || ''}
                 roles={roles || []}
                 departments={departments || []}
+                defaultUserType="Private Pilot"
                 trigger={
                   <Button
                     disabled={!canCreateUsers || isProfileLoading}

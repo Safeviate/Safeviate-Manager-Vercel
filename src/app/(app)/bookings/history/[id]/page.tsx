@@ -44,8 +44,13 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
         };
 
         loadBooking();
+        const handleBookingUpdate = () => {
+            loadBooking();
+        };
+        window.addEventListener('safeviate-bookings-updated', handleBookingUpdate);
         return () => {
             cancelled = true;
+            window.removeEventListener('safeviate-bookings-updated', handleBookingUpdate);
         };
     }, [resolvedParams.id, tenantId]);
 

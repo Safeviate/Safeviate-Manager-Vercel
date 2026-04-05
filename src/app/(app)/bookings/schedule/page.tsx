@@ -33,7 +33,7 @@ const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
 };
 
-const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booking, onBookingClick: (booking: Booking) => void, selectedDate: Date }) => {
+const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { booking: Booking, onBookingClick: (booking: Booking) => void, selectedDate: Date, peopleMap: Map<string, string> }) => {
     const segments = [];
 
     segments.push({
@@ -88,6 +88,12 @@ const BookingItem = ({ booking, onBookingClick, selectedDate }: { booking: Booki
                     }}
                 >
                     <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
+                    <p className="truncate text-[9px] font-medium opacity-90">
+                        Inst: {booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : 'N/A'}
+                    </p>
+                    <p className="truncate text-[9px] font-medium opacity-90">
+                        Stud: {booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}
+                    </p>
                     {isCancelled && <p className="font-bold uppercase text-[8px] mt-0.5">Cancelled</p>}
                     {booking.status === 'Completed' && <p className="font-bold uppercase text-[8px] mt-0.5">Completed</p>}
                     {booking.status === 'Approved' && <p className="font-bold uppercase text-[8px] mt-0.5">Approved</p>}
@@ -134,13 +140,13 @@ export default function SchedulePage() {
 
       setIsLoading(true);
       try {
-        const [scheduleResponse, personnelResponse] = await Promise.all([
+        const [scheduleResponse, summaryResponse] = await Promise.all([
           fetch('/api/schedule-data', { cache: 'no-store' }),
-          fetch('/api/personnel', { cache: 'no-store' }),
+          fetch('/api/dashboard-summary', { cache: 'no-store' }),
         ]);
 
         const schedulePayload = await scheduleResponse.json();
-        const personnelPayload = await personnelResponse.json();
+        const summaryPayload = await summaryResponse.json();
         if (!cancelled) {
           const scheduleBookings = schedulePayload.bookings ?? [];
           const apiAircraft = schedulePayload.aircraft ?? [];
@@ -153,10 +159,10 @@ export default function SchedulePage() {
             scheduleBookings.filter((booking: Booking) => booking.date === today || booking.date === yesterday)
           );
 
-          setPersonnel(personnelPayload.personnel ?? []);
-          setInstructors(personnelPayload.instructors ?? []);
-          setStudents(personnelPayload.students ?? []);
-          setPrivatePilots(personnelPayload.privatePilots ?? []);
+          setPersonnel(summaryPayload.personnel ?? []);
+          setInstructors(summaryPayload.instructors ?? []);
+          setStudents(summaryPayload.students ?? []);
+          setPrivatePilots(summaryPayload.privatePilots ?? []);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -164,14 +170,33 @@ export default function SchedulePage() {
     };
 
     void load();
+    const handlePersonnelUpdated = () => {
+      if (!cancelled) {
+        setDataVersion(v => v + 1);
+      }
+    };
+    window.addEventListener('safeviate-personnel-updated', handlePersonnelUpdated);
     return () => {
       cancelled = true;
+      window.removeEventListener('safeviate-personnel-updated', handlePersonnelUpdated);
     };
   }, [tenantId, selectedDate, dataVersion]);
 
   const allPilots = useMemo(() => {
-      return [...(personnel || []), ...(students || []), ...(instructors || []), ...(privatePilots || [])];
+      const uniquePeople = new Map<string, Personnel | PilotProfile>();
+      [...(personnel || []), ...(students || []), ...(instructors || []), ...(privatePilots || [])].forEach((person) => {
+          uniquePeople.set(person.id, person);
+      });
+      return Array.from(uniquePeople.values());
   }, [personnel, students, instructors, privatePilots]);
+
+  const peopleMap = useMemo(() => {
+      const map = new Map<string, string>();
+      allPilots.forEach((person) => {
+          map.set(person.id, `${person.firstName} ${person.lastName}`);
+      });
+      return map;
+  }, [allPilots]);
 
   const refreshBookings = useCallback(() => {
     setDataVersion(v => v + 1);
@@ -367,6 +392,7 @@ export default function SchedulePage() {
                                                 booking={booking}
                                                 onBookingClick={handleBookingClick}
                                                 selectedDate={selectedDate}
+                                                peopleMap={peopleMap}
                                             />
                                         ))}
                                     </div>

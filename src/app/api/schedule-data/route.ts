@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureAircraftSchema, ensureBookingsSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -24,15 +25,18 @@ export async function GET() {
     });
     const tenantId = currentUser?.tenantId || 'safeviate';
 
+    await Promise.all([ensureAircraftSchema(), ensureBookingsSchema()]);
     const [aircraftRows, bookingRows] = await Promise.all([
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(
-        `SELECT data FROM aircrafts WHERE tenant_id = $1 ORDER BY created_at ASC`,
-        tenantId
-      ),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(
-        `SELECT data FROM bookings WHERE tenant_id = $1 ORDER BY created_at ASC`,
-        tenantId
-      ),
+      prisma.aircraftRecord.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'asc' },
+        select: { data: true },
+      }),
+      prisma.bookingRecord.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'asc' },
+        select: { data: true },
+      }),
     ]);
 
     return NextResponse.json(

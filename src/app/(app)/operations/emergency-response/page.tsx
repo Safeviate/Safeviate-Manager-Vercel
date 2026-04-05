@@ -57,7 +57,8 @@ export default function EmergencyResponsePage() {
               organizations={organizations || []}
               activeTab={activeCompanyTab}
               onTabChange={setActiveCompanyTab}
-              className="border-b bg-muted/5 px-4 py-2 shrink-0"
+              className="border-b bg-transparent px-4 py-2 shrink-0"
+              flatTabs
             />
           )}
 
@@ -65,7 +66,8 @@ export default function EmergencyResponsePage() {
             value={activeTab}
             onValueChange={setActiveTab}
             placeholder="Select Section"
-            className="border-b bg-muted/5 px-4 py-2 shrink-0"
+            className="border-b bg-transparent px-4 py-2 shrink-0"
+            flatTabs
             options={tabs}
           />
 

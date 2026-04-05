@@ -37,19 +37,24 @@ async function loadCaps(tenantId: string) {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], caps: [], findingLevels: [] }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], caps: [], findingLevels: [] }, { status: 200 });
 
-  const [audits, caps, config] = await Promise.all([loadAudits(tenantId), loadCaps(tenantId), getConfig(tenantId)]);
-  return NextResponse.json({
-    audits,
-    caps,
-    templates: Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [],
-    personnel: Array.isArray(config['personnel']) ? config['personnel'] : [],
-    departments: Array.isArray(config['departments']) ? config['departments'] : [],
-    organizations: Array.isArray(config['external-organizations']) ? config['external-organizations'] : [],
-    findingLevels: Array.isArray(config['finding-levels']) ? config['finding-levels'] : [],
-  }, { status: 200 });
+    const [audits, caps, config] = await Promise.all([loadAudits(tenantId), loadCaps(tenantId), getConfig(tenantId)]);
+    return NextResponse.json({
+      audits,
+      caps,
+      templates: Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [],
+      personnel: Array.isArray(config['personnel']) ? config['personnel'] : [],
+      departments: Array.isArray(config['departments']) ? config['departments'] : [],
+      organizations: Array.isArray(config['external-organizations']) ? config['external-organizations'] : [],
+      findingLevels: Array.isArray(config['finding-levels']) ? config['finding-levels'] : [],
+    }, { status: 200 });
+  } catch (error) {
+    console.error('[quality-audits] fallback to empty payload:', error);
+    return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], caps: [], findingLevels: [] }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {

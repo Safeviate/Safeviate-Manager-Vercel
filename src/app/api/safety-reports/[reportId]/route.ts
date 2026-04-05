@@ -40,21 +40,26 @@ export async function PUT(request: Request, context: { params: Promise<{ reportI
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ reportId: string }> }) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ report: null }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ report: null }, { status: 200 });
 
-  const { reportId } = await context.params;
-  if (!reportId) return NextResponse.json({ report: null }, { status: 400 });
+    const { reportId } = await context.params;
+    if (!reportId) return NextResponse.json({ report: null }, { status: 400 });
 
-  const rows = await prisma.$queryRawUnsafe<{ data: unknown; tenant_id: string }[]>(
-    `SELECT data, tenant_id FROM safety_reports WHERE id = $1 LIMIT 1`,
-    reportId
-  );
-  const row = rows[0];
+    const rows = await prisma.$queryRawUnsafe<{ data: unknown; tenant_id: string }[]>(
+      `SELECT data, tenant_id FROM safety_reports WHERE id = $1 LIMIT 1`,
+      reportId
+    );
+    const row = rows[0];
 
-  if (!row || row.tenant_id !== tenantId) {
-    return NextResponse.json({ report: null }, { status: 404 });
+    if (!row || row.tenant_id !== tenantId) {
+      return NextResponse.json({ report: null }, { status: 404 });
+    }
+
+    return NextResponse.json({ report: row.data }, { status: 200 });
+  } catch (error) {
+    console.error('[safety-reports/[reportId]] fallback to null:', error);
+    return NextResponse.json({ report: null }, { status: 200 });
   }
-
-  return NextResponse.json({ report: row.data }, { status: 200 });
 }

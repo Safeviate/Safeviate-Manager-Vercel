@@ -35,14 +35,15 @@ function UserProfileContent() {
 
     useEffect(() => {
         let cancelled = false;
+        const handleProfileUpdated = () => { void load(); };
 
         const load = async () => {
             setIsLoadingUser(true);
             try {
-                const response = await fetch('/api/personnel', { cache: 'no-store' });
+                const response = await fetch('/api/users', { cache: 'no-store' });
                 const payload = await response.json().catch(() => ({}));
 
-                const apiPersonnel = Array.isArray(payload?.personnel) ? payload.personnel : [];
+                const apiPersonnel = Array.isArray(payload?.users) ? payload.users : Array.isArray(payload?.personnel) ? payload.personnel : [];
                 const apiRoles = Array.isArray(payload?.roles) ? payload.roles : [];
                 const apiDepartments = Array.isArray(payload?.departments) ? payload.departments : [];
 
@@ -61,6 +62,7 @@ function UserProfileContent() {
 
         try {
             void load();
+            window.addEventListener('safeviate-profile-updated', handleProfileUpdated);
             fetch('/api/logbook-templates', { cache: 'no-store' })
               .then((response) => response.json())
               .then((payload) => {
@@ -76,6 +78,7 @@ function UserProfileContent() {
         }
         return () => {
             cancelled = true;
+            window.removeEventListener('safeviate-profile-updated', handleProfileUpdated);
         };
     }, [userId]);
 

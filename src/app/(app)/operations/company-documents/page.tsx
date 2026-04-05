@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
-import { getDocumentExpiryBadgeStyle } from '@/lib/document-expiry';
+import { getContrastingTextColor, getDocumentExpiryBadgeStyle } from '@/lib/document-expiry';
 
 interface CompanyDocument {
   id: string;
@@ -44,17 +44,30 @@ export default function CompanyDocumentsPage() {
 
   const [documents, setDocuments] = useState<CompanyDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const expirySettings: DocumentExpirySettings | undefined = undefined;
+  const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await fetch('/api/company-documents', { cache: 'no-store' });
-        if (!response.ok) {
+        const [docsResponse, configResponse] = await Promise.all([
+          fetch('/api/company-documents', { cache: 'no-store' }),
+          fetch('/api/tenant-config', { cache: 'no-store' }),
+        ]);
+
+        if (!docsResponse.ok) {
           throw new Error('Failed to load documents');
         }
-        const payload = await response.json();
-        setDocuments(payload.documents || []);
+
+        const [docsPayload, configPayload] = await Promise.all([
+          docsResponse.json().catch(() => ({})),
+          configResponse.json().catch(() => ({})),
+        ]);
+
+        setDocuments(docsPayload.documents || []);
+
+        const config = configPayload?.config && typeof configPayload.config === 'object' ? configPayload.config : {};
+        const settings = (config as any)['document-expiry-settings'] as DocumentExpirySettings | undefined;
+        setExpirySettings(settings || null);
       } catch (error) {
         toast({
           variant: 'destructive',
@@ -128,6 +141,7 @@ export default function CompanyDocumentsPage() {
       if (!response.ok) {
         throw new Error('Update failed');
       }
+      window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
       toast({ title: 'Expiry Updated' });
     } catch {
       setDocuments(previous);
@@ -164,6 +178,11 @@ export default function CompanyDocumentsPage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5 space-y-3 p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Document Register</p>
+              <h2 className="text-xl font-black tracking-tight">Company Documents</h2>
+            </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             {canManage && (
               <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
@@ -187,6 +206,7 @@ export default function CompanyDocumentsPage() {
                 />
               </div>
             )}
+          </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:w-96">
@@ -223,7 +243,7 @@ export default function CompanyDocumentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDocs.map((doc) => {
+                      {filteredDocs.map((doc) => {
                     const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
                     return (
                     <TableRow key={doc.id} className="group">
@@ -242,14 +262,18 @@ export default function CompanyDocumentsPage() {
                         <div className="flex items-center gap-2">
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button 
-                                variant="outline" 
+                                <Button 
+                                variant="default" 
                                 size="sm" 
                                 className={cn(
-                                  "h-8 text-xs gap-2 font-medium px-3",
+                                  "h-8 text-xs gap-2 font-bold px-3 border shadow-none",
                                   !doc.expirationDate && "text-muted-foreground italic border-dashed"
                                 )}
-                                style={doc.expirationDate && expiryStyle ? expiryStyle : undefined}
+                                style={doc.expirationDate && expiryStyle ? {
+                                  backgroundColor: expiryStyle.borderColor || '#ffffff',
+                                  borderColor: expiryStyle.borderColor || '#ffffff',
+                                  color: getContrastingTextColor(expiryStyle.borderColor || '#ffffff'),
+                                } : undefined}
                               >
                                 <CalendarIcon className="h-3.5 w-3.5" />
                                 {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry'}

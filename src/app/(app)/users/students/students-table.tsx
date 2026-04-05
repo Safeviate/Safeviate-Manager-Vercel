@@ -44,6 +44,8 @@ export function StudentsTable({ data, tenantId }: StudentsTableProps) {
                   <TableHead className="text-[10px] uppercase font-bold">User #</TableHead>
                   <TableHead className="text-[10px] uppercase font-bold">Name</TableHead>
                   <TableHead className="text-[10px] uppercase font-bold">Email</TableHead>
+                  <TableHead className="text-[10px] uppercase font-bold">Department</TableHead>
+                  <TableHead className="text-[10px] uppercase font-bold">Role</TableHead>
                   <TableHead className="text-[10px] uppercase font-bold">License No.</TableHead>
                   <TableHead className="text-right text-[10px] uppercase font-bold">Actions</TableHead>
                 </TableRow>
@@ -76,6 +78,8 @@ export function StudentsTable({ data, tenantId }: StudentsTableProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-xs">{pilot.email}</TableCell>
+                    <TableCell className="text-xs">{pilot.department || 'N/A'}</TableCell>
+                    <TableCell className="text-xs font-semibold">{pilot.role || 'N/A'}</TableCell>
                     <TableCell className="text-xs font-mono font-bold uppercase">{pilot.pilotLicense?.licenseNumber || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       <PersonnelActions tenantId={tenantId} user={pilot} />
@@ -110,6 +114,10 @@ export function StudentsTable({ data, tenantId }: StudentsTableProps) {
                       Student
                     </div>
                     <span className="text-[10px] font-mono text-muted-foreground">{pilot.pilotLicense?.licenseNumber || 'No License'}</span>
+                  </div>
+                  <div className="grid gap-1 text-[10px] uppercase font-black text-muted-foreground">
+                    <span>Department: {pilot.department || 'N/A'}</span>
+                    <span>Role: {pilot.role || 'N/A'}</span>
                   </div>
                 </CardContent>
                 <CardFooter className="p-2 border-t bg-muted/5 flex gap-2">

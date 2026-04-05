@@ -66,6 +66,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
     } finally {
       setIsDeleteDialogOpen(false);
       window.dispatchEvent(new Event('safeviate-personnel-updated'));
+      window.dispatchEvent(new Event('safeviate-users-updated'));
     }
   }
 

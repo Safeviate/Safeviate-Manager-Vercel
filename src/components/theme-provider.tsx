@@ -246,6 +246,12 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const { tenant, tenantId } = useTenantConfig();
 
+  const resolveSidebarBackgroundImage = (value: string | null | undefined) => {
+    if (value === '') return '';
+    if (value == null) return defaultSidebarBackgroundImage;
+    return value;
+  };
+
   const normalizeMatrixTheme = (source: Record<string, string> | undefined | null): MatrixThemeColors => ({
     ...defaultMatrixColors,
     'matrix-header-background': source?.['matrix-header-background'] || source?.['matrix-header-start'] || defaultMatrixColors['matrix-header-background'],
@@ -287,8 +293,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const nextMatrixTheme = normalizeMatrixTheme({
       ...(tenant?.theme?.matrix || {}),
     });
-    const nextSidebarBackgroundImage =
-      tenant?.theme?.sidebarBackgroundImage || defaultSidebarBackgroundImage;
+    const nextSidebarBackgroundImage = resolveSidebarBackgroundImage(
+      tenant?.theme?.sidebarBackgroundImage
+    );
     const nextScale = defaultScale;
     const nextSavedThemes = getInitialState<SavedTheme[]>(
       getSavedThemesStorageKey(tenantId),
@@ -367,7 +374,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     Object.keys(defaultSidebarColors).forEach(k => {
         if ((themeToApply.sidebarColors as any)[k]) (newSidebarTheme as any)[k] = (themeToApply.sidebarColors as any)[k];
     });
-    const newSidebarBackgroundImage = themeToApply.sidebarBackgroundImage || defaultSidebarBackgroundImage;
+    const newSidebarBackgroundImage = resolveSidebarBackgroundImage(
+      themeToApply.sidebarBackgroundImage
+    );
 
     const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
     const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
@@ -451,7 +460,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       ...defaultSidebarColors,
       ...(tenant?.theme?.sidebar || {}),
     });
-    setSidebarBackgroundImageState(tenant?.theme?.sidebarBackgroundImage || defaultSidebarBackgroundImage);
+    setSidebarBackgroundImageState(
+      resolveSidebarBackgroundImage(tenant?.theme?.sidebarBackgroundImage)
+    );
     setHeaderTheme({
       ...defaultHeaderColors,
       ...(tenant?.theme?.header || {}),

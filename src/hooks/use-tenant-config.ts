@@ -6,6 +6,8 @@ import type { Tenant, IndustryType } from '@/types/quality';
 
 const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
 const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
+const FALLBACK_TENANT_ID = 'safeviate';
+const FALLBACK_TENANT_NAME = 'Safeviate';
 
 /**
  * A custom hook to fetch the configuration for the current tenant.
@@ -18,6 +20,12 @@ export const useTenantConfig = () => {
   const [error, setError] = useState<Error | null>(null);
   const [industryOverride, setIndustryOverride] = useState<IndustryType | null>(null);
   const [localOverride, setLocalOverride] = useState<Record<string, unknown> | null>(null);
+
+  const buildLocalTenant = (override: Record<string, unknown> | null): Tenant => ({
+    id: FALLBACK_TENANT_ID,
+    name: FALLBACK_TENANT_NAME,
+    ...(override || {}),
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -74,6 +82,8 @@ export const useTenantConfig = () => {
               ...tenantFromApi,
               ...mergedConfig,
             });
+          } else if (localOverride) {
+            setTenantData(buildLocalTenant(localOverride));
           } else {
             setTenantData(null);
           }
@@ -95,8 +105,14 @@ export const useTenantConfig = () => {
         try {
           const response = await fetch('/api/tenant-config', { cache: 'no-store' });
           const payload = response.ok ? await response.json().catch(() => ({})) : {};
-          if (payload?.config && !cancelled) {
-            setTenantData((current) => (current ? { ...current, ...payload.config, ...(localOverride || {}) } : current));
+          if (!cancelled) {
+            const nextConfig = {
+              ...(payload?.config || {}),
+              ...(localOverride || {}),
+            };
+            if (Object.keys(nextConfig).length > 0) {
+              setTenantData((current) => (current ? { ...current, ...nextConfig } : buildLocalTenant(nextConfig)));
+            }
           }
         } catch {
         // ignore transient refresh failures

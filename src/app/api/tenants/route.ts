@@ -12,13 +12,18 @@ async function getTenantId() {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) {
+      return NextResponse.json({ tenants: [] }, { status: 200 });
+    }
+
+    const tenants = await prisma.tenant.findMany({ orderBy: { name: 'asc' } }).catch(() => []);
+    return NextResponse.json({ tenants }, { status: 200 });
+  } catch (error) {
+    console.error('[tenants] fallback to empty list:', error);
     return NextResponse.json({ tenants: [] }, { status: 200 });
   }
-
-  const tenants = await prisma.tenant.findMany({ orderBy: { name: 'asc' } }).catch(() => []);
-  return NextResponse.json({ tenants }, { status: 200 });
 }
 
 export async function PUT(request: Request) {

@@ -9,10 +9,10 @@ export const HEADER_MOBILE_ACTION_BUTTON_CLASS =
   "h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40";
 
 export const HEADER_TAB_LIST_CLASS =
-  "bg-muted/10 h-auto p-1.5 gap-1.5 border rounded-md justify-start flex min-w-max flex-nowrap shadow-inner";
+  "bg-transparent h-auto p-0 gap-2 border-0 rounded-md justify-start flex min-w-max flex-nowrap shadow-none";
 
 export const HEADER_TAB_TRIGGER_CLASS =
-  "rounded-md px-8 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shrink-0 gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm";
+  "rounded-md px-8 py-2.5 data-[state=active]:bg-transparent data-[state=active]:text-foreground shrink-0 gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-none border border-input";
 
 interface MainPageHeaderProps {
   title: string;

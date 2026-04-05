@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, ChevronsUpDown } from 'lucide-react';
 import type { Role } from '@/app/(app)/admin/roles/page';
 import type { Department } from '@/app/(app)/admin/department/page';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import type { Personnel, PilotProfile } from './personnel-directory-page';
 
 interface PersonnelFormProps {
@@ -23,6 +23,7 @@ interface PersonnelFormProps {
   externalOrganizations?: any[];
   defaultDepartmentId?: string | null;
   defaultRoleId?: string | null;
+  defaultUserType?: string | null;
   trigger?: React.ReactNode;
   onClose?: () => void;
 }
@@ -35,6 +36,7 @@ export function PersonnelForm({
   externalOrganizations,
   defaultDepartmentId = null,
   defaultRoleId = null,
+  defaultUserType = null,
   trigger,
   onClose,
 }: PersonnelFormProps) {
@@ -51,6 +53,8 @@ export function PersonnelForm({
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [canBeInstructor, setCanBeInstructor] = useState(false);
+  const [canBeStudent, setCanBeStudent] = useState(false);
   const [isIncerfaContact, setIsIncerfaContact] = useState(false);
   const [isAlerfaContact, setIsAlerfaContact] = useState(false);
 
@@ -64,21 +68,34 @@ export function PersonnelForm({
       setSelectedDepartment(('department' in existingPersonnel ? (existingPersonnel as Personnel).department : null) || null);
       setSelectedRole(existingPersonnel.role);
       setOrganizationId(existingPersonnel.organizationId || null);
+      setCanBeInstructor(!!existingPersonnel.canBeInstructor);
+      setCanBeStudent(!!existingPersonnel.canBeStudent);
       setIsIncerfaContact(existingPersonnel.isErpIncerfaContact || false);
       setIsAlerfaContact(existingPersonnel.isErpAlerfaContact || false);
     } else if (defaultDepartmentId) {
       setSelectedDepartment(defaultDepartmentId);
     }
+    if (!existingPersonnel && defaultUserType) {
+      setUserType(defaultUserType);
+      setCanBeInstructor(defaultUserType === 'Instructor');
+      setCanBeStudent(defaultUserType === 'Student');
+    } else if (!existingPersonnel && !defaultUserType) {
+      setCanBeInstructor(false);
+      setCanBeStudent(false);
+    }
     if (!existingPersonnel && defaultRoleId) {
       setSelectedRole(defaultRoleId);
-      setUserType('Personnel');
+      setUserType(defaultUserType || 'Personnel');
     }
-  }, [existingPersonnel, defaultDepartmentId, defaultRoleId, roles]);
+  }, [existingPersonnel, defaultDepartmentId, defaultRoleId, defaultUserType, roles]);
 
   const handleRoleChange = (roleId: string) => {
     setSelectedRole(roleId);
-    setUserType('Personnel');
+    setUserType((current) => current || defaultUserType || 'Personnel');
   };
+
+  const lockedRole = roles.find((role) => role.id === defaultRoleId) || null;
+  const shouldLockRole = !existingPersonnel && !!defaultRoleId && !!lockedRole;
 
   const handleAddOrUpdateUser = async () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole) {
@@ -106,6 +123,8 @@ export function PersonnelForm({
               email,
               department: selectedDepartment || null,
               role: selectedRole,
+              canBeInstructor,
+              canBeStudent,
               organizationId: organizationId === 'internal' ? null : organizationId,
               isErpIncerfaContact: !!isIncerfaContact,
               isErpAlerfaContact: !!isAlerfaContact,
@@ -130,6 +149,8 @@ export function PersonnelForm({
             department: selectedDepartment || null,
             role: selectedRole,
             userType,
+            canBeInstructor,
+            canBeStudent,
             organizationId: organizationId === 'internal' ? null : (organizationId || null),
             isErpIncerfaContact: !!isIncerfaContact,
             isErpAlerfaContact: !!isAlerfaContact,
@@ -145,6 +166,7 @@ export function PersonnelForm({
       }
       
       window.dispatchEvent(new Event('safeviate-personnel-updated'));
+      window.dispatchEvent(new Event('safeviate-users-updated'));
       setIsOpen(false);
       onClose?.();
     } catch (error: any) {
@@ -177,18 +199,32 @@ export function PersonnelForm({
         <Label htmlFor="userNumber" className="text-right">User #</Label>
         <Input id="userNumber" value={userNumber} onChange={(e) => setUserNumber(e.target.value)} className="col-span-3" placeholder="e.g. BARRY-01" />
       </div>
+      {!existingPersonnel && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label className="text-right">Profile</Label>
+          <div className="col-span-3 rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium text-muted-foreground">
+            {defaultUserType || 'Personnel'}
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="role" className="text-right">Role</Label>
-        <Select value={selectedRole} onValueChange={handleRoleChange}>
-          <SelectTrigger className="col-span-3">
-            <SelectValue placeholder="Select Role" />
-          </SelectTrigger>
-          <SelectContent>
-            {roles.map(role => (
-              <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {shouldLockRole ? (
+          <div className="col-span-3 rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium text-muted-foreground">
+            {lockedRole.name}
+          </div>
+        ) : (
+          <Select value={selectedRole} onValueChange={handleRoleChange}>
+            <SelectTrigger className="col-span-3">
+              <SelectValue placeholder="Select Role" />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map(role => (
+                <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="department" className="text-right">Dept</Label>
@@ -216,6 +252,19 @@ export function PersonnelForm({
           </div>
         </div>
       </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label className="text-right">Bookings</Label>
+        <div className="col-span-3 flex items-center space-x-4">
+          <div className="flex items-center gap-2">
+            <Switch id="assign-instructor" checked={canBeInstructor} onCheckedChange={setCanBeInstructor} />
+            <Label htmlFor="assign-instructor" className="text-xs font-normal cursor-pointer">Assignable as Instructor</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch id="assign-student" checked={canBeStudent} onCheckedChange={setCanBeStudent} />
+            <Label htmlFor="assign-student" className="text-xs font-normal cursor-pointer">Assignable as Student</Label>
+          </div>
+        </div>
+      </div>
       <div className="flex justify-end gap-2 mt-4">
         <Button onClick={handleAddOrUpdateUser} disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -231,9 +280,9 @@ export function PersonnelForm({
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{existingPersonnel ? 'Edit User Profile' : 'Create Organization Member'}</DialogTitle>
+            <DialogTitle>{existingPersonnel ? 'Edit User Profile' : 'Create User'}</DialogTitle>
             <DialogDescription>
-              {existingPersonnel ? 'Update system permissions and metadata.' : 'Establish a new secure login and directory profile.'}
+              {existingPersonnel ? 'Update system permissions and metadata.' : 'Create a secure account with an operational profile.'}
             </DialogDescription>
           </DialogHeader>
           {formFields}

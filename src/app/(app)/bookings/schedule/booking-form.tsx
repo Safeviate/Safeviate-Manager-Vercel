@@ -93,8 +93,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     
     const canDelete = hasPermission('bookings-delete') && (!isUnderway || canOverride);
 
-    const instructors = useMemo(() => pilots.filter(p => p.userType === 'Instructor'), [pilots]);
-    const students = useMemo(() => pilots.filter(p => p.userType === 'Student'), [pilots]);
+    const instructors = useMemo(() => pilots.filter(p => p.canBeInstructor || p.userType === 'Instructor'), [pilots]);
+    const students = useMemo(() => pilots.filter(p => p.canBeStudent || p.userType === 'Student'), [pilots]);
 
     const defaultValues = useMemo(() => ({
         type: existingBooking?.type || 'Training Flight',

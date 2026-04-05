@@ -88,6 +88,7 @@ export default function ExternalUsersPage() {
                 tenantId={tenantId || ''} 
                 roles={roles || []} 
                 departments={departments || []} 
+                defaultUserType="External"
                 trigger={
                    <Button
                        disabled={!canCreateUsers || isProfileLoading}

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Trash2, Navigation, Wind, Gauge, Fuel, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { recalculateNavlogLegs, calculateRouteTotals, DEFAULT_FLIGHT_PARAMS } from '@/lib/flight-planner';
 import type { FlightParams } from '@/lib/flight-planner';
 import type { TrainingRoute } from '@/types/booking';
@@ -101,6 +102,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
             if (!response.ok) {
                 throw new Error((await response.json())?.error || 'Failed to import route.');
             }
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
             setIsImportOpen(false);
             toast({ title: 'Route Imported', description: route.name });
         } catch (e: any) {
@@ -161,6 +163,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                 body: JSON.stringify({ booking: { ...booking, navlog: { ...(booking.navlog || {}), legs: updatedLegs } } }),
             });
             if (!response.ok) throw new Error((await response.json())?.error || 'Update failed');
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
             toast({ title: 'Leg Removed' });
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
@@ -202,6 +205,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                 }),
             });
             if (!response.ok) throw new Error((await response.json())?.error || 'Save failed');
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
             toast({ title: 'Flight Parameters Saved' });
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Save Failed', description: e.message });

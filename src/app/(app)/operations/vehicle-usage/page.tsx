@@ -44,11 +44,6 @@ type VehicleUsageLite = {
   returnNotes: string;
 };
 
-const DEFAULT_VEHICLES: VehicleLite[] = [
-  { id: 'vehicle-1', registrationNumber: 'SV-001', make: 'Toyota', model: 'Hilux', type: 'Utility', currentOdometer: 100000 },
-  { id: 'vehicle-2', registrationNumber: 'SV-002', make: 'Ford', model: 'Ranger', type: 'Utility', currentOdometer: 85000 },
-];
-
 const getPersonName = (firstName?: string, lastName?: string, email?: string) => {
   const fullName = `${firstName || ''} ${lastName || ''}`.trim();
   return fullName || email || 'Unknown User';
@@ -248,7 +243,7 @@ export default function VehicleUsagePage() {
   const actorName = getPersonName(userProfile?.firstName, userProfile?.lastName, userProfile?.email);
   const canManageVehicleUsage = hasPermission('operations-view') || hasPermission('assets-view');
 
-  const [vehicles, setVehicles] = useState<VehicleLite[]>(DEFAULT_VEHICLES);
+  const [vehicles, setVehicles] = useState<VehicleLite[]>([]);
   const [usageRecords, setUsageRecords] = useState<VehicleUsageLite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -256,11 +251,10 @@ export default function VehicleUsagePage() {
     try {
       const response = await fetch('/api/vehicle-usage', { cache: 'no-store' });
       const payload = await response.json().catch(() => ({ vehicles: [], usageRecords: [] }));
-      const nextVehicles = Array.isArray(payload.vehicles) && payload.vehicles.length > 0 ? (payload.vehicles as VehicleLite[]) : DEFAULT_VEHICLES;
-      setVehicles(nextVehicles);
+      setVehicles(Array.isArray(payload.vehicles) ? (payload.vehicles as VehicleLite[]) : []);
       setUsageRecords(Array.isArray(payload.usageRecords) ? (payload.usageRecords as VehicleUsageLite[]) : []);
     } catch {
-      setVehicles(DEFAULT_VEHICLES);
+      setVehicles([]);
       setUsageRecords([]);
     } finally {
       setIsLoading(false);
@@ -369,7 +363,7 @@ export default function VehicleUsagePage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              {vehicles.map((vehicle) => {
+              {vehicles.length > 0 ? vehicles.map((vehicle) => {
                 const activeRecord = activeUsageByVehicleId.get(vehicle.id);
                 const isBookedOut = Boolean(activeRecord);
 
@@ -413,7 +407,13 @@ export default function VehicleUsagePage() {
                     </CardContent>
                   </Card>
                 );
-              })}
+              }) : (
+                <Card className="shadow-none border lg:col-span-2 xl:col-span-3">
+                  <CardContent className="flex h-40 items-center justify-center">
+                    <p className="text-sm text-muted-foreground italic">No vehicles configured yet.</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             <Card className="shadow-none border">

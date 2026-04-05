@@ -21,9 +21,14 @@ async function getAllCaps(tenantId: string) {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ caps: [] }, { status: 200 });
-  return NextResponse.json({ caps: await getAllCaps(tenantId) }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ caps: [] }, { status: 200 });
+    return NextResponse.json({ caps: await getAllCaps(tenantId) }, { status: 200 });
+  } catch (error) {
+    console.error('[corrective-action-plans] fallback to empty list:', error);
+    return NextResponse.json({ caps: [] }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {

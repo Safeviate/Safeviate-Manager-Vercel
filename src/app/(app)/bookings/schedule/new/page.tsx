@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NewBookingForm, type NewBookingFormValues } from './new-booking-form';
 import type { Aircraft } from '@/types/aircraft';
+import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -17,6 +18,8 @@ export default function NewBookingPage() {
   const { tenantId } = useUserProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [instructors, setInstructors] = useState<PilotProfile[]>([]);
+  const [students, setStudents] = useState<PilotProfile[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const canManageSchedule = hasPermission('bookings-schedule-manage');
@@ -32,14 +35,22 @@ export default function NewBookingPage() {
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch('/api/schedule-data', { cache: 'no-store' });
-        const payload = await response.json();
+        const [scheduleResponse, summaryResponse] = await Promise.all([
+          fetch('/api/schedule-data', { cache: 'no-store' }),
+          fetch('/api/dashboard-summary', { cache: 'no-store' }),
+        ]);
+        const schedulePayload = await scheduleResponse.json();
+        const summaryPayload = await summaryResponse.json();
         if (!cancelled) {
-          setAircrafts((payload?.aircraft ?? []) as Aircraft[]);
+          setAircrafts((schedulePayload?.aircraft ?? []) as Aircraft[]);
+          setInstructors(Array.isArray(summaryPayload?.instructors) ? summaryPayload.instructors : []);
+          setStudents(Array.isArray(summaryPayload?.students) ? summaryPayload.students : []);
         }
       } catch {
         if (!cancelled) {
           setAircrafts([]);
+          setInstructors([]);
+          setStudents([]);
         }
       } finally {
         if (!cancelled) setIsLoadingData(false);
@@ -113,8 +124,8 @@ export default function NewBookingPage() {
   return (
     <NewBookingForm
       aircrafts={aircrafts || []}
-      instructors={[]}
-      students={[]}
+      instructors={instructors}
+      students={students}
       onSubmit={handleNewBooking}
       isSubmitting={isSubmitting}
     />

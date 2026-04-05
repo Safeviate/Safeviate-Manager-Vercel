@@ -1439,6 +1439,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
             url="/api/openaip/tiles/openaip/{z}/{x}/{y}"
             attribution="&copy; OpenAIP"
             opacity={0.85}
+            tms={true}
+            minZoom={4}
+            maxZoom={20}
           />
         </LayersControl.Overlay>
 

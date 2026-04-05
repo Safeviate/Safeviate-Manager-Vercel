@@ -61,7 +61,7 @@ export function BookingDetailHeader({
       </div>
 
       {/* Navigation Sub-header (Muted background strip like Filter pins) */}
-      <div className="bg-muted/20 px-4 md:px-6 py-3 sticky top-0 z-20 backdrop-blur-sm">
+      <div className="px-4 md:px-6 py-3 sticky top-0 z-20 backdrop-blur-sm bg-transparent">
         <div className="relative">
           <ResponsiveTabRow
             value={activeTab}

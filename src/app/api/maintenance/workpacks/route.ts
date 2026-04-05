@@ -17,10 +17,15 @@ async function loadRows(table: string, tenantId: string) {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ workpacks: [], taskCards: [] }, { status: 200 });
-  const [workpackRows, taskCardRows] = await Promise.all([loadRows('workpacks', tenantId), loadRows('maintenance_task_cards', tenantId)]);
-  return NextResponse.json({ workpacks: workpackRows.map((row) => row.data), taskCards: taskCardRows.map((row) => row.data) }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ workpacks: [], taskCards: [] }, { status: 200 });
+    const [workpackRows, taskCardRows] = await Promise.all([loadRows('workpacks', tenantId), loadRows('maintenance_task_cards', tenantId)]);
+    return NextResponse.json({ workpacks: workpackRows.map((row) => row.data), taskCards: taskCardRows.map((row) => row.data) }, { status: 200 });
+  } catch (error) {
+    console.error('[maintenance/workpacks] fallback to empty payload:', error);
+    return NextResponse.json({ workpacks: [], taskCards: [] }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {

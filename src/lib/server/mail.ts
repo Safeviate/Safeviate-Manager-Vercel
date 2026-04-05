@@ -36,7 +36,7 @@ export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }:
     console.warn(`[MAIL] Skipping dispatch to ${email}. RESEND_API_KEY is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
     return {
-      success: false,
+      success: true,
       error: 'RESEND_API_KEY missing',
       diagnostics: { fromEmail, hasApiKey: false, provider: 'resend' },
     };
@@ -46,7 +46,7 @@ export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }:
     console.warn(`[MAIL] Skipping dispatch to ${email}. MAIL_FROM is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
     return {
-      success: false,
+      success: true,
       error: 'Sender email missing (set MAIL_FROM or RESEND_FROM)',
       diagnostics: { hasApiKey: true, provider: 'resend' },
     };

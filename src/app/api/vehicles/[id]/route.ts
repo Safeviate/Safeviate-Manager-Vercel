@@ -17,19 +17,24 @@ async function getTenantId() {
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const tenantId = await getTenantId();
-  if (!tenantId) {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) {
+      return NextResponse.json({ vehicle: null }, { status: 200 });
+    }
+
+    const { id } = await params;
+    const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+      `SELECT data FROM vehicles WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
+      id,
+      tenantId
+    );
+
+    return NextResponse.json({ vehicle: rows[0]?.data ?? null }, { status: 200 });
+  } catch (error) {
+    console.error('[vehicles/[id]] fallback to null:', error);
     return NextResponse.json({ vehicle: null }, { status: 200 });
   }
-
-  const { id } = await params;
-  const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-    `SELECT data FROM vehicles WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
-    id,
-    tenantId
-  );
-
-  return NextResponse.json({ vehicle: rows[0]?.data ?? null }, { status: 200 });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {

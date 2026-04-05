@@ -13,6 +13,7 @@ export default function UsersPersonnelPage() {
   const searchParams = useSearchParams();
   return (
     <PersonnelDirectoryPage
+      title="All Users"
       selectedDepartmentId={searchParams.get('department')}
       selectedRoleId={searchParams.get('role')}
     />

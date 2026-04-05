@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureAircraftSchema, ensureBookingsSchema, ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -20,6 +21,15 @@ const EMPTY_SUMMARY = {
   caps: [],
   risks: [],
 };
+
+async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  try {
+    return await task;
+  } catch (error) {
+    console.error(`[dashboard-summary] fallback for ${label}:`, error);
+    return [];
+  }
+}
 
 export async function GET() {
   try {
@@ -42,6 +52,7 @@ export async function GET() {
     });
     const tenantId = currentUser?.tenantId || 'safeviate';
 
+    await Promise.all([ensureAircraftSchema(), ensureBookingsSchema(), ensurePersonnelSchema()]);
     const [
       bookingRows,
       aircraftRows,
@@ -52,17 +63,14 @@ export async function GET() {
       capRows,
       riskRows,
     ] = await Promise.all([
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM bookings WHERE tenant_id = $1`, tenantId),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM aircrafts WHERE tenant_id = $1`, tenantId),
-      prisma.$queryRawUnsafe<{ userType: string | null }[]>(
-        `SELECT user_type AS "userType" FROM personnel WHERE tenant_id = $1`,
-        tenantId
-      ),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM management_of_change WHERE tenant_id = $1`, tenantId),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM quality_audits WHERE tenant_id = $1`, tenantId),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM safety_reports WHERE tenant_id = $1`, tenantId),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM corrective_action_plans WHERE tenant_id = $1`, tenantId),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM risks WHERE tenant_id = $1`, tenantId),
+      safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId }, select: { data: true } })),
+      safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId }, select: { data: true } })),
+      safeFindMany('personnel', prisma.personnel.findMany({ where: { tenantId } })),
+      safeFindMany('management_of_change', prisma.managementOfChange.findMany({ where: { tenantId }, select: { data: true } })),
+      safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId }, select: { data: true } })),
+      safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId }, select: { data: true } })),
+      safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId }, select: { data: true } })),
+      safeFindMany('risks', prisma.risk.findMany({ where: { tenantId }, select: { data: true } })),
     ]);
 
     const personnelList = [];
@@ -72,15 +80,18 @@ export async function GET() {
 
     for (const row of personnelRows) {
       const type = row.userType || 'Personnel';
-      if (INSTRUCTOR_TYPES.has(type)) {
+      if (row.canBeInstructor || INSTRUCTOR_TYPES.has(type)) {
         instructorList.push(row);
-      } else if (STUDENT_TYPES.has(type)) {
+      }
+      if (row.canBeStudent || STUDENT_TYPES.has(type)) {
         studentList.push(row);
-      } else if (PRIVATE_PILOT_TYPES.has(type)) {
+      }
+      if (PRIVATE_PILOT_TYPES.has(type)) {
         privatePilotList.push(row);
-      } else if (PERSONNEL_TYPES.has(type)) {
+      }
+      if (PERSONNEL_TYPES.has(type)) {
         personnelList.push(row);
-      } else {
+      } else if (!row.canBeInstructor && !row.canBeStudent && !PRIVATE_PILOT_TYPES.has(type)) {
         personnelList.push(row);
       }
     }

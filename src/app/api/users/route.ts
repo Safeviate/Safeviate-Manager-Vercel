@@ -1,0 +1,72 @@
+import { authOptions } from '@/auth';
+import { prisma } from '@/lib/prisma';
+import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
+import { getServerSession } from 'next-auth';
+import { NextResponse } from 'next/server';
+
+const INSTRUCTOR_TYPES = new Set(['Instructor']);
+const STUDENT_TYPES = new Set(['Student']);
+const PRIVATE_PILOT_TYPES = new Set(['Private Pilot']);
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email?.trim().toLowerCase();
+
+    if (!email) {
+      return NextResponse.json({
+        users: [],
+        personnel: [],
+        instructors: [],
+        students: [],
+        privatePilots: [],
+        roles: [],
+        departments: [],
+      }, { status: 200 });
+    }
+
+    await prisma.tenant.upsert({
+      where: { id: 'safeviate' },
+      update: { updatedAt: new Date() },
+      create: { id: 'safeviate', name: 'Safeviate' },
+    });
+
+    const currentUser = await prisma.user.findUnique({
+      where: { email },
+      select: { tenantId: true },
+    });
+    const tenantId = currentUser?.tenantId || 'safeviate';
+
+    await ensurePersonnelSchema();
+    const [roleRows, departmentRows, userRows] = await Promise.all([
+      prisma.role.findMany({ where: { tenantId } }),
+      prisma.department.findMany({ where: { tenantId } }),
+      prisma.personnel.findMany({ where: { tenantId } }),
+    ]);
+
+    const instructors = userRows.filter((row) => row.canBeInstructor || INSTRUCTOR_TYPES.has(row.userType || ''));
+    const students = userRows.filter((row) => row.canBeStudent || STUDENT_TYPES.has(row.userType || ''));
+    const privatePilots = userRows.filter((row) => PRIVATE_PILOT_TYPES.has(row.userType || ''));
+
+    return NextResponse.json({
+      users: userRows,
+      personnel: userRows,
+      instructors,
+      students,
+      privatePilots,
+      roles: roleRows,
+      departments: departmentRows,
+    }, { status: 200 });
+  } catch (error) {
+    console.error('[users] fallback to empty payload:', error);
+    return NextResponse.json({
+      users: [],
+      personnel: [],
+      instructors: [],
+      students: [],
+      privatePilots: [],
+      roles: [],
+      departments: [],
+    }, { status: 200 });
+  }
+}

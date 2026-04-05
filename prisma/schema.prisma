@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  directUrl = env("DATABASE_URL")
 }
 
 model Tenant {
@@ -94,6 +94,8 @@ model Personnel {
   permissions          Json     @default("[]")
   accessOverrides      Json?    @map("access_overrides")
   userType             String   @default("Personnel") @map("user_type")
+  canBeInstructor      Boolean  @default(false) @map("can_be_instructor")
+  canBeStudent         Boolean  @default(false) @map("can_be_student")
   isErpIncerfaContact  Boolean  @default(false) @map("is_erp_incerfa_contact")
   isErpAlerfaContact   Boolean  @default(false) @map("is_erp_alerfa_contact")
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

@@ -38,6 +38,8 @@ type PersonnelFormState = {
     hiddenMenus?: string[];
   };
   dateOfBirth?: string;
+  canBeInstructor?: boolean;
+  canBeStudent?: boolean;
   isErpIncerfaContact?: boolean;
   isErpAlerfaContact?: boolean;
   emergencyContact?: {
@@ -157,6 +159,8 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
       if (!response.ok) throw new Error(payload.error || 'Update failed');
 
       window.dispatchEvent(new Event('safeviate-profile-updated'));
+      window.dispatchEvent(new Event('safeviate-personnel-updated'));
+      window.dispatchEvent(new Event('safeviate-users-updated'));
       toast({ title: 'User Updated' });
       onCancel();
     } catch {
@@ -237,7 +241,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-2"><Label>User Type</Label><Select onValueChange={(value) => handleInputChange('userType', value as PersonnelFormState['userType'])} value={formData?.userType} disabled><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{userTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>User Type</Label><Select onValueChange={(value) => handleInputChange('userType', value as PersonnelFormState['userType'])} value={formData?.userType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{userTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                   <div className="space-y-2"><Label>User Number (Billing)</Label><Input value={formData?.userNumber || ''} onChange={(e) => handleInputChange('userNumber', e.target.value)} placeholder="e.g., ACC-001" /></div>
                   <div className="space-y-2"><Label>First Name</Label><Input value={formData?.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} /></div>
                   <div className="space-y-2"><Label>Last Name</Label><Input value={formData?.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} /></div>
@@ -272,6 +276,24 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                       onCheckedChange={(val) => handleInputChange('isErpAlerfaContact', val)} 
                     />
                     <Label htmlFor="erp-alerfa" className="cursor-pointer text-xs">ERP ALERFA Contact</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
+                    <Switch
+                      id="booking-instructor"
+                      checked={!!formData?.canBeInstructor}
+                      onCheckedChange={(val) => handleInputChange('canBeInstructor', val)}
+                    />
+                    <Label htmlFor="booking-instructor" className="cursor-pointer text-xs">Assignable as Instructor</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/10">
+                    <Switch
+                      id="booking-student"
+                      checked={!!formData?.canBeStudent}
+                      onCheckedChange={(val) => handleInputChange('canBeStudent', val)}
+                    />
+                    <Label htmlFor="booking-student" className="cursor-pointer text-xs">Assignable as Student</Label>
                   </div>
 
                   {formData && !isPilotProfile(formData) && (

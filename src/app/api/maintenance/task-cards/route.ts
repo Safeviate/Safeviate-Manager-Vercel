@@ -13,21 +13,26 @@ async function getTenantId() {
 }
 
 export async function GET(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ taskCards: [] }, { status: 200 });
-  const { searchParams } = new URL(request.url);
-  const workpackId = searchParams.get('workpackId');
-  const rows = workpackId
-    ? await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-        `SELECT data FROM maintenance_task_cards WHERE tenant_id = $1 AND data->>'workpackId' = $2 ORDER BY created_at ASC`,
-        tenantId,
-        workpackId
-      )
-    : await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-        `SELECT data FROM maintenance_task_cards WHERE tenant_id = $1 ORDER BY created_at ASC`,
-        tenantId
-      );
-  return NextResponse.json({ taskCards: rows.map((row) => row.data) }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ taskCards: [] }, { status: 200 });
+    const { searchParams } = new URL(request.url);
+    const workpackId = searchParams.get('workpackId');
+    const rows = workpackId
+      ? await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+          `SELECT data FROM maintenance_task_cards WHERE tenant_id = $1 AND data->>'workpackId' = $2 ORDER BY created_at ASC`,
+          tenantId,
+          workpackId
+        )
+      : await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+          `SELECT data FROM maintenance_task_cards WHERE tenant_id = $1 ORDER BY created_at ASC`,
+          tenantId
+        );
+    return NextResponse.json({ taskCards: rows.map((row) => row.data) }, { status: 200 });
+  } catch (error) {
+    console.error('[maintenance/task-cards] fallback to empty list:', error);
+    return NextResponse.json({ taskCards: [] }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {

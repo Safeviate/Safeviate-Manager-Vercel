@@ -22,11 +22,14 @@ export type UserAccessOverrides = {
 export type PilotProfile = {
   id: string;
   userType: 'Student' | 'Private Pilot' | 'Instructor';
+  canBeInstructor?: boolean;
+  canBeStudent?: boolean;
   userNumber?: string;
   firstName: string;
   lastName: string;
   email: string;
   role: string;
+  department?: string;
   organizationId?: string | null;
   permissions?: string[];
   accessOverrides?: UserAccessOverrides;
@@ -65,6 +68,8 @@ export type PilotProfile = {
 export type Personnel = {
   id: string;
   userType: 'Personnel' | 'External';
+  canBeInstructor?: boolean;
+  canBeStudent?: boolean;
   userNumber?: string;
   firstName: string;
   lastName: string;
@@ -114,7 +119,7 @@ export function PersonnelDirectoryPage({
   selectedRoleId = null,
   selectedUserType = null,
   externalOnly = false,
-  title = 'Personnel Directory',
+  title = 'Users Directory',
   description,
   defaultDepartmentId = null,
   defaultRoleId = null,
@@ -135,12 +140,20 @@ export function PersonnelDirectoryPage({
     const load = async () => {
       setIsLoadingData(true);
       try {
-        const response = await fetch('/api/personnel', { cache: 'no-store' });
-        const payload = await response.json();
+        const [usersResponse, rolesResponse, departmentsResponse] = await Promise.all([
+          fetch('/api/users', { cache: 'no-store' }),
+          fetch('/api/roles', { cache: 'no-store' }),
+          fetch('/api/departments', { cache: 'no-store' }),
+        ]);
+        const [usersPayload, rolesPayload, departmentsPayload] = await Promise.all([
+          usersResponse.json().catch(() => ({})),
+          rolesResponse.json().catch(() => ({})),
+          departmentsResponse.json().catch(() => ({})),
+        ]);
         if (!cancelled) {
-          setPersonnel(payload.personnel ?? []);
-          const apiRoles = payload.roles ?? [];
-          const apiDepartments = payload.departments ?? [];
+          setPersonnel(usersPayload.users ?? usersPayload.personnel ?? []);
+          const apiRoles = Array.isArray(rolesPayload.roles) ? rolesPayload.roles : [];
+          const apiDepartments = Array.isArray(departmentsPayload.departments) ? departmentsPayload.departments : [];
           setRoles(apiRoles);
           setDepartments(apiDepartments);
           setExternalOrgs([]);
@@ -148,7 +161,7 @@ export function PersonnelDirectoryPage({
         }
       } catch (error) {
         if (!cancelled) {
-          setDataError(error instanceof Error ? error : new Error('Failed to load personnel data.'));
+          setDataError(error instanceof Error ? error : new Error('Failed to load user data.'));
         }
       } finally {
         if (!cancelled) setIsLoadingData(false);
@@ -160,9 +173,11 @@ export function PersonnelDirectoryPage({
       void load();
     };
     window.addEventListener('safeviate-personnel-updated', handlePersonnelUpdated);
+    window.addEventListener('safeviate-users-updated', handlePersonnelUpdated);
     return () => {
       cancelled = true;
       window.removeEventListener('safeviate-personnel-updated', handlePersonnelUpdated);
+      window.removeEventListener('safeviate-users-updated', handlePersonnelUpdated);
     };
   }, [tenantId]);
 
@@ -261,7 +276,7 @@ export function PersonnelDirectoryPage({
       ? `Showing users assigned to department: ${selectedDepartmentName}`
       : selectedRoleName
         ? `Showing users assigned to role: ${selectedRoleName}`
-        : 'Manage all non-flying staff in your organization.');
+        : 'Manage all users in your organization.');
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">

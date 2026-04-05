@@ -21,10 +21,15 @@ async function getConfig(tenantId: string) {
 }
 
 export async function GET() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ templates: [] }, { status: 200 });
-  const config = await getConfig(tenantId);
-  return NextResponse.json({ templates: Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [] }, { status: 200 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ templates: [] }, { status: 200 });
+    const config = await getConfig(tenantId);
+    return NextResponse.json({ templates: Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [] }, { status: 200 });
+  } catch (error) {
+    console.error('[quality-audit-templates] fallback to empty list:', error);
+    return NextResponse.json({ templates: [] }, { status: 200 });
+  }
 }
 
 export async function POST(request: Request) {
