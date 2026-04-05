@@ -19,7 +19,7 @@ import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,10 +41,9 @@ export default function ManagementOfChangePage() {
 
     const canViewAll = hasPermission('moc-manage');
 
-    useEffect(() => {
+    const load = useCallback(async () => {
         let cancelled = false;
-
-        const load = async () => {
+        try {
             if (!tenantId) {
                 setIsLoadingMocs(false);
                 setIsLoadingOrgs(false);
@@ -54,27 +53,31 @@ export default function ManagementOfChangePage() {
             setIsLoadingMocs(true);
             setIsLoadingOrgs(true);
             setError(null);
-            try {
-                const response = await fetch('/api/management-of-change', { cache: 'no-store' });
-                const payload = await response.json();
-                if (cancelled) return;
-                setMocs(payload.mocs ?? []);
-                setOrganizations(payload.organizations ?? []);
-            } catch (err) {
-                if (!cancelled) setError(err instanceof Error ? err : new Error('Unable to load MOC records.'));
-            } finally {
-                if (!cancelled) {
-                    setIsLoadingMocs(false);
-                    setIsLoadingOrgs(false);
-                }
+            const response = await fetch('/api/management-of-change', { cache: 'no-store' });
+            const payload = await response.json();
+            if (cancelled) return;
+            setMocs(payload.mocs ?? []);
+            setOrganizations(payload.organizations ?? []);
+        } catch (err) {
+            if (!cancelled) setError(err instanceof Error ? err : new Error('Unable to load MOC records.'));
+        } finally {
+            if (!cancelled) {
+                setIsLoadingMocs(false);
+                setIsLoadingOrgs(false);
             }
-        };
-
-        void load();
+        }
         return () => {
             cancelled = true;
         };
     }, [tenantId]);
+
+    useEffect(() => {
+        void load();
+        window.addEventListener('safeviate-mocs-updated', load);
+        return () => {
+            window.removeEventListener('safeviate-mocs-updated', load);
+        };
+    }, [load]);
 
     const isLoading = isLoadingMocs || isLoadingOrgs;
 

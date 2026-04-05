@@ -177,6 +177,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         primaryColour: theme.primary,
         backgroundColour: theme.background,
         accentColour: theme.accent,
+        scale,
         main: theme,
         button: buttonTheme,
         card: cardTheme,
@@ -293,7 +294,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         },
         swimlaneColors: (effectiveTheme.swimlane as any) || swimlaneTheme,
         matrixColors: (effectiveTheme.matrix as any) || matrixTheme,
-        scale: scale,
+        scale: typeof effectiveTheme.scale === 'number' ? effectiveTheme.scale : scale,
     };
 
     applySavedTheme(themeToApply);

@@ -252,6 +252,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     return value;
   };
 
+  const resolveScale = (value: unknown) => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    return defaultScale;
+  };
+
   const normalizeMatrixTheme = (source: Record<string, string> | undefined | null): MatrixThemeColors => ({
     ...defaultMatrixColors,
     'matrix-header-background': source?.['matrix-header-background'] || source?.['matrix-header-start'] || defaultMatrixColors['matrix-header-background'],
@@ -296,7 +301,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const nextSidebarBackgroundImage = resolveSidebarBackgroundImage(
       tenant?.theme?.sidebarBackgroundImage
     );
-    const nextScale = defaultScale;
+    const localScale = getInitialState<number>(SCALE_KEY, defaultScale);
+    const nextScale = resolveScale(tenant?.theme?.scale) !== defaultScale
+      ? resolveScale(tenant?.theme?.scale)
+      : localScale;
     const nextSavedThemes = getInitialState<SavedTheme[]>(
       getSavedThemesStorageKey(tenantId),
       []
@@ -342,6 +350,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const setScale = (newScale: number) => {
     setScaleState(newScale);
+    try {
+      window.localStorage.setItem(SCALE_KEY, JSON.stringify(newScale));
+    } catch {
+      // Ignore browser storage failures and keep the in-memory value.
+    }
     applyScaleToDOM(newScale);
   };
   
@@ -393,6 +406,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSwimlaneTheme(newSwimlaneTheme);
     setMatrixTheme(newMatrixTheme);
     setScaleState(newScale);
+    try {
+      window.localStorage.setItem(SCALE_KEY, JSON.stringify(newScale));
+    } catch {
+      // Ignore browser storage failures and keep the in-memory value.
+    }
     
     applyColorsToDOM(newTheme);
     applyColorsToDOM(newButtonTheme);
@@ -472,7 +490,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       ...(tenant?.theme?.swimlane || {}),
     });
     setMatrixTheme(normalizeMatrixTheme(tenant?.theme?.matrix || {}));
-    setScaleState(defaultScale);
+    const nextScale = resolveScale(tenant?.theme?.scale);
+    setScaleState(nextScale);
+    try {
+      window.localStorage.setItem(SCALE_KEY, JSON.stringify(nextScale));
+    } catch {
+      // Ignore browser storage failures and keep the in-memory value.
+    }
     window.location.reload();
   };
 
