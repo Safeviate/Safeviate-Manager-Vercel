@@ -21,7 +21,7 @@ export default function LoginPage() {
   const getLoginErrorMessage = (errorMessage?: string) => {
     if (!errorMessage) return 'Incorrect email or password.';
     if (errorMessage === 'CredentialsSignin') {
-      return 'Login failed. Check email/password, and ensure AUTH_SEED_EMAIL + AUTH_SEED_PASSWORD are set in local .env.local.';
+      return 'Login failed. Check the database password for this user or confirm the seed credentials are configured.';
     }
     return errorMessage;
   };

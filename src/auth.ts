@@ -21,11 +21,6 @@ export const authOptions: NextAuthOptions = {
 
         if (!email || !password) return null;
 
-        if (!seedEmail) {
-          console.warn('[AUTH] Missing AUTH_SEED_EMAIL in runtime env.');
-          return null;
-        }
-
         console.info('[AUTH] Credentials login attempt received.', {
           email,
           seedEmailConfigured: Boolean(seedEmail),
@@ -45,6 +40,11 @@ export const authOptions: NextAuthOptions = {
               name: `${dbUser.firstName} ${dbUser.lastName}`.trim(),
             };
           }
+        }
+
+        if (!seedEmail) {
+          console.warn('[AUTH] Missing AUTH_SEED_EMAIL in runtime env.');
+          return null;
         }
 
         if (seedEmail && email === seedEmail) {

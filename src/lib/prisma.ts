@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 
+if (process.env.NODE_ENV === 'development' && process.env.DATABASE_URL_UNPOOLED) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_UNPOOLED.trim();
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __prisma: PrismaClient | undefined;
@@ -14,4 +18,3 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;
 }
-
