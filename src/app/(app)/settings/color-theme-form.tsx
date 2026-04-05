@@ -86,6 +86,8 @@ const PALETTE_PRESETS: PalettePreset[] = [
   },
 ];
 
+const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
+
 export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
@@ -157,25 +159,25 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   }, []);
 
   const handleSaveToOrganization = async () => {
-    try {
-        const updatedTenant = {
-            id: tenantId || 'safeviate',
-            theme: {
-                primaryColour: theme.primary,
-                backgroundColour: theme.background,
-                accentColour: theme.accent,
-                main: theme,
-                button: buttonTheme,
-                card: cardTheme,
-                popover: popoverTheme,
-                sidebar: sidebarTheme,
-                sidebarBackgroundImage,
-                header: headerTheme,
-                swimlane: swimlaneTheme,
-                matrix: matrixTheme,
-            }
-        };
+    const updatedTenant = {
+      id: tenantId || 'safeviate',
+      theme: {
+        primaryColour: theme.primary,
+        backgroundColour: theme.background,
+        accentColour: theme.accent,
+        main: theme,
+        button: buttonTheme,
+        card: cardTheme,
+        popover: popoverTheme,
+        sidebar: sidebarTheme,
+        sidebarBackgroundImage,
+        header: headerTheme,
+        swimlane: swimlaneTheme,
+        matrix: matrixTheme,
+      }
+    };
 
+    try {
         const response = await fetch('/api/tenant-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -187,6 +189,13 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
           throw new Error(payload?.error || 'Could not save tenant configuration.');
         }
 
+        try {
+          window.localStorage.setItem(LOCAL_TENANT_CONFIG_KEY, JSON.stringify(updatedTenant));
+          window.dispatchEvent(new Event('storage'));
+        } catch {
+          // Ignore browser storage failures and rely on the server copy.
+        }
+
         window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
         loadTenants();
 
@@ -195,7 +204,19 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
             description: "These branding settings have been saved as the default for all members of your organization."
         });
     } catch (e) {
-      toast({ variant: "destructive", title: "Save Failed", description: "The organization branding could not be saved." });
+      try {
+        window.localStorage.setItem(LOCAL_TENANT_CONFIG_KEY, JSON.stringify(updatedTenant));
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+        loadTenants();
+      } catch {
+        // Ignore browser storage failures.
+      }
+
+      toast({
+        title: "Saved Locally",
+        description: e instanceof Error ? `${e.message} The branding was kept in this browser.` : "The organization branding could not be saved to the server, but the changes were kept in this browser.",
+      });
     }
   };
 

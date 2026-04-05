@@ -22,30 +22,38 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const auth = await authenticateAiRequest();
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  try {
+    const auth = await authenticateAiRequest();
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const role = auth.userProfile.role?.toLowerCase();
+    const isDeveloper = role === 'dev' || role === 'developer';
+    if (!isDeveloper && !auth.effectivePermissions.has('admin-settings-manage')) {
+      return NextResponse.json({ error: 'Unauthorized to update tenant configuration.' }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => null);
+    const config = body?.config;
+    if (!config || typeof config !== 'object') {
+      return NextResponse.json({ error: 'Invalid config payload.' }, { status: 400 });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at)
+       VALUES ($1, $2::jsonb, NOW(), NOW())
+       ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      auth.tenantId,
+      JSON.stringify(config)
+    );
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[tenant-config] failed to save config:', error);
+    return NextResponse.json(
+      { error: 'Failed to save tenant configuration.' },
+      { status: 500 }
+    );
   }
-
-  const role = auth.userProfile.role?.toLowerCase();
-  const isDeveloper = role === 'dev' || role === 'developer';
-  if (!isDeveloper && !auth.effectivePermissions.has('admin-settings-manage')) {
-    return NextResponse.json({ error: 'Unauthorized to update tenant configuration.' }, { status: 403 });
-  }
-
-  const body = await request.json().catch(() => null);
-  const config = body?.config;
-  if (!config || typeof config !== 'object') {
-    return NextResponse.json({ error: 'Invalid config payload.' }, { status: 400 });
-  }
-
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at)
-     VALUES ($1, $2::jsonb, NOW(), NOW())
-     ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-    auth.tenantId,
-    JSON.stringify(config)
-  );
-
-  return NextResponse.json({ ok: true }, { status: 200 });
 }

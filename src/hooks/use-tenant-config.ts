@@ -5,6 +5,7 @@ import { useUserProfile } from './use-user-profile';
 import type { Tenant, IndustryType } from '@/types/quality';
 
 const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
+const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
 
 /**
  * A custom hook to fetch the configuration for the current tenant.
@@ -16,6 +17,7 @@ export const useTenantConfig = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [industryOverride, setIndustryOverride] = useState<IndustryType | null>(null);
+  const [localOverride, setLocalOverride] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -24,8 +26,11 @@ export const useTenantConfig = () => {
       try {
         const stored = window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY);
         setIndustryOverride(stored as IndustryType | null);
+        const tenantConfigStored = window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
+        setLocalOverride(tenantConfigStored ? JSON.parse(tenantConfigStored) : null);
       } catch {
         setIndustryOverride(null);
+        setLocalOverride(null);
       }
     };
 
@@ -58,12 +63,16 @@ export const useTenantConfig = () => {
         const configPayload = configResponse.ok ? await configResponse.json().catch(() => ({})) : {};
         const tenantFromApi = payload?.tenant ?? null;
         const tenantConfig = configPayload?.config ?? null;
+        const mergedConfig = {
+          ...(tenantConfig || {}),
+          ...(localOverride || {}),
+        };
 
         if (!cancelled) {
           if (tenantFromApi) {
             setTenantData({
               ...tenantFromApi,
-              ...(tenantConfig || {}),
+              ...mergedConfig,
             });
           } else {
             setTenantData(null);
@@ -87,7 +96,7 @@ export const useTenantConfig = () => {
           const response = await fetch('/api/tenant-config', { cache: 'no-store' });
           const payload = response.ok ? await response.json().catch(() => ({})) : {};
           if (payload?.config && !cancelled) {
-            setTenantData((current) => (current ? { ...current, ...payload.config } : current));
+            setTenantData((current) => (current ? { ...current, ...payload.config, ...(localOverride || {}) } : current));
           }
         } catch {
         // ignore transient refresh failures
@@ -99,7 +108,7 @@ export const useTenantConfig = () => {
       cancelled = true;
       window.removeEventListener('safeviate-tenant-config-updated', handleUpdate);
     };
-  }, [tenantId]);
+  }, [tenantId, localOverride]);
 
   const isDeveloper =
     userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';
