@@ -3,8 +3,22 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
+const cleanEnvValue = (value: string | undefined) =>
+  value?.replace(/\\r\\n|\\n|\\r/g, '').trim() || '';
+
+const normalizeNextAuthUrl = () => {
+  const current = cleanEnvValue(process.env.NEXTAUTH_URL);
+  if (process.env.NODE_ENV === 'development' && (!current || current.includes('vercel.app'))) {
+    return 'http://localhost:9002';
+  }
+  return current;
+};
+
+process.env.NEXTAUTH_URL = normalizeNextAuthUrl();
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
+  secret: cleanEnvValue(process.env.NEXTAUTH_SECRET),
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -15,9 +29,9 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         const email = credentials?.email?.toString().toLowerCase().trim();
         const password = credentials?.password?.toString();
-        const seedEmail = process.env.AUTH_SEED_EMAIL?.toLowerCase().trim();
-        const seedPasswordHash = process.env.AUTH_SEED_PASSWORD_HASH?.trim();
-        const seedPassword = process.env.AUTH_SEED_PASSWORD?.trim();
+        const seedEmail = cleanEnvValue(process.env.AUTH_SEED_EMAIL).toLowerCase();
+        const seedPasswordHash = cleanEnvValue(process.env.AUTH_SEED_PASSWORD_HASH);
+        const seedPassword = cleanEnvValue(process.env.AUTH_SEED_PASSWORD);
 
         if (!email || !password) return null;
 
@@ -26,6 +40,7 @@ export const authOptions: NextAuthOptions = {
           seedEmailConfigured: Boolean(seedEmail),
           seedHashConfigured: Boolean(seedPasswordHash),
           seedPasswordConfigured: Boolean(seedPassword),
+          nextAuthUrl: cleanEnvValue(process.env.NEXTAUTH_URL),
         });
 
         const dbUser = await prisma.user.findUnique({ where: { email } });

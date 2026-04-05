@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Globe, Save } from 'lucide-react';
+import { Check, ChevronDown, LayoutGrid, Sparkles, Trash2, Globe, Save } from 'lucide-react';
 import { useTheme, type SavedTheme } from '@/components/theme-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -19,6 +21,70 @@ import { usePermissions } from '@/hooks/use-permissions';
 interface ColorThemeFormProps {
   showHeader?: boolean;
 }
+
+type PalettePreset = {
+  name: string;
+  description: string;
+  colors: {
+    primary: string;
+    'primary-foreground': string;
+    background: string;
+    accent: string;
+  };
+};
+
+const PALETTE_PRESETS: PalettePreset[] = [
+  {
+    name: 'Aero',
+    description: 'Calm blue for aviation ops',
+    colors: {
+      primary: '#4a90c2',
+      'primary-foreground': '#0f172a',
+      background: '#f7fbfe',
+      accent: '#7fb8d8',
+    },
+  },
+  {
+    name: 'Signal',
+    description: 'Professional safety alert system',
+    colors: {
+      primary: '#23415d',
+      'primary-foreground': '#ffffff',
+      background: '#f7f9fc',
+      accent: '#d79b2a',
+    },
+  },
+  {
+    name: 'Compliance',
+    description: 'OHS-friendly yellow-grey compliance',
+    colors: {
+      primary: '#9a8d5a',
+      'primary-foreground': '#1f2937',
+      background: '#fbfaf4',
+      accent: '#b9b39d',
+    },
+  },
+  {
+    name: 'Industrial',
+    description: 'Strong contrast for admin dashboards',
+    colors: {
+      primary: '#2f3a4a',
+      'primary-foreground': '#ffffff',
+      background: '#f6f8fb',
+      accent: '#8f99a8',
+    },
+  },
+  {
+    name: 'Harbour',
+    description: 'Navy and ivory with a warm accent',
+    colors: {
+      primary: '#243c5a',
+      'primary-foreground': '#ffffff',
+      background: '#fbfcfe',
+      accent: '#b8a15a',
+    },
+  },
+];
 
 export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const { toast } = useToast();
@@ -57,6 +123,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const [sidebarImageUrl, setSidebarImageUrl] = useState('');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoadingTenants, setIsLoadingTenants] = useState(true);
+  const [openAdvancedSections, setOpenAdvancedSections] = useState<string[]>(['buttons', 'headers']);
 
   const canManageOrganization = hasPermission('admin-settings-manage');
 
@@ -235,6 +302,38 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     toast({ title: 'Sidebar Background Applied', description: 'The image URL has been applied to the sidebar preview.' });
   };
 
+  const applyPalettePreset = (preset: PalettePreset) => {
+    setThemeValue('primary', preset.colors.primary);
+    setThemeValue('primary-foreground', preset.colors['primary-foreground']);
+    setThemeValue('background', preset.colors.background);
+    setThemeValue('accent', preset.colors.accent);
+    setButtonThemeValue('button-primary-background', preset.colors.primary);
+    setButtonThemeValue('button-primary-foreground', preset.colors['primary-foreground']);
+    setButtonThemeValue('button-primary-accent', preset.colors.accent);
+    setPopoverThemeValue('popover', preset.colors.background);
+    setPopoverThemeValue('popover-accent', preset.colors.primary);
+    setSidebarThemeValue('sidebar-background', preset.colors.background);
+    setSidebarThemeValue('sidebar-accent', preset.colors.accent);
+    setCardThemeValue('card', preset.colors.background);
+    toast({
+      title: `${preset.name} palette applied`,
+      description: 'The core brand colors, button accents, and supporting surfaces were updated together.',
+    });
+  };
+
+  const toggleAdvancedSection = (section: string) => {
+    setOpenAdvancedSections((current) =>
+      current.includes(section) ? current.filter((item) => item !== section) : [...current, section]
+    );
+  };
+
+  const isSectionOpen = (section: string) => openAdvancedSections.includes(section);
+  const activePaletteName = PALETTE_PRESETS.find((preset) => (
+    preset.colors.primary === theme.primary &&
+    preset.colors.background === theme.background &&
+    preset.colors.accent === theme.accent
+  ))?.name;
+
   const formatLabel = (key: string) => {
     const clean = key.replace('popover-', '').replace('button-primary-', '').replace('sidebar-', '').replace('header-', '').replace('swimlane-header-', '');
     if (clean === 'popover' || clean === 'card' || clean === 'background') return 'Background';
@@ -248,7 +347,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     <div className="p-6 space-y-8 pb-24">
         <div>
             <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">UI Scaling</h2>
-            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Adjust the overall size of the application interface.</p>
+            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Set the global interface scale for the whole app.</p>
             <div className='flex items-center gap-6 bg-muted/5 p-4 border rounded-xl'>
                 <Slider aria-label="UI scale" value={[scale]} onValueChange={(value) => setScale(value[0])} min={50} max={150} step={5} className="flex-1" />
                 <span className='text-sm font-black text-primary w-12 text-right'>{scale}%</span>
@@ -266,7 +365,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             Organization Branding
                         </h2>
                         <p className='text-[9px] font-black uppercase italic text-foreground/75'>
-                            Set the shared tenant branding that appears across every device.
+                            Save these colors as the shared default for everyone in the tenant.
                         </p>
                     </div>
                     <Button onClick={handleSaveToOrganization} className="w-full sm:w-auto text-[10px] font-black uppercase h-9 px-8 shadow-md">
@@ -279,7 +378,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
         <div>
             <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Apply Tenant Branding</h2>
-            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Load the shared organization theme stored in the database.</p>
+            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Load a saved organization theme and use it as your starting point.</p>
             <Select onValueChange={handleApplyTenantTheme} disabled={isLoadingTenants || tenants.length === 0}>
                 <SelectTrigger className="w-full sm:w-[320px] h-11 font-black uppercase text-[10px] border-2">
                     <SelectValue placeholder={isLoadingTenants ? "Loading themes..." : (tenants.length === 0 ? "No tenant config found" : "Select a tenant theme")} />
@@ -298,9 +397,172 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
       
         <div className="space-y-4">
             <h2 className="text-sm font-black uppercase tracking-tight text-foreground">Main Theme Colors</h2>
+            <div className="rounded-2xl border bg-background/80 p-4 shadow-sm">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-primary">
+                            <Sparkles className="h-4 w-4" />
+                            <h3 className="text-[10px] font-black uppercase tracking-widest">Live Preview</h3>
+                        </div>
+                        <p className="text-[9px] font-black uppercase italic text-foreground/75">A quick read on how the current theme will feel in the app.</p>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {[theme.primary, theme.background, theme.accent, buttonTheme['button-primary-background']].map((value, index) => (
+                            <div key={value + index} className="group h-10 w-10 overflow-hidden rounded-xl border shadow-sm">
+                                <div className="h-full w-full transition-transform group-hover:scale-110" style={{ backgroundColor: value }} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div
+                    className="mt-4 overflow-hidden rounded-2xl border shadow-sm"
+                    style={{
+                        borderColor: cardTheme['card-border'],
+                    }}
+                >
+                    <div
+                        className="flex items-center justify-between border-b px-4 py-3"
+                        style={{
+                            backgroundColor: headerTheme['header-background'],
+                            color: headerTheme['header-foreground'],
+                            borderColor: headerTheme['header-border'],
+                        }}
+                    >
+                        <div className="space-y-0.5">
+                            <p className="text-[10px] font-black uppercase tracking-widest">Header Preview</p>
+                            <p className="text-[9px] font-bold uppercase tracking-tight opacity-80">Top bars and key framing</p>
+                        </div>
+                        <LayoutGrid className="h-5 w-5 opacity-70" />
+                    </div>
+                    <div className="grid gap-0 md:grid-cols-[180px_1fr]">
+                        <div
+                            className="space-y-3 p-4"
+                            style={{
+                                backgroundColor: sidebarTheme['sidebar-background'],
+                                color: sidebarTheme['sidebar-foreground'],
+                            }}
+                        >
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest">Sidebar</p>
+                                <p className="text-[9px] font-bold uppercase tracking-tight opacity-80">Navigation and shell color</p>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: sidebarTheme['sidebar-accent'], color: sidebarTheme['sidebar-accent-foreground'] }}>
+                                    Selected item
+                                </div>
+                                <div className="rounded-xl border px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ borderColor: sidebarTheme['sidebar-border'] }}>
+                                    Border sample
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-3 p-4" style={{ backgroundColor: theme.background, color: theme['primary-foreground'] }}>
+                            <div
+                                className="rounded-2xl border p-4 shadow-sm"
+                                style={{
+                                    backgroundColor: cardTheme.card,
+                                    color: cardTheme['card-foreground'],
+                                    borderColor: cardTheme['card-border'],
+                                }}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Card Preview</p>
+                                        <p className="text-[9px] font-bold uppercase tracking-tight opacity-80">Buttons, accents, and surfaces together</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: theme.primary }} />
+                                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: theme.accent }} />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: theme.primary, color: theme['primary-foreground'] }}>
+                                        Primary
+                                    </span>
+                                    <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: theme.accent, color: theme['primary-foreground'] }}>
+                                        Accent
+                                    </span>
+                                    <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: buttonTheme['button-primary-background'], color: buttonTheme['button-primary-foreground'] }}>
+                                        Button
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: popoverTheme.popover, color: popoverTheme['popover-foreground'], border: `1px solid ${popoverTheme['popover-accent']}` }}>
+                                    Popover
+                                </span>
+                                <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: swimlaneTheme['swimlane-header-background'], color: swimlaneTheme['swimlane-header-foreground'] }}>
+                                    Swimlane
+                                </span>
+                                <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: matrixTheme['matrix-header-background'], color: matrixTheme['matrix-header-foreground'] }}>
+                                    Matrix
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="rounded-2xl border bg-muted/5 p-4 shadow-inner space-y-4">
+                <div className="space-y-1">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Quick Palettes</h3>
+                    <p className="text-[9px] font-black uppercase italic text-foreground/75">Pick a starting palette, then fine-tune the individual swatches below.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleReset}
+                        className="h-8 rounded-full border-primary/20 bg-background px-3 text-[9px] font-black uppercase tracking-widest shadow-sm"
+                    >
+                        Reset to defaults
+                    </Button>
+                    <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground">
+                        Restores the shared base brand palette on this device.
+                    </span>
+                </div>
+                {activePaletteName && (
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="border-primary/30 bg-primary/5 text-[9px] font-black uppercase tracking-widest">
+                            Active: {activePaletteName}
+                        </Badge>
+                    </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                    {PALETTE_PRESETS.map((preset) => (
+                        <Button
+                            key={preset.name}
+                            type="button"
+                            variant="outline"
+                            onClick={() => applyPalettePreset(preset)}
+                            className={`h-auto justify-start gap-3 rounded-2xl border-2 bg-background p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-muted/40 ${
+                                activePaletteName === preset.name ? 'border-primary ring-1 ring-primary/30 bg-primary/5' : ''
+                            }`}
+                            aria-pressed={activePaletteName === preset.name}
+                        >
+                            <span className="flex h-10 w-10 shrink-0 overflow-hidden rounded-xl border">
+                                <span className="flex-1" style={{ backgroundColor: preset.colors.primary }} />
+                                <span className="flex-1" style={{ backgroundColor: preset.colors.background }} />
+                                <span className="flex-1" style={{ backgroundColor: preset.colors.accent }} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2">
+                                    <span className="block text-[10px] font-black uppercase tracking-tight text-foreground">{preset.name}</span>
+                                    {activePaletteName === preset.name && (
+                                        <Badge variant="outline" className="h-5 gap-1 border-primary/30 bg-primary/10 px-2 text-[8px] font-black uppercase tracking-widest">
+                                            <Check className="h-3 w-3" />
+                                            Selected
+                                        </Badge>
+                                    )}
+                                </span>
+                                <span className="block text-[9px] font-bold uppercase tracking-tight text-muted-foreground">{preset.description}</span>
+                            </span>
+                        </Button>
+                    ))}
+                </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4 p-5 border rounded-2xl bg-muted/5 shadow-inner">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Primary Palette</h4>
+                    <p className="text-[9px] font-black uppercase italic text-foreground/60">Used for primary actions, key emphasis, and brand identity.</p>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="primary" className="text-[9px] font-black uppercase">Primary</Label>
@@ -314,6 +576,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                 </div>
                 <div className="space-y-4 p-5 border rounded-2xl bg-muted/5 shadow-inner">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Base &amp; Accent</h4>
+                    <p className="text-[9px] font-black uppercase italic text-foreground/60">Sets the app canvas and the secondary accent used for highlights.</p>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="background" className="text-[9px] font-black uppercase">Background</Label>
@@ -332,113 +595,184 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
         <div>
             <h2 className="text-sm font-black uppercase tracking-tight mb-4 text-foreground">Advanced Component Theming</h2>
+            <p className="mb-5 text-[10px] font-black uppercase italic text-foreground/75">These controls fine-tune how specific surfaces, headers, and panels behave.</p>
             <div className="space-y-10">
-                <section className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Primary Buttons</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {Object.entries(buttonTheme).map(([name, value]) => (
-                        <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                            <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                        </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Headers</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {Object.entries(headerTheme).map(([name, value]) => (
-                        <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                            <Input id={name} type="color" value={value} onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                        </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Swimlanes</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                        {Object.entries(swimlaneTheme).map(([name, value]) => (
-                        <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                            <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                        </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Matrix Hierarchy</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {Object.entries(matrixTheme).map(([name, value]) => (
-                        <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                            <Input id={name} type="color" value={value} onChange={(e) => setMatrixThemeValue(name as keyof typeof matrixTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                        </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Cards</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {Object.entries(cardTheme).map(([name, value]) => (
-                        <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                            <Input id={name} type="color" value={value} onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                        </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Popovers &amp; Sidebar</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[...Object.entries(popoverTheme), ...Object.entries(sidebarTheme)].map(([name, value]) => (
-                        <div key={name} className="space-y-1.5">
-                            <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                            <Input id={name} type="color" value={value} onChange={(e) => (popoverTheme as any)[name] !== undefined ? setPopoverThemeValue(name as any, e.target.value) : setSidebarThemeValue(name as any, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                        </div>
-                        ))}
-                    </div>
-                    <div className="space-y-3 rounded-2xl border bg-muted/10 p-5 shadow-inner mt-4">
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sidebar Background Image</p>
-                            <p className="text-[9px] font-black uppercase tracking-tight text-foreground/75">Paste a direct image URL to use it for the sidebar background.</p>
-                            <div className="flex flex-col gap-2 sm:flex-row mt-2">
-                                <Input
-                                value={sidebarImageUrl}
-                                onChange={(e) => setSidebarImageUrl(e.target.value)}
-                                placeholder="https://example.com/texture.jpg"
-                                className="h-11 flex-1 font-bold text-sm bg-background"
-                                />
-                                <Button type="button" variant="outline" className="h-11 px-6 font-black uppercase text-[10px] border-slate-300 shadow-sm" onClick={handleApplySidebarBackgroundUrl}>
-                                Apply URL
-                                </Button>
-                            </div>
-                        </div>
-                        {sidebarBackgroundImage ? (
-                            <div className="relative h-40 overflow-hidden rounded-xl border-2 shadow-sm mt-2">
-                                <Image
-                                src={sidebarBackgroundImage}
-                                alt="Sidebar background preview"
-                                fill
-                                className="object-cover"
-                                unoptimized
-                                />
-                                <div className='absolute top-2 right-2'>
-                                    <Button size="icon" variant="destructive" onClick={() => setSidebarBackgroundImage('')} className="h-8 w-8 shadow-lg"><Trash2 className="h-4 w-4" /></Button>
+                <Collapsible open={isSectionOpen('buttons')} onOpenChange={() => toggleAdvancedSection('buttons')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Primary Buttons</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('buttons') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls button fill, text, and hover states.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {Object.entries(buttonTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                                 </div>
+                                ))}
                             </div>
-                        ) : (
-                        <div className="rounded-xl border-2 border-dashed p-8 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-background/50">
-                            No sidebar background selected
-                        </div>
-                        )}
-                    </div>
-                </section>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
+
+                <Collapsible open={isSectionOpen('headers')} onOpenChange={() => toggleAdvancedSection('headers')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Headers</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('headers') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Affects top bars, section headers, and border contrast.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {Object.entries(headerTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setHeaderThemeValue(name as keyof typeof headerTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
+
+                <Collapsible open={isSectionOpen('swimlanes')} onOpenChange={() => toggleAdvancedSection('swimlanes')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Swimlanes</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('swimlanes') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Used in swimlane rows and table-like group headers.</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                {Object.entries(swimlaneTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setSwimlaneThemeValue(name as keyof typeof swimlaneTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
+
+                <Collapsible open={isSectionOpen('matrix')} onOpenChange={() => toggleAdvancedSection('matrix')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Matrix Hierarchy</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('matrix') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Affects matrix headings and nested structure rows.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {Object.entries(matrixTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setMatrixThemeValue(name as keyof typeof matrixTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
+
+                <Collapsible open={isSectionOpen('cards')} onOpenChange={() => toggleAdvancedSection('cards')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Cards</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('cards') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls panels, cards, and their border treatment.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {Object.entries(cardTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setCardThemeValue(name as keyof typeof cardTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
+
+                <Collapsible open={isSectionOpen('popover')} onOpenChange={() => toggleAdvancedSection('popover')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Popovers</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('popover') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Used by dropdowns, tooltips, and overlay surfaces.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {Object.entries(popoverTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setPopoverThemeValue(name as keyof typeof popoverTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
+
+                <Collapsible open={isSectionOpen('sidebar')} onOpenChange={() => toggleAdvancedSection('sidebar')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Sidebar</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('sidebar') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Used by the navigation shell and sidebar surface.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {Object.entries(sidebarTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                </div>
+                                ))}
+                            </div>
+                            <div className="space-y-3 rounded-2xl border bg-muted/10 p-5 shadow-inner mt-4">
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sidebar Background Image</p>
+                                    <p className="text-[9px] font-black uppercase tracking-tight text-foreground/75">Paste a direct image URL to use it for the sidebar background.</p>
+                                    <div className="flex flex-col gap-2 sm:flex-row mt-2">
+                                        <Input
+                                            value={sidebarImageUrl}
+                                            onChange={(e) => setSidebarImageUrl(e.target.value)}
+                                            placeholder="https://example.com/texture.jpg"
+                                            className="h-11 flex-1 font-bold text-sm bg-background"
+                                        />
+                                        <Button type="button" variant="outline" className="h-11 px-6 font-black uppercase text-[10px] border-slate-300 shadow-sm" onClick={handleApplySidebarBackgroundUrl}>
+                                            Apply URL
+                                        </Button>
+                                    </div>
+                                </div>
+                                {sidebarBackgroundImage ? (
+                                    <div className="relative h-40 overflow-hidden rounded-xl border-2 shadow-sm mt-2">
+                                        <Image
+                                            src={sidebarBackgroundImage}
+                                            alt="Sidebar background preview"
+                                            fill
+                                            className="object-cover"
+                                            unoptimized
+                                        />
+                                        <div className="absolute top-2 right-2">
+                                            <Button size="icon" variant="destructive" onClick={() => setSidebarBackgroundImage('')} className="h-8 w-8 shadow-lg">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-xl border-2 border-dashed p-8 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-background/50">
+                                        No sidebar background selected
+                                    </div>
+                                )}
+                            </div>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
             </div>
         </div>
 

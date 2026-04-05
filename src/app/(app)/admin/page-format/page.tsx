@@ -42,7 +42,10 @@ export default function PageFormatPage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <MainPageHeader title="Page Formatting" />
+          <MainPageHeader
+            title="Page Formatting"
+            description="Refine the tenant look and access rules from one place. Start with quick palettes, then tune the advanced component colors only if needed."
+          />
 
           <ResponsiveTabRow
             value={activeTab}
