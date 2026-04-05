@@ -220,7 +220,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   
   const handleReset = () => {
     resetToDefaults();
-    toast({ title: "Browser Theme Reset", description: "Your local browser theme overrides have been cleared for this company." });
+    toast({ title: "Tenant Branding Restored", description: "This device has been reset to the shared organization branding." });
   }
 
   const handleApplySidebarBackgroundUrl = () => {
@@ -266,7 +266,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             Organization Branding
                         </h2>
                         <p className='text-[9px] font-black uppercase italic text-foreground/75'>
-                            Set the default branding for all members of your organization.
+                            Set the shared tenant branding that appears on every device.
                         </p>
                     </div>
                     <Button onClick={handleSaveToOrganization} className="w-full sm:w-auto text-[10px] font-black uppercase h-9 px-8 shadow-md">
@@ -278,8 +278,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         )}
 
         <div>
-            <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Set Theme from Tenant</h2>
-            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Override the current theme with a saved tenant configuration.</p>
+            <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Apply Tenant Branding</h2>
+            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Load the shared organization theme stored in the database.</p>
             <Select onValueChange={handleApplyTenantTheme} disabled={isLoadingTenants || tenants.length === 0}>
                 <SelectTrigger className="w-full sm:w-[320px] h-11 font-black uppercase text-[10px] border-2">
                     <SelectValue placeholder={isLoadingTenants ? "Loading themes..." : (tenants.length === 0 ? "No tenant config found" : "Select a tenant theme")} />
@@ -445,17 +445,17 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         <Separator />
         
         <div>
-            <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Personal Theme Storage</h2>
-            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Save your current overrides as a personal theme for later use.</p>
+            <h2 className="text-sm font-black uppercase tracking-tight mb-1 text-foreground">Personal Browser Theme</h2>
+            <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Save your current look as a browser-only preset for this device.</p>
             <div className="flex flex-col sm:flex-row items-center gap-3">
                 <Input placeholder="Personal theme name..." value={themeName} onChange={(e) => setThemeName(e.target.value)} className="h-11 font-black text-sm uppercase placeholder:font-black placeholder:text-[10px] placeholder:italic" />
-                <Button onClick={handleSaveTheme} className="w-full sm:w-auto h-11 px-10 text-[10px] font-black uppercase shadow-lg tracking-tight">Save Personal Theme</Button>
+                <Button onClick={handleSaveTheme} className="w-full sm:w-auto h-11 px-10 text-[10px] font-black uppercase shadow-lg tracking-tight">Save Browser Preset</Button>
             </div>
         </div>
 
         {isMounted && savedThemes.length > 0 && (
             <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Saved Personal Themes</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/75">Saved Browser Presets</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {savedThemes.map((theme) => (
                         <div key={theme.name} className="flex items-center justify-between p-4 border rounded-2xl bg-background shadow-sm group hover:border-primary/20 transition-all">
@@ -473,7 +473,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         <Separator />
 
         <div className="flex justify-start">
-            <Button onClick={handleReset} variant="outline" className="text-[10px] font-black uppercase h-11 px-10 border-slate-300 hover:bg-muted/50 shadow-sm">Reset Browser Overrides</Button>
+            <Button onClick={handleReset} variant="outline" className="text-[10px] font-black uppercase h-11 px-10 border-slate-300 hover:bg-muted/50 shadow-sm">Reset This Device Only</Button>
         </div>
     </div>
   );
