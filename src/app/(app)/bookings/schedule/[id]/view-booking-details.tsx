@@ -211,6 +211,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }, [tenantId]);
 
     useEffect(() => {
+        if (aircraft) {
             if (aircraft?.cgEnvelope?.length) {
                 const envelope = aircraft.cgEnvelope.map((point) => ({ x: point.cg, y: point.weight }));
                 setGraphConfig({
@@ -240,6 +241,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             } else {
                 setStations(DEFAULT_STATIONS);
             }
+        }
         }
     }, [aircraft, booking.massAndBalance?.stations]);
 

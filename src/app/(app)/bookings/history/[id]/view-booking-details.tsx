@@ -295,6 +295,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [postFlight, setPostFlight] = useState<PostFlightData>(booking.postFlightData || { hobbs: 0, tacho: 0, fuelUpliftGallons: 0, fuelUpliftLitres: 0, oilUplift: 0, defects: '' });
 
     useEffect(() => {
+        if (aircraft) {
         if (aircraft?.cgEnvelope?.length) {
             const envelope = aircraft.cgEnvelope.map((point) => ({ x: point.cg, y: point.weight }));
             setGraphConfig({
@@ -323,6 +324,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             setStations(aircraft.stations);
         } else {
             setStations(DEFAULT_STATIONS);
+        }
         }
     }, [aircraft, booking.massAndBalance?.stations]);
 
