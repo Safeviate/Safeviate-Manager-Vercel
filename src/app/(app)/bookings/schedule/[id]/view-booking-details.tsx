@@ -242,7 +242,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 setStations(DEFAULT_STATIONS);
             }
         }
-        }
     }, [aircraft, booking.massAndBalance?.stations]);
 
     useEffect(() => {
