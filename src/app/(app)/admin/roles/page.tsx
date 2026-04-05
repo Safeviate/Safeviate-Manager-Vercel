@@ -19,12 +19,9 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
-export type RoleCategory = 'Personnel' | 'Instructor' | 'Student' | 'Private Pilot' | 'External';
-
 export type Role = {
   id: string;
   name: string;
-  category: RoleCategory;
   permissions: string[];
   requiredDocuments?: string[];
 };
@@ -92,9 +89,6 @@ export default function RolesPage() {
                         <div className="min-w-0 flex-1 space-y-3">
                           <p className="break-words text-sm font-bold leading-snug text-foreground">{role.name}</p>
                           <div className="flex flex-wrap items-center gap-3">
-                            <Badge variant="outline" className="h-6 border-slate-300 px-3 text-[10px] font-black uppercase">
-                              {role.category || 'N/A'}
-                            </Badge>
                             <Badge variant="secondary" className="h-10 rounded-full px-4 text-[10px] font-black uppercase">
                               {role.permissions?.length || 0} Permissions
                             </Badge>
@@ -118,7 +112,6 @@ export default function RolesPage() {
                   <TableHeader className="bg-muted/30">
                     <TableRow>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider px-6">Role Name</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Category</TableHead>
                       <TableHead className="text-[10px] uppercase font-bold tracking-wider">Permissions</TableHead>
                       <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider px-6">Actions</TableHead>
                     </TableRow>
@@ -126,14 +119,11 @@ export default function RolesPage() {
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center p-8 uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">Loading roles...</TableCell>
+                        <TableCell colSpan={3} className="text-center p-8 uppercase font-bold text-[10px] tracking-widest text-muted-foreground italic bg-muted/5">Loading roles...</TableCell>
                       </TableRow>
                     ) : (roles || []).map((role) => (
                       <TableRow key={role.id} className="hover:bg-muted/5 transition-colors">
                         <TableCell className="font-bold text-sm text-foreground px-6 py-4">{role.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px] font-black uppercase py-0.5 px-3 border-slate-300">{role.category || 'N/A'}</Badge>
-                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-[10px] font-black uppercase py-0.5 px-3">{role.permissions?.length || 0} PERMISSIONS</Badge>
                         </TableCell>
@@ -144,7 +134,7 @@ export default function RolesPage() {
                     ))}
                     {!isLoading && (!roles || roles.length === 0) && (
                        <TableRow>
-                          <TableCell colSpan={4} className="text-center h-48 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-muted/5">
+                          <TableCell colSpan={3} className="text-center h-48 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-muted/5">
                               No roles defined yet.
                           </TableCell>
                        </TableRow>

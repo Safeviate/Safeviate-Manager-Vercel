@@ -71,17 +71,13 @@ export function PersonnelForm({
     }
     if (!existingPersonnel && defaultRoleId) {
       setSelectedRole(defaultRoleId);
-      const defaultRole = roles.find(r => r.id === defaultRoleId);
-      setUserType(defaultRole?.category || 'Personnel');
+      setUserType('Personnel');
     }
   }, [existingPersonnel, defaultDepartmentId, defaultRoleId, roles]);
 
   const handleRoleChange = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
-    if (role) {
-      setSelectedRole(roleId);
-      setUserType(role.category || '');
-    }
+    setSelectedRole(roleId);
+    setUserType('Personnel');
   };
 
   const handleAddOrUpdateUser = async () => {

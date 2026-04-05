@@ -81,9 +81,6 @@ export default function UsersPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-black uppercase tracking-tight text-foreground">{role.name}</p>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                              {role.category || 'Personnel'}
-                            </p>
                           </div>
                           <Badge variant="secondary" className="h-6 px-2 text-[10px] font-black uppercase">
                             {role.permissions?.length || 0} perms

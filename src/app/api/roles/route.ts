@@ -42,7 +42,6 @@ export async function POST(request: Request) {
   }
   const id = body.id || crypto.randomUUID();
   const name = String(body.name || '').trim();
-  const category = String(body.category || 'Personnel').trim() || 'Personnel';
   const permissions = Array.isArray(body.permissions) ? body.permissions.filter((permission) => typeof permission === 'string') : [];
   const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments.filter((document) => typeof document === 'string') : [];
 
@@ -55,7 +54,6 @@ export async function POST(request: Request) {
     update: {
       tenantId,
       name,
-      category,
       permissions,
       requiredDocuments,
       updatedAt: new Date(),
@@ -64,7 +62,6 @@ export async function POST(request: Request) {
       id,
       tenantId,
       name,
-      category,
       permissions,
       requiredDocuments,
     },

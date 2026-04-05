@@ -60,7 +60,6 @@ model Role {
   id                String   @id @db.VarChar(128)
   tenantId          String   @map("tenant_id") @db.VarChar(128)
   name              String
-  category          String   @default("Personnel")
   permissions       Json     @default("[]")
   requiredDocuments Json?    @map("required_documents")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -319,5 +318,7 @@ model AlertRecord {
 
   @@map("alerts")
 }
+
+
 
 

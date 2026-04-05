@@ -85,10 +85,7 @@ export default function RolesPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1 space-y-3">
                         <p className="text-sm font-bold leading-snug text-foreground break-words">{role.name}</p>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Badge variant="outline" className="h-6 px-3 text-[10px] font-black uppercase">
-                            {role.category || 'N/A'}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-3">
                           <Badge className="h-10 rounded-full bg-blue-100 px-4 text-[10px] font-black uppercase text-slate-900 hover:bg-blue-100">
                             {(role.permissions?.length || 0)} Permissions
                           </Badge>
@@ -106,7 +103,7 @@ export default function RolesPage() {
             </div>
           ) : (
             <Table>
-              <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                  <TableHeader className="bg-muted/30 sticky top-0 z-10">
                 <TableRow>
                   <TableHead className="text-xs uppercase font-bold tracking-wider">Name</TableHead>
                   <TableHead className="text-xs uppercase font-bold tracking-wider">Permissions</TableHead>

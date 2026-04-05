@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
 import { RoleForm } from './role-form';
-import type { RoleCategory, Role } from './page';
+import type { Role } from './page';
 
 interface RoleActionsProps {
   tenantId: string;
@@ -28,11 +28,6 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const canManage = hasPermission('admin-roles-manage');
-  const normalizedCategory = (
-    ['Personnel', 'Instructor', 'Student', 'Private Pilot', 'External'] as RoleCategory[]
-  ).includes(role.category as RoleCategory)
-    ? (role.category as RoleCategory)
-    : undefined;
 
   const handleDelete = () => {
     fetch(`/api/roles/${role.id}`, { method: 'DELETE' })
@@ -62,7 +57,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
       <div className="flex items-center justify-end gap-2">
         <RoleForm 
             tenantId={tenantId} 
-            existingRole={{ ...role, category: normalizedCategory }} 
+            existingRole={{ ...role }} 
             trigger={
                 <EditActionButton label="Edit role" />
             } 
