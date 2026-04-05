@@ -27,16 +27,14 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-
 import { Checkbox } from '@/components/ui/checkbox';
-import type { TaskCard } from '@/types/workpack';
 
 const formSchema = z.object({
   taskNumber: z.string().min(1, 'Required'),
   taskDescription: z.string().min(1, 'Required'),
   requiresInspector: z.boolean().default(false),
-  partsList: z.string().optional(), // Part Number: Serial Number pairs
-  toolsList: z.string().optional(), // Comma separated tool IDs or names
+  partsList: z.string().optional(),
+  toolsList: z.string().optional(),
 });
 
 export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; tenantId: string }) {
@@ -45,43 +43,36 @@ export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; t
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { 
-      taskNumber: '', 
-      taskDescription: '', 
-      requiresInspector: false,
-      partsList: '',
-      toolsList: ''
-    },
+    defaultValues: { taskNumber: '', taskDescription: '', requiresInspector: false, partsList: '', toolsList: '' },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const stored = localStorage.getItem('safeviate.maintenance-task-cards');
-      const current = stored ? JSON.parse(stored) as TaskCard[] : [];
-
-      // Parse parts and tools into the structured format expected by the DB
-      const parts = values.partsList?.split('\n').filter(l => l.trim()).map(line => {
-        const [pn, sn] = line.split(':').map(s => s.trim());
+      const parts = values.partsList?.split('\n').filter((l) => l.trim()).map((line) => {
+        const [pn, sn] = line.split(':').map((s) => s.trim());
         return { partNumber: pn || 'Unknown', serialNumber: sn || 'N/A', quantity: 1 };
       }) || [];
-
-      const tools = values.toolsList?.split(',').map(t => t.trim()).filter(Boolean) || [];
-
-      const newTaskCard: TaskCard = {
+      const tools = values.toolsList?.split(',').map((t) => t.trim()).filter(Boolean) || [];
+      const taskCard = {
         id: crypto.randomUUID(),
+        tenantId,
+        workpackId,
         taskNumber: values.taskNumber,
         taskDescription: values.taskDescription,
         requiresInspector: values.requiresInspector,
-        workpackId,
         isCompleted: false,
         toolsUsed: tools,
         partsInstalled: parts,
+        attachments: [],
         createdAt: new Date().toISOString(),
       };
-
-      localStorage.setItem('safeviate.maintenance-task-cards', JSON.stringify([...current, newTaskCard]));
+      const res = await fetch('/api/maintenance/task-cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskCard }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Failed to create task card.');
       window.dispatchEvent(new Event('safeviate-maintenance-task-cards-updated'));
-      
       toast({ title: 'Task Card Appended', description: `Card ${values.taskNumber} added.` });
       setIsOpen(false);
       form.reset();
@@ -114,14 +105,11 @@ export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; t
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                 <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel className="font-bold flex items-center text-red-600">
-                    Required Inspection Item (RII)
-                  </FormLabel>
-                   <DialogDescription className="text-[10px]">Dual-certification needed for flight critical items.</DialogDescription>
+                  <FormLabel className="font-bold flex items-center text-red-600">Required Inspection Item (RII)</FormLabel>
+                  <DialogDescription className="text-[10px]">Dual-certification needed for flight critical items.</DialogDescription>
                 </div>
               </FormItem>
             )} />
-
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="partsList" render={({ field }) => (
                 <FormItem>

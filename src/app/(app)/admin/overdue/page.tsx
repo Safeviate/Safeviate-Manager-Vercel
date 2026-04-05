@@ -33,18 +33,16 @@ export default function OverdueSettingsPage() {
   const [contactPhone, setContactPhone] = useState(defaultSettings.contactPhone);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem('safeviate.overdue-monitor-settings');
-        if (stored) {
-            const parsed = JSON.parse(stored) as OverdueMonitorSettings;
-            setIsEnabled(parsed.isEnabled);
-            setThresholdMinutes(parsed.thresholdMinutes);
-            setContactPhone(parsed.contactPhone);
-        } else {
-            localStorage.setItem('safeviate.overdue-monitor-settings', JSON.stringify(defaultSettings));
-        }
+        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        const config = payload?.config && typeof payload.config === 'object' ? payload.config : {};
+        const settings = (config as any)['overdue-monitor-settings'] || defaultSettings;
+        setIsEnabled(settings.isEnabled);
+        setThresholdMinutes(settings.thresholdMinutes);
+        setContactPhone(settings.contactPhone);
     } catch (e) {
         console.error("Failed to load overdue settings", e);
     } finally {
@@ -53,7 +51,7 @@ export default function OverdueSettingsPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-overdue-monitor-settings-updated', loadData);
     return () => window.removeEventListener('safeviate-overdue-monitor-settings-updated', loadData);
   }, [loadData]);
@@ -67,7 +65,11 @@ export default function OverdueSettingsPage() {
             contactPhone,
         };
 
-        localStorage.setItem('safeviate.overdue-monitor-settings', JSON.stringify(settings));
+        await fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: { 'overdue-monitor-settings': settings } }),
+        });
         window.dispatchEvent(new Event('safeviate-overdue-monitor-settings-updated'));
 
         toast({

@@ -15,23 +15,12 @@ type MePayload = {
   } | null;
 };
 
-const PERMISSIONS_CACHE_KEY = 'safeviate:me-payload-cache';
-
-const getCachedPayload = (): MePayload | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.sessionStorage.getItem(PERMISSIONS_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as MePayload;
-  } catch {
-    return null;
-  }
-};
+let permissionsCache: MePayload | null = null;
 
 export const usePermissions = () => {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const [payload, setPayload] = useState<MePayload | null>(() => getCachedPayload());
-  const [isPermissionsLoading, setIsPermissionsLoading] = useState(() => getCachedPayload() === null);
+  const [payload, setPayload] = useState<MePayload | null>(() => permissionsCache);
+  const [isPermissionsLoading, setIsPermissionsLoading] = useState(() => permissionsCache === null);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,9 +31,7 @@ export const usePermissions = () => {
         const data = (await response.json()) as MePayload;
         if (!cancelled) {
           setPayload(data);
-          if (typeof window !== 'undefined') {
-            window.sessionStorage.setItem(PERMISSIONS_CACHE_KEY, JSON.stringify(data));
-          }
+          permissionsCache = data;
         }
       } catch {
         if (!cancelled) setPayload(null);

@@ -45,45 +45,28 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const canDelete = hasPermission('users-delete');
   const canEdit = hasPermission('users-edit');
 
-  const handleDeleteUser = () => {
-    const removeFromLocal = () => {
-      const collectionName = determineCollection(user.userType);
-      const key = `safeviate.${collectionName}`;
-      try {
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          const arr = JSON.parse(stored) as UserProfile[];
-          const nextArr = arr.filter(u => u.id !== user.id);
-          localStorage.setItem(key, JSON.stringify(nextArr));
-        }
-      } catch {
-        // ignore
+  const handleDeleteUser = async () => {
+    try {
+      const response = await fetch(`/api/personnel/${user.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete user');
       }
-    };
-
-    void (async () => {
-      try {
-        const response = await fetch(`/api/personnel/${user.id}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          throw new Error('Failed to delete user');
-        }
-        removeFromLocal();
-        toast({
-          title: 'User Removed',
-          description: `The user profile for ${user.firstName} ${user.lastName} was deleted.`,
-        });
-      } catch {
-        removeFromLocal();
-        toast({
-          title: 'User Removed',
-          description: `The user profile for ${user.firstName} ${user.lastName} was removed locally.`,
-        });
-      } finally {
-        setIsDeleteDialogOpen(false);
-      }
-    })();
+      toast({
+        title: 'User Removed',
+        description: `The user profile for ${user.firstName} ${user.lastName} was deleted.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error.message || 'The user profile could not be deleted.',
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      window.dispatchEvent(new Event('safeviate-personnel-updated'));
+    }
   }
 
   const handleSendWelcomeEmail = async () => {

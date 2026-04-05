@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2, Box, PenTool, Hash, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { AircraftComponent } from '@/types/aircraft';
 import { ComponentForm } from './component-form';
 
 interface ComponentsTableProps {
@@ -24,21 +24,15 @@ interface ComponentsTableProps {
 export function ComponentsTable({ data, aircraftId, canManage }: ComponentsTableProps) {
   const { toast } = useToast();
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     try {
-      const stored = localStorage.getItem('safeviate.aircrafts');
-      if (!stored) return;
-      const aircrafts = JSON.parse(stored) as Aircraft[];
-      
-      const nextAircrafts = aircrafts.map(a => {
-        if (a.id === aircraftId) {
-            const nextComponents = (a.components || []).filter(c => c.id !== id);
-            return { ...a, components: nextComponents };
-        }
-        return a;
+      const response = await fetch(`/api/aircraft/${aircraftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aircraft: { components: data.filter((component) => component.id !== id) } }),
       });
-      
-      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to remove component.');
       window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
       toast({ title: 'Component Removed', description: `The tracking record for ${name} has been purged.` });

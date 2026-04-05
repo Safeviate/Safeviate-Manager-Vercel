@@ -29,7 +29,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
-import type { Workpack } from '@/types/workpack';
 
 const formSchema = z.object({
   aircraftId: z.string().min(1, 'Aircraft reference is required.'),
@@ -44,45 +43,36 @@ export function AddWorkpackDialog({ tenantId }: { tenantId: string }) {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      aircraftId: '',
-      title: '',
-      description: '',
-    },
+    defaultValues: { aircraftId: '', title: '', description: '' },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const stored = localStorage.getItem('safeviate.maintenance-workpacks');
-      const current = stored ? JSON.parse(stored) as Workpack[] : [];
-      
       const datePrefix = format(new Date(), 'yyMM');
       const trackingNumber = `WP-${datePrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      const newWorkpack: Workpack = {
-        ...values,
+      const workpack = {
         id: crypto.randomUUID(),
+        tenantId,
+        ...values,
         trackingNumber,
-        status: 'OPEN',
+        status: 'OPEN' as const,
         openedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
 
-      localStorage.setItem('safeviate.maintenance-workpacks', JSON.stringify([newWorkpack, ...current]));
-      window.dispatchEvent(new Event('safeviate-maintenance-workpacks-updated'));
-      
-      toast({
-        title: 'Workpack Initiated',
-        description: `Workpack ${trackingNumber} opened. You can now add task cards.`,
+      const res = await fetch('/api/maintenance/workpacks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workpack }),
       });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Failed to create workpack.');
+
+      window.dispatchEvent(new Event('safeviate-maintenance-workpacks-updated'));
+      toast({ title: 'Workpack Initiated', description: `Workpack ${trackingNumber} opened. You can now add task cards.` });
       setIsOpen(false);
       form.reset();
     } catch (e: any) {
-       toast({
-        title: 'Error',
-        description: e.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
   };
 
@@ -110,15 +100,12 @@ export function AddWorkpackDialog({ tenantId }: { tenantId: string }) {
             <FormField control={form.control} name="aircraftId" render={({ field }) => (
               <FormItem><FormLabel>Aircraft Registration</FormLabel><FormControl><Input placeholder="e.g. ZS-XYZ" {...field} className="uppercase font-mono" /></FormControl><FormMessage /></FormItem>
             )} />
-            
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem><FormLabel>Work Scope / Title</FormLabel><FormControl><Input placeholder="e.g. 100-Hour Inspection" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem><FormLabel>Additional Notes</FormLabel><FormControl><Textarea className="resize-none" rows={3} placeholder="Describe any special considerations..." {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-
             <DialogFooter className="pt-4">
               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
               <Button type="submit">Open Workpack</Button>

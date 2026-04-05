@@ -68,24 +68,19 @@ export function AddComponentDialog({ aircraftId, isOpen, setIsOpen }: AddCompone
 
   const onSubmit = async (values: ComponentFormValues) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) throw new Error("Fleet record not found.");
-        
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        const acIndex = aircrafts.findIndex(a => a.id === aircraftId);
-        if (acIndex === -1) throw new Error("Aircraft not found.");
-
         const newComponent: AircraftComponent = {
             ...values,
             id: crypto.randomUUID(),
             installDate: values.installDate.toISOString(),
         };
 
-        const aircraft = aircrafts[acIndex];
-        aircraft.components = [...(aircraft.components || []), newComponent];
-        
-        aircrafts[acIndex] = aircraft;
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(aircrafts));
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { components: [newComponent] } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save component.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
         toast({ title: 'Component Registered', description: `"${values.name}" has been added to the airframe inventory.` });

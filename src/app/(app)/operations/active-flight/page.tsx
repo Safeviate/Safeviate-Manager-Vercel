@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, MapPinned, Navigation, PlaneTakeoff, Radio, Smartphone, TimerReset } from 'lucide-react';
+import { Loader2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
+import type { FlightSession } from '@/types/flight-session';
 import { getOrCreateDeviceBinding, setDeviceLabel } from '@/lib/flight-session';
 import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
 import { getActiveLegState } from '@/lib/active-flight';
@@ -30,35 +31,6 @@ const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/act
   ),
 });
 
-const STORAGE_KEY = 'safeviate.flight-sessions';
-
-type FlightSessionLite = {
-  id: string;
-  status: 'active' | 'completed';
-  aircraftId: string;
-  aircraftRegistration: string;
-  pilotName: string;
-  deviceId: string;
-  deviceLabel: string;
-  bookingId?: string;
-  lastPosition?: any;
-  activeLegIndex?: number | null;
-  onCourse?: boolean | null;
-  groundSpeedKt?: number | null;
-  crossTrackErrorNm?: number | null;
-  bearingToNext?: number | null;
-  etaToNextMinutes?: number | null;
-  distanceToNextNm?: number | null;
-};
-
-const loadSessions = (): FlightSessionLite[] => {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as FlightSessionLite[];
-  } catch {
-    return [];
-  }
-};
-
 export default function ActiveFlightPage() {
   const { toast } = useToast();
   const { tenantId, userProfile, isLoading: isUserLoading } = useUserProfile();
@@ -70,7 +42,7 @@ export default function ActiveFlightPage() {
   const [manualLegIndex, setManualLegIndex] = useState(0);
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [flightSessions, setFlightSessions] = useState<FlightSessionLite[]>([]);
+  const [flightSessions, setFlightSessions] = useState<FlightSession[]>([]);
   const lastWriteRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
 
@@ -83,19 +55,29 @@ export default function ActiveFlightPage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch('/api/schedule-data');
-      if (!res.ok) return;
-      const data = await res.json();
-      setAircrafts(data.aircraft || []);
-      setBookings(data.bookings || []);
+      const [scheduleRes, sessionsRes] = await Promise.all([fetch('/api/schedule-data'), fetch('/api/flight-sessions', { cache: 'no-store' })]);
+      if (scheduleRes.ok) {
+        const data = await scheduleRes.json();
+        setAircrafts(data.aircraft || []);
+        setBookings(data.bookings || []);
+      }
+      if (sessionsRes.ok) {
+        const data = await sessionsRes.json();
+        setFlightSessions(Array.isArray(data.sessions) ? data.sessions : []);
+      }
     };
     void load();
-    setFlightSessions(loadSessions());
   }, []);
 
-  const persistSessions = (next: FlightSessionLite[]) => {
+  const persistSessions = async (next: FlightSession[]) => {
     setFlightSessions(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    const current = next[next.length - 1];
+    if (!current) return;
+    await fetch('/api/flight-sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session: current }),
+    });
   };
 
   const sortedAircraft = useMemo(() => [...aircrafts].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber)), [aircrafts]);
@@ -122,6 +104,7 @@ export default function ActiveFlightPage() {
     lastWriteRef.current = now;
     const next = flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId).concat({
       id: deviceBinding.deviceId,
+      pilotId: userProfile?.id || 'unknown',
       pilotName,
       aircraftId: selectedAircraft.id,
       aircraftRegistration: selectedAircraft.tailNumber,
@@ -129,17 +112,19 @@ export default function ActiveFlightPage() {
       status: 'active',
       deviceId: deviceBinding.deviceId,
       deviceLabel: savedDeviceLabel || deviceBinding.deviceLabel || '',
-      activeLegIndex: activeLegState?.activeLegIndex ?? null,
+      activeLegIndex: activeLegState?.activeLegIndex ?? 0,
+      startedAt: flightSessions.find((session) => session.deviceId === deviceBinding.deviceId)?.startedAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       lastPosition: position,
-      distanceToNextNm: activeLegState?.distanceToNextNm ?? null,
-      bearingToNext: activeLegState?.bearingToNext ?? null,
-      etaToNextMinutes: activeLegState?.etaToNextMinutes ?? null,
-      crossTrackErrorNm: activeLegState?.crossTrackErrorNm ?? null,
-      onCourse: activeLegState?.onCourse ?? null,
+      distanceToNextNm: activeLegState?.distanceToNextNm,
+      bearingToNext: activeLegState?.bearingToNext,
+      etaToNextMinutes: activeLegState?.etaToNextMinutes,
+      crossTrackErrorNm: activeLegState?.crossTrackErrorNm,
+      onCourse: activeLegState?.onCourse,
       groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? null,
     });
-    persistSessions(next);
-  }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraft, selectedBooking?.id]);
+    void persistSessions(next);
+  }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraft, selectedBooking?.id, userProfile?.id]);
 
   const startTracking = () => {
     if (!selectedAircraft || !deviceBinding) return;
@@ -149,8 +134,9 @@ export default function ActiveFlightPage() {
     }
     setIsTrackingActive(true);
     lastWriteRef.current = 0;
-    persistSessions(flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId).concat({
+    void persistSessions(flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId).concat({
       id: deviceBinding.deviceId,
+      pilotId: userProfile?.id || 'unknown',
       pilotName,
       aircraftId: selectedAircraft.id,
       aircraftRegistration: selectedAircraft.tailNumber,
@@ -158,7 +144,9 @@ export default function ActiveFlightPage() {
       status: 'active',
       deviceId: deviceBinding.deviceId,
       deviceLabel: savedDeviceLabel || deviceBinding.deviceLabel || '',
-      activeLegIndex: activeLegState?.activeLegIndex ?? null,
+      activeLegIndex: activeLegState?.activeLegIndex ?? 0,
+      startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }));
     startWatching();
   };
@@ -167,7 +155,7 @@ export default function ActiveFlightPage() {
     stopWatching();
     setIsTrackingActive(false);
     if (!deviceBinding) return;
-    persistSessions(flightSessions.map((session) => session.deviceId === deviceBinding.deviceId ? { ...session, status: 'completed' } : session));
+    void persistSessions(flightSessions.map((session) => session.deviceId === deviceBinding.deviceId ? { ...session, status: 'completed', endedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : session));
   };
 
   return (

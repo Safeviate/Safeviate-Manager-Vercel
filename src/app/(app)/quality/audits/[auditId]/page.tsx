@@ -35,33 +35,31 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-        const storedAudits = localStorage.getItem('safeviate.quality-audits');
-        const audits = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
-        const foundAudit = audits.find(a => a.id === auditId);
-        
-        if (foundAudit) {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/quality-audits', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ audits: [], templates: [], caps: [], personnel: [], findingLevels: [] }));
+        const foundAudit = (payload.audits as QualityAudit[] | undefined)?.find(a => a.id === auditId);
+        if (!cancelled && foundAudit) {
             setAudit(foundAudit);
-            
-            const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
-            const templates = storedTemplates ? JSON.parse(storedTemplates) as QualityAuditChecklistTemplate[] : [];
-            setTemplate(templates.find(t => t.id === foundAudit.templateId) || null);
-            
-            const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
-            const allCaps = storedCaps ? JSON.parse(storedCaps) as CorrectiveActionPlan[] : [];
-            setCaps(allCaps.filter(c => c.auditId === auditId));
+            setTemplate((payload.templates as QualityAuditChecklistTemplate[] | undefined)?.find(t => t.id === foundAudit.templateId) || null);
+            setCaps((payload.caps as CorrectiveActionPlan[] | undefined)?.filter(c => c.auditId === auditId) || []);
         }
-        
-        const storedPersonnel = localStorage.getItem('safeviate.personnel');
-        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
-        
-        const storedSettings = localStorage.getItem('safeviate.finding-levels');
-        if (storedSettings) setFindingLevelsSettings(JSON.parse(storedSettings));
-    } catch (e) {
-        console.error('Failed to load local audit details', e);
-    } finally {
-        setIsLoading(false);
-    }
+        if (!cancelled) {
+          setPersonnel(Array.isArray(payload.personnel) ? payload.personnel : []);
+          setFindingLevelsSettings(Array.isArray(payload.findingLevels) ? payload.findingLevels : null);
+        }
+      } catch (e) {
+        console.error('Failed to load audit details', e);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [auditId]);
 
   // SECURITY: Scoped visibility guard

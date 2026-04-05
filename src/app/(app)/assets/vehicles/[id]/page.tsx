@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { DocumentUploader } from '@/components/document-uploader';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,27 +61,25 @@ export default function VehicleDetailPage({ params }: VehicleDetailPageProps) {
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const storedVehicles = localStorage.getItem('safeviate.vehicles');
-        if (storedVehicles) {
-            const vehicles = JSON.parse(storedVehicles) as Vehicle[];
-            const v = vehicles.find(item => item.id === vehicleId);
-            setVehicle(v || null);
-        }
-
-        const storedExpiry = localStorage.getItem('safeviate.document-expiry-settings');
-        if (storedExpiry) setExpirySettings(JSON.parse(storedExpiry));
+        const vehicleResponse = await fetch(`/api/vehicles/${vehicleId}`, { cache: 'no-store' });
+        const vehiclePayload = await vehicleResponse.json().catch(() => ({ vehicle: null }));
+        setVehicle((vehiclePayload?.vehicle as Vehicle | null) || null);
+        const configResponse = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const configPayload = await configResponse.json().catch(() => ({ config: null }));
+        setExpirySettings((configPayload?.config?.['document-expiry-settings'] as DocumentExpirySettings | undefined) || null);
     } catch (e) {
         console.error("Failed to load vehicle details", e);
+        setVehicle(null);
     } finally {
         setIsLoading(false);
     }
   }, [vehicleId]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-vehicles-updated', loadData);
     return () => window.removeEventListener('safeviate-vehicles-updated', loadData);
   }, [loadData]);
@@ -226,37 +225,49 @@ function VehicleDocumentsTab({ vehicle, tenantId, expirySettings }: { vehicle: V
   const { toast } = useToast();
   const [viewingDoc, setViewingDoc] = useState<{ name: string; url: string } | null>(null);
 
-  const handleDocUpload = (newDoc: VehicleDocument) => {
+  const handleDocUpload = async (newDoc: VehicleDocument) => {
     try {
-        const stored = localStorage.getItem('safeviate.vehicles');
-        const vehicles = stored ? JSON.parse(stored) as Vehicle[] : [];
-        const nextVehicles = vehicles.map(v => v.id === vehicle.id ? {
-            ...v,
-            documents: [...(v.documents || []), newDoc]
-        } : v);
-        
-        localStorage.setItem('safeviate.vehicles', JSON.stringify(nextVehicles));
+        const response = await fetch(`/api/vehicles/${vehicle.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vehicle: {
+              ...vehicle,
+              documents: [...(vehicle.documents || []), newDoc],
+            },
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update vehicle documents.');
+        }
         window.dispatchEvent(new Event('safeviate-vehicles-updated'));
         toast({ title: 'Document Added', description: `"${newDoc.name}" has been uploaded.` });
-    } catch (e) {
+      } catch (e) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Failed to update vehicle documents.' });
-    }
+      }
   };
 
-  const handleDeleteDoc = (docName: string) => {
+  const handleDeleteDoc = async (docName: string) => {
     try {
-        const stored = localStorage.getItem('safeviate.vehicles');
-        const vehicles = stored ? JSON.parse(stored) as Vehicle[] : [];
-        const nextVehicles = vehicles.map(v => v.id === vehicle.id ? {
-            ...v,
-            documents: (v.documents || []).filter(d => d.name !== docName)
-        } : v);
-        
-        localStorage.setItem('safeviate.vehicles', JSON.stringify(nextVehicles));
-        window.dispatchEvent(new Event('safeviate-vehicles-updated'));
-        toast({ title: 'Document Removed' });
+      const response = await fetch(`/api/vehicles/${vehicle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicle: {
+            ...vehicle,
+            documents: (vehicle.documents || []).filter((d) => d.name !== docName),
+          },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete technical document.');
+      }
+      window.dispatchEvent(new Event('safeviate-vehicles-updated'));
+      toast({ title: 'Document Removed' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete technical document.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete technical document.' });
     }
   };
 
@@ -365,24 +376,29 @@ function EditVehicleDialog({ vehicle, tenantId }: { vehicle: Vehicle; tenantId: 
     },
   });
 
-  const onSubmit = (values: z.infer<typeof vehicleSchema>) => {
+  const onSubmit = async (values: z.infer<typeof vehicleSchema>) => {
     try {
-        const stored = localStorage.getItem('safeviate.vehicles');
-        const vehicles = stored ? JSON.parse(stored) as Vehicle[] : [];
-        const nextVehicles = vehicles.map(v => v.id === vehicle.id ? {
-            ...v,
+      const response = await fetch(`/api/vehicles/${vehicle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicle: {
+            ...vehicle,
             ...values,
             nextServiceDueDate: values.nextServiceDueDate || null,
             nextServiceDueOdometer: values.nextServiceDueOdometer === '' ? null : Number(values.nextServiceDueOdometer),
-        } : v);
-        
-        localStorage.setItem('safeviate.vehicles', JSON.stringify(nextVehicles));
-        window.dispatchEvent(new Event('safeviate-vehicles-updated'));
-        
-        toast({ title: 'Vehicle Synchronized', description: 'Operational specifications have been updated in the local inventory.' });
-        setIsOpen(false);
+          },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save vehicle configuration.');
+      }
+      window.dispatchEvent(new Event('safeviate-vehicles-updated'));
+      toast({ title: 'Vehicle Updated', description: 'Operational specifications have been saved to the database.' });
+      setIsOpen(false);
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: 'Failed to save vehicle configuration.' });
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Failed to save vehicle configuration.' });
     }
   };
 

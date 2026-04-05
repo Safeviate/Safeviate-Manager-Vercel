@@ -79,40 +79,48 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     const [isLoadingInstructors, setIsLoadingInstructors] = useState(true);
 
     useEffect(() => {
-        try {
-            const stds = localStorage.getItem('safeviate.students');
-            if (stds) {
-                const arr = JSON.parse(stds) as PilotProfile[];
-                const s = arr.find(u => u.id === studentId);
+        let cancelled = false;
+
+        const load = async () => {
+            try {
+                const [summaryResponse, trainingResponse] = await Promise.all([
+                    fetch('/api/dashboard-summary', { cache: 'no-store' }),
+                    fetch('/api/student-training', { cache: 'no-store' }),
+                ]);
+
+                const [summaryPayload, trainingPayload] = await Promise.all([
+                    summaryResponse.json().catch(() => ({})),
+                    trainingResponse.json().catch(() => ({})),
+                ]);
+
+                if (cancelled) return;
+
+                const summaryStudents = Array.isArray(summaryPayload?.students) ? summaryPayload.students : [];
+                const summaryInstructors = Array.isArray(summaryPayload?.instructors) ? summaryPayload.instructors : [];
+                const summaryBookings = Array.isArray(summaryPayload?.bookings) ? summaryPayload.bookings : [];
+
+                const s = summaryStudents.find((u: PilotProfile) => u.id === studentId);
                 if (s) setStudent(s);
+
+                setInstructors(summaryInstructors);
+                setBookings(summaryBookings.filter((b: Booking) => b.studentId === studentId && b.status === 'Completed'));
+                setReports((Array.isArray(trainingPayload?.reports) ? trainingPayload.reports : []).filter((r: StudentProgressReport) => r.studentId === studentId));
+                setMilestoneSettings(trainingPayload?.milestones || null);
+            } catch (error) {
+                console.error('Failed to load training records', error);
+            } finally {
+                if (!cancelled) {
+                    setIsLoadingInstructors(false);
+                    setIsLoadingReports(false);
+                    setIsLoadingBookings(false);
+                }
             }
-        } catch { }
+        };
 
-        try {
-            const ins = localStorage.getItem('safeviate.instructors');
-            if (ins) setInstructors(JSON.parse(ins));
-        } catch { } finally { setIsLoadingInstructors(false); }
-
-        try {
-            const rpts = localStorage.getItem('safeviate.student-progress-reports');
-            if (rpts) {
-                const arr = JSON.parse(rpts) as StudentProgressReport[];
-                setReports(arr.filter(r => r.studentId === studentId));
-            }
-        } catch { } finally { setIsLoadingReports(false); }
-
-        try {
-            const bks = localStorage.getItem('safeviate.bookings');
-            if (bks) {
-                const arr = JSON.parse(bks) as Booking[];
-                setBookings(arr.filter(b => b.studentId === studentId && b.status === 'Completed'));
-            }
-        } catch { } finally { setIsLoadingBookings(false); }
-
-        try {
-            const ms = localStorage.getItem('safeviate.student-milestones');
-            if (ms) setMilestoneSettings(JSON.parse(ms));
-        } catch { }
+        void load();
+        return () => {
+            cancelled = true;
+        };
     }, [studentId]);
 
     const isLoading = isLoadingReports || isLoadingInstructors || isLoadingBookings;

@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Aircraft } from '@/types/aircraft';
 
 const formSchema = z.object({
   make: z.string().min(1, 'Make is required.'),
@@ -29,49 +28,38 @@ export function NewAircraftForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      make: '',
-      model: '',
-      tailNumber: '',
-      type: 'Single-Engine',
-    },
+    defaultValues: { make: '', model: '', tailNumber: '', type: 'Single-Engine' },
   });
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-
     try {
-      const stored = localStorage.getItem('safeviate.aircrafts');
-      const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
-      
-      const newAircraft: Aircraft = {
-        id: crypto.randomUUID(),
-        ...values,
-        initialHobbs: 0,
-        currentHobbs: 0,
-        initialTacho: 0,
-        currentTacho: 0,
-        tachoAtNext50Inspection: 50,
-        tachoAtNext100Inspection: 100,
-        components: [],
-        documents: [],
-        type: values.type || 'Single-Engine',
-      };
-
-      const nextAircrafts = [newAircraft, ...aircrafts];
-      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
-      
-      // Notify components that the fleet has updated
-      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
-
-      toast({ 
-        title: 'Aircraft Added', 
-        description: `${values.make} ${values.model} (${values.tailNumber}) has been added to the local inventory.` 
+      const response = await fetch('/api/aircraft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aircraft: {
+            id: crypto.randomUUID(),
+            ...values,
+            initialHobbs: 0,
+            currentHobbs: 0,
+            initialTacho: 0,
+            currentTacho: 0,
+            tachoAtNext50Inspection: 50,
+            tachoAtNext100Inspection: 100,
+            components: [],
+            documents: [],
+            type: values.type || 'Single-Engine',
+          },
+        }),
       });
-      
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to save aircraft.');
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+      toast({ title: 'Aircraft Added', description: `${values.make} ${values.model} (${values.tailNumber}) has been added to the fleet.` });
       router.push('/assets/aircraft');
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save aircraft to local storage.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save aircraft.' });
       setIsSubmitting(false);
     }
   };

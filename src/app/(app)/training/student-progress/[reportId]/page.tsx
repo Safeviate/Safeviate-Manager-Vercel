@@ -23,18 +23,26 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-        const storedStudents = localStorage.getItem('safeviate.students');
-        if (storedStudents) {
-            const arr = JSON.parse(storedStudents);
-            const found = arr.find((s: any) => s.id === studentId);
-            setStudent(found);
-        }
-    } catch (e) {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        const students = Array.isArray(payload?.students) ? payload.students : [];
+        const found = students.find((s: any) => s.id === studentId);
+        if (!cancelled) setStudent(found || null);
+      } catch (e) {
         console.error('Failed to load student', e);
-    } finally {
-        setIsLoading(false);
-    }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [studentId]);
 
   if (isLoading) {

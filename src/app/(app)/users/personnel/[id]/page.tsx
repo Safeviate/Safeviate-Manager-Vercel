@@ -61,8 +61,16 @@ function UserProfileContent() {
 
         try {
             void load();
-            const storedLogbooks = localStorage.getItem('safeviate.logbook-templates');
-            if (storedLogbooks) setLogbookTemplates(JSON.parse(storedLogbooks));
+            fetch('/api/logbook-templates', { cache: 'no-store' })
+              .then((response) => response.json())
+              .then((payload) => {
+                  if (!cancelled && Array.isArray(payload?.templates)) {
+                      setLogbookTemplates(payload.templates);
+                  }
+              })
+              .catch(() => {
+                  // ignore
+              });
         } catch {
             // ignore
         }

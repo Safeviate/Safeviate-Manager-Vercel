@@ -27,19 +27,39 @@ export default function RolesPage() {
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    try {
-      const scopedKey = `safeviate.roles:${tenantId}`;
-      const stored = localStorage.getItem(scopedKey) || localStorage.getItem('safeviate.roles');
-      if (stored) {
-        setRoles(JSON.parse(stored));
-      } else {
-        setRoles([]);
-      }
-    } catch (e: any) {
-      setError(e);
-    } finally {
-      setIsLoading(false);
-    }
+    let cancelled = false;
+    setIsLoading(true);
+    fetch('/api/roles', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = response.ok ? await response.json().catch(() => ({ roles: [] })) : { roles: [] };
+        if (!cancelled) {
+          setRoles((payload.roles || []) as AdminRole[]);
+          setError(null);
+        }
+      })
+      .catch((e: any) => {
+        if (!cancelled) setError(e);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    const handleRolesUpdated = () => {
+      fetch('/api/roles', { cache: 'no-store' })
+        .then(async (response) => {
+          const payload = response.ok ? await response.json().catch(() => ({ roles: [] })) : { roles: [] };
+          if (!cancelled) setRoles((payload.roles || []) as AdminRole[]);
+        })
+        .catch((e) => {
+          if (!cancelled) setError(e);
+        });
+    };
+
+    window.addEventListener('safeviate-roles-updated', handleRolesUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('safeviate-roles-updated', handleRolesUpdated);
+    };
   }, [tenantId]);
 
   return (

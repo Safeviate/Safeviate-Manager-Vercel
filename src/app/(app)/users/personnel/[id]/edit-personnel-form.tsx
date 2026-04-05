@@ -94,8 +94,10 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
 
   useEffect(() => {
       try {
-          const stored = localStorage.getItem('safeviate.external-organizations');
-          if (stored) setOrganizations(JSON.parse(stored));
+          void fetch('/api/external-organizations', { cache: 'no-store' })
+            .then((response) => response.json())
+            .then((payload) => setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []))
+            .catch(() => setOrganizations([]));
       } catch {
           // ignore
       }
@@ -137,9 +139,6 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
         return;
     }
 
-    const collectionName = determineCollection(formData.userType);
-    const key = `safeviate.${collectionName}`;
-    
     let dataToUpdate: Partial<PersonnelFormState> = { ...formData };
     if (!isPilotProfile(formData)) {
         delete dataToUpdate.pilotLicense;
@@ -149,18 +148,14 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     }
 
     try {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-          const arr = JSON.parse(stored) as UserProfile[];
-          const nextArr = arr.map(u => {
-              if (u.id === user.id) {
-                  return { ...u, ...dataToUpdate };
-              }
-              return u;
-          });
-          localStorage.setItem(key, JSON.stringify(nextArr));
-      }
-      
+      const response = await fetch(`/api/personnel/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personnel: dataToUpdate }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Update failed');
+
       window.dispatchEvent(new Event('safeviate-profile-updated'));
       toast({ title: 'User Updated' });
       onCancel();

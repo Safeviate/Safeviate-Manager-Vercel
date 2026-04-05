@@ -70,31 +70,26 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
     }
 
     try {
-      const stored = localStorage.getItem('safeviate.assets-tools');
-      const current = stored ? JSON.parse(stored) as Tool[] : [];
-
-      const newTool: Tool = {
+      const tool: Tool = {
         ...values,
         id: crypto.randomUUID(),
         nextCalibrationDueDate: nextCalibrationDueDate || undefined,
         createdAt: new Date().toISOString(),
       };
 
-      localStorage.setItem('safeviate.assets-tools', JSON.stringify([...current, newTool]));
-      window.dispatchEvent(new Event('safeviate-assets-tools-updated'));
-      
-      toast({
-        title: 'Tool Added',
-        description: `${values.name} (${values.serialNumber}) has been added to the registry.`,
+      const res = await fetch('/api/tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool }),
       });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Failed to add tool.');
+
+      window.dispatchEvent(new Event('safeviate-assets-tools-updated'));
+      toast({ title: 'Tool Added', description: `${values.name} (${values.serialNumber}) has been added to the registry.` });
       setIsOpen(false);
       form.reset();
     } catch (e: any) {
-       toast({
-        title: 'Error',
-        description: e.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
   };
 
@@ -120,41 +115,21 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>Tool Name</FormLabel><FormControl><Input placeholder="e.g. Torque Wrench" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="serialNumber" render={({ field }) => (
-                <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="Required for tracing" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Tool Name</FormLabel><FormControl><Input placeholder="e.g. Torque Wrench" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="Required for tracing" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="manufacturer" render={({ field }) => (
-                <FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="modelNumber" render={({ field }) => (
-                <FormItem><FormLabel>Model Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <FormField control={form.control} name="manufacturer" render={({ field }) => (<FormItem><FormLabel>Manufacturer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="modelNumber" render={({ field }) => (<FormItem><FormLabel>Model Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="ownerType" render={({ field }) => (
-                <FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="COMPANY">Company Owned</SelectItem><SelectItem value="EMPLOYEE">Employee Owned</SelectItem><SelectItem value="CLIENT">Client Owned</SelectItem></SelectContent></Select><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="status" render={({ field }) => (
-                <FormItem><FormLabel>Calibration Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="CALIBRATED">Calibrated</SelectItem><SelectItem value="OUT_OF_CALIBRATION">Out of Calibration</SelectItem><SelectItem value="REFERENCE_ONLY">Reference Only</SelectItem><SelectItem value="DAMAGED">Damaged</SelectItem><SelectItem value="LOST">Lost</SelectItem></SelectContent></Select><FormMessage /></FormItem>
-              )} />
+              <FormField control={form.control} name="ownerType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="COMPANY">Company Owned</SelectItem><SelectItem value="EMPLOYEE">Employee Owned</SelectItem><SelectItem value="CLIENT">Client Owned</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Calibration Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="CALIBRATED">Calibrated</SelectItem><SelectItem value="OUT_OF_CALIBRATION">Out of Calibration</SelectItem><SelectItem value="REFERENCE_ONLY">Reference Only</SelectItem><SelectItem value="DAMAGED">Damaged</SelectItem><SelectItem value="LOST">Lost</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
             </div>
-
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="lastCalibrationDate" render={({ field }) => (
-                <FormItem><FormLabel>Last Calibration Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="calibrationIntervalMonths" render={({ field }) => (
-                <FormItem><FormLabel>Interval (Months)</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <FormField control={form.control} name="lastCalibrationDate" render={({ field }) => (<FormItem><FormLabel>Last Calibration Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="calibrationIntervalMonths" render={({ field }) => (<FormItem><FormLabel>Interval (Months)</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-
             <DialogFooter className="pt-4">
               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
               <Button type="submit">Register Tool</Button>

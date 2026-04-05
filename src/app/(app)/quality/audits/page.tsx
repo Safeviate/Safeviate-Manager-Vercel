@@ -45,13 +45,10 @@ interface AuditActionsProps {
 function AuditActions({ audit, tenantId }: AuditActionsProps) {
     const { toast } = useToast();
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         try {
-            const storedAudits = localStorage.getItem('safeviate.quality-audits');
-            const currentAudits = storedAudits ? JSON.parse(storedAudits) : [];
-            const nextAudits = currentAudits.filter((a: any) => a.id !== audit.id);
-            localStorage.setItem('safeviate.quality-audits', JSON.stringify(nextAudits));
-            
+            const response = await fetch(`/api/quality-audits?id=${encodeURIComponent(audit.id)}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Failed to delete audit');
             window.dispatchEvent(new Event('safeviate-quality-updated'));
             toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} has been removed.`});
         } catch (error: any) {
@@ -141,31 +138,26 @@ export default function AuditsPage() {
     const [audits, setAudits] = useState<QualityAudit[]>([]);
     const [personnel, setPersonnel] = useState<Personnel[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    const loadData = () => {
+    const loadData = async () => {
         try {
-            const storedAudits = localStorage.getItem('safeviate.quality-audits');
-            if (storedAudits) setAudits(JSON.parse(storedAudits));
-            
-            const storedPersonnel = localStorage.getItem('safeviate.personnel');
-            if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
-            
-            const storedDepts = localStorage.getItem('safeviate.departments');
-            if (storedDepts) setDepartments(JSON.parse(storedDepts));
-            
-            const storedOrgs = localStorage.getItem('safeviate.external-organizations');
-            if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+            const response = await fetch('/api/quality-audits', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({ audits: [], personnel: [], departments: [], organizations: [] }));
+            setAudits(Array.isArray(payload.audits) ? payload.audits : []);
+            setPersonnel(Array.isArray(payload.personnel) ? payload.personnel : []);
+            setDepartments(Array.isArray(payload.departments) ? payload.departments : []);
+            setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
         } catch (e) {
-            console.error('Failed to load local quality data', e);
+            console.error('Failed to load quality data', e);
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        loadData();
+        void loadData();
         window.addEventListener('safeviate-quality-updated', loadData);
         return () => window.removeEventListener('safeviate-quality-updated', loadData);
     }, []);

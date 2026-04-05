@@ -109,14 +109,20 @@ const WBCalculator = () => {
   const [isLoadTemplateDialogOpen, setIsLoadTemplateDialogOpen] = useState(false);
   const [loadedAircraft, setLoadedAircraft] = useState<Aircraft | null>(null);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const storedAircrafts = localStorage.getItem('safeviate.aircrafts');
-        const storedTemplates = localStorage.getItem('safeviate.mass-and-balance-templates');
-        
-        if (storedAircrafts) setAircrafts(JSON.parse(storedAircrafts));
-        if (storedTemplates) setSavedTemplates(JSON.parse(storedTemplates));
+        const [aircraftResponse, configResponse] = await Promise.all([
+          fetch('/api/dashboard-summary', { cache: 'no-store' }),
+          fetch('/api/tenant-config', { cache: 'no-store' }),
+        ]);
+        const [aircraftPayload, configPayload] = await Promise.all([
+          aircraftResponse.json().catch(() => ({})),
+          configResponse.json().catch(() => ({})),
+        ]);
+        setAircrafts(Array.isArray(aircraftPayload?.aircrafts) ? aircraftPayload.aircrafts : []);
+        const config = configPayload?.config && typeof configPayload.config === 'object' ? configPayload.config : {};
+        setSavedTemplates(Array.isArray((config as any)['mass-and-balance-templates']) ? (config as any)['mass-and-balance-templates'] : []);
     } catch (e) {
         console.error("Failed to load M&B data", e);
     } finally {
@@ -125,7 +131,7 @@ const WBCalculator = () => {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-aircrafts-updated', loadData);
     window.addEventListener('safeviate-mb-templates-updated', loadData);
     return () => {
@@ -230,11 +236,12 @@ const WBCalculator = () => {
         cgEnvelope: graphConfig.envelope.map(p => ({ x: p.x, y: p.y })), stations: stations.map(serializeStation)
       };
       
-      const stored = localStorage.getItem('safeviate.mass-and-balance-templates');
-      const templates = stored ? JSON.parse(stored) as AircraftModelProfile[] : [];
-      const nextTemplates = [...templates.filter(t => t.id !== id), newTemplate];
-      
-      localStorage.setItem('safeviate.mass-and-balance-templates', JSON.stringify(nextTemplates));
+      const nextTemplates = [...savedTemplates.filter(t => t.id !== id), newTemplate];
+      await fetch('/api/tenant-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: { 'mass-and-balance-templates': nextTemplates } }),
+      });
       window.dispatchEvent(new Event('safeviate-mb-templates-updated'));
       
       toast({ title: 'Template Saved' });
@@ -245,29 +252,26 @@ const WBCalculator = () => {
 
   const handleSaveToAircraft = (aircraftId: string) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (stored) {
-            const acs = JSON.parse(stored) as Aircraft[];
-            const updatedAcs = acs.map(ac => {
-                if (ac.id === aircraftId) {
-                    return {
-                        ...ac,
-                        emptyWeight: basicEmpty.weight,
-                        emptyWeightMoment: basicEmpty.moment,
-                        maxTakeoffWeight: graphConfig.yMax,
-                        maxLandingWeight: graphConfig.yMax,
-                        cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
-                        stations: stations.map(serializeStation),
-                    };
-                }
-                return ac;
-            });
-            localStorage.setItem('safeviate.aircrafts', JSON.stringify(updatedAcs));
-            window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
-            toast({ title: 'Saved to Aircraft' });
-        }
+        const ac = aircrafts.find(a => a.id === aircraftId);
+        if (!ac) return;
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...ac,
+            emptyWeight: basicEmpty.weight,
+            emptyWeightMoment: basicEmpty.moment,
+            maxTakeoffWeight: graphConfig.yMax,
+            maxLandingWeight: graphConfig.yMax,
+            cgEnvelope: graphConfig.envelope.map(p => ({ weight: p.y, cg: p.x })),
+            stations: stations.map(serializeStation),
+          }),
+        });
+        if (!response.ok) throw new Error('Failed to save aircraft');
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        toast({ title: 'Saved to Aircraft' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Save Failed' });
+      toast({ variant: 'destructive', title: 'Save Failed' });
     }
     setIsSaveAircraftDialogOpen(false);
   };

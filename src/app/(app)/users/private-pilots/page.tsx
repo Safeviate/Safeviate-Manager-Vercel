@@ -28,20 +28,44 @@ export default function PrivatePilotsPage() {
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    try {
-      const storedPilots = localStorage.getItem('safeviate.private-pilots');
-      if (storedPilots) setPrivatePilots(JSON.parse(storedPilots));
-      
-      const storedRoles = localStorage.getItem('safeviate.roles');
-      if (storedRoles) setRoles(JSON.parse(storedRoles));
-      
-      const storedDepts = localStorage.getItem('safeviate.departments');
-      if (storedDepts) setDepartments(JSON.parse(storedDepts));
-    } catch (err: any) {
-      setError(err);
-    } finally {
-      setIsLoadingData(false);
-    }
+    let cancelled = false;
+    const load = async () => {
+      setIsLoadingData(true);
+      try {
+        const [summaryRes, rolesRes, departmentsRes] = await Promise.all([
+          fetch('/api/dashboard-summary', { cache: 'no-store' }),
+          fetch('/api/roles', { cache: 'no-store' }),
+          fetch('/api/departments', { cache: 'no-store' }),
+        ]);
+
+        const summary = await summaryRes.json().catch(() => ({}));
+        const rolesPayload = await rolesRes.json().catch(() => ({}));
+        const departmentsPayload = await departmentsRes.json().catch(() => ({}));
+
+        if (!cancelled) {
+          setPrivatePilots(Array.isArray(summary.privatePilots) ? summary.privatePilots : []);
+          setRoles(Array.isArray(rolesPayload.roles) ? rolesPayload.roles : []);
+          setDepartments(Array.isArray(departmentsPayload.departments) ? departmentsPayload.departments : []);
+          setError(null);
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err);
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
+      }
+    };
+
+    void load();
+    const handleUpdate = () => { void load(); };
+    window.addEventListener('safeviate-personnel-updated', handleUpdate);
+    window.addEventListener('safeviate-roles-updated', handleUpdate);
+    window.addEventListener('safeviate-departments-updated', handleUpdate);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('safeviate-personnel-updated', handleUpdate);
+      window.removeEventListener('safeviate-roles-updated', handleUpdate);
+      window.removeEventListener('safeviate-departments-updated', handleUpdate);
+    };
   }, []);
 
   const isLoading = isProfileLoading || isLoadingData;
@@ -49,45 +73,45 @@ export default function PrivatePilotsPage() {
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <MainPageHeader 
+        <MainPageHeader
           title="Private Pilots"
           description="Manage all private pilots in your organization."
           actions={
             canCreateUsers && (
-              <PersonnelForm 
-                tenantId={tenantId || ''} 
-                roles={roles || []} 
-                departments={departments || []} 
+              <PersonnelForm
+                tenantId={tenantId || ''}
+                roles={roles || []}
+                departments={departments || []}
                 trigger={
-                   <Button
-                       disabled={!canCreateUsers || isProfileLoading}
-                       variant={isMobile ? 'outline' : 'default'}
-                       size={isMobile ? 'sm' : 'default'}
-                       className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full gap-2 px-6 text-xs font-black uppercase shadow-md sm:w-auto'}
-                   >
-                       <span className="flex items-center gap-2">
-                           <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-                           Add User
-                       </span>
-                       {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-                   </Button>
+                  <Button
+                    disabled={!canCreateUsers || isProfileLoading}
+                    variant={isMobile ? 'outline' : 'default'}
+                    size={isMobile ? 'sm' : 'default'}
+                    className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full gap-2 px-6 text-xs font-black uppercase shadow-md sm:w-auto'}
+                  >
+                    <span className="flex items-center gap-2">
+                      <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                      Add User
+                    </span>
+                    {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+                  </Button>
                 }
               />
             )
           }
         />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-           {isLoading ? (
-              <div className="p-8 space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : error ? (
-              <div className="text-center p-8 text-destructive font-semibold">Error: {error.message}</div>
-            ) : privatePilots && (
-              <PrivatePilotsTable data={privatePilots} tenantId={tenantId || ''} />
-            )}
+          {isLoading ? (
+            <div className="p-8 space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : error ? (
+            <div className="text-center p-8 text-destructive font-semibold">Error: {error.message}</div>
+          ) : (
+            <PrivatePilotsTable data={privatePilots} tenantId={tenantId || ''} />
+          )}
         </CardContent>
       </Card>
     </div>

@@ -75,16 +75,6 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
         if (tenant) {
           const mergedTenant = { ...tenant, ...(tenantConfig || {}) } as Tenant;
-          if (!mergedTenant.theme) {
-            try {
-              const localTenant = JSON.parse(localStorage.getItem('safeviate.tenant-config') || '{}');
-              if (localTenant?.theme) {
-                mergedTenant.theme = localTenant.theme;
-              }
-            } catch {
-              // no-op: local fallback is optional
-            }
-          }
           setTenants([mergedTenant]);
         } else {
           setTenants([]);

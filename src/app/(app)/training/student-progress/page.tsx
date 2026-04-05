@@ -16,14 +16,26 @@ export default function StudentProgressPage() {
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
 
   useEffect(() => {
-    try {
-        const storedStudents = localStorage.getItem('safeviate.students');
-        if (storedStudents) setStudents(JSON.parse(storedStudents));
-    } catch (e) {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!cancelled && Array.isArray(payload?.students)) {
+          setStudents(payload.students);
+        }
+      } catch (e) {
         console.error('Failed to load students', e);
-    } finally {
-        setIsLoadingStudents(false);
-    }
+      } finally {
+        if (!cancelled) setIsLoadingStudents(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (isLoadingStudents) {

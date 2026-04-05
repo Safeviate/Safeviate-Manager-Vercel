@@ -36,12 +36,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid role payload.' }, { status: 400 });
+  }
   const id = body.id || crypto.randomUUID();
   const name = String(body.name || '').trim();
   const category = String(body.category || 'Personnel').trim() || 'Personnel';
-  const permissions = Array.isArray(body.permissions) ? body.permissions : [];
-  const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments : [];
+  const permissions = Array.isArray(body.permissions) ? body.permissions.filter((permission) => typeof permission === 'string') : [];
+  const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments.filter((document) => typeof document === 'string') : [];
 
   if (!name) {
     return NextResponse.json({ error: 'Role name is required.' }, { status: 400 });

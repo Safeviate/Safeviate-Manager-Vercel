@@ -18,26 +18,27 @@ export default function VehiclesPage() {
 
   const canManageAssets = hasPermission('assets-create') || hasPermission('assets-edit');
 
-  const loadVehicles = useCallback(() => {
+  const loadVehicles = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem('safeviate.vehicles');
-        if (stored) {
-            setVehicles(JSON.parse(stored));
-        } else {
-            setVehicles([]);
-        }
+      const response = await fetch('/api/vehicles', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ vehicles: [] }));
+      setVehicles(Array.isArray(payload.vehicles) ? payload.vehicles : []);
     } catch (e) {
-        console.error("Failed to load vehicles", e);
+      console.error('Failed to load vehicles', e);
+      setVehicles([]);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadVehicles();
-    window.addEventListener('safeviate-vehicles-updated', loadVehicles);
-    return () => window.removeEventListener('safeviate-vehicles-updated', loadVehicles);
+    void loadVehicles();
+    const handleVehiclesUpdated = () => {
+      void loadVehicles();
+    };
+    window.addEventListener('safeviate-vehicles-updated', handleVehiclesUpdated);
+    return () => window.removeEventListener('safeviate-vehicles-updated', handleVehiclesUpdated);
   }, [loadVehicles]);
 
   if (isLoading) {

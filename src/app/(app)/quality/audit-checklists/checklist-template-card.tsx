@@ -30,13 +30,10 @@ export function ChecklistTemplateCard({ category, templates, tenantId, departmen
     const { toast } = useToast();
     const isMobile = useIsMobile();
 
-    const handleDelete = (templateId: string, templateTitle: string) => {
+    const handleDelete = async (templateId: string, templateTitle: string) => {
         try {
-            const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
-            const currentTemplates = storedTemplates ? JSON.parse(storedTemplates) as QualityAuditChecklistTemplate[] : [];
-            const nextTemplates = currentTemplates.filter(t => t.id !== templateId);
-            localStorage.setItem('safeviate.quality-audit-templates', JSON.stringify(nextTemplates));
-            
+            const response = await fetch(`/api/quality-audit-templates?id=${encodeURIComponent(templateId)}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Failed to delete template');
             window.dispatchEvent(new Event('safeviate-quality-templates-updated'));
             toast({ title: "Template Deleted", description: `"${templateTitle}" has been removed.`});
         } catch (error: any) {

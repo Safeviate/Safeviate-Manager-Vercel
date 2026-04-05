@@ -118,9 +118,6 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
 
     const onSubmit = (values: FormValues) => {
         try {
-            const storedAudits = localStorage.getItem('safeviate.quality-audits');
-            const audits = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
-            
             const filledFindings = values.findings.map(f => {
                 if (f.finding === 'Not Applicable') {
                      return { ...f, level: undefined };
@@ -128,9 +125,16 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                 return f;
             });
 
-            const nextAudits = audits.map(a => a.id === audit.id ? { ...a, findings: filledFindings } : a);
-            localStorage.setItem('safeviate.quality-audits', JSON.stringify(nextAudits));
-            
+            void fetch('/api/quality-audits', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                audit: {
+                  ...audit,
+                  findings: filledFindings,
+                },
+              }),
+            });
             window.dispatchEvent(new Event('safeviate-quality-updated'));
             toast({ title: "Findings Saved", description: "Your audit progress has been recorded." });
         } catch (e: any) {
@@ -149,20 +153,19 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
             : 100;
 
         try {
-            // Update Audit
-            const storedAudits = localStorage.getItem('safeviate.quality-audits');
-            const auditsList = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
-            const nextAudits = auditsList.map(a => a.id === audit.id ? { 
-                ...a, 
-                findings: values.findings,
-                status: 'Finalized' as const,
-                complianceScore: complianceScore 
-            } : a);
-            localStorage.setItem('safeviate.quality-audits', JSON.stringify(nextAudits));
+            await fetch('/api/quality-audits', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                audit: {
+                  ...audit,
+                  findings: values.findings,
+                  status: 'Finalized' as const,
+                  complianceScore,
+                },
+              }),
+            });
 
-            // Create CAPS
-            const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
-            const currentCaps = storedCaps ? JSON.parse(storedCaps) : [];
             const newCaps = nonCompliantFindings.map(finding => ({
                 id: crypto.randomUUID(),
                 auditId: audit.id,
@@ -171,7 +174,11 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                 status: 'Open',
                 actions: [],
             }));
-            localStorage.setItem('safeviate.corrective-action-plans', JSON.stringify([...newCaps, ...currentCaps]));
+            await Promise.all(newCaps.map((cap) => fetch('/api/corrective-action-plans', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ cap }),
+            })));
 
             window.dispatchEvent(new Event('safeviate-quality-updated'));
             toast({

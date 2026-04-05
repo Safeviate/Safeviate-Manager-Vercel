@@ -35,24 +35,22 @@ export default function AccountingPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(() => {
-    setIsLoading(true);
-    try {
-        const b = localStorage.getItem('safeviate.bookings');
-        const a = localStorage.getItem('safeviate.aircrafts');
-        const p = localStorage.getItem('safeviate.personnel');
-        const i = localStorage.getItem('safeviate.instructors');
-        const s = localStorage.getItem('safeviate.students');
-        
-        if (b) setBookings(JSON.parse(b));
-        if (a) setAircrafts(JSON.parse(a));
-        if (p) setPersonnel(JSON.parse(p));
-        if (i) setInstructors(JSON.parse(i));
-        if (s) setStudents(JSON.parse(s));
-    } catch (e) {
-        console.error("Failed to load accounting data", e);
-    } finally {
-        setIsLoading(false);
-    }
+    void (async () => {
+      setIsLoading(true);
+      try {
+          const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+          const payload = await response.json().catch(() => ({ bookings: [], aircrafts: [], personnel: [], instructors: [], students: [] }));
+          setBookings(Array.isArray(payload.bookings) ? payload.bookings : []);
+          setAircrafts(Array.isArray(payload.aircrafts) ? payload.aircrafts : []);
+          setPersonnel(Array.isArray(payload.personnel) ? payload.personnel : []);
+          setInstructors(Array.isArray(payload.instructors) ? payload.instructors : []);
+          setStudents(Array.isArray(payload.students) ? payload.students : []);
+      } catch (e) {
+          console.error("Failed to load accounting data", e);
+      } finally {
+          setIsLoading(false);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -161,19 +159,12 @@ export default function AccountingPage() {
       link.click();
       document.body.removeChild(link);
 
-      // 2. Update Status (locally)
-      const stored = localStorage.getItem('safeviate.bookings');
-      if (stored) {
-          const bks = JSON.parse(stored) as Booking[];
-          const updatedBks = bks.map(b => {
-              if (selectedIds.has(b.id)) {
-                  return { ...b, accountingStatus: 'Exported' as const };
-              }
-              return b;
-          });
-          localStorage.setItem('safeviate.bookings', JSON.stringify(updatedBks));
-          window.dispatchEvent(new Event('safeviate-bookings-updated'));
-      }
+      await Promise.all(selectedBookings.map((booking) => fetch('/api/bookings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking: { ...booking, accountingStatus: 'Exported' as const } }),
+      })));
+      window.dispatchEvent(new Event('safeviate-bookings-updated'));
 
       toast({ title: 'Export Successful', description: `${selectedIds.size} records prepared for Sage.` });
       setSelectedIds(new Set());

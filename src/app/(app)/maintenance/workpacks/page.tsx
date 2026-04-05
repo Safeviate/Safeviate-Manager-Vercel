@@ -18,17 +18,16 @@ export default function WorkpacksPage() {
 
   const canManageWorkpacks = hasPermission('maintenance-workpacks-create') || hasPermission('admin');
 
-  const loadWorkpacks = useCallback(() => {
+  const loadWorkpacks = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem('safeviate.maintenance-workpacks');
-        if (stored) {
-            setWorkpacks(JSON.parse(stored));
-        }
+      const res = await fetch('/api/maintenance/workpacks', { cache: 'no-store' });
+      const data = await res.json();
+      setWorkpacks(Array.isArray(data.workpacks) ? data.workpacks : []);
     } catch (e) {
-        console.error("Failed to load workpacks", e);
+      console.error('Failed to load workpacks', e);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 

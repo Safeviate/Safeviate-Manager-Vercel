@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { AircraftComponent } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Settings2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
@@ -23,16 +23,11 @@ export function TrackedComponents({ aircraftId }: TrackedComponentsProps) {
   const [components, setComponents] = useState<AircraftComponent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadComponents = useCallback(() => {
+  const loadComponents = useCallback(async () => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (stored) {
-            const aircrafts = JSON.parse(stored) as Aircraft[];
-            const aircraft = aircrafts.find(a => a.id === aircraftId);
-            if (aircraft) {
-                setComponents(aircraft.components || []);
-            }
-        }
+        const response = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ aircraft: null }));
+        setComponents((payload.aircraft?.components || []) as AircraftComponent[]);
     } catch (e) {
         console.error("Failed to load local components", e);
     } finally {

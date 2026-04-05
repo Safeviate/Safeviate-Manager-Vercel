@@ -38,24 +38,28 @@ export function AddMaintenanceLogDialog({ aircraftId }: { tenantId: string, airc
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-        const logStorageKey = `safeviate.maintenance-logs.${aircraftId}`;
-        const stored = localStorage.getItem(logStorageKey);
-        const logs = stored ? JSON.parse(stored) as MaintenanceLog[] : [];
+        const currentResponse = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+        const currentPayload = await currentResponse.json().catch(() => ({ aircraft: null }));
+        const logs = ((currentPayload.aircraft?.maintenanceLogs as MaintenanceLog[]) || []).slice();
         
         const newLog: MaintenanceLog = {
           id: crypto.randomUUID(),
           aircraftId,
-          timestamp: new Date().toISOString(),
           ...values,
         };
 
         const nextLogs = [newLog, ...logs];
-        localStorage.setItem(logStorageKey, JSON.stringify(nextLogs));
-        
-        // Trigger reactive update
-        window.dispatchEvent(new Event('safeviate-maintenance-logs-updated'));
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...currentPayload.aircraft, maintenanceLogs: nextLogs } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save maintenance log.');
+
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
         toast({ 
             title: 'Maintenance Log Recorded',
@@ -68,7 +72,7 @@ export function AddMaintenanceLogDialog({ aircraftId }: { tenantId: string, airc
         toast({ 
             variant: 'destructive', 
             title: 'Logging Failed',
-            description: 'Unable to commit the maintenance entry to local storage.'
+            description: 'Unable to commit the maintenance entry to the aircraft record.'
         });
     }
   };

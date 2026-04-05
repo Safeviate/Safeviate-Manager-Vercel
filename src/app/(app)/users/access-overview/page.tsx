@@ -19,16 +19,27 @@ export default function AccessOverviewPage() {
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
 
   useEffect(() => {
-    try {
-      const storedRoles = localStorage.getItem('safeviate.roles');
-      if (storedRoles) {
-        setRoles(JSON.parse(storedRoles));
+    let cancelled = false;
+    const loadRoles = async () => {
+      try {
+        const response = await fetch('/api/roles', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!cancelled) {
+          setRoles(Array.isArray(payload.roles) ? payload.roles : []);
+        }
+      } catch {
+        if (!cancelled) setRoles([]);
+      } finally {
+        if (!cancelled) setIsLoadingRoles(false);
       }
-    } catch (e: any) {
-      // ignore
-    } finally {
-      setIsLoadingRoles(false);
-    }
+    };
+
+    void loadRoles();
+    window.addEventListener('safeviate-roles-updated', loadRoles);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('safeviate-roles-updated', loadRoles);
+    };
   }, []);
 
   const isLoading = isLoadingTenant || isLoadingRoles;
@@ -52,9 +63,7 @@ export default function AccessOverviewPage() {
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
-        <MainPageHeader 
-          title="Access Overview"
-        />
+        <MainPageHeader title="Access Overview" />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 flex-1 min-h-0 p-4 lg:p-6 overflow-hidden">
           <Card className="flex flex-col h-full overflow-hidden shadow-none border">
@@ -81,9 +90,9 @@ export default function AccessOverviewPage() {
                   <TableBody>
                     {coreModules.map(module => {
                       const isEnabled = !tenant?.enabledMenus || tenant.enabledMenus.includes(module.href);
-                      
+
                       return (
-                        <TableRow key={module.href} className={!isEnabled ? "opacity-40 grayscale" : ""}>
+                        <TableRow key={module.href} className={!isEnabled ? 'opacity-40 grayscale' : ''}>
                           <TableCell className="font-bold text-sm text-foreground flex items-center gap-2 py-4 px-6">
                             <module.icon className="h-4 w-4 text-primary" />
                             {module.label}
@@ -92,7 +101,7 @@ export default function AccessOverviewPage() {
                           {(roles || []).map(role => {
                             const permissionId = module.permissionId;
                             const hasAccess = role.permissions?.includes(permissionId || '');
-                            
+
                             return (
                               <TableCell key={role.id} className="text-center">
                                 {isEnabled && hasAccess ? (
@@ -126,7 +135,7 @@ export default function AccessOverviewPage() {
                   return (
                     <div key={m.href} className="flex items-center justify-between text-[11px] font-bold">
                       <span className="text-foreground">{m.label}</span>
-                      <Badge variant={isEnabled ? "default" : "outline"} className="h-4 text-[8px] font-black uppercase">
+                      <Badge variant={isEnabled ? 'default' : 'outline'} className="h-4 text-[8px] font-black uppercase">
                         {isEnabled ? 'ENABLED' : 'HIDDEN'}
                       </Badge>
                     </div>

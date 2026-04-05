@@ -70,9 +70,6 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
     }
 
     try {
-      const stored = localStorage.getItem('safeviate.maintenance-tools');
-      const current = stored ? JSON.parse(stored) as Tool[] : [];
-
       const newTool: Tool = {
         ...values,
         id: crypto.randomUUID(),
@@ -80,8 +77,14 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
         createdAt: new Date().toISOString(),
       };
 
-      localStorage.setItem('safeviate.maintenance-tools', JSON.stringify([...current, newTool]));
-      window.dispatchEvent(new Event('safeviate-maintenance-tools-updated'));
+      const response = await fetch('/api/tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: newTool }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to add tool.');
+      window.dispatchEvent(new Event('safeviate-tools-updated'));
       
       toast({
         title: 'Tool Added',

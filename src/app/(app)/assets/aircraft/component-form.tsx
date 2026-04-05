@@ -66,23 +66,18 @@ export function ComponentForm({ aircraftId, trigger }: ComponentFormProps) {
 
   const onSubmit = (values: FormValues) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        const acIndex = aircrafts.findIndex(a => a.id === aircraftId);
-        if (acIndex === -1) return;
-
         const newComponent: AircraftComponent = {
             ...values,
             id: crypto.randomUUID(),
         };
 
-        const aircraft = aircrafts[acIndex];
-        aircraft.components = [...(aircraft.components || []), newComponent];
-        
-        aircrafts[acIndex] = aircraft;
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(aircrafts));
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { components: [newComponent] } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save component.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
         toast({ title: 'Component Registered', description: `"${values.name}" has been mapped to the airframe serial ${values.serialNumber}.` });

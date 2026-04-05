@@ -53,38 +53,47 @@ export function MaintenanceLogForm({ aircraftId, isOpen, setIsOpen, trigger }: M
     },
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     try {
-        const logStorageKey = `safeviate.maintenance-logs.${aircraftId}`;
-        const stored = localStorage.getItem(logStorageKey);
-        const logs = stored ? JSON.parse(stored) as MaintenanceLog[] : [];
-        
-        const newLog: MaintenanceLog = {
-          id: crypto.randomUUID(),
-          ...values,
-          aircraftId,
-          timestamp: new Date().toISOString(),
-        };
+      const currentResponse = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+      const currentPayload = await currentResponse.json().catch(() => ({ aircraft: null }));
+      const logs = ((currentPayload.aircraft?.maintenanceLogs as MaintenanceLog[]) || []).slice();
 
-        const nextLogs = [newLog, ...logs];
-        localStorage.setItem(logStorageKey, JSON.stringify(nextLogs));
-        
-        // Trigger reactive update for the log list
-        window.dispatchEvent(new Event('safeviate-maintenance-logs-updated'));
+      const response = await fetch(`/api/aircraft/${aircraftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aircraft: {
+            ...currentPayload.aircraft,
+            maintenanceLogs: [
+              {
+                id: crypto.randomUUID(),
+                ...values,
+                aircraftId,
+              },
+              ...logs,
+            ],
+          },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to save maintenance log.');
 
-        toast({ 
-          title: "Maintenance Logged", 
-          description: `Successfully recorded ${values.maintenanceType} for this asset.` 
-        });
-        
-        setIsOpen(false);
-        form.reset();
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+
+      toast({
+        title: 'Maintenance Logged',
+        description: `Successfully recorded ${values.maintenanceType} for this asset.`,
+      });
+
+      setIsOpen(false);
+      form.reset();
     } catch (e) {
-        toast({ 
-          variant: 'destructive', 
-          title: "Logging Failed", 
-          description: "Unable to save the maintenance entry to local storage." 
-        });
+      toast({
+        variant: 'destructive',
+        title: 'Logging Failed',
+        description: 'Unable to save the maintenance entry to the aircraft record.',
+      });
     }
   };
 

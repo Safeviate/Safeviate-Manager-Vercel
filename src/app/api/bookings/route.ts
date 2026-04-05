@@ -67,9 +67,10 @@ export async function PUT(request: Request) {
   }
 
   await prisma.$executeRawUnsafe(
-    `UPDATE bookings SET data = $2::jsonb, updated_at = NOW() WHERE id = $1`,
+    `UPDATE bookings SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
     bookingId,
-    JSON.stringify(incoming)
+    JSON.stringify(incoming),
+    tenantId
   );
 
   return NextResponse.json({ booking: incoming }, { status: 200 });
@@ -86,7 +87,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Missing booking id.' }, { status: 400 });
   }
 
-  await prisma.$executeRawUnsafe(`DELETE FROM bookings WHERE id = $1`, bookingId);
+  await prisma.$executeRawUnsafe(`DELETE FROM bookings WHERE id = $1 AND tenant_id = $2`, bookingId, tenantId);
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }

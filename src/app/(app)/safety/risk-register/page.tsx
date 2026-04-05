@@ -48,9 +48,13 @@ function ManageAreasDialog({ settings, trigger }: { settings: string[]; trigger?
     setAreas(settings);
   }, [settings]);
 
-  const save = (updatedAreas: string[]) => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('safeviate:risk-register-areas', JSON.stringify(updatedAreas));
+  const save = async (updatedAreas: string[]) => {
+    await fetch('/api/risk-register/areas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ areas: updatedAreas }),
+    });
+    window.dispatchEvent(new Event('safeviate-risk-register-updated'));
     toast({ title: 'Hazard Areas Updated' });
   };
 
@@ -136,13 +140,18 @@ export default function RiskRegisterPage() {
   const [visibilitySettings, setVisibilitySettings] = useState<{ visibilities?: Record<string, boolean> } | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storedAreas = window.localStorage.getItem('safeviate:risk-register-areas');
-    if (storedAreas) {
+    let cancelled = false;
+    const loadAreas = async () => {
       try {
-        setHazardAreas(JSON.parse(storedAreas));
-      } catch {}
-    }
+        const response = await fetch('/api/risk-register/areas', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ areas: DEFAULT_HAZARD_AREAS }));
+        if (!cancelled) setHazardAreas(Array.isArray(payload.areas) && payload.areas.length ? payload.areas : DEFAULT_HAZARD_AREAS);
+      } catch {
+        if (!cancelled) setHazardAreas(DEFAULT_HAZARD_AREAS);
+      }
+    };
+    void loadAreas();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -150,14 +159,23 @@ export default function RiskRegisterPage() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const personnelResponse = await fetch('/api/personnel', { cache: 'no-store' });
-        const personnelPayload = await personnelResponse.json();
-        const registerData = typeof window !== 'undefined' ? window.localStorage.getItem('safeviate:risk-register-data') : null;
+        const [personnelResponse, riskResponse, orgResponse, visibilityResponse] = await Promise.all([
+          fetch('/api/personnel', { cache: 'no-store' }),
+          fetch('/api/risk-register', { cache: 'no-store' }),
+          fetch('/api/external-organizations', { cache: 'no-store' }),
+          fetch('/api/tenant-config', { cache: 'no-store' }),
+        ]);
+        const [personnelPayload, riskPayload, orgPayload, visibilityPayload] = await Promise.all([
+          personnelResponse.json().catch(() => ({ personnel: [] })),
+          riskResponse.json().catch(() => ({ risks: [] })),
+          orgResponse.json().catch(() => ({ organizations: [] })),
+          visibilityResponse.json().catch(() => ({ configuration: null })),
+        ]);
         if (!cancelled) {
           setPersonnel(personnelPayload?.personnel ?? []);
-          setOrganizations([]);
-          setAllRisks(registerData ? (JSON.parse(registerData) as Risk[]) : []);
-          setVisibilitySettings({ visibilities: { 'risk-register': true } });
+          setOrganizations(orgPayload?.organizations ?? []);
+          setAllRisks(riskPayload?.risks ?? []);
+          setVisibilitySettings({ visibilities: visibilityPayload?.configuration?.visibilities || { 'risk-register': true } });
         }
       } catch {
         if (!cancelled) {

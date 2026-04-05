@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { EditSpiForm } from './edit-spi-form';
@@ -12,7 +12,7 @@ import { ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { SpiConfig, SpiConfigurations } from '@/types/spi';
-import type { ExternalOrganization, TabVisibilitySettings } from '@/types/quality';
+import type { ExternalOrganization } from '@/types/quality';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
@@ -109,73 +109,65 @@ export default function SafetyIndicatorsPage() {
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const storedReports = localStorage.getItem('safeviate.safety-reports');
-        const storedBookings = localStorage.getItem('safeviate.bookings');
-        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
-        const storedSpi = localStorage.getItem('safeviate.spi-configurations');
+        const [reportsRes, bookingsRes, orgsRes, spiRes] = await Promise.all([
+          fetch('/api/safety-reports', { cache: 'no-store' }),
+          fetch('/api/bookings', { cache: 'no-store' }),
+          fetch('/api/external-organizations', { cache: 'no-store' }),
+          fetch('/api/spi-configurations', { cache: 'no-store' }),
+        ]);
 
-        if (storedReports) setReports(JSON.parse(storedReports));
-        if (storedBookings) setBookings(JSON.parse(storedBookings));
-        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
-        
-        if (storedSpi) {
-            const config = JSON.parse(storedSpi) as SpiConfigurations;
-            if (config.configurations) setSpiConfig(config.configurations);
-        } else {
-            const configToSave: SpiConfigurations = {
-                id: settingsDocId,
-                configurations: initialSpiConfig
-            };
-            localStorage.setItem('safeviate.spi-configurations', JSON.stringify(configToSave));
-            setSpiConfig(initialSpiConfig);
-        }
+        const [reportsPayload, bookingsPayload, orgsPayload, spiPayload] = await Promise.all([
+          reportsRes.json().catch(() => ({ reports: [] })),
+          bookingsRes.json().catch(() => ({ bookings: [] })),
+          orgsRes.json().catch(() => ({ organizations: [] })),
+          spiRes.json().catch(() => ({ configurations: [] })),
+        ]);
+
+        setReports(Array.isArray(reportsPayload.reports) ? reportsPayload.reports : []);
+        setBookings(Array.isArray(bookingsPayload.bookings) ? bookingsPayload.bookings : []);
+        setOrganizations(Array.isArray(orgsPayload.organizations) ? orgsPayload.organizations : []);
+        setSpiConfig(Array.isArray(spiPayload.configurations) && spiPayload.configurations.length > 0 ? spiPayload.configurations : initialSpiConfig);
     } catch (e) {
-        console.error("Failed to load safety data", e);
+        console.error('Failed to load safety data', e);
     } finally {
         setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
-    const events = [
-        'safeviate-safety-reports-updated',
-        'safeviate-bookings-updated',
-        'safeviate-external-organizations-updated',
-        'safeviate-spi-configurations-updated'
-    ];
+    void loadData();
+    const events = ['safeviate-safety-reports-updated', 'safeviate-bookings-updated', 'safeviate-external-organizations-updated', 'safeviate-spi-configurations-updated'];
     events.forEach(event => window.addEventListener(event, loadData));
     return () => events.forEach(event => window.removeEventListener(event, loadData));
   }, [loadData]);
   
-  const saveConfigToLocal = useCallback((updatedConfig: SpiConfig[]) => {
+  const saveConfigToLocal = useCallback(async (updatedConfig: SpiConfig[]) => {
     const configToSave: SpiConfigurations = {
         id: settingsDocId,
         configurations: JSON.parse(JSON.stringify(updatedConfig))
     };
-    localStorage.setItem('safeviate.spi-configurations', JSON.stringify(configToSave));
+    await fetch('/api/spi-configurations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(configToSave),
+    });
     window.dispatchEvent(new Event('safeviate-spi-configurations-updated'));
   }, []);
-  
-  const handleEdit = (spi: SpiConfig) => {
-    setSelectedSpi(spi);
-    setIsEditDialogOpen(true);
-  };
 
-  const handleSave = (spiToSave: SpiConfig) => {
-    const newConfig = spiToSave.id === 'new-spi' 
-        ? [...spiConfig, { ...spiToSave, id: `spi-${Date.now()}` }]
-        : spiConfig.map(s => s.id === spiToSave.id ? spiToSave : s);
+  const handleEdit = (spi: SpiConfig) => { setSelectedSpi(spi); setIsEditDialogOpen(true); };
+
+  const handleSave = async (spiToSave: SpiConfig) => {
+    const newConfig = spiToSave.id === 'new-spi' ? [...spiConfig, { ...spiToSave, id: `spi-${Date.now()}` }] : spiConfig.map(s => s.id === spiToSave.id ? spiToSave : s);
     setSpiConfig(newConfig);
-    saveConfigToLocal(newConfig);
+    await saveConfigToLocal(newConfig);
     setIsEditDialogOpen(false);
     setSelectedSpi(null);
   };
 
-  const handleMonthDataSave = (spiId: string, monthIndex: number, newValue: number) => {
+  const handleMonthDataSave = async (spiId: string, monthIndex: number, newValue: number) => {
       const newConfig = spiConfig.map(spi => {
           if (spi.id === spiId) {
               const newMonthlyData = [...(spi.monthlyData || Array(12).fill(0))];
@@ -185,128 +177,66 @@ export default function SafetyIndicatorsPage() {
           return spi;
       });
       setSpiConfig(newConfig);
-      saveConfigToLocal(newConfig);
+      await saveConfigToLocal(newConfig);
   };
 
   const renderOrgCard = (orgId: string | 'internal') => {
     const contextOrgId = orgId === 'internal' ? null : orgId;
     return (
-        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl h-full">
-            <div className="sticky top-0 z-30 bg-card">
-                <MainPageHeader 
-                    title={isAviation ? "Safety Performance Indicators" : "Health & Safety Indicators"}
-                    description={isAviation 
-                        ? "Track and monitor key safety metrics against organizational targets."
-                        : "Monitor critical occupational safety KPIs and target levels."
-                    }
-                    actions={
-                        <Button
-                            size="sm"
-                            variant={isMobile ? "outline" : "default"}
-                            className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"}
-                            onClick={() => {
-                            setSelectedSpi({
-                                id: 'new-spi',
-                                name: '',
-                                comparison: 'lower-is-better',
-                                unit: 'Count',
-                                periodLabel: 'Month',
-                                description: '',
-                                target: 0,
-                                levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
-                                monthlyData: Array(12).fill(0),
-                            });
-                            setIsEditDialogOpen(true);
-                        }}
-                        >
-                            <span className="flex items-center gap-2">
-                                <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "mr-2 h-4 w-4"} /> 
-                                {isMobile ? "Add" : "Add New Indicator"}
-                            </span>
-                            {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-                        </Button>
-                    }
-                />
-                {showTabs && <OrganizationTabsRow organizations={organizations} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
-            </div>
-            
-            <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
-                <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
-                    {spiConfig.map(spi => {
-                        // Skip aviation specific KPIs for General industry
-                        const isAviationOnly = spi.id === 'unstable-approach' || spi.id === 'tech-defect';
-                        if (!isAviation && isAviationOnly) return null;
-
-                        return (
-                            <SPICard 
-                                key={spi.id} 
-                                spi={spi} 
-                                onEdit={handleEdit}
-                                onDelete={(id) => {
-                                    if(window.confirm('Delete this indicator?')) {
-                                        const nc = spiConfig.filter(s => s.id !== id);
-                                        setSpiConfig(nc);
-                                        saveConfigToLocal(nc);
-                                    }
-                                }}
-                                reports={reports.filter(r => r.organizationId === contextOrgId) || []} 
-                                bookings={bookings.filter(b => b.organizationId === contextOrgId) || []}
-                                onMonthDataSave={handleMonthDataSave}
-                            />
-                        )
-                    })}
-                </div>
-            </CardContent>
-        </Card>
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl h-full">
+        <div className="sticky top-0 z-30 bg-card">
+          <MainPageHeader title={isAviation ? 'Safety Performance Indicators' : 'Health & Safety Indicators'}
+            description={isAviation ? 'Track and monitor key safety metrics against organizational targets.' : 'Monitor critical occupational safety KPIs and target levels.'}
+            actions={
+              <Button
+                size="sm"
+                variant={isMobile ? "outline" : "default"}
+                className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"}
+                onClick={() => {
+                  setSelectedSpi({
+                    id: 'new-spi',
+                    name: '',
+                    comparison: 'lower-is-better',
+                    unit: 'Count',
+                    periodLabel: 'Month',
+                    description: '',
+                    target: 0,
+                    levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
+                    monthlyData: Array(12).fill(0),
+                  });
+                  setIsEditDialogOpen(true);
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "mr-2 h-4 w-4"} />
+                  {isMobile ? 'Add' : 'Add New Indicator'}
+                </span>
+                {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+              </Button>
+            }
+          />
+          {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+        </div>
+        <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
+          <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
+            {spiConfig.map(spi => {
+              const isAviationOnly = spi.id === 'unstable-approach' || spi.id === 'tech-defect';
+              if (!isAviation && isAviationOnly) return null;
+              return <SPICard key={spi.id} spi={spi} onEdit={handleEdit} onDelete={async (id) => { if (window.confirm('Delete this indicator?')) { const nc = spiConfig.filter(s => s.id !== id); setSpiConfig(nc); await saveConfigToLocal(nc); } }} reports={reports.filter(r => r.organizationId === contextOrgId) || []} bookings={bookings.filter(b => b.organizationId === contextOrgId) || []} onMonthDataSave={handleMonthDataSave} />;
+            })}
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
-  if (isLoading) {
-    return (
-        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1 h-full overflow-hidden">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="flex-1 w-full" />
-        </div>
-    );
-  }
-
+  if (isLoading) return <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1 h-full overflow-hidden"><Skeleton className="h-20 w-full" /><Skeleton className="flex-1 w-full" /></div>;
   const showTabs = shouldShowOrganizationTabs;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
-        {!showTabs ? (
-            renderOrgCard(scopedOrganizationId)
-        ) : (
-            <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                    <TabsContent value="internal" className="mt-0 h-full flex flex-col flex-1 overflow-hidden">
-                        {renderOrgCard('internal')}
-                    </TabsContent>
-                    
-                    {organizations.map(org => (
-                        <TabsContent key={org.id} value={org.id} className="mt-0 h-full flex flex-col flex-1 overflow-hidden">
-                            {renderOrgCard(org.id)}
-                        </TabsContent>
-                    ))}
-                </div>
-            </Tabs>
-        )}
-      
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-xl">
-              <DialogHeader>
-                  <DialogTitle>{selectedSpi?.id === 'new-spi' ? 'Create New Indicator' : `Edit Indicator: ${selectedSpi?.name}`}</DialogTitle>
-                  <DialogDescription>Define targets and alert thresholds for this performance indicator.</DialogDescription>
-              </DialogHeader>
-              {selectedSpi && (
-                  <EditSpiForm 
-                      spi={selectedSpi}
-                      onSave={handleSave}
-                      onCancel={() => setIsEditDialogOpen(false)}
-                  />
-              )}
-          </DialogContent>
-      </Dialog>
+      {!showTabs ? renderOrgCard(scopedOrganizationId) : <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden"><div className="flex-1 min-h-0 overflow-hidden flex flex-col"><TabsContent value="internal" className="mt-0 h-full flex flex-col flex-1 overflow-hidden">{renderOrgCard('internal')}</TabsContent>{organizations.map(org => (<TabsContent key={org.id} value={org.id} className="mt-0 h-full flex flex-col flex-1 overflow-hidden">{renderOrgCard(org.id)}</TabsContent>))}</div></Tabs>}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>{selectedSpi?.id === 'new-spi' ? 'Create New Indicator' : `Edit Indicator: ${selectedSpi?.name}`}</DialogTitle><DialogDescription>Define targets and alert thresholds for this performance indicator.</DialogDescription></DialogHeader>{selectedSpi && <EditSpiForm spi={selectedSpi} onSave={handleSave} onCancel={() => setIsEditDialogOpen(false)} />}</DialogContent></Dialog>
     </div>
   );
 }

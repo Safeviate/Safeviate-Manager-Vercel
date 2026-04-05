@@ -78,47 +78,28 @@ export default function DocumentDatesPage() {
   const [newHundredHourColor, setNewHundredHourColor] = useState('#f97316');
   const [newHundredHourFgColor, setNewHundredHourFgColor] = useState('#ffffff');
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const exp = localStorage.getItem('safeviate.document-expiry-settings');
-        const mile = localStorage.getItem('safeviate.student-milestone-settings');
-        const insp = localStorage.getItem('safeviate.inspection-warning-settings');
+        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        const config = payload?.config && typeof payload.config === 'object' ? payload.config : {};
 
-        if (exp) {
-            const parsed = JSON.parse(exp);
-            setExpirySettings(parsed);
-            setDefaultColorState(parsed.defaultColor || defaultSafeColor);
-            setExpiredColorState(parsed.expiredColor || defaultExpiredColor);
-            setPeriodColors((parsed.warningPeriods || []).reduce((acc: any, p: any) => ({ ...acc, [p.period]: p.color }), {}));
-        } else {
-            const def = { id: 'document-expiry', defaultColor: defaultSafeColor, expiredColor: defaultExpiredColor, warningPeriods: [] };
-            localStorage.setItem('safeviate.document-expiry-settings', JSON.stringify(def));
-            setExpirySettings(def);
-        }
+        const exp = (config as any)['document-expiry-settings'] || { id: 'document-expiry', defaultColor: defaultSafeColor, expiredColor: defaultExpiredColor, warningPeriods: [] };
+        const mile = (config as any)['student-milestone-settings'] || { id: 'student-milestones', milestones: defaultMilestones };
+        const insp = (config as any)['inspection-warning-settings'] || { id: 'inspection-warnings', fiftyHourWarnings: defaultFiftyHourWarnings, oneHundredHourWarnings: defaultHundredHourWarnings };
 
-        if (mile) {
-            const parsed = JSON.parse(mile);
-            setMilestoneSettings(parsed);
-            setMilestoneState(parsed.milestones || defaultMilestones);
-        } else {
-            const def = { id: 'student-milestones', milestones: defaultMilestones };
-            localStorage.setItem('safeviate.student-milestone-settings', JSON.stringify(def));
-            setMilestoneSettings(def);
-        }
+        setExpirySettings(exp);
+        setDefaultColorState(exp.defaultColor || defaultSafeColor);
+        setExpiredColorState(exp.expiredColor || defaultExpiredColor);
+        setPeriodColors((exp.warningPeriods || []).reduce((acc: any, p: any) => ({ ...acc, [p.period]: p.color }), {}));
 
-        if (insp) {
-            const parsed = JSON.parse(insp);
-            setInspectionSettings(parsed);
-            setFiftyHourWarnings(parsed.fiftyHourWarnings || []);
-            setHundredHourWarnings(parsed.oneHundredHourWarnings || []);
-        } else {
-            const def = { id: 'inspection-warnings', fiftyHourWarnings: defaultFiftyHourWarnings, oneHundredHourWarnings: defaultHundredHourWarnings };
-            localStorage.setItem('safeviate.inspection-warning-settings', JSON.stringify(def));
-            setInspectionSettings(def);
-            setFiftyHourWarnings(defaultFiftyHourWarnings);
-            setHundredHourWarnings(defaultHundredHourWarnings);
-        }
+        setMilestoneSettings(mile);
+        setMilestoneState(mile.milestones || defaultMilestones);
+
+        setInspectionSettings(insp);
+        setFiftyHourWarnings(insp.fiftyHourWarnings || []);
+        setHundredHourWarnings(insp.oneHundredHourWarnings || []);
     } catch (e) {
         console.error("Failed to load settings", e);
     } finally {
@@ -127,7 +108,7 @@ export default function DocumentDatesPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-document-expiry-settings-updated', loadData);
     window.addEventListener('safeviate-student-milestone-settings-updated', loadData);
     window.addEventListener('safeviate-inspection-warning-settings-updated', loadData);
@@ -145,37 +126,49 @@ export default function DocumentDatesPage() {
 
   useEffect(() => {
      if (isLoading || !expirySettings) return;
-     const current = JSON.parse(localStorage.getItem('safeviate.document-expiry-settings') || '{}');
-     if (current.defaultColor !== debouncedDefaultColor) {
-         localStorage.setItem('safeviate.document-expiry-settings', JSON.stringify({ ...current, defaultColor: debouncedDefaultColor }));
+     if (expirySettings.defaultColor !== debouncedDefaultColor) {
+         fetch('/api/tenant-config', {
+           method: 'PUT',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ config: { 'document-expiry-settings': { ...expirySettings, defaultColor: debouncedDefaultColor }, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': inspectionSettings } }),
+         }).catch(() => {});
          window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
      }
   }, [debouncedDefaultColor, isLoading, expirySettings]);
 
   useEffect(() => {
     if (isLoading || !expirySettings) return;
-    const current = JSON.parse(localStorage.getItem('safeviate.document-expiry-settings') || '{}');
-    if (current.expiredColor !== debouncedExpiredColor) {
-        localStorage.setItem('safeviate.document-expiry-settings', JSON.stringify({ ...current, expiredColor: debouncedExpiredColor }));
+    if (expirySettings.expiredColor !== debouncedExpiredColor) {
+        fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: { 'document-expiry-settings': { ...expirySettings, expiredColor: debouncedExpiredColor }, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': inspectionSettings } }),
+        }).catch(() => {});
         window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
     }
  }, [debouncedExpiredColor, isLoading, expirySettings]);
 
  useEffect(() => {
     if (isLoading || !expirySettings || Object.keys(debouncedPeriodColors).length === 0) return;
-    const current = JSON.parse(localStorage.getItem('safeviate.document-expiry-settings') || '{}');
-    const newPeriods = (current.warningPeriods || []).map((p: any) => ({ ...p, color: debouncedPeriodColors[p.period] || p.color }));
-    if (JSON.stringify(current.warningPeriods) !== JSON.stringify(newPeriods)) {
-        localStorage.setItem('safeviate.document-expiry-settings', JSON.stringify({ ...current, warningPeriods: newPeriods }));
+    const newPeriods = (expirySettings.warningPeriods || []).map((p: any) => ({ ...p, color: debouncedPeriodColors[p.period] || p.color }));
+    if (JSON.stringify(expirySettings.warningPeriods) !== JSON.stringify(newPeriods)) {
+        fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: { 'document-expiry-settings': { ...expirySettings, warningPeriods: newPeriods }, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': inspectionSettings } }),
+        }).catch(() => {});
         window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
     }
  }, [debouncedPeriodColors, isLoading, expirySettings]);
 
  useEffect(() => {
     if (isLoading || !milestoneSettings) return;
-    const current = JSON.parse(localStorage.getItem('safeviate.student-milestone-settings') || '{}');
-    if (JSON.stringify(current.milestones) !== JSON.stringify(debouncedMilestoneState)) {
-        localStorage.setItem('safeviate.student-milestone-settings', JSON.stringify({ ...current, milestones: debouncedMilestoneState }));
+    if (JSON.stringify(milestoneSettings.milestones) !== JSON.stringify(debouncedMilestoneState)) {
+        fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': { ...milestoneSettings, milestones: debouncedMilestoneState }, 'inspection-warning-settings': inspectionSettings } }),
+        }).catch(() => {});
         window.dispatchEvent(new Event('safeviate-student-milestone-settings-updated'));
     }
  }, [debouncedMilestoneState, isLoading, milestoneSettings]);
@@ -186,14 +179,17 @@ export default function DocumentDatesPage() {
       toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of days.' });
       return;
     }
-    const current = JSON.parse(localStorage.getItem('safeviate.document-expiry-settings') || '{}');
-    const currentPeriods = current.warningPeriods || [];
+    const currentPeriods = expirySettings?.warningPeriods || [];
     if (currentPeriods.some((p: any) => p.period === period)) {
       toast({ variant: 'destructive', title: 'Duplicate Period', description: `The warning period for ${period} days already exists.` });
       return;
     }
     const updatedWarningPeriods = [...currentPeriods, { period, color: newPeriodColor }].sort((a, b) => a.period - b.period);
-    localStorage.setItem('safeviate.document-expiry-settings', JSON.stringify({ ...current, warningPeriods: updatedWarningPeriods }));
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': { ...expirySettings, warningPeriods: updatedWarningPeriods }, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': inspectionSettings } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
     toast({ title: 'Warning Period Added', description: `${period} days has been added.` });
     setNewPeriod('');
@@ -201,9 +197,12 @@ export default function DocumentDatesPage() {
   };
 
   const handleRemovePeriod = (periodToRemove: number) => {
-    const current = JSON.parse(localStorage.getItem('safeviate.document-expiry-settings') || '{}');
-    const newPeriods = (current.warningPeriods || []).filter((p: any) => p.period !== periodToRemove);
-    localStorage.setItem('safeviate.document-expiry-settings', JSON.stringify({ ...current, warningPeriods: newPeriods }));
+    const newPeriods = (expirySettings?.warningPeriods || []).filter((p: any) => p.period !== periodToRemove);
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': { ...expirySettings, warningPeriods: newPeriods }, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': inspectionSettings } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
     toast({ title: 'Warning Period Removed', description: `${periodToRemove} days has been removed.` });
   };
@@ -227,16 +226,19 @@ export default function DocumentDatesPage() {
         return;
     }
 
-    const current = JSON.parse(localStorage.getItem('safeviate.inspection-warning-settings') || '{}');
     const fieldKey = is50hr ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const currentWarnings = current[fieldKey] || [];
+    const currentWarnings = (inspectionSettings as any)?.[fieldKey] || [];
     if (currentWarnings.some((w: any) => w.hours === hours)) {
         toast({ variant: 'destructive', title: 'Duplicate Warning', description: `A warning for ${hours} hours already exists.` });
         return;
     }
 
     const updatedWarnings = [...currentWarnings, { hours, color: newBgColor, foregroundColor: newFgColor }].sort((a, b) => b.hours - a.hours);
-    localStorage.setItem('safeviate.inspection-warning-settings', JSON.stringify({ ...current, [fieldKey]: updatedWarnings }));
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: updatedWarnings } } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-inspection-warning-settings-updated'));
 
     toast({ title: 'Inspection Warning Added' });
@@ -253,19 +255,25 @@ export default function DocumentDatesPage() {
   };
 
   const handleRemoveInspectionWarning = (type: '50hr' | '100hr', hoursToRemove: number) => {
-    const current = JSON.parse(localStorage.getItem('safeviate.inspection-warning-settings') || '{}');
     const fieldKey = type === '50hr' ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const newWarnings = (current[fieldKey] || []).filter((w: any) => w.hours !== hoursToRemove);
-    localStorage.setItem('safeviate.inspection-warning-settings', JSON.stringify({ ...current, [fieldKey]: newWarnings }));
+    const newWarnings = ((inspectionSettings as any)?.[fieldKey] || []).filter((w: any) => w.hours !== hoursToRemove);
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: newWarnings } } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-inspection-warning-settings-updated'));
     toast({ title: 'Inspection Warning Removed' });
   };
 
   const updateInspectionWarningColor = (type: '50hr' | '100hr', hours: number, field: 'color' | 'foregroundColor', value: string) => {
-    const current = JSON.parse(localStorage.getItem('safeviate.inspection-warning-settings') || '{}');
     const fieldKey = type === '50hr' ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const updated = (current[fieldKey] || []).map((w: any) => w.hours === hours ? { ...w, [field]: value } : w);
-    localStorage.setItem('safeviate.inspection-warning-settings', JSON.stringify({ ...current, [fieldKey]: updated }));
+    const updated = ((inspectionSettings as any)?.[fieldKey] || []).map((w: any) => w.hours === hours ? { ...w, [field]: value } : w);
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: updated } } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-inspection-warning-settings-updated'));
   };
 

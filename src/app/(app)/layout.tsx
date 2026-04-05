@@ -8,7 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { AuthGuard } from '@/components/auth-guard';
 import { OverdueBookingMonitor } from '@/components/overdue-booking-monitor';
 
-const CHUNK_RELOAD_KEY = 'safeviate:chunk-reload-attempted';
+let chunkReloadAttempted = false;
 
 export default function AppLayout({
   children,
@@ -21,9 +21,9 @@ export default function AppLayout({
     const handleChunkError = (message: string) => {
       if (!message.includes('ChunkLoadError') && !message.includes('Loading chunk')) return;
       if (typeof window === 'undefined') return;
-      if (window.sessionStorage.getItem(CHUNK_RELOAD_KEY) === '1') return;
+      if (chunkReloadAttempted) return;
 
-      window.sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+      chunkReloadAttempted = true;
       const url = new URL(window.location.href);
       url.searchParams.set('__chunk_reload', Date.now().toString());
       window.location.replace(url.toString());

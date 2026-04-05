@@ -63,28 +63,30 @@ export function MaintenanceForm({ aircraftId, trigger }: MaintenanceFormProps) {
     },
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     try {
-        const key = `safeviate.maintenance-logs:${aircraftId}`;
-        const stored = localStorage.getItem(key);
-        const logs = stored ? JSON.parse(stored) as MaintenanceLog[] : [];
-        
-        const newLog: MaintenanceLog = {
-            ...values,
-            id: crypto.randomUUID(),
-            aircraftId,
-            createdAt: new Date().toISOString(),
-        };
-
-        const nextLogs = [newLog, ...logs];
-        localStorage.setItem(key, JSON.stringify(nextLogs));
-        window.dispatchEvent(new Event(`safeviate-maintenance-logs-updated:${aircraftId}`));
-
-        toast({ title: 'Maintenance Activity Logged', description: `Activity registered under WO ${values.reference}. Aircraft history updated.` });
-        setIsOpen(false);
-        form.reset();
+      const response = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+      const payload = response.ok ? await response.json().catch(() => ({ aircraft: null })) : { aircraft: null };
+      const logs = ((payload.aircraft?.maintenanceLogs as MaintenanceLog[]) || []).slice();
+      const newLog: MaintenanceLog = {
+        ...values,
+        id: crypto.randomUUID(),
+        aircraftId,
+      };
+      const nextLogs = [newLog, ...logs];
+      const updateResponse = await fetch(`/api/aircraft/${aircraftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aircraft: { ...payload.aircraft, maintenanceLogs: nextLogs } }),
+      });
+      const updateResult = await updateResponse.json().catch(() => ({}));
+      if (!updateResponse.ok) throw new Error(updateResult.error || 'Failed to record maintenance activity.');
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+      toast({ title: 'Maintenance Activity Logged', description: `Activity registered under WO ${values.reference}. Aircraft history updated.` });
+      setIsOpen(false);
+      form.reset();
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to record maintenance activity.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to record maintenance activity.' });
     }
   };
 

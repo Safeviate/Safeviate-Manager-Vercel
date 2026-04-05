@@ -76,13 +76,15 @@ function EditDetailsDialog({ aircraft, children }: { aircraft: Aircraft; childre
     },
   });
 
-  const onSubmit = (values: DetailsFormValues) => {
+  const onSubmit = async (values: DetailsFormValues) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, ...cleanData(values) } : a);
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, ...cleanData(values) } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to update aircraft.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         toast({ title: 'Aircraft Details Updated' });
         setIsOpen(false);
@@ -166,21 +168,21 @@ function EditComponentsDialog({ aircraft, children }: { aircraft: Aircraft; chil
     name: 'components',
   });
 
-  const onSubmit = (values: ComponentsFormValues) => {
+  const onSubmit = async (values: ComponentsFormValues) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        
         const dataToSave = {
             components: values.components.map(c => ({
                 ...c,
                 installDate: c.installDate ? format(c.installDate, 'yyyy-MM-dd') : null,
             }))
         };
-        
-        const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, ...cleanData(dataToSave) } : a);
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, ...cleanData(dataToSave) } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to update components.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         
         toast({ title: 'Components Updated' });
@@ -265,13 +267,15 @@ function ManageDocumentsDialog({ aircraft, children }: { aircraft: Aircraft; chi
         setDocuments(prev => prev.filter(doc => doc.url !== docUrl));
     };
 
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         try {
-            const stored = localStorage.getItem('safeviate.aircrafts');
-            if (!stored) return;
-            const aircrafts = JSON.parse(stored) as Aircraft[];
-            const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, documents } : a);
-            localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+            const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ aircraft: { ...aircraft, documents } }),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || 'Failed to update documents.');
             window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
             toast({ title: 'Documents Updated' });
             setIsOpen(false);

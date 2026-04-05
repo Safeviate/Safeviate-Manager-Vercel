@@ -101,13 +101,16 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
 
     if (!isMockOnly) {
       try {
-        const storedResults = localStorage.getItem('safeviate.student-exam-results');
-        const results = storedResults ? JSON.parse(storedResults) : [];
         const finalResult = { ...examResult, id: crypto.randomUUID() };
-        const nextResults = [finalResult, ...results];
-        localStorage.setItem('safeviate.student-exam-results', JSON.stringify(nextResults));
-        
-        window.dispatchEvent(new Event('safeviate-exams-updated'));
+        const response = await fetch('/api/exams', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result: finalResult }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save exam result');
+        }
         
         toast({ 
           title: 'Official Result Recorded', 

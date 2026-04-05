@@ -24,25 +24,30 @@ export default function AuditChecklistsManager() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = () => {
+  const loadData = async () => {
     try {
-        const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
-        if (storedTemplates) setTemplates(JSON.parse(storedTemplates));
-        
-        const storedPersonnel = localStorage.getItem('safeviate.personnel');
-        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
-        
-        const storedDepts = localStorage.getItem('safeviate.departments');
-        if (storedDepts) setDepartments(JSON.parse(storedDepts));
+        const [templatesResponse, personnelResponse, deptsResponse] = await Promise.all([
+          fetch('/api/quality-audit-templates', { cache: 'no-store' }),
+          fetch('/api/personnel', { cache: 'no-store' }),
+          fetch('/api/departments', { cache: 'no-store' }),
+        ]);
+        const [templatesPayload, personnelPayload, deptsPayload] = await Promise.all([
+          templatesResponse.json().catch(() => ({ templates: [] })),
+          personnelResponse.json().catch(() => ({ personnel: [] })),
+          deptsResponse.json().catch(() => ({ departments: [] })),
+        ]);
+        setTemplates(Array.isArray(templatesPayload.templates) ? templatesPayload.templates : []);
+        setPersonnel(Array.isArray(personnelPayload.personnel) ? personnelPayload.personnel : []);
+        setDepartments(Array.isArray(deptsPayload.departments) ? deptsPayload.departments : []);
     } catch (e) {
-        console.error('Failed to load local audit template data', e);
+        console.error('Failed to load audit template data', e);
     } finally {
         setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-quality-templates-updated', loadData);
     return () => window.removeEventListener('safeviate-quality-templates-updated', loadData);
   }, []);

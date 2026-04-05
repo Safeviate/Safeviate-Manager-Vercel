@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import type { FlightSession } from '@/types/flight-session';
 
 const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-tracker-map').then((module) => module.FleetTrackerMap), {
   ssr: false,
@@ -21,26 +22,26 @@ const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-t
   ),
 });
 
-const STORAGE_KEY = 'safeviate.flight-sessions';
-
 export default function FleetTrackerPage() {
   const { toast } = useToast();
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<FlightSession[]>([]);
 
   useEffect(() => {
-    try {
-      setSessions(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
-    } catch {
-      setSessions([]);
-    }
+    const load = async () => {
+      const res = await fetch('/api/flight-sessions', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+    };
+    void load();
   }, []);
 
   const sortedSessions = useMemo(() => [...sessions].sort((a, b) => (a.aircraftRegistration || '').localeCompare(b.aircraftRegistration || '')), [sessions]);
 
-  const clearStaleSession = (session: any) => {
-    const next = sessions.map((item) => item.id === session.id ? { ...item, status: 'completed', endedAt: new Date().toISOString() } : item);
+  const clearStaleSession = async (session: FlightSession) => {
+    const next = sessions.map((item) => item.id === session.id ? { ...item, status: 'completed' as const, endedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : item);
     setSessions(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    await fetch(`/api/flight-sessions?id=${session.id}`, { method: 'DELETE' });
     toast({ title: 'Stale Session Ended', description: `${session.aircraftRegistration} was cleared from the active fleet tracker.` });
   };
 
@@ -66,7 +67,7 @@ export default function FleetTrackerPage() {
           <Card className="border shadow-none">
             <CardHeader>
               <CardTitle className="text-sm font-black uppercase tracking-widest">Fleet Map Surface</CardTitle>
-              <CardDescription>Active aircraft sessions are plotted here from the local session store.</CardDescription>
+              <CardDescription>Active aircraft sessions are plotted here from the server-backed session store.</CardDescription>
             </CardHeader>
             <CardContent><FleetTrackerMap sessions={sortedSessions} /></CardContent>
           </Card>
@@ -74,7 +75,7 @@ export default function FleetTrackerPage() {
             <Card className="border shadow-none">
               <CardHeader>
                 <CardTitle className="text-sm font-black uppercase tracking-widest">Active Broadcasts</CardTitle>
-                <CardDescription>Live sessions stored in local browser state will appear here automatically.</CardDescription>
+                <CardDescription>Live sessions stored on the server appear here automatically.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {sortedSessions.length === 0 && <div className="rounded-xl border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground">No active aircraft sessions yet.</div>}

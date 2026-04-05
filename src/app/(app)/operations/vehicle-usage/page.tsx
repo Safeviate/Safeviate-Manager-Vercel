@@ -49,15 +49,6 @@ const DEFAULT_VEHICLES: VehicleLite[] = [
   { id: 'vehicle-2', registrationNumber: 'SV-002', make: 'Ford', model: 'Ranger', type: 'Utility', currentOdometer: 85000 },
 ];
 
-const loadLocal = <T,>(key: string, fallback: T): T => {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    return JSON.parse(localStorage.getItem(key) || '') as T;
-  } catch {
-    return fallback;
-  }
-};
-
 const getPersonName = (firstName?: string, lastName?: string, email?: string) => {
   const fullName = `${firstName || ''} ${lastName || ''}`.trim();
   return fullName || email || 'Unknown User';
@@ -87,11 +78,7 @@ function BookOutDialog({
   const [destination, setDestination] = useState('');
   const [notes, setNotes] = useState('');
 
-  const availableVehicles = useMemo(
-    () => vehicles.filter((vehicle) => !activeVehicleIds.has(vehicle.id)),
-    [vehicles, activeVehicleIds]
-  );
-
+  const availableVehicles = useMemo(() => vehicles.filter((vehicle) => !activeVehicleIds.has(vehicle.id)), [vehicles, activeVehicleIds]);
   const selectedVehicle = availableVehicles.find((vehicle) => vehicle.id === vehicleId);
 
   const reset = () => {
@@ -176,13 +163,7 @@ function BookOutDialog({
             type="button"
             disabled={!vehicleId || purpose.trim().length === 0}
             onClick={() => {
-              onBookOut({
-                vehicleId,
-                bookedOutOdometer,
-                purpose: purpose.trim(),
-                destination: destination.trim(),
-                notes: notes.trim(),
-              });
+              onBookOut({ vehicleId, bookedOutOdometer, purpose: purpose.trim(), destination: destination.trim(), notes: notes.trim() });
               setIsOpen(false);
               reset();
             }}
@@ -233,13 +214,7 @@ function BookInDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Book In Odometer</label>
-            <Input
-              type="number"
-              step="1"
-              min="0"
-              value={bookedInOdometer}
-              onChange={(event) => setBookedInOdometer(Number(event.target.value))}
-            />
+            <Input type="number" step="1" min="0" value={bookedInOdometer} onChange={(event) => setBookedInOdometer(Number(event.target.value))} />
             <p className="text-xs text-muted-foreground">Booked out at {usageRecord.bookedOutOdometer.toFixed(0)} km</p>
           </div>
           <div className="space-y-2">
@@ -255,11 +230,7 @@ function BookInDialog({
             type="button"
             disabled={bookedInOdometer < usageRecord.bookedOutOdometer}
             onClick={() => {
-              onBookIn({
-                usageId: usageRecord.id,
-                bookedInOdometer,
-                returnNotes: returnNotes.trim(),
-              });
+              onBookIn({ usageId: usageRecord.id, bookedInOdometer, returnNotes: returnNotes.trim() });
               setIsOpen(false);
             }}
           >
@@ -279,28 +250,33 @@ export default function VehicleUsagePage() {
 
   const [vehicles, setVehicles] = useState<VehicleLite[]>(DEFAULT_VEHICLES);
   const [usageRecords, setUsageRecords] = useState<VehicleUsageLite[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      const response = await fetch('/api/vehicle-usage', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ vehicles: [], usageRecords: [] }));
+      const nextVehicles = Array.isArray(payload.vehicles) && payload.vehicles.length > 0 ? (payload.vehicles as VehicleLite[]) : DEFAULT_VEHICLES;
+      setVehicles(nextVehicles);
+      setUsageRecords(Array.isArray(payload.usageRecords) ? (payload.usageRecords as VehicleUsageLite[]) : []);
+    } catch {
+      setVehicles(DEFAULT_VEHICLES);
+      setUsageRecords([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setVehicles(loadLocal<VehicleLite[]>('safeviate.vehicles', DEFAULT_VEHICLES));
-    setUsageRecords(loadLocal<VehicleUsageLite[]>('safeviate.vehicle-usage', []));
+    void loadData();
+    const handleVehiclesUpdated = () => {
+      void loadData();
+    };
+    window.addEventListener('safeviate-vehicles-updated', handleVehiclesUpdated);
+    return () => window.removeEventListener('safeviate-vehicles-updated', handleVehiclesUpdated);
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('safeviate.vehicles', JSON.stringify(vehicles));
-    }
-  }, [vehicles]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('safeviate.vehicle-usage', JSON.stringify(usageRecords));
-    }
-  }, [usageRecords]);
-
-  const sortedUsageRecords = useMemo(
-    () => [...usageRecords].sort((a, b) => new Date(b.bookedOutAt).getTime() - new Date(a.bookedOutAt).getTime()),
-    [usageRecords]
-  );
+  const sortedUsageRecords = useMemo(() => [...usageRecords].sort((a, b) => new Date(b.bookedOutAt).getTime() - new Date(a.bookedOutAt).getTime()), [usageRecords]);
 
   const activeUsageByVehicleId = useMemo(() => {
     const activeMap = new Map<string, VehicleUsageLite>();
@@ -317,77 +293,42 @@ export default function VehicleUsagePage() {
   const stats = useMemo(() => {
     const totalVehicles = vehicles.length;
     const bookedOutCount = activeVehicleIds.size;
-    return {
-      totalVehicles,
-      bookedOutCount,
-      availableCount: Math.max(totalVehicles - bookedOutCount, 0),
-    };
+    return { totalVehicles, bookedOutCount, availableCount: Math.max(totalVehicles - bookedOutCount, 0) };
   }, [vehicles, activeVehicleIds]);
 
-  const handleBookOut = (payload: {
-    vehicleId: string;
-    bookedOutOdometer: number;
-    purpose: string;
-    destination: string;
-    notes: string;
-  }) => {
-    const vehicle = vehicles.find((item) => item.id === payload.vehicleId);
-    if (!vehicle) return;
-
-    const timestamp = new Date().toISOString();
-    const usage: VehicleUsageLite = {
-      id: crypto.randomUUID(),
-      vehicleId: vehicle.id,
-      vehicleRegistrationNumber: vehicle.registrationNumber,
-      vehicleLabel: `${vehicle.make} ${vehicle.model}`.trim(),
-      status: 'Booked Out',
-      bookedOutAt: timestamp,
-      bookedOutByName: actorName,
-      bookedOutOdometer: payload.bookedOutOdometer,
-      purpose: payload.purpose,
-      destination: payload.destination,
-      notes: payload.notes,
-      bookedInAt: null,
-      bookedInByName: null,
-      bookedInOdometer: null,
-      returnNotes: '',
-    };
-
-    setUsageRecords([usage, ...usageRecords]);
-    setVehicles(
-      vehicles.map((item) =>
-        item.id === vehicle.id ? { ...item, currentOdometer: payload.bookedOutOdometer } : item
-      )
-    );
+  const handleBookOut = async (payload: { vehicleId: string; bookedOutOdometer: number; purpose: string; destination: string; notes: string }) => {
+    try {
+      const response = await fetch('/api/vehicle-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'book-out', ...payload, bookedOutByName: actorName }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to book out vehicle.');
+      await loadData();
+      window.dispatchEvent(new Event('safeviate-vehicles-updated'));
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleBookIn = (payload: { usageId: string; bookedInOdometer: number; returnNotes: string }) => {
-    const target = usageRecords.find((record) => record.id === payload.usageId);
-    if (!target) return;
-
-    setUsageRecords(
-      usageRecords.map((record) =>
-        record.id === payload.usageId
-          ? {
-              ...record,
-              status: 'Booked In',
-              bookedInAt: new Date().toISOString(),
-              bookedInByName: actorName,
-              bookedInOdometer: payload.bookedInOdometer,
-              returnNotes: payload.returnNotes,
-            }
-          : record
-      )
-    );
-
-    setVehicles(
-      vehicles.map((vehicle) =>
-        vehicle.id === target.vehicleId ? { ...vehicle, currentOdometer: payload.bookedInOdometer } : vehicle
-      )
-    );
+  const handleBookIn = async (payload: { usageId: string; bookedInOdometer: number; returnNotes: string }) => {
+    try {
+      const response = await fetch('/api/vehicle-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'book-in', ...payload, bookedInByName: actorName }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to book in vehicle.');
+      await loadData();
+      window.dispatchEvent(new Event('safeviate-vehicles-updated'));
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  if (!vehicles) {
+  if (isLoading) {
     return (
       <div className="max-w-[1400px] mx-auto w-full space-y-6 px-1">
         <Skeleton className="h-24 w-full" />
@@ -402,16 +343,7 @@ export default function VehicleUsagePage() {
         <MainPageHeader
           title="Vehicle Usage"
           description="Book company vehicles out and back in, with a live view of what is currently on the road."
-          actions={
-            canManageVehicleUsage ? (
-              <BookOutDialog
-                vehicles={vehicles}
-                activeVehicleIds={activeVehicleIds}
-                actorName={actorName}
-                onBookOut={handleBookOut}
-              />
-            ) : undefined
-          }
+          actions={canManageVehicleUsage ? <BookOutDialog vehicles={vehicles} activeVehicleIds={activeVehicleIds} actorName={actorName} onBookOut={handleBookOut} /> : undefined}
         />
         <CardContent className="flex-1 min-h-0 overflow-hidden p-0 bg-background">
           <div className="h-full overflow-y-auto px-4 py-4 md:px-6 md:py-6 space-y-6">
@@ -442,22 +374,14 @@ export default function VehicleUsagePage() {
                 const isBookedOut = Boolean(activeRecord);
 
                 return (
-                  <Card
-                    key={vehicle.id}
-                    className={cn(
-                      'shadow-none border transition-colors',
-                      isBookedOut ? 'border-border bg-muted/40' : 'border-border bg-muted/20'
-                    )}
-                  >
+                  <Card key={vehicle.id} className={cn('shadow-none border transition-colors', isBookedOut ? 'border-border bg-muted/40' : 'border-border bg-muted/20')}>
                     <CardHeader className="space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <CardTitle className="text-base">{vehicle.registrationNumber}</CardTitle>
                           <CardDescription className="text-foreground/80">{vehicle.make} {vehicle.model}</CardDescription>
                         </div>
-                        <Badge variant={isBookedOut ? 'secondary' : 'default'}>
-                          {isBookedOut ? 'Booked Out' : 'Available'}
-                        </Badge>
+                        <Badge variant={isBookedOut ? 'secondary' : 'default'}>{isBookedOut ? 'Booked Out' : 'Available'}</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
@@ -475,14 +399,10 @@ export default function VehicleUsagePage() {
                             <LogOut className="h-4 w-4 text-primary" />
                             Active usage
                           </div>
-                          <p className="text-foreground/80">
-                            Out by {activeRecord.bookedOutByName} on {format(new Date(activeRecord.bookedOutAt), 'dd MMM yyyy HH:mm')}
-                          </p>
+                          <p className="text-foreground/80">Out by {activeRecord.bookedOutByName} on {format(new Date(activeRecord.bookedOutAt), 'dd MMM yyyy HH:mm')}</p>
                           <p className="text-foreground/80">Purpose: {activeRecord.purpose || 'Not specified'}</p>
                           <p className="text-foreground/80">Destination: {activeRecord.destination || 'Not specified'}</p>
-                          {canManageVehicleUsage ? (
-                            <BookInDialog usageRecord={activeRecord} actorName={actorName} onBookIn={handleBookIn} />
-                          ) : null}
+                          {canManageVehicleUsage ? <BookInDialog usageRecord={activeRecord} actorName={actorName} onBookIn={handleBookIn} /> : null}
                         </div>
                       ) : (
                         <div className="rounded-lg border bg-background p-3 flex items-center gap-2 text-foreground">
@@ -522,9 +442,7 @@ export default function VehicleUsagePage() {
                       </TableHeader>
                       <TableBody>
                         {sortedUsageRecords.map((record) => {
-                          const distanceTravelled =
-                            record.bookedInOdometer != null ? record.bookedInOdometer - record.bookedOutOdometer : null;
-
+                          const distanceTravelled = record.bookedInOdometer != null ? record.bookedInOdometer - record.bookedOutOdometer : null;
                           return (
                             <TableRow key={record.id}>
                               <TableCell>
@@ -537,9 +455,7 @@ export default function VehicleUsagePage() {
                               </TableCell>
                               <TableCell>{record.purpose || 'Not specified'}</TableCell>
                               <TableCell>
-                                <Badge variant={record.status === 'Booked Out' ? 'secondary' : 'default'}>
-                                  {record.status}
-                                </Badge>
+                                <Badge variant={record.status === 'Booked Out' ? 'secondary' : 'default'}>{record.status}</Badge>
                               </TableCell>
                               <TableCell>
                                 {record.bookedInAt ? (
@@ -551,9 +467,7 @@ export default function VehicleUsagePage() {
                                   <span className="text-muted-foreground">Still out</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {distanceTravelled != null ? `${distanceTravelled.toFixed(0)} km` : '-'}
-                              </TableCell>
+                              <TableCell className="text-right font-mono">{distanceTravelled != null ? `${distanceTravelled.toFixed(0)} km` : '-'}</TableCell>
                             </TableRow>
                           );
                         })}

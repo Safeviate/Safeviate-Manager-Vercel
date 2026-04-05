@@ -7,6 +7,19 @@ const PERSONNEL_TYPES = new Set(['Personnel', 'External']);
 const INSTRUCTOR_TYPES = new Set(['Instructor']);
 const STUDENT_TYPES = new Set(['Student']);
 const PRIVATE_PILOT_TYPES = new Set(['Private Pilot']);
+const EMPTY_SUMMARY = {
+  bookings: [],
+  aircrafts: [],
+  personnel: [],
+  instructors: [],
+  students: [],
+  privatePilots: [],
+  mocs: [],
+  audits: [],
+  reports: [],
+  caps: [],
+  risks: [],
+};
 
 export async function GET() {
   try {
@@ -14,10 +27,7 @@ export async function GET() {
     const email = session?.user?.email?.trim().toLowerCase();
 
     if (!email) {
-      return NextResponse.json(
-        { bookings: [], aircrafts: [], personnel: [], instructors: [], students: [], privatePilots: [], mocs: [], audits: [], reports: [], caps: [], risks: [] },
-        { status: 200 }
-      );
+      return NextResponse.json(EMPTY_SUMMARY, { status: 200 });
     }
 
     await prisma.tenant.upsert({
@@ -93,9 +103,6 @@ export async function GET() {
     );
   } catch (error) {
     console.error('[dashboard-summary] fallback to empty payload:', error);
-    return NextResponse.json(
-      { bookings: [], aircrafts: [], personnel: [], instructors: [], students: [], privatePilots: [], mocs: [], audits: [], reports: [], caps: [], risks: [] },
-      { status: 200 }
-    );
+    return NextResponse.json(EMPTY_SUMMARY, { status: 200 });
   }
 }

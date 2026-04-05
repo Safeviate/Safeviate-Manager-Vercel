@@ -144,18 +144,7 @@ export default function SchedulePage() {
         if (!cancelled) {
           const scheduleBookings = schedulePayload.bookings ?? [];
           const apiAircraft = schedulePayload.aircraft ?? [];
-          let resolvedAircraft = apiAircraft;
-
-          if (apiAircraft.length === 0 && typeof window !== 'undefined') {
-            try {
-              const localAircraft = window.localStorage.getItem('safeviate.aircrafts');
-              resolvedAircraft = localAircraft ? JSON.parse(localAircraft) : [];
-            } catch {
-              resolvedAircraft = apiAircraft;
-            }
-          }
-
-          setAircraft(resolvedAircraft);
+          setAircraft(apiAircraft);
           setAllBookings(scheduleBookings);
 
           const today = format(selectedDate, 'yyyy-MM-dd');

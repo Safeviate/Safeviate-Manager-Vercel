@@ -25,18 +25,28 @@ export default function EditExamPage({ params }: EditExamPageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-        const storedTemplates = localStorage.getItem('safeviate.exam-templates');
-        if (storedTemplates) {
-            const arr = JSON.parse(storedTemplates);
-            const found = arr.find((e: any) => e.id === examId);
-            setExam(found || null);
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const response = await fetch('/api/exams', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        const templates = Array.isArray(payload?.templates) ? payload.templates : [];
+        const found = templates.find((e: any) => e.id === examId);
+        if (!cancelled) {
+          setExam(found || null);
         }
-    } catch (e) {
+      } catch (e) {
         console.error('Failed to load exam', e);
-    } finally {
-        setIsLoading(false);
-    }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [examId]);
 
   const handleUpdate = async (values: ExamFormValues) => {
@@ -44,12 +54,15 @@ export default function EditExamPage({ params }: EditExamPageProps) {
     setIsSubmitting(true);
 
     try {
-      const storedTemplates = localStorage.getItem('safeviate.exam-templates');
-      const templates = storedTemplates ? JSON.parse(storedTemplates) : [];
-      const nextTemplates = templates.map((e: any) => e.id === exam.id ? { ...e, ...values } : e);
-      
-      localStorage.setItem('safeviate.exam-templates', JSON.stringify(nextTemplates));
-      window.dispatchEvent(new Event('safeviate-exams-updated'));
+      const response = await fetch('/api/exams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template: { ...exam, ...values } }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update exam.');
+      }
       
       toast({ title: 'Exam Updated', description: `"${values.title}" has been updated.` });
       router.push('/training/exams');

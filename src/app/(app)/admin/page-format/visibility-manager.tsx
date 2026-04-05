@@ -46,18 +46,16 @@ export function VisibilityManager() {
     setEnabledHrefs(newEnabled);
   };
 
-  const handleSaveModules = () => {
+  const handleSaveModules = async () => {
     try {
-        const stored = localStorage.getItem('safeviate.tenant-config');
-        const currentTenant = stored ? JSON.parse(stored) : { id: 'safeviate', name: 'Safeviate' };
-        
-        const updatedTenant = { 
-            ...currentTenant, 
-            enabledMenus: Array.from(enabledHrefs) 
-        };
-        
-        localStorage.setItem('safeviate.tenant-config', JSON.stringify(updatedTenant));
-        window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+        const response = await fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: { enabledMenus: Array.from(enabledHrefs) } }),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to save module settings.');
+        }
         
         toast({ title: 'Module Access Updated', description: 'Sidebar navigation settings have been saved.' });
     } catch (e) {

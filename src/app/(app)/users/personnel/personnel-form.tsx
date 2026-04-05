@@ -98,16 +98,11 @@ export function PersonnelForm({
 
     try {
       if (existingPersonnel) {
-        const collectionName = existingPersonnel.userType === 'Instructor' ? 'instructors' : 
-                             existingPersonnel.userType === 'Student' ? 'students' : 
-                             existingPersonnel.userType === 'Private Pilot' ? 'private-pilots' : 'personnel';
-        
-        const key = `safeviate.${collectionName}`;
-        try {
-          const stored = localStorage.getItem(key);
-          if (stored) {
-            const arr = JSON.parse(stored) as any[];
-            const updatedProfile = {
+        const response = await fetch(`/api/personnel/${existingPersonnel.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            personnel: {
               ...existingPersonnel,
               userNumber: userNumber || null,
               firstName,
@@ -118,14 +113,11 @@ export function PersonnelForm({
               organizationId: organizationId === 'internal' ? null : organizationId,
               isErpIncerfaContact: !!isIncerfaContact,
               isErpAlerfaContact: !!isAlerfaContact,
-              updatedAt: new Date().toISOString(),
-            };
-            const nextArr = arr.map(u => u.id === existingPersonnel.id ? updatedProfile : u);
-            localStorage.setItem(key, JSON.stringify(nextArr));
-          }
-        } catch {
-          // ignore
-        }
+            },
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to update user.');
         toast({ title: 'User Updated' });
       } else {
         const response = await fetch('/api/admin/create-personnel', {

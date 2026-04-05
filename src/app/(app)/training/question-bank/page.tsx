@@ -56,27 +56,38 @@ export default function QuestionBankPage() {
   const [isLoadingTopics, setIsLoadingTopics] = useState(true);
 
   useEffect(() => {
-    const load = () => {
+    let cancelled = false;
+
+    const load = async () => {
         try {
-            const storedTopics = localStorage.getItem('safeviate.exam-topics');
-            if (storedTopics) setTopicsData(JSON.parse(storedTopics));
-            
-            const storedPool = localStorage.getItem('safeviate.question-pool');
-            if (storedPool) setPoolItems(JSON.parse(storedPool).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            const response = await fetch('/api/exams', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+
+            if (!cancelled) {
+                const topics = Array.isArray(payload?.topics) ? payload.topics : [];
+                const pool = Array.isArray(payload?.poolItems) ? payload.poolItems : [];
+                setTopicsData(topics.length ? { id: 'exam-topics', topics } : null);
+                setPoolItems(pool.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            }
         } catch (e) {
-            console.error('Local storage load failed', e);
+            console.error('Failed to load question bank', e);
         } finally {
-            setIsLoading(false);
-            setIsLoadingTopics(false);
+            if (!cancelled) {
+                setIsLoading(false);
+                setIsLoadingTopics(false);
+            }
         }
     };
-    load();
+    void load();
 
     const handleUpdate = () => {
-        load();
+        void load();
     };
     window.addEventListener('safeviate-question-bank-updated', handleUpdate);
-    return () => window.removeEventListener('safeviate-question-bank-updated', handleUpdate);
+    return () => {
+        cancelled = true;
+        window.removeEventListener('safeviate-question-bank-updated', handleUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -97,16 +108,18 @@ export default function QuestionBankPage() {
   const handleAiGenerated = async (questions: any[]) => {
     const targetTopic = selectedTopic;
     try {
-        const storedPool = localStorage.getItem('safeviate.question-pool');
-        const currentPool = storedPool ? JSON.parse(storedPool) : [];
         const newItems = questions.map(q => ({
             ...q,
             id: crypto.randomUUID(),
             topic: targetTopic,
             createdAt: new Date().toISOString()
         }));
-        const nextPool = [...newItems, ...currentPool];
-        localStorage.setItem('safeviate.question-pool', JSON.stringify(nextPool));
+        const nextPool = [...newItems, ...poolItems];
+        await fetch('/api/exams', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ poolItems: nextPool, topics: topicsData?.topics || [] }),
+        });
         setPoolItems(nextPool);
         
         window.dispatchEvent(new Event('safeviate-question-bank-updated'));
@@ -307,10 +320,12 @@ function DeleteQuestionButton({ item, tenantId, selectedTopic }: { item: Questio
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
-            const storedPool = localStorage.getItem('safeviate.question-pool');
-            const currentPool = storedPool ? JSON.parse(storedPool) : [];
-            const nextPool = currentPool.filter((p: any) => p.id !== item.id);
-            localStorage.setItem('safeviate.question-pool', JSON.stringify(nextPool));
+            const nextPool = poolItems.filter((p: any) => p.id !== item.id);
+            await fetch('/api/exams', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ poolItems: nextPool, topics: topicsData?.topics || [] }),
+            });
             
             window.dispatchEvent(new Event('safeviate-question-bank-updated'));
             toast({ title: 'Question Deleted', description: `Removed from ${selectedTopic} bank.` });
@@ -410,19 +425,20 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                 createdAt: editingItem?.createdAt || new Date().toISOString()
             };
 
-            const storedPool = localStorage.getItem('safeviate.question-pool');
-            const currentPool = storedPool ? JSON.parse(storedPool) : [];
-            
             let nextPool;
             if (editingItem) {
-                nextPool = currentPool.map((p: any) => p.id === editingItem.id ? data : p);
+                nextPool = poolItems.map((p: any) => p.id === editingItem.id ? data : p);
                 toast({ title: 'Question Updated' });
             } else {
-                nextPool = [data, ...currentPool];
+                nextPool = [data, ...poolItems];
                 toast({ title: 'Question Added' });
             }
             
-            localStorage.setItem('safeviate.question-pool', JSON.stringify(nextPool));
+            await fetch('/api/exams', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ poolItems: nextPool, topics: topicsData?.topics || [] }),
+            });
             window.dispatchEvent(new Event('safeviate-question-bank-updated'));
             onOpenChange(false);
         } catch (error: any) {

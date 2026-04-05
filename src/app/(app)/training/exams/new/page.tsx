@@ -16,17 +16,21 @@ export default function NewExamPage() {
     setIsSubmitting(true);
 
     try {
-      const storedTemplates = localStorage.getItem('safeviate.exam-templates');
-      const templates = storedTemplates ? JSON.parse(storedTemplates) : [];
       const data = {
         ...values,
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       };
 
-      const nextTemplates = [data, ...templates];
-      localStorage.setItem('safeviate.exam-templates', JSON.stringify(nextTemplates));
-      window.dispatchEvent(new Event('safeviate-exams-updated'));
+      const response = await fetch('/api/exams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template: data }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save exam template.');
+      }
       
       toast({ title: 'Exam Created', description: `"${values.title}" template is now available.` });
       router.push('/training/exams');

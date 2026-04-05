@@ -95,10 +95,15 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
 
   useEffect(() => {
       try {
-          const stored = localStorage.getItem('safeviate.document-expiry');
-          if (stored) {
-              setExpirySettings(JSON.parse(stored));
-          }
+          void fetch('/api/tenant-config', { cache: 'no-store' })
+            .then((response) => response.json())
+            .then((payload) => {
+              const config = payload?.config || {};
+              if (config['document-expiry']) {
+                setExpirySettings(config['document-expiry']);
+              }
+            })
+            .catch(() => {});
       } catch {
           // ignore
       }
@@ -110,27 +115,11 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   };
   
   const handleDocumentUpdate = (updatedDocuments: Document[]) => {
-    const collectionName = isPilotProfile(user) ? 
-        user.userType === 'Student' ? 'students' : 
-        user.userType === 'Instructor' ? 'instructors' : 'private-pilots' 
-        : 'personnel';
-        
-    const key = `safeviate.${collectionName}`;
-    try {
-        const stored = localStorage.getItem(key);
-        if (stored) {
-            const arr = JSON.parse(stored) as UserProfile[];
-            const nextArr = arr.map(u => {
-                if (u.id === user.id) {
-                    return { ...u, documents: updatedDocuments };
-                }
-                return u;
-            });
-            localStorage.setItem(key, JSON.stringify(nextArr));
-        }
-    } catch {
-        // ignore
-    }
+    void fetch(`/api/personnel/${user.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ personnel: { ...user, documents: updatedDocuments } }),
+    });
   };
 
   const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
@@ -233,22 +222,12 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
       newHidden = currentHidden.filter(h => !toShow.includes(h));
     }
     
-    const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
-    
-    const key = `safeviate.${collectionName}`;
     try {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        const arr = JSON.parse(stored) as UserProfile[];
-        const nextArr = arr.map(u => {
-            if (u.id === user.id) {
-                return { ...u, accessOverrides: { ...u.accessOverrides, hiddenMenus: newHidden } };
-            }
-            return u;
-        });
-        localStorage.setItem(key, JSON.stringify(nextArr));
-      }
-
+      await fetch(`/api/personnel/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personnel: { ...user, accessOverrides: { ...user.accessOverrides, hiddenMenus: newHidden } } }),
+      });
       setHiddenMenus(newHidden);
       window.dispatchEvent(new Event('safeviate-profile-updated'));
       toast({ title: hidden ? "Access Restricted" : "Access Restored" });
@@ -281,20 +260,12 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
         ? currentPermissions.filter(p => p !== `!${permissionId}`)
         : [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
 
-    const collectionName = isPilotProfile(user) ? (user.userType === 'Student' ? 'students' : user.userType === 'Instructor' ? 'instructors' : 'private-pilots') : 'personnel';
-    const key = `safeviate.${collectionName}`;
     try {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        const arr = JSON.parse(stored) as UserProfile[];
-        const nextArr = arr.map(u => {
-            if (u.id === user.id) {
-                return { ...u, permissions: newPermissions };
-            }
-            return u;
-        });
-        localStorage.setItem(key, JSON.stringify(nextArr));
-      }
+      await fetch(`/api/personnel/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personnel: { ...user, permissions: newPermissions } }),
+      });
       toast({ title: "Access Level Updated" });
     } catch {
       toast({

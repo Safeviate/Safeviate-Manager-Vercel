@@ -182,9 +182,6 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                 return;
             }
 
-            const storedItems = localStorage.getItem('safeviate.compliance-matrix');
-            const currentItems = storedItems ? JSON.parse(storedItems) : [];
-            
             const newItems = requirements.map(req => ({
                 ...req,
                 id: crypto.randomUUID(),
@@ -195,7 +192,11 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                 regulationStatement: req.regulationStatement?.trim() || normalizeRegulationCode(req.regulationCode),
             }));
 
-            localStorage.setItem('safeviate.compliance-matrix', JSON.stringify([...currentItems, ...newItems]));
+            await Promise.all(newItems.map((item) => fetch('/api/compliance-matrix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ item }),
+            })));
             window.dispatchEvent(new Event('safeviate-compliance-updated'));
 
             toast({
@@ -390,44 +391,26 @@ export default function CoherenceMatrixPage() {
   const [editingItem, setEditingItem] = useState<ComplianceRequirement | null>(null);
   const [formMode, setFormMode] = useState<'item' | 'header' | 'subheader'>('item');
 
-  const [complianceItems, setComplianceItems] = useState<ComplianceRequirement[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const stored = window.localStorage.getItem('safeviate.compliance-matrix');
-      return stored ? (JSON.parse(stored) as ComplianceRequirement[]) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [personnel, setPersonnel] = useState<Personnel[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const stored = window.localStorage.getItem('safeviate.personnel');
-      return stored ? (JSON.parse(stored) as Personnel[]) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [organizations, setOrganizations] = useState<ExternalOrganization[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const stored = window.localStorage.getItem('safeviate.external-organizations');
-      return stored ? (JSON.parse(stored) as ExternalOrganization[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [complianceItems, setComplianceItems] = useState<ComplianceRequirement[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     try {
-        const storedCompliance = localStorage.getItem('safeviate.compliance-matrix');
-        const storedPersonnel = localStorage.getItem('safeviate.personnel');
-        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
-
-        if (storedCompliance) setComplianceItems(JSON.parse(storedCompliance));
-        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
-        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+        const [matrixResponse, personnelResponse, orgResponse] = await Promise.all([
+          fetch('/api/compliance-matrix', { cache: 'no-store' }),
+          fetch('/api/personnel', { cache: 'no-store' }),
+          fetch('/api/external-organizations', { cache: 'no-store' }),
+        ]);
+        const [matrixPayload, personnelPayload, orgPayload] = await Promise.all([
+          matrixResponse.json().catch(() => ({ items: [] })),
+          personnelResponse.json().catch(() => ({ personnel: [] })),
+          orgResponse.json().catch(() => ({ organizations: [] })),
+        ]);
+        setComplianceItems(Array.isArray(matrixPayload.items) ? matrixPayload.items : []);
+        setPersonnel(Array.isArray(personnelPayload.personnel) ? personnelPayload.personnel : []);
+        setOrganizations(Array.isArray(orgPayload.organizations) ? orgPayload.organizations : []);
     } catch (e) {
         console.error("Failed to load matrix data", e);
     } finally {
@@ -436,7 +419,7 @@ export default function CoherenceMatrixPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-compliance-updated', loadData);
     window.addEventListener('safeviate-personnel-updated', loadData);
     window.addEventListener('safeviate-external-organizations-updated', loadData);
@@ -497,16 +480,16 @@ export default function CoherenceMatrixPage() {
 
   const handleDeleteItem = async (item: ComplianceRequirement) => {
     try {
-        const storedItems = localStorage.getItem('safeviate.compliance-matrix');
-        const items = storedItems ? JSON.parse(storedItems) as ComplianceRequirement[] : [];
+        const response = await fetch('/api/compliance-matrix', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ items: [] }));
+        const items = Array.isArray(payload.items) ? (payload.items as ComplianceRequirement[]) : [];
         
         const idsToDelete = new Set<string>([
           item.id,
           ...collectDescendantIds(item.regulationCode, items),
         ]);
 
-        const nextItems = items.filter(i => !idsToDelete.has(i.id));
-        localStorage.setItem('safeviate.compliance-matrix', JSON.stringify(nextItems));
+        await Promise.all(Array.from(idsToDelete).map((id) => fetch(`/api/compliance-matrix?id=${encodeURIComponent(id)}`, { method: 'DELETE' })));
         window.dispatchEvent(new Event('safeviate-compliance-updated'));
         toast({ title: "Success", description: "Compliance item has been deleted." });
     } catch (e: any) {
@@ -516,16 +499,16 @@ export default function CoherenceMatrixPage() {
   
   const handleDeleteSection = async (parentItem: ComplianceRequirement) => {
       try {
-          const storedItems = localStorage.getItem('safeviate.compliance-matrix');
-          const items = storedItems ? JSON.parse(storedItems) as ComplianceRequirement[] : [];
+          const response = await fetch('/api/compliance-matrix', { cache: 'no-store' });
+          const payload = await response.json().catch(() => ({ items: [] }));
+          const items = Array.isArray(payload.items) ? (payload.items as ComplianceRequirement[]) : [];
           
           const idsToDelete = new Set<string>([
               parentItem.id,
               ...collectDescendantIds(parentItem.regulationCode, items),
           ]);
           
-          const nextItems = items.filter(i => !idsToDelete.has(i.id));
-          localStorage.setItem('safeviate.compliance-matrix', JSON.stringify(nextItems));
+          await Promise.all(Array.from(idsToDelete).map((id) => fetch(`/api/compliance-matrix?id=${encodeURIComponent(id)}`, { method: 'DELETE' })));
           window.dispatchEvent(new Event('safeviate-compliance-updated'));
           toast({ title: "Section Deleted" });
       } catch (e: any) {

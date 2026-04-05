@@ -143,19 +143,15 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
             };
 
         try {
-            const storedItems = localStorage.getItem('safeviate.compliance-matrix');
-            const items = storedItems ? JSON.parse(storedItems) as ComplianceRequirement[] : [];
-            
-            if (existingItem) {
-                const nextItems = items.map(i => i.id === existingItem.id ? { ...i, ...dataToSave } : i);
-                localStorage.setItem('safeviate.compliance-matrix', JSON.stringify(nextItems));
-                toast({ title: "Success", description: "Compliance item updated." });
-            } else {
-                const newItem = { ...dataToSave, id: crypto.randomUUID() };
-                localStorage.setItem('safeviate.compliance-matrix', JSON.stringify([...items, newItem]));
-                toast({ title: "Success", description: "New compliance item added." });
-            }
-            
+            const response = await fetch('/api/compliance-matrix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    item: existingItem ? { ...existingItem, ...dataToSave } : { ...dataToSave, id: crypto.randomUUID() },
+                }),
+            });
+            if (!response.ok) throw new Error('Failed to save compliance item');
+            toast({ title: "Success", description: existingItem ? "Compliance item updated." : "New compliance item added." });
             window.dispatchEvent(new Event('safeviate-compliance-updated'));
             onFormSubmit();
         } catch (e: any) {

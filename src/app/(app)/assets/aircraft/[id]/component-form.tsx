@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { AircraftComponent } from '@/types/aircraft';
 
 const componentSchema = z.object({
   name: z.string().min(1, "Component name is required"),
@@ -71,25 +71,18 @@ export function ComponentForm({ aircraftId, isOpen, setIsOpen, existingComponent
 
   const onSubmit = async (values: FormValues) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        
         const nextComponent: AircraftComponent = {
           ...values,
           id: existingComponent?.id || uuidv4(),
         };
 
-        const nextAircrafts = aircrafts.map(a => {
-            if (a.id === aircraftId) {
-                const currentComponents = a.components || [];
-                const otherComponents = currentComponents.filter(c => c.id !== nextComponent.id);
-                return { ...a, components: [...otherComponents, nextComponent] };
-            }
-            return a;
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { components: [nextComponent] } }),
         });
-
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save component.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
         toast({ 
@@ -103,7 +96,7 @@ export function ComponentForm({ aircraftId, isOpen, setIsOpen, existingComponent
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'Unable to commit the component update to local storage.',
+        description: 'Unable to commit the component update.',
       });
     }
   };

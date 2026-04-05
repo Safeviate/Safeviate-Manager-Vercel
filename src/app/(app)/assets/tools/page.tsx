@@ -18,17 +18,16 @@ export default function ToolsPage() {
 
   const canManageAssets = hasPermission('assets-create') || hasPermission('assets-edit');
 
-  const loadTools = useCallback(() => {
+  const loadTools = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem('safeviate.assets-tools');
-        if (stored) {
-            setTools(JSON.parse(stored));
-        }
+      const res = await fetch('/api/tools', { cache: 'no-store' });
+      const data = await res.json();
+      setTools(Array.isArray(data.tools) ? data.tools : []);
     } catch (e) {
-        console.error("Failed to load tools", e);
+      console.error('Failed to load tools', e);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 

@@ -8,25 +8,22 @@ import { Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
-    // 1. Authenticate the administrator
     const authResult = await authenticateAiRequest();
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    // Simple permission check
     if (!authResult.effectivePermissions.has('users-create') && authResult.userProfile.role?.toLowerCase() !== 'developer') {
       return NextResponse.json({ error: 'Unauthorized to create users.' }, { status: 403 });
     }
 
     const body = await request.json();
-    const { 
-      tenantId, email, firstName, lastName, 
-      userType, role, department, userNumber, 
-      organizationId, isErpIncerfaContact, isErpAlerfaContact 
+    const {
+      tenantId, email, firstName, lastName,
+      userType, role, department, userNumber,
+      organizationId, isErpIncerfaContact, isErpAlerfaContact
     } = body;
 
-    // Password is now optional (we generate a secure random one if not provided)
     const password = body.password || Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
 
     if (!tenantId || !email || !firstName || !lastName || !role) {
@@ -76,10 +73,13 @@ export async function POST(request: Request) {
         lastName,
         email,
         department: department || null,
+        organizationId: organizationId || null,
         role,
         permissions: [],
         accessOverrides: Prisma.JsonNull,
         userType: userType || 'Personnel',
+        isErpIncerfaContact: !!isErpIncerfaContact,
+        isErpAlerfaContact: !!isErpAlerfaContact,
         updatedAt: new Date(),
       },
       create: {
@@ -90,10 +90,13 @@ export async function POST(request: Request) {
         lastName,
         email,
         department: department || null,
+        organizationId: organizationId || null,
         role,
         permissions: [],
         accessOverrides: Prisma.JsonNull,
         userType: userType || 'Personnel',
+        isErpIncerfaContact: !!isErpIncerfaContact,
+        isErpAlerfaContact: !!isErpAlerfaContact,
       },
     });
 
@@ -101,7 +104,7 @@ export async function POST(request: Request) {
     const setupLink = `${baseUrl}/login`;
 
     const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink, tempPassword });
-    
+
     if (!emailResult.success) {
       return NextResponse.json(
         {

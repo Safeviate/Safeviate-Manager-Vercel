@@ -233,21 +233,27 @@ export default function LogbookParserPage() {
   const [savedTemplates, setSavedTemplates] = useState<LogbookTemplate[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
 
-  // Load Templates from LocalStorage
   useEffect(() => {
-    const loadTemplates = () => {
+    let cancelled = false;
+
+    const loadTemplates = async () => {
         try {
-            const stored = localStorage.getItem('safeviate.logbook-templates');
-            if (stored) {
-                setSavedTemplates(JSON.parse(stored));
+            const response = await fetch('/api/logbook-templates', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (!cancelled && Array.isArray(payload?.templates)) {
+                setSavedTemplates(payload.templates);
             }
         } catch (e) {
             console.error('Failed to load logbook templates', e);
         } finally {
-            setIsLoadingTemplates(false);
+            if (!cancelled) setIsLoadingTemplates(false);
         }
     };
-    loadTemplates();
+
+    void loadTemplates();
+    return () => {
+        cancelled = true;
+    };
   }, []);
 
   const handlePaste = useCallback((event: React.ClipboardEvent) => {
@@ -311,9 +317,16 @@ export default function LogbookParserPage() {
     };
 
     const nextTemplates = [newTemplate, ...savedTemplates];
-    localStorage.setItem('safeviate.logbook-templates', JSON.stringify(nextTemplates));
+
+    fetch('/api/logbook-templates', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ templates: nextTemplates }),
+    }).catch((error) => {
+      console.error('Failed to save logbook template', error);
+    });
+
     setSavedTemplates(nextTemplates);
-    
     toast({ title: 'Logic Persistent', description: `Grid schema "${templateName}" saved to local registry.`});
     setTemplateName('');
   };
@@ -325,7 +338,15 @@ export default function LogbookParserPage() {
   
   const handleDeleteTemplate = (templateId: string) => {
     const nextTemplates = savedTemplates.filter(t => t.id !== templateId);
-    localStorage.setItem('safeviate.logbook-templates', JSON.stringify(nextTemplates));
+
+    fetch('/api/logbook-templates', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ templates: nextTemplates }),
+    }).catch((error) => {
+      console.error('Failed to delete logbook template', error);
+    });
+
     setSavedTemplates(nextTemplates);
     toast({ title: 'Registry Purged' });
   }

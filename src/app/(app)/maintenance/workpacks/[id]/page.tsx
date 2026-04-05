@@ -18,30 +18,26 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
   const resolvedParams = use(params);
   const router = useRouter();
   const { tenantId } = useUserProfile();
-  
+
   const [workpack, setWorkpack] = useState<Workpack | null>(null);
   const [allTaskCards, setAllTaskCards] = useState<TaskCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const storedWps = localStorage.getItem('safeviate.maintenance-workpacks');
-        const storedTcs = localStorage.getItem('safeviate.maintenance-task-cards');
-        
-        if (storedWps) {
-            const wps = JSON.parse(storedWps) as Workpack[];
-            const found = wps.find(wp => wp.id === resolvedParams.id);
-            if (found) setWorkpack(found);
-        }
-        
-        if (storedTcs) {
-            setAllTaskCards(JSON.parse(storedTcs));
-        }
+      const [workpackRes, taskCardRes] = await Promise.all([
+        fetch(`/api/maintenance/workpacks/${resolvedParams.id}`, { cache: 'no-store' }),
+        fetch(`/api/maintenance/task-cards?workpackId=${resolvedParams.id}`, { cache: 'no-store' }),
+      ]);
+      const workpackData = await workpackRes.json();
+      const taskCardData = await taskCardRes.json();
+      setWorkpack(workpackData.workpack ?? null);
+      setAllTaskCards(Array.isArray(taskCardData.taskCards) ? taskCardData.taskCards : []);
     } catch (e) {
-        console.error("Failed to load workpack data", e);
+      console.error('Failed to load workpack data', e);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, [resolvedParams.id]);
 
@@ -50,27 +46,28 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
     window.addEventListener('safeviate-maintenance-workpacks-updated', loadData);
     window.addEventListener('safeviate-maintenance-task-cards-updated', loadData);
     return () => {
-        window.removeEventListener('safeviate-maintenance-workpacks-updated', loadData);
-        window.removeEventListener('safeviate-maintenance-task-cards-updated', loadData);
-    }
+      window.removeEventListener('safeviate-maintenance-workpacks-updated', loadData);
+      window.removeEventListener('safeviate-maintenance-task-cards-updated', loadData);
+    };
   }, [loadData]);
 
-  const taskCards = useMemo(() => {
-      return allTaskCards.filter(tc => tc.workpackId === resolvedParams.id);
-  }, [allTaskCards, resolvedParams.id]);
+  const taskCards = useMemo(() => allTaskCards.filter((tc) => tc.workpackId === resolvedParams.id), [allTaskCards, resolvedParams.id]);
 
-  const handleCloseWorkpack = () => {
-      if (!workpack) return;
-      try {
-          const storedWps = localStorage.getItem('safeviate.maintenance-workpacks');
-          const wps = storedWps ? JSON.parse(storedWps) as Workpack[] : [];
-          const nextWps = wps.map(wp => wp.id === workpack.id ? { ...wp, status: 'CLOSED', closedAt: new Date().toISOString() } : wp);
-          localStorage.setItem('safeviate.maintenance-workpacks', JSON.stringify(nextWps));
-          window.dispatchEvent(new Event('safeviate-maintenance-workpacks-updated'));
-      } catch (e) {
-          console.error("Failed to close workpack", e);
-      }
-  }
+  const handleCloseWorkpack = async () => {
+    if (!workpack) return;
+    try {
+      const nextWorkpack = { ...workpack, status: 'CLOSED' as const, closedAt: new Date().toISOString() };
+      const res = await fetch(`/api/maintenance/workpacks/${workpack.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workpack: nextWorkpack }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Failed to close workpack');
+      window.dispatchEvent(new Event('safeviate-maintenance-workpacks-updated'));
+    } catch (e) {
+      console.error('Failed to close workpack', e);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -87,8 +84,6 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full p-4 overflow-hidden">
-      
-      {/* Header Sticky Card */}
       <Card className="shrink-0 bg-background shadow-md border-b-4 border-b-primary sticky top-0 z-10">
         <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-start gap-4">
@@ -101,9 +96,7 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
               </p>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight">{workpack.title}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-1">
-                <Badge className="bg-slate-100 text-slate-800 text-[9px] uppercase font-bold border-slate-200">
-                  A/C: {workpack.aircraftId}
-                </Badge>
+                <Badge className="bg-slate-100 text-slate-800 text-[9px] uppercase font-bold border-slate-200">A/C: {workpack.aircraftId}</Badge>
                 <div className="flex items-center text-[10px] text-muted-foreground font-mono">
                   <Clock className="w-3 h-3 mr-1" />
                   {workpack.openedAt ? format(new Date(workpack.openedAt), 'dd MMM yyyy HH:mm') : '-'}
@@ -112,9 +105,7 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
           {workpack.status === 'CLOSED' ? (
-             <Badge className="h-10 px-6 bg-emerald-600 hover:bg-emerald-600 font-black tracking-widest text-sm uppercase">
-               Released to Service
-             </Badge>
+            <Badge className="h-10 px-6 bg-emerald-600 hover:bg-emerald-600 font-black tracking-widest text-sm uppercase">Released to Service</Badge>
           ) : (
             <div className="flex gap-2">
               <TaskCardDialog workpackId={workpack.id} tenantId={tenantId || ''} />
@@ -123,30 +114,22 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
         </CardContent>
       </Card>
 
-      {/* CRS Banner */}
-      {workpack.status !== 'CLOSED' && taskCards && taskCards.length > 0 && taskCards.every(tc => tc.isCompleted && (!tc.requiresInspector || tc.isInspected)) && (
+      {workpack.status !== 'CLOSED' && taskCards && taskCards.length > 0 && taskCards.every((tc) => tc.isCompleted && (!tc.requiresInspector || tc.isInspected)) && (
         <Card className="shrink-0 bg-primary/10 border-primary/30 shadow-sm">
-           <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <h3 className="font-black text-foreground uppercase">Ready for Certificate of Release to Service (CRS)</h3>
-                <p className="text-sm text-muted-foreground">All task cards are certified. This workpack is ready for final release.</p>
-              </div>
-              <Button 
-                className="font-black uppercase shadow-md"
-                onClick={handleCloseWorkpack}
-              >
-                 Issue CRS & Lock Package
-              </Button>
-           </CardContent>
+          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="font-black text-foreground uppercase">Ready for Certificate of Release to Service (CRS)</h3>
+              <p className="text-sm text-muted-foreground">All task cards are certified. This workpack is ready for final release.</p>
+            </div>
+            <Button className="font-black uppercase shadow-md" onClick={handleCloseWorkpack}>Issue CRS & Lock Package</Button>
+          </CardContent>
         </Card>
       )}
 
       <ScrollArea className="flex-1 -mx-4 px-4 h-full pb-24">
         {taskCards && taskCards.length > 0 ? (
           <div className="space-y-4">
-            {taskCards.map(tc => (
-              <TaskCardItem key={tc.id} taskCard={tc} workpackId={workpack.id} />
-            ))}
+            {taskCards.map((tc) => <TaskCardItem key={tc.id} taskCard={tc} workpackId={workpack.id} />)}
           </div>
         ) : (
           <Card className="border-dashed bg-transparent shadow-none">

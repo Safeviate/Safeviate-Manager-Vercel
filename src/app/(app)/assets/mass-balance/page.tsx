@@ -63,29 +63,34 @@ function WBCalculatorContent() {
 
   const loadData = useCallback(() => {
     setIsLoading(true);
-    try {
-        if (aircraftId) {
-            const storedAircrafts = localStorage.getItem('safeviate.aircrafts');
-            if (storedAircrafts) {
-                const aircrafts = JSON.parse(storedAircrafts) as Aircraft[];
-                const ac = aircrafts.find(a => a.id === aircraftId);
-                setAircraft(ac || null);
-            }
+    Promise.all([
+      aircraftId ? fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' }) : Promise.resolve(null),
+      bookingId ? fetch(`/api/bookings`, { cache: 'no-store' }) : Promise.resolve(null),
+    ])
+      .then(async ([aircraftResponse, bookingsResponse]) => {
+        if (aircraftResponse) {
+          const payload = await aircraftResponse.json().catch(() => ({ aircraft: null }));
+          setAircraft((payload.aircraft as Aircraft | null) || null);
+        } else {
+          setAircraft(null);
         }
-        
-        if (bookingId) {
-            const storedBookings = localStorage.getItem('safeviate.bookings');
-            if (storedBookings) {
-                const bookings = JSON.parse(storedBookings) as Booking[];
-                const b = bookings.find(item => item.id === bookingId);
-                setBooking(b || null);
-            }
+
+        if (bookingsResponse) {
+          const payload = await bookingsResponse.json().catch(() => ({ bookings: [] }));
+          const b = (payload.bookings as Booking[]).find(item => item.id === bookingId);
+          setBooking(b || null);
+        } else {
+          setBooking(null);
         }
-    } catch (e) {
+      })
+      .catch((e) => {
         console.error("Failed to load M&B data", e);
-    } finally {
+        setAircraft(null);
+        setBooking(null);
+      })
+      .finally(() => {
         setIsLoading(false);
-    }
+      });
   }, [aircraftId, bookingId]);
 
   useEffect(() => {
@@ -166,24 +171,29 @@ function WBCalculatorContent() {
 
   const handleSaveToBooking = () => {
     if (!booking) return;
-    try {
-        const stored = localStorage.getItem('safeviate.bookings');
-        const bookings = stored ? JSON.parse(stored) as Booking[] : [];
-        const nextBookings = bookings.map(b => b.id === booking.id ? {
-            ...b,
-            massAndBalance: {
-                takeoffWeight: results.weight,
-                takeoffCg: results.cg,
-                isWithinLimits: results.isSafe,
-            }
-        } : b);
-        
-        localStorage.setItem('safeviate.bookings', JSON.stringify(nextBookings));
+    fetch('/api/bookings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        booking: {
+          ...booking,
+          massAndBalance: {
+            takeoffWeight: results.weight,
+            takeoffCg: results.cg,
+            isWithinLimits: results.isSafe,
+          },
+        },
+      }),
+    })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to record M&B data to the booking.');
         window.dispatchEvent(new Event('safeviate-bookings-updated'));
         toast({ title: "M&B Saved to Booking", description: `Takeoff: ${results.weight} lbs @ ${results.cg} in` });
-    } catch (e) {
+      })
+      .catch(() => {
         toast({ variant: 'destructive', title: 'Save Failed', description: 'Failed to record M&B data to the booking.' });
-    }
+      });
   };
 
   if (isLoading) return (

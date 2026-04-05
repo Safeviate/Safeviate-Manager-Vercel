@@ -51,12 +51,13 @@ export function EditHoursDialog({ aircraft }: EditHoursDialogProps) {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        
-        const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, ...values } : a);
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, ...values } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to update aircraft hours.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
         toast({

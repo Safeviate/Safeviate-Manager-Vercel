@@ -34,17 +34,24 @@ export function DatabaseForm() {
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(allHrefs);
 
   useEffect(() => {
-    const stored = localStorage.getItem('safeviate.tenant-config');
-    if (stored) {
-        try {
-            const config = JSON.parse(stored);
-            if (config.enabledMenus) {
-                setEnabledHrefs(new Set(config.enabledMenus));
-            }
-        } catch (e) {
-            console.error("Failed to parse tenant config", e);
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        const config = payload?.config && typeof payload.config === 'object' ? payload.config : {};
+        if (!cancelled && Array.isArray((config as any).enabledMenus)) {
+          setEnabledHrefs(new Set((config as any).enabledMenus));
         }
-    }
+      } catch (e) {
+        console.error("Failed to parse tenant config", e);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const toggleMenu = (href: string, subHrefs?: string[]) => {
@@ -74,21 +81,20 @@ export function DatabaseForm() {
     setEnabledHrefs(newEnabled);
   };
 
-  const handleCreateTenant = () => {
+  const handleCreateTenant = async () => {
     try {
-      const tenantId = 'safeviate';
-      const config = {
-        id: tenantId,
-        name: 'Safeviate',
-        enabledMenus: Array.from(enabledHrefs),
-      };
-
-      localStorage.setItem('safeviate.tenant-config', JSON.stringify(config));
-      window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+      const response = await fetch('/api/tenant-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: { enabledMenus: Array.from(enabledHrefs) } }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save configuration.');
+      }
 
       toast({
         title: 'Setup Updated',
-        description: 'Organization branding and menu configurations have been saved locally.',
+        description: 'Organization branding and menu configurations have been saved.',
       });
     } catch (e: any) {
       console.error(e);

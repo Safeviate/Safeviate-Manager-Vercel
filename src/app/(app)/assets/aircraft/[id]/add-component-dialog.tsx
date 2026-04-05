@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Box, PenTool, Hash, Timer } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { AircraftComponent } from '@/types/aircraft';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Component name is required.'),
@@ -38,12 +38,8 @@ export function AddComponentDialog({ aircraftId }: { tenantId: string, aircraftI
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        
         const newComp: AircraftComponent = { 
             ...values, 
             id: uuidv4(), 
@@ -54,17 +50,16 @@ export function AddComponentDialog({ aircraftId }: { tenantId: string, aircraftI
             notes: '',
         };
 
-        const nextAircrafts = aircrafts.map(a => {
-            if (a.id === aircraftId) {
-                return { ...a, components: [...(a.components || []), newComp] };
-            }
-            return a;
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { components: [newComp] } }),
         });
-
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save component.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         
-        toast({ title: 'Component Registered', description: `${values.name} is now being tracked in the local vault.` });
+        toast({ title: 'Component Registered', description: `${values.name} is now being tracked in the fleet record.` });
         setIsOpen(false);
         form.reset();
     } catch (e) {

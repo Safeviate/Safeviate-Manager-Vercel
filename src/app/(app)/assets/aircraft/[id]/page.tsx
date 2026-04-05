@@ -70,27 +70,17 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const [inspectionSettings, setInspectionSettings] = useState<AircraftInspectionWarningSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const storedAircrafts = localStorage.getItem('safeviate.aircrafts');
-        if (storedAircrafts) {
-            const aircrafts = JSON.parse(storedAircrafts) as Aircraft[];
-            const ac = aircrafts.find(a => a.id === aircraftId);
-            setAircraft(ac || null);
-        }
+        const response = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ aircraft: null }));
+        setAircraft((payload.aircraft as Aircraft | null) || null);
+        setLogs(((payload.aircraft as Aircraft | null)?.maintenanceLogs as MaintenanceLog[] | undefined || []).slice().sort((a, b) => b.date.localeCompare(a.date)));
 
-        const storedLogs = localStorage.getItem(`safeviate.maintenance-logs:${aircraftId}`);
-        if (storedLogs) {
-            setLogs(JSON.parse(storedLogs));
-        } else {
-            setLogs([]);
-        }
-
-        const storedInsp = localStorage.getItem('safeviate.inspection-warning-settings');
-        if (storedInsp) {
-            setInspectionSettings(JSON.parse(storedInsp));
-        }
+        const configResponse = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const configPayload = await configResponse.json().catch(() => ({ config: null }));
+        setInspectionSettings((configPayload?.config?.['inspection-warning-settings'] as AircraftInspectionWarningSettings | undefined) || null);
     } catch (e) {
         console.error("Failed to load aircraft details", e);
     } finally {
@@ -100,7 +90,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
   useEffect(() => {
     loadData();
-    const events = ['safeviate-aircrafts-updated', `safeviate-maintenance-logs-updated:${aircraftId}`, 'safeviate-inspection-warning-settings-updated'];
+    const events = ['safeviate-aircrafts-updated', 'safeviate-inspection-warning-settings-updated', 'safeviate-tenant-config-updated'];
     events.forEach(e => window.addEventListener(e, loadData));
     return () => events.forEach(e => window.removeEventListener(e, loadData));
   }, [loadData, aircraftId]);
@@ -406,20 +396,24 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('safeviate.document-expiry-settings');
-    if (stored) setExpirySettings(JSON.parse(stored));
+  void fetch('/api/tenant-config', { cache: 'no-store' })
+    .then((response) => response.json().catch(() => ({})))
+    .then((payload) => {
+      const settings = payload?.config?.['document-expiry-settings'] as DocumentExpirySettings | undefined;
+      if (settings) setExpirySettings(settings);
+    })
+    .catch(() => undefined);
   }, []);
 
-  const handleDocUpload = (newDoc: any) => {
+  const handleDocUpload = async (newDoc: any) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
-        const nextAircrafts = aircrafts.map(ac => ac.id === aircraft.id ? {
-            ...ac,
-            documents: [...(ac.documents || []), newDoc]
-        } : ac);
-        
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, documents: [...(aircraft.documents || []), newDoc] } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to update aircraft documents.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         toast({ title: 'Document Added', description: `"${newDoc.name}" has been uploaded.` });
     } catch (e) {
@@ -427,16 +421,15 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
     }
   };
 
-  const handleDeleteDoc = (docName: string) => {
+  const handleDeleteDoc = async (docName: string) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
-        const nextAircrafts = aircrafts.map(ac => ac.id === aircraft.id ? {
-            ...ac,
-            documents: (ac.documents || []).filter(d => d.name !== docName)
-        } : ac);
-        
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, documents: (aircraft.documents || []).filter(d => d.name !== docName) } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to remove document.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         toast({ title: 'Document Removed' });
     } catch (e) {
@@ -561,13 +554,15 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
     }
   });
 
-  const onSubmit = (values: any) => {
+  const onSubmit = async (values: any) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
-        const nextAircrafts = aircrafts.map(ac => ac.id === aircraft.id ? { ...ac, ...values } : ac);
-        
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, ...values } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save aircraft configuration.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         
         toast({ title: 'Asset Updated', description: `Configuration for ${aircraft.tailNumber} has been synchronized.` });
@@ -658,20 +653,27 @@ function AddMaintenanceLogDialog({ aircraftId, tenantId }: { aircraftId: string;
     }
   });
 
-  const onSubmit = (values: any) => {
+  const onSubmit = async (values: any) => {
     try {
-        const storedLogs = localStorage.getItem(`safeviate.maintenance-logs:${aircraftId}`);
-        const logs = storedLogs ? JSON.parse(storedLogs) as MaintenanceLog[] : [];
-        
+        const currentResponse = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+        const currentPayload = await currentResponse.json().catch(() => ({ aircraft: null }));
+        const logs = ((currentPayload.aircraft?.maintenanceLogs as MaintenanceLog[]) || []).slice();
+
         const newLog: MaintenanceLog = {
             ...values,
             id: crypto.randomUUID(),
-            timestamp: new Date().toISOString(),
+            aircraftId,
         };
 
         const nextLogs = [newLog, ...logs];
-        localStorage.setItem(`safeviate.maintenance-logs:${aircraftId}`, JSON.stringify(nextLogs));
-        window.dispatchEvent(new Event(`safeviate-maintenance-logs-updated:${aircraftId}`));
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...currentPayload.aircraft, maintenanceLogs: nextLogs } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save maintenance log.');
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
         toast({ title: 'Log Registered', description: 'Maintenance event has been documented in the permanent record.' });
         setIsOpen(false);
@@ -739,19 +741,19 @@ function AddComponentDialog({ aircraftId, tenantId }: { aircraftId: string; tena
     }
   });
 
-  const onSubmit = (values: any) => {
+  const onSubmit = async (values: any) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
-        
+        const currentResponse = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+        const currentPayload = await currentResponse.json().catch(() => ({ aircraft: null }));
+        const currentAircraft = currentPayload.aircraft as Aircraft | null;
         const newComponent = { ...values, id: crypto.randomUUID(), installDate: new Date().toISOString() };
-        
-        const nextAircrafts = aircrafts.map(ac => ac.id === aircraftId ? {
-            ...ac,
-            components: [...(ac.components || []), newComponent]
-        } : ac);
-        
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...currentAircraft, components: [...(currentAircraft?.components || []), newComponent] } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to add component.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         
         toast({ title: 'Component Tracked', description: `Lifecycle monitoring enabled for ${values.name}.` });

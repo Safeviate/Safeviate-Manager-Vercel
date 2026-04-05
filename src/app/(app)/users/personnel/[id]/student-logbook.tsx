@@ -20,27 +20,28 @@ export function StudentLogbook({ studentId, tenantId }: StudentLogbookProps) {
     const [isLoadingAircrafts, setIsLoadingAircrafts] = useState(true);
 
     useEffect(() => {
-        try {
-            const bks = localStorage.getItem('safeviate.bookings');
-            if (bks) {
-                setRawBookings((JSON.parse(bks) as Booking[]).filter(b => b.studentId === studentId && b.status === 'Completed'));
-            }
-        } catch {
-            // ignore
-        } finally {
+        void (async () => {
+          try {
+            const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({ bookings: [] }));
+            const completed = Array.isArray(payload.bookings) ? (payload.bookings as Booking[]) : [];
+            setRawBookings(completed.filter(b => b.studentId === studentId && b.status === 'Completed'));
+          } finally {
             setIsLoadingBookings(false);
-        }
+          }
+        })();
     }, [tenantId, studentId]);
 
     useEffect(() => {
-        try {
-            const acs = localStorage.getItem('safeviate.aircrafts');
-            if (acs) setAircrafts(JSON.parse(acs) as Aircraft[]);
-        } catch {
-            // ignore
-        } finally {
+        void (async () => {
+          try {
+            const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({ aircrafts: [] }));
+            setAircrafts(Array.isArray(payload.aircrafts) ? payload.aircrafts : []);
+          } finally {
             setIsLoadingAircrafts(false);
-        }
+          }
+        })();
     }, [tenantId]);
 
     const aircraftMap = useMemo(() => {

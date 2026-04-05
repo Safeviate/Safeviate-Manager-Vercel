@@ -91,23 +91,32 @@ const PublishDialog = ({ template }: { template: TableTemplate }) => {
         { id: 'custom-report', name: 'Ad-hoc Maintenance Report' }
     ];
 
-    const handlePublish = () => {
+    const handlePublish = async () => {
         if (!selectedPage) {
             toast({ variant: 'destructive', title: 'Invalid Operation', description: 'Destination vector must be selected.' });
             return;
         }
 
         try {
-            const stored = localStorage.getItem('safeviate.published-tables');
-            const published = stored ? JSON.parse(stored) : {};
-            
-            published[selectedPage] = {
+            const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            const config = payload?.config && typeof payload.config === 'object' ? payload.config : {};
+            const published = (config as any)['published-tables'] || {};
+
+            const nextPublished = {
+                ...published,
+                [selectedPage]: {
                 pageId: selectedPage,
                 tableData: template.tableData,
                 publishedAt: new Date().toISOString()
+                }
             };
 
-            localStorage.setItem('safeviate.published-tables', JSON.stringify(published));
+            await fetch('/api/tenant-config', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ config: { ...config, 'published-tables': nextPublished } }),
+            });
             window.dispatchEvent(new Event('safeviate-tables-published'));
 
             toast({
@@ -178,20 +187,36 @@ export default function TableBuilderPage() {
 
   // Load from LocalStorage
   useEffect(() => {
-    const loadData = () => {
+    let cancelled = false;
+
+    const loadData = async () => {
         try {
-            const tableStore = localStorage.getItem('safeviate.table-templates');
-            const logbookStore = localStorage.getItem('safeviate.logbook-templates');
-            
-            if (tableStore) setSavedTemplates(JSON.parse(tableStore));
-            if (logbookStore) setSavedLogbookTemplates(JSON.parse(logbookStore));
+            const [tableStore, logbookStore] = await Promise.all([
+                fetch('/api/tenant-config', { cache: 'no-store' }),
+                fetch('/api/logbook-templates', { cache: 'no-store' }),
+            ]);
+            const [tablePayload, logbookPayload] = await Promise.all([
+                tableStore.json().catch(() => ({})),
+                logbookStore.json().catch(() => ({})),
+            ]);
+
+            const config = tablePayload?.config && typeof tablePayload.config === 'object' ? tablePayload.config : {};
+            if (!cancelled && Array.isArray((config as any)['table-templates'])) {
+                setSavedTemplates((config as any)['table-templates']);
+            }
+            if (!cancelled && Array.isArray(logbookPayload?.templates)) {
+                setSavedLogbookTemplates(logbookPayload.templates);
+            }
         } catch (e) {
             console.error('Failed to load builder data', e);
         } finally {
-            setIsLoading(false);
+            if (!cancelled) setIsLoading(false);
         }
     };
-    loadData();
+    void loadData();
+    return () => {
+        cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -485,7 +510,15 @@ export default function TableBuilderPage() {
     };
 
     const nextTemplates = [newTemplate, ...savedTemplates];
-    localStorage.setItem('safeviate.table-templates', JSON.stringify(nextTemplates));
+
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'table-templates': nextTemplates, 'logbook-templates': savedLogbookTemplates } }),
+    }).catch((error) => {
+      console.error('Failed to save table template', error);
+    });
+
     setSavedTemplates(nextTemplates);
     
     toast({ title: 'Logic Persistent', description: `Schematic "${templateName}" registered.` });
@@ -500,7 +533,15 @@ export default function TableBuilderPage() {
 
   const handleDeleteTemplate = (templateId: string) => {
     const nextTemplates = savedTemplates.filter(t => t.id !== templateId);
-    localStorage.setItem('safeviate.table-templates', JSON.stringify(nextTemplates));
+
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'table-templates': nextTemplates, 'logbook-templates': savedLogbookTemplates } }),
+    }).catch((error) => {
+      console.error('Failed to delete table template', error);
+    });
+
     setSavedTemplates(nextTemplates);
     toast({ title: 'Schematic Purged' });
   };

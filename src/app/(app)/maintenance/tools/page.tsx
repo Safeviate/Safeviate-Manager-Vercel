@@ -20,22 +20,22 @@ export default function ToolsPage() {
 
   const loadTools = useCallback(() => {
     setIsLoading(true);
-    try {
-        const stored = localStorage.getItem('safeviate.maintenance-tools');
-        if (stored) {
-            setTools(JSON.parse(stored));
-        }
-    } catch (e) {
-        console.error("Failed to load tools", e);
-    } finally {
-        setIsLoading(false);
-    }
+    fetch('/api/tools', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = response.ok ? await response.json().catch(() => ({ tools: [] })) : { tools: [] };
+        setTools((payload.tools || []) as Tool[]);
+      })
+      .catch((e) => {
+        console.error('Failed to load tools', e);
+        setTools([]);
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
     loadTools();
-    window.addEventListener('safeviate-maintenance-tools-updated', loadTools);
-    return () => window.removeEventListener('safeviate-maintenance-tools-updated', loadTools);
+    window.addEventListener('safeviate-tools-updated', loadTools);
+    return () => window.removeEventListener('safeviate-tools-updated', loadTools);
   }, [loadTools]);
 
   if (isLoading) {

@@ -62,14 +62,15 @@ export function ManageComponentsDialog({ aircraft, isOpen, onOpenChange }: { air
     ];
 
     try {
-      const stored = localStorage.getItem('safeviate.aircrafts');
-      if (!stored) return;
-      const aircrafts = JSON.parse(stored) as Aircraft[];
-      const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, components: nextComponents } : a);
-      
-      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+      const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aircraft: { ...aircraft, components: nextComponents } }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to add component.');
       window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
-      
+
       setComponents(nextComponents);
       toast({ title: 'Component Added' });
     } catch (error) {
@@ -85,12 +86,13 @@ export function ManageComponentsDialog({ aircraft, isOpen, onOpenChange }: { air
     const nextComponents = components.filter((component) => component.id !== componentId);
 
     try {
-      const stored = localStorage.getItem('safeviate.aircrafts');
-      if (!stored) return;
-      const aircrafts = JSON.parse(stored) as Aircraft[];
-      const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, components: nextComponents } : a);
-      
-      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+      const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aircraft: { ...aircraft, components: nextComponents } }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to remove component.');
       window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
       setComponents(nextComponents);

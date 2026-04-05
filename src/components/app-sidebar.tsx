@@ -44,39 +44,24 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { usePermissions } from '@/hooks/use-permissions';
 
-const LAST_SUBMENU_STORAGE_KEY = 'safeviate:last-submenu-by-parent';
 const USERS_STATIC_SUB_ITEMS: SubMenuItem[] = [
   { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
 ];
 
+let lastSubmenuByParentMemory: Record<string, string> = {};
+
 const getLastSubmenuByParent = (): Record<string, string> => {
-    if (typeof window === 'undefined') return {};
-    try {
-        const raw = window.localStorage.getItem(LAST_SUBMENU_STORAGE_KEY) || '{}';
-        if (!raw.trim().startsWith('{') && !raw.trim().startsWith('[')) {
-            return {};
-        }
-        return JSON.parse(raw) as Record<string, string>;
-    } catch {
-        return {};
-    }
+    return lastSubmenuByParentMemory;
 };
 
 const setLastSubmenuByParent = (parentHref: string, subHref: string) => {
-    if (typeof window === 'undefined') return;
-    const current = getLastSubmenuByParent();
-    window.localStorage.setItem(
-        LAST_SUBMENU_STORAGE_KEY,
-        JSON.stringify({ ...current, [parentHref]: subHref })
-    );
+    lastSubmenuByParentMemory = { ...lastSubmenuByParentMemory, [parentHref]: subHref };
 };
 
 const clearLastSubmenuByParent = (parentHref: string) => {
-    if (typeof window === 'undefined') return;
-    const current = getLastSubmenuByParent();
-    if (!(parentHref in current)) return;
-    const { [parentHref]: _removed, ...rest } = current;
-    window.localStorage.setItem(LAST_SUBMENU_STORAGE_KEY, JSON.stringify(rest));
+    if (!(parentHref in lastSubmenuByParentMemory)) return;
+    const { [parentHref]: _removed, ...rest } = lastSubmenuByParentMemory;
+    lastSubmenuByParentMemory = rest;
 };
 
 type SidebarSharedState = {

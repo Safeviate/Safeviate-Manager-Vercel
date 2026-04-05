@@ -26,15 +26,12 @@ export default function EmergencyResponsePage() {
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
 
   useEffect(() => {
-    // Local storage mock fallback
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('safeviate.external-organizations');
-        if (stored) setOrganizations(JSON.parse(stored));
-      } catch (e) {
-        // ignore
-      }
-    }
+    fetch('/api/external-organizations', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = response.ok ? await response.json().catch(() => ({ organizations: [] })) : { organizations: [] };
+        setOrganizations((payload.organizations || []) as ExternalOrganization[]);
+      })
+      .catch(() => setOrganizations([]));
   }, []);
 
   const tabs = [

@@ -5,26 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Aircraft } from '@/types/aircraft';
@@ -69,41 +52,33 @@ export function AircraftForm({ tenantId, existingAircraft, onCancel, trigger }: 
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
-        
-        let nextAircrafts: Aircraft[];
-        if (existingAircraft) {
-            nextAircrafts = aircrafts.map(ac => ac.id === existingAircraft.id ? { 
-                ...ac, 
-                ...values,
-                frameHours: values.currentHobbs,
-                engineHours: values.currentTacho,
-            } : ac);
-        } else {
-            const newAircraft: Aircraft = {
-                ...values,
-                id: values.tailNumber.replace('-', '').toUpperCase() + '-' + crypto.randomUUID().slice(0, 4),
-                frameHours: values.currentHobbs,
-                engineHours: values.currentTacho,
-                components: [],
-                documents: [],
-                initialHobbs: values.currentHobbs,
-                initialTacho: values.currentTacho,
-                organizationId: tenantId,
-            };
-            nextAircrafts = [...aircrafts, newAircraft];
-        }
+      const payload = {
+        aircraft: {
+          ...(existingAircraft || {}),
+          ...values,
+          frameHours: values.currentHobbs,
+          engineHours: values.currentTacho,
+          components: existingAircraft?.components || [],
+          documents: existingAircraft?.documents || [],
+          organizationId: existingAircraft?.organizationId || tenantId,
+        },
+      };
 
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
-        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+      const response = await fetch(existingAircraft ? `/api/aircraft/${existingAircraft.id}` : '/api/aircraft', {
+        method: existingAircraft ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to save aircraft.');
 
-        toast({ title: isEditing ? 'Aircraft Updated' : 'Aircraft Added', description: `${values.tailNumber} has been ${isEditing ? 'updated' : 'added to the fleet'}.` });
-        setIsOpen(false);
-        if (!isEditing) form.reset();
-        onCancel?.();
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+      toast({ title: isEditing ? 'Aircraft Updated' : 'Aircraft Added', description: `${values.tailNumber} has been ${isEditing ? 'updated' : 'added to the fleet'}.` });
+      setIsOpen(false);
+      if (!isEditing) form.reset();
+      onCancel?.();
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save aircraft.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save aircraft.' });
     }
   };
 

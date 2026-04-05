@@ -203,19 +203,13 @@ export default function AuditSchedulePage() {
   const [newAreaName, setNewAreaName] = useState('');
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const storedAreas = localStorage.getItem('safeviate.audit-areas');
-        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
-        
-        if (storedAreas) {
-            setAuditAreas(JSON.parse(storedAreas));
-        }
-        if (storedItems) {
-            const items = JSON.parse(storedItems) as AuditScheduleItem[];
-            setSchedule(items.filter(i => i.year === currentYear));
-        }
+        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ areas: INITIAL_AUDIT_AREAS, items: [] }));
+        if (Array.isArray(payload.areas) && payload.areas.length) setAuditAreas(payload.areas);
+        if (Array.isArray(payload.items)) setSchedule((payload.items as AuditScheduleItem[]).filter(i => i.year === currentYear));
     } catch (e) {
         console.error("Failed to load audit schedule", e);
     } finally {
@@ -224,16 +218,17 @@ export default function AuditSchedulePage() {
   }, [currentYear]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-audit-schedule-updated', loadData);
     return () => window.removeEventListener('safeviate-audit-schedule-updated', loadData);
   }, [loadData]);
 
-  const handleStatusChange = (area: string, month: string, status: AuditScheduleStatus) => {
+  const handleStatusChange = async (area: string, month: string, status: AuditScheduleStatus) => {
     setOpenPopoverId(null);
     try {
-        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
-        const items = storedItems ? JSON.parse(storedItems) as AuditScheduleItem[] : [];
+        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ items: [] }));
+        const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
         const existingIdx = items.findIndex(item => item.area === area && item.month === month && item.year === currentYear);
 
         let nextItems: AuditScheduleItem[];
@@ -250,50 +245,66 @@ export default function AuditSchedulePage() {
             }];
         }
 
-        localStorage.setItem('safeviate.audit-schedule-items', JSON.stringify(nextItems));
+        await fetch('/api/audit-schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ areas: auditAreas, items: nextItems }),
+        });
         window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
     } catch (e) {
         console.error("Failed to update status", e);
     }
   };
 
-  const handleAddArea = () => {
+  const handleAddArea = async () => {
     const trimmed = newAreaName.trim();
     if (trimmed && !auditAreas.includes(trimmed)) {
         const nextAreas = [...auditAreas, trimmed];
         setAuditAreas(nextAreas);
-        localStorage.setItem('safeviate.audit-areas', JSON.stringify(nextAreas));
+        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ items: [] }));
+        await fetch('/api/audit-schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ areas: nextAreas, items: payload.items || [] }),
+        });
     }
     setNewAreaName('');
     setIsAddAreaOpen(false);
   }
 
-  const handleEditArea = (oldName: string, newName: string) => {
+  const handleEditArea = async (oldName: string, newName: string) => {
     const nextAreas = auditAreas.map(area => area === oldName ? newName : area);
     setAuditAreas(nextAreas);
-    localStorage.setItem('safeviate.audit-areas', JSON.stringify(nextAreas));
-    
     try {
-        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
-        const items = storedItems ? JSON.parse(storedItems) as AuditScheduleItem[] : [];
+        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ items: [] }));
+        const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
         const nextItems = items.map(item => item.area === oldName ? { ...item, area: newName } : item);
-        localStorage.setItem('safeviate.audit-schedule-items', JSON.stringify(nextItems));
+        await fetch('/api/audit-schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ areas: nextAreas, items: nextItems }),
+        });
         window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
     } catch (e) {
         console.error("Failed to rename area items", e);
     }
   }
 
-  const handleDeleteArea = (areaToDelete: string) => {
+  const handleDeleteArea = async (areaToDelete: string) => {
     const nextAreas = auditAreas.filter(area => area !== areaToDelete);
     setAuditAreas(nextAreas);
-    localStorage.setItem('safeviate.audit-areas', JSON.stringify(nextAreas));
-
     try {
-        const storedItems = localStorage.getItem('safeviate.audit-schedule-items');
-        const items = storedItems ? JSON.parse(storedItems) as AuditScheduleItem[] : [];
+        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ items: [] }));
+        const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
         const nextItems = items.filter(item => item.area !== areaToDelete);
-        localStorage.setItem('safeviate.audit-schedule-items', JSON.stringify(nextItems));
+        await fetch('/api/audit-schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ areas: nextAreas, items: nextItems }),
+        });
         window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
     } catch (e) {
         console.error("Failed to delete area items", e);

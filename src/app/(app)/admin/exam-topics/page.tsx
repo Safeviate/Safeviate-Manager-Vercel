@@ -41,16 +41,19 @@ export default function ExamTopicsPage() {
   const [editingValue, setEditingValue] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem('safeviate.exam-topics');
-        if (stored) {
-            setSettings(JSON.parse(stored));
-        } else {
-            const def = { id: 'exam-topics', topics: DEFAULT_TOPICS };
-            localStorage.setItem('safeviate.exam-topics', JSON.stringify(def));
-            setSettings(def);
+        const response = await fetch('/api/exams', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        const topics = Array.isArray(payload?.topics) && payload.topics.length ? payload.topics : DEFAULT_TOPICS;
+        setSettings({ id: 'exam-topics', topics });
+        if (!Array.isArray(payload?.topics) || payload.topics.length === 0) {
+            await fetch('/api/exams', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topics }),
+            });
         }
     } catch (e) {
         console.error("Failed to load exam topics", e);
@@ -60,12 +63,12 @@ export default function ExamTopicsPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     window.addEventListener('safeviate-exam-topics-updated', loadData);
     return () => window.removeEventListener('safeviate-exam-topics-updated', loadData);
   }, [loadData]);
 
-  const handleAddTopic = () => {
+  const handleAddTopic = async () => {
     if (!newTopic.trim()) return;
     if (settings?.topics.includes(newTopic.trim())) {
         toast({ variant: 'destructive', title: 'Duplicate Topic', description: 'This category already exists.' });
@@ -73,17 +76,23 @@ export default function ExamTopicsPage() {
     }
 
     const updatedTopics = [...(settings?.topics || []), newTopic.trim()].sort();
-    const nextSettings = { id: 'exam-topics', topics: updatedTopics };
-    localStorage.setItem('safeviate.exam-topics', JSON.stringify(nextSettings));
+    await fetch('/api/exams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: updatedTopics }),
+    });
     window.dispatchEvent(new Event('safeviate-exam-topics-updated'));
     setNewTopic('');
     toast({ title: 'Topic Added' });
   };
 
-  const handleDeleteTopic = (topicToDelete: string) => {
+  const handleDeleteTopic = async (topicToDelete: string) => {
     const updatedTopics = (settings?.topics || []).filter(t => t !== topicToDelete);
-    const nextSettings = { id: 'exam-topics', topics: updatedTopics };
-    localStorage.setItem('safeviate.exam-topics', JSON.stringify(nextSettings));
+    await fetch('/api/exams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: updatedTopics }),
+    });
     window.dispatchEvent(new Event('safeviate-exam-topics-updated'));
     toast({ title: 'Topic Removed' });
   };
@@ -112,17 +121,15 @@ export default function ExamTopicsPage() {
         updatedTopics.sort();
         
         // 2. Perform a migration of all questions in the bank (locally)
-        const storedQuestions = localStorage.getItem('safeviate.question-pool');
-        if (storedQuestions) {
-            const questions = JSON.parse(storedQuestions) as any[];
-            const updatedQuestions = questions.map(q => q.topic === oldName ? { ...q, topic: newName } : q);
-            localStorage.setItem('safeviate.question-pool', JSON.stringify(updatedQuestions));
-            window.dispatchEvent(new Event('safeviate-question-pool-updated'));
-            toast({ title: 'Database Synced', description: `Updated local questions to the new category name.` });
-        }
-
-        const nextSettings = { id: 'exam-topics', topics: updatedTopics };
-        localStorage.setItem('safeviate.exam-topics', JSON.stringify(nextSettings));
+        const bankResponse = await fetch('/api/exams', { cache: 'no-store' });
+        const bankPayload = await bankResponse.json().catch(() => ({}));
+        const questions = Array.isArray(bankPayload?.poolItems) ? bankPayload.poolItems : [];
+        const updatedQuestions = questions.map(q => q.topic === oldName ? { ...q, topic: newName } : q);
+        await fetch('/api/exams', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topics: updatedTopics, poolItems: updatedQuestions }),
+        });
         window.dispatchEvent(new Event('safeviate-exam-topics-updated'));
         
         setEditingIndex(null);

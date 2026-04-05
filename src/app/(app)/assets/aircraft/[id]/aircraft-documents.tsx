@@ -27,23 +27,26 @@ export function AircraftDocuments({ aircraft }: AircraftDocumentsProps) {
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
 
   useEffect(() => {
-    const storedSettings = localStorage.getItem('safeviate.document-expiry-settings');
-    if (storedSettings) {
-        try {
-            setExpirySettings(JSON.parse(storedSettings));
-        } catch (e) {
-            console.error("Failed to load expiry settings", e);
-        }
-    }
+    void fetch('/api/tenant-config', { cache: 'no-store' })
+      .then((response) => response.json().catch(() => ({})))
+      .then((payload) => {
+        const settings = payload?.config?.['document-expiry-settings'] as DocumentExpirySettings | undefined;
+        if (settings) setExpirySettings(settings);
+      })
+      .catch((e) => {
+        console.error('Failed to load expiry settings', e);
+      });
   }, []);
 
-  const handleDocumentUpdate = (updatedDocuments: any[]) => {
+  const handleDocumentUpdate = async (updatedDocuments: any[]) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        const nextAircrafts = aircrafts.map(a => a.id === aircraft.id ? { ...a, documents: updatedDocuments } : a);
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, documents: updatedDocuments } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to update documents.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
     } catch (e) {
         toast({ variant: 'destructive', title: 'Update Failed' });
@@ -54,7 +57,7 @@ export function AircraftDocuments({ aircraft }: AircraftDocumentsProps) {
     const currentDocs = aircraft.documents || [];
     const updatedDocs = [...currentDocs, docDetails];
     handleDocumentUpdate(updatedDocs);
-    toast({ title: "Document Synchronized", description: `${docDetails.name} has been added to the local archive.` });
+    toast({ title: "Document Synchronized", description: `${docDetails.name} has been added to the aircraft record.` });
   };
 
   const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
@@ -68,7 +71,7 @@ export function AircraftDocuments({ aircraft }: AircraftDocumentsProps) {
   const handleDocumentDelete = (docNameToDelete: string) => {
     const updatedDocs = (aircraft.documents || []).filter(doc => doc.name !== docNameToDelete);
     handleDocumentUpdate(updatedDocs);
-    toast({ title: "Document Purged", description: "The record has been removed from the encrypted local store." });
+    toast({ title: "Document Purged", description: "The record has been removed from the aircraft record." });
   };
 
   return (

@@ -57,9 +57,6 @@ export function CapActionsForm({ cap, tenantId, personnel, onFormSubmit }: CapAc
 
     const onSubmit = (values: CapFormValues) => {
         try {
-            const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
-            const currentCaps = storedCaps ? JSON.parse(storedCaps) as CorrectiveActionPlan[] : [];
-            
             const dataToSave = {
                 ...values,
                 actions: values.actions.map(action => ({
@@ -68,9 +65,16 @@ export function CapActionsForm({ cap, tenantId, personnel, onFormSubmit }: CapAc
                 }))
             };
 
-            const nextCaps = currentCaps.map(c => c.id === cap.id ? { ...c, ...dataToSave } : c);
-            localStorage.setItem('safeviate.corrective-action-plans', JSON.stringify(nextCaps));
-            
+            void fetch('/api/corrective-action-plans', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cap: {
+                  ...cap,
+                  ...dataToSave,
+                },
+              }),
+            });
             window.dispatchEvent(new Event('safeviate-quality-updated'));
             toast({
                 title: 'Corrective Action Plan Saved',

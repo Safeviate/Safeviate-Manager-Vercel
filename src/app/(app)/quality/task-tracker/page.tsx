@@ -49,54 +49,54 @@ export default function TaskTrackerPage() {
 
   const loadData = useCallback(() => {
     setIsLoading(true);
-    try {
-        const storedMocs = localStorage.getItem('safeviate.management-of-change');
-        const storedSafety = localStorage.getItem('safeviate.safety-reports');
-        const storedCaps = localStorage.getItem('safeviate.corrective-action-plans');
-        const storedAudits = localStorage.getItem('safeviate.quality-audits');
-        const storedPersonnel = localStorage.getItem('safeviate.personnel');
-        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
+    void (async () => {
+      try {
+        const [summaryRes, orgsRes] = await Promise.all([
+          fetch('/api/dashboard-summary', { cache: 'no-store' }),
+          fetch('/api/external-organizations', { cache: 'no-store' }),
+        ]);
+        const summary = await summaryRes.json().catch(() => ({}));
+        const orgsPayload = await orgsRes.json().catch(() => ({}));
 
-        if (storedMocs) setMocs(JSON.parse(storedMocs));
-        if (storedSafety) setSafetyReports(JSON.parse(storedSafety));
-        if (storedCaps) setCaps(JSON.parse(storedCaps));
-        if (storedAudits) setAudits(JSON.parse(storedAudits));
-        if (storedPersonnel) setPersonnel(JSON.parse(storedPersonnel));
-        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
-    } catch (e) {
-        console.error("Failed to load task data", e);
-    } finally {
+        setMocs(Array.isArray(summary.mocs) ? summary.mocs : []);
+        setSafetyReports(Array.isArray(summary.reports) ? summary.reports : []);
+        setCaps(Array.isArray(summary.caps) ? summary.caps : []);
+        setAudits(Array.isArray(summary.audits) ? summary.audits : []);
+        setPersonnel(Array.isArray(summary.personnel) ? summary.personnel : []);
+        setOrganizations(Array.isArray(orgsPayload.organizations) ? orgsPayload.organizations : []);
+      } catch (e) {
+        console.error('Failed to load task data', e);
+      } finally {
         setIsLoading(false);
-    }
+      }
+    })();
   }, []);
 
   useEffect(() => {
     loadData();
-    // Reactivity for all sources
     const events = [
-        'safeviate-moc-updated',
-        'safeviate-safety-reports-updated',
-        'safeviate-quality-updated',
-        'safeviate-personnel-updated',
-        'safeviate-external-organizations-updated'
+      'safeviate-moc-updated',
+      'safeviate-safety-reports-updated',
+      'safeviate-quality-updated',
+      'safeviate-personnel-updated',
+      'safeviate-external-organizations-updated',
     ];
-    events.forEach(event => window.addEventListener(event, loadData));
-    return () => events.forEach(event => window.removeEventListener(event, loadData));
+    events.forEach((event) => window.addEventListener(event, loadData));
+    return () => events.forEach((event) => window.removeEventListener(event, loadData));
   }, [loadData]);
-
 
   const allTasks = useMemo((): UnifiedTask[] => {
     if (isLoading || !personnel) return [];
 
-    const personnelMap = new Map(personnel.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
+    const personnelMap = new Map(personnel.map((p) => [p.id, `${p.firstName} ${p.lastName}`]));
     const tasks: UnifiedTask[] = [];
 
-    (mocs || []).forEach(moc => {
-      moc.phases?.forEach(phase => {
-        phase.steps?.forEach(step => {
-          step.hazards?.forEach(hazard => {
-            hazard.risks?.forEach(risk => {
-              risk.mitigations?.forEach(mitigation => {
+    (mocs || []).forEach((moc) => {
+      moc.phases?.forEach((phase) => {
+        phase.steps?.forEach((step) => {
+          step.hazards?.forEach((hazard) => {
+            hazard.risks?.forEach((risk) => {
+              risk.mitigations?.forEach((mitigation) => {
                 if (mitigation.status !== 'Closed' && mitigation.status !== 'Cancelled') {
                   tasks.push({
                     id: mitigation.id,
@@ -117,30 +117,30 @@ export default function TaskTrackerPage() {
         });
       });
     });
-    
-    (safetyReports || []).forEach(report => {
-        (report.investigationTasks || []).forEach(task => {
-            if (task.status !== 'Completed') {
-                 tasks.push({
-                    id: task.id,
-                    description: task.description,
-                    sourceType: 'Safety Report',
-                    sourceIdentifier: report.reportNumber,
-                    link: `/safety/safety-reports/${report.id}`,
-                    assigneeId: task.assigneeId,
-                    assigneeName: personnelMap.get(task.assigneeId) || 'Unassigned',
-                    dueDate: task.dueDate,
-                    status: task.status,
-                    organizationId: report.organizationId,
-                });
-            }
-        });
+
+    (safetyReports || []).forEach((report) => {
+      (report.investigationTasks || []).forEach((task) => {
+        if (task.status !== 'Completed') {
+          tasks.push({
+            id: task.id,
+            description: task.description,
+            sourceType: 'Safety Report',
+            sourceIdentifier: report.reportNumber,
+            link: `/safety/safety-reports/${report.id}`,
+            assigneeId: task.assigneeId,
+            assigneeName: personnelMap.get(task.assigneeId) || 'Unassigned',
+            dueDate: task.dueDate,
+            status: task.status,
+            organizationId: report.organizationId,
+          });
+        }
+      });
     });
 
-    const auditsMap = new Map((audits || []).map(a => [a.id, a]));
-    (caps || []).forEach(cap => {
+    const auditsMap = new Map((audits || []).map((a) => [a.id, a]));
+    (caps || []).forEach((cap) => {
       const audit = auditsMap.get(cap.auditId);
-      (cap.actions || []).forEach(action => {
+      (cap.actions || []).forEach((action) => {
         if (action.status !== 'Closed' && action.status !== 'Cancelled') {
           tasks.push({
             id: action.id,
@@ -159,20 +159,19 @@ export default function TaskTrackerPage() {
     });
 
     return tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-
   }, [mocs, safetyReports, caps, audits, personnel, isLoading]);
-  
-  const getStatusBadgeVariant = (status: UnifiedTask['status']): "default" | "secondary" | "destructive" | "outline" => {
+
+  const getStatusBadgeVariant = (status: UnifiedTask['status']): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
-        case 'Completed':
-        case 'Closed':
-             return 'default';
-        case 'In Progress':
-            return 'secondary';
-        case 'Cancelled':
-            return 'destructive';
-        default:
-            return 'outline';
+      case 'Completed':
+      case 'Closed':
+        return 'default';
+      case 'In Progress':
+        return 'secondary';
+      case 'Cancelled':
+        return 'destructive';
+      default:
+        return 'outline';
     }
   };
 
@@ -190,7 +189,7 @@ export default function TaskTrackerPage() {
       </TableHeader>
       <TableBody>
         {tasks.length > 0 ? (
-          tasks.map(task => (
+          tasks.map((task) => (
             <TableRow key={task.id}>
               <TableCell className="font-bold text-sm text-foreground">{task.description}</TableCell>
               <TableCell>
@@ -202,7 +201,7 @@ export default function TaskTrackerPage() {
                 <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">{task.status}</Badge>
               </TableCell>
               <TableCell className="text-right">
-                  <ViewActionButton href={task.link} />
+                <ViewActionButton href={task.link} />
               </TableCell>
             </TableRow>
           ))
@@ -218,15 +217,13 @@ export default function TaskTrackerPage() {
   );
 
   const renderOrgCard = (orgId: string | 'internal') => {
-    const filteredTasks = allTasks.filter(task => 
-        orgId === 'internal' ? !task.organizationId : task.organizationId === orgId
-    );
+    const filteredTasks = allTasks.filter((task) => (orgId === 'internal' ? !task.organizationId : task.organizationId === orgId));
 
     return (
       <Card className="min-h-[400px] flex flex-col shadow-none border">
         <MainPageHeader title="Task Tracker" description="Centralized oversight of all corrective actions and mitigation tasks across the organization." />
         {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
-        <CardContent className={cn("p-0", isMobile ? "overflow-y-auto" : "overflow-auto")}>
+        <CardContent className={cn('p-0', isMobile ? 'overflow-y-auto' : 'overflow-auto')}>
           {renderTasksTable(filteredTasks)}
         </CardContent>
       </Card>
@@ -235,34 +232,34 @@ export default function TaskTrackerPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-[400px] w-full" />
-        </div>
+      <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
     );
   }
 
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className={cn("max-w-[1200px] mx-auto w-full flex flex-col gap-6 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full")}>
-        {!showTabs ? (
-            renderOrgCard(scopedOrganizationId)
-        ) : (
-            <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className={cn("w-full flex-1 flex flex-col", isMobile ? "overflow-visible" : "overflow-hidden")}>
-                <div className={cn("flex-1 min-h-0", isMobile ? "overflow-visible" : "overflow-hidden")}>
-                    <TabsContent value="internal" className={cn("m-0 p-0", isMobile ? "min-h-0" : "h-full")}>
-                        {renderOrgCard('internal')}
-                    </TabsContent>
-                    
-                    {(organizations || []).map(org => (
-                        <TabsContent key={org.id} value={org.id} className={cn("m-0 p-0", isMobile ? "min-h-0" : "h-full")}>
-                            {renderOrgCard(org.id)}
-                        </TabsContent>
-                    ))}
-                </div>
-            </Tabs>
-        )}
+    <div className={cn('max-w-[1200px] mx-auto w-full flex flex-col gap-6 px-1', isMobile ? 'min-h-0 overflow-y-auto' : 'h-full')}>
+      {!showTabs ? (
+        renderOrgCard(scopedOrganizationId)
+      ) : (
+        <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className={cn('w-full flex-1 flex flex-col', isMobile ? 'overflow-visible' : 'overflow-hidden')}>
+          <div className={cn('flex-1 min-h-0', isMobile ? 'overflow-visible' : 'overflow-hidden')}>
+            <TabsContent value="internal" className={cn('m-0 p-0', isMobile ? 'min-h-0' : 'h-full')}>
+              {renderOrgCard('internal')}
+            </TabsContent>
+
+            {(organizations || []).map((org) => (
+              <TabsContent key={org.id} value={org.id} className={cn('m-0 p-0', isMobile ? 'min-h-0' : 'h-full')}>
+                {renderOrgCard(org.id)}
+              </TabsContent>
+            ))}
+          </div>
+        </Tabs>
+      )}
     </div>
   );
 }

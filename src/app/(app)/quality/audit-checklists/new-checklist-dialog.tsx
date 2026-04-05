@@ -82,10 +82,24 @@ export function NewChecklistDialog({
   const dragSectionNode = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
-    if (isOpen) {
-        const storedCompliance = localStorage.getItem('safeviate.compliance-matrix');
-        if (storedCompliance) setComplianceItems(JSON.parse(storedCompliance));
-    }
+    if (!isOpen) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ config: null }));
+        const config = payload?.config || {};
+        if (!cancelled && Array.isArray(config['compliance-matrix'])) {
+          setComplianceItems(config['compliance-matrix']);
+        }
+      } catch {
+        if (!cancelled) setComplianceItems([]);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen]);
 
 
@@ -111,9 +125,6 @@ export function NewChecklistDialog({
 
   const onSubmit = async (values: FormValues) => {
     try {
-        const storedTemplates = localStorage.getItem('safeviate.quality-audit-templates');
-        const currentTemplates = storedTemplates ? JSON.parse(storedTemplates) as QualityAuditChecklistTemplate[] : [];
-        
         const dataToSave = {
             ...values,
             sections: values.sections.map(section => ({
@@ -127,20 +138,24 @@ export function NewChecklistDialog({
             }))
         }
 
-        if (existingTemplate) {
-            const nextTemplates = currentTemplates.map(t => t.id === existingTemplate.id ? { ...t, ...dataToSave } : t);
-            localStorage.setItem('safeviate.quality-audit-templates', JSON.stringify(nextTemplates));
-            toast({ title: 'Template Updated', description: 'The checklist template has been saved.' });
-        } else {
-            const newTemplate = {
-                ...dataToSave,
-                id: crypto.randomUUID(),
-                category: departments.find(d => d.id === values.departmentId)?.name || 'General',
-                organizationId: '', // Default to global/internal for now
+        const template = existingTemplate
+          ? { ...existingTemplate, ...dataToSave }
+          : {
+              ...dataToSave,
+              id: crypto.randomUUID(),
+              category: departments.find(d => d.id === values.departmentId)?.name || 'General',
+              organizationId: '',
             };
-            localStorage.setItem('safeviate.quality-audit-templates', JSON.stringify([newTemplate, ...currentTemplates]));
-            toast({ title: 'Template Created', description: 'The new checklist template has been saved.' });
+
+        const response = await fetch('/api/quality-audit-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template }),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to save checklist template');
         }
+        toast({ title: existingTemplate ? 'Template Updated' : 'Template Created', description: 'The checklist template has been saved.' });
         
         window.dispatchEvent(new Event('safeviate-quality-templates-updated'));
         setIsOpen(false);

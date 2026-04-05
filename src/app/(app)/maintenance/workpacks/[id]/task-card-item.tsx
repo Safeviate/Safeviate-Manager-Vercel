@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { SecureSignaturePad } from '@/components/secure-signature-pad';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -17,9 +17,9 @@ interface TaskCardItemProps {
 }
 
 export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
-  const { tenantId, userProfile } = useUserProfile();
+  const { userProfile } = useUserProfile();
   const { toast } = useToast();
-  
+
   const [isSigning, setIsSigning] = useState(false);
   const [signMode, setSignMode] = useState<'MECHANIC' | 'INSPECTOR'>('MECHANIC');
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -28,14 +28,18 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
   const isPendingInspection = taskCard.isCompleted && taskCard.requiresInspector && !taskCard.isInspected;
   const isFullyClosed = taskCard.isCompleted && (!taskCard.requiresInspector || taskCard.isInspected);
 
-  const handleSignOff = async (signatureBase64: string, credentials: { pin: string }) => {
-    try {
-      const storedTcs = localStorage.getItem('safeviate.maintenance-task-cards');
-      const currentTcs = storedTcs ? JSON.parse(storedTcs) as TaskCard[] : [];
-      
-      const storedSignatures = localStorage.getItem('safeviate.maintenance-task-card-signatures');
-      const currentSignatures = storedSignatures ? JSON.parse(storedSignatures) : [];
+  const persistTaskCard = async (nextTaskCard: TaskCard) => {
+    const res = await fetch(`/api/maintenance/task-cards/${nextTaskCard.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskCard: nextTaskCard }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Failed to update task card.');
+    window.dispatchEvent(new Event('safeviate-maintenance-task-cards-updated'));
+  };
 
+  const handleSignOff = async (signatureBase64: string) => {
+    try {
       const newSignature = {
         id: crypto.randomUUID(),
         taskCardId: taskCard.id,
@@ -43,25 +47,20 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
         signatoryUserId: userProfile?.id ?? 'unknown',
         role: signMode,
         timestamp: new Date().toISOString(),
-        authMethod: 'PIN_VALIDATED'
+        authMethod: 'PIN_VALIDATED',
       };
-
-      localStorage.setItem('safeviate.maintenance-task-card-signatures', JSON.stringify([...currentSignatures, newSignature]));
-
-      const nextTcs = currentTcs.map(tc => {
-          if (tc.id === taskCard.id) {
-              if (signMode === 'MECHANIC') {
-                  return { ...tc, isCompleted: true, completedAt: new Date().toISOString() };
-              } else if (signMode === 'INSPECTOR') {
-                  return { ...tc, isInspected: true, inspectedAt: new Date().toISOString() };
-              }
-          }
-          return tc;
-      });
-
-      localStorage.setItem('safeviate.maintenance-task-cards', JSON.stringify(nextTcs));
-      window.dispatchEvent(new Event('safeviate-maintenance-task-cards-updated'));
-
+      const nextTaskCard: TaskCard & { signatures?: any[] } = {
+        ...taskCard,
+        signatures: [...((taskCard as any).signatures || []), newSignature],
+      };
+      if (signMode === 'MECHANIC') {
+        nextTaskCard.isCompleted = true;
+        nextTaskCard.completedAt = new Date().toISOString();
+      } else {
+        nextTaskCard.isInspected = true;
+        nextTaskCard.inspectedAt = new Date().toISOString();
+      }
+      await persistTaskCard(nextTaskCard);
       toast({ title: 'Task Certified', description: `Your ${signMode.toLowerCase()} signature was secured.` });
       setIsSigning(false);
     } catch (e: any) {
@@ -69,7 +68,7 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
     }
   };
 
-  const handleAddAttachmentUrl = () => {
+  const handleAddAttachmentUrl = async () => {
     const url = attachmentUrl.trim();
     if (!url) {
       toast({ title: 'No URL Provided', description: 'Paste an evidence link first.', variant: 'destructive' });
@@ -77,31 +76,14 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
     }
 
     try {
-      const storedTcs = localStorage.getItem('safeviate.maintenance-task-cards');
-      const currentTcs = storedTcs ? JSON.parse(storedTcs) as TaskCard[] : [];
-      
-      const nextTcs = currentTcs.map(tc => {
-          if (tc.id === taskCard.id) {
-              const currentAttachments = tc.attachments || [];
-              return {
-                  ...tc,
-                  attachments: [
-                      ...currentAttachments,
-                      {
-                        id: Date.now().toString(),
-                        url,
-                        name: 'Evidence link',
-                        type: 'LINK' as const
-                      }
-                  ]
-              };
-          }
-          return tc;
-      });
-
-      localStorage.setItem('safeviate.maintenance-task-cards', JSON.stringify(nextTcs));
-      window.dispatchEvent(new Event('safeviate-maintenance-task-cards-updated'));
-
+      const nextTaskCard: TaskCard & { attachments?: any[] } = {
+        ...taskCard,
+        attachments: [
+          ...((taskCard as any).attachments || []),
+          { id: Date.now().toString(), url, name: 'Evidence link', type: 'LINK' as const },
+        ],
+      };
+      await persistTaskCard(nextTaskCard);
       toast({ title: 'Attachment Added', description: 'The evidence link was attached.' });
       setAttachmentUrl('');
     } catch (e: any) {
@@ -115,29 +97,16 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-1 flex-wrap">
             <CardTitle className="font-mono text-primary font-black uppercase tracking-tight">{taskCard.taskNumber}</CardTitle>
-            
             {isFullyClosed ? (
-               <Badge className="bg-emerald-100 text-emerald-700 bg-emerald-100 hover:bg-emerald-100 border-none font-bold">
-                 <ShieldCheck className="h-3 w-3 mr-1" />
-                 Certified & Closed
-               </Badge>
+              <Badge className="bg-emerald-100 text-emerald-700 bg-emerald-100 hover:bg-emerald-100 border-none font-bold"><ShieldCheck className="h-3 w-3 mr-1" />Certified & Closed</Badge>
             ) : isPendingInspection ? (
-               <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-bold">
-                 <ShieldCheck className="h-3 w-3 mr-1" />
-                 Pending Inspection (RII)
-               </Badge>
+              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-bold"><ShieldCheck className="h-3 w-3 mr-1" />Pending Inspection (RII)</Badge>
             ) : (
-               <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-bold">Open Task</Badge>
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-bold">Open Task</Badge>
             )}
-
-            {taskCard.requiresInspector && (
-               <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-red-600 border-red-200 bg-red-50">RII</Badge>
-            )}
+            {taskCard.requiresInspector && <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-red-600 border-red-200 bg-red-50">RII</Badge>}
           </div>
-          <CardDescription className="text-slate-700 font-medium mt-2 whitespace-pre-wrap">
-            {taskCard.taskDescription}
-          </CardDescription>
-
+          <CardDescription className="text-slate-700 font-medium mt-2 whitespace-pre-wrap">{taskCard.taskDescription}</CardDescription>
           <div className="mt-4 flex flex-col md:flex-row gap-4">
             {taskCard.partsInstalled && taskCard.partsInstalled.length > 0 && (
               <div className="flex-1 space-y-2">
@@ -156,85 +125,56 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
               <div className="flex-1 space-y-2">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">Tools & Equipment</p>
                 <div className="flex flex-wrap gap-1">
-                  {taskCard.toolsUsed.map((t, i) => (
-                    <Badge key={i} variant="secondary" className="text-[9px] font-mono bg-slate-200 text-slate-700 uppercase">
-                      {t}
-                    </Badge>
-                  ))}
+                  {taskCard.toolsUsed.map((t, i) => <Badge key={i} variant="secondary" className="text-[9px] font-mono bg-slate-200 text-slate-700 uppercase">{t}</Badge>)}
                 </div>
               </div>
             )}
           </div>
         </div>
-        
-        <div className="flex flex-col gap-2 shrink-0 w-full md:w-auto">
-           {!taskCard.isCompleted && !isSigning && (
-            <Button 
-              onClick={() => { setSignMode('MECHANIC'); setIsSigning(true); }}
-              className="w-full text-xs font-black uppercase shadow-md gap-2"
-            >
-              <PenTool className="h-4 w-4" /> Mechanic Sign-Off
-            </Button>
-          )}
 
+        <div className="flex flex-col gap-2 shrink-0 w-full md:w-auto">
+          {!taskCard.isCompleted && !isSigning && (
+            <Button onClick={() => { setSignMode('MECHANIC'); setIsSigning(true); }} className="w-full text-xs font-black uppercase shadow-md gap-2"><PenTool className="h-4 w-4" /> Mechanic Sign-Off</Button>
+          )}
           {isPendingInspection && !isSigning && (
-             <Button 
-              onClick={() => { setSignMode('INSPECTOR'); setIsSigning(true); }}
-              className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-xs font-black uppercase shadow-md gap-2"
-            >
-               <ShieldCheck className="h-4 w-4" /> Inspector Sign-Off
-            </Button>
+            <Button onClick={() => { setSignMode('INSPECTOR'); setIsSigning(true); }} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-xs font-black uppercase shadow-md gap-2"><ShieldCheck className="h-4 w-4" /> Inspector Sign-Off</Button>
           )}
         </div>
       </CardHeader>
 
-      {/* Attachments Display Area */}
       {taskCard.attachments && taskCard.attachments.length > 0 && (
         <CardContent className="px-4 md:px-6 py-4 bg-white border-t">
           <p className="text-[10px] uppercase font-bold text-muted-foreground mb-3">Evidence & Attachments</p>
           <div className="flex flex-wrap gap-3">
-             {taskCard.attachments.map(att => (
-               <a key={att.id} href={att.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 border rounded p-2 text-xs font-medium hover:bg-muted transition-colors">
-                 {att.type === 'PDF' ? <FileText className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}
-                 <span className="truncate max-w-[150px]">{att.name}</span>
-               </a>
-             ))}
+            {taskCard.attachments.map((att) => (
+              <a key={att.id} href={att.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 border rounded p-2 text-xs font-medium hover:bg-muted transition-colors">
+                {att.type === 'PDF' ? <FileText className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}
+                <span className="truncate max-w-[150px]">{att.name}</span>
+              </a>
+            ))}
           </div>
         </CardContent>
       )}
 
-      {/* Attachments Actions */}
       {!isFullyClosed && !isSigning && (
         <CardFooter className="px-4 md:px-6 py-3 bg-muted/10 border-t flex justify-end">
-           <div className="flex w-full gap-2">
-             <Input
-               value={attachmentUrl}
-               onChange={(e) => setAttachmentUrl(e.target.value)}
-               placeholder="Paste evidence URL"
-               className="h-9 text-xs"
-             />
-             <Button variant="outline" size="sm" className="text-xs font-bold gap-2" onClick={handleAddAttachmentUrl}>
-                <Link2 className="h-3 w-3" />
-                Attach Link
-             </Button>
-           </div>
+          <div className="flex w-full gap-2">
+            <Input value={attachmentUrl} onChange={(e) => setAttachmentUrl(e.target.value)} placeholder="Paste evidence URL" className="h-9 text-xs" />
+            <Button variant="outline" size="sm" className="text-xs font-bold gap-2" onClick={handleAddAttachmentUrl}>
+              <Link2 className="h-3 w-3" />
+              Attach Link
+            </Button>
+          </div>
         </CardFooter>
       )}
-      
+
       {isSigning && (
-         <CardContent className="p-4 md:p-6 bg-muted/30 border-t">
-           <div className="flex justify-end mb-4">
-             <Button variant="ghost" size="sm" onClick={() => setIsSigning(false)}>Cancel Sign-Off</Button>
-           </div>
-           
-           <SecureSignaturePad 
-             onSign={handleSignOff} 
-             title={signMode === 'MECHANIC' ? "Mechanic Certification" : "Inspector RII Certification"}
-             description={signMode === 'MECHANIC' 
-                ? "Ensure the work defined in this task card was completed per regulatory standards."
-                : "Verify the RII work was performed correctly and per the approved maintenance manual instructions."}
-           />
-         </CardContent>
+        <CardContent className="p-4 md:p-6 bg-muted/30 border-t">
+          <div className="flex justify-end mb-4">
+            <Button variant="ghost" size="sm" onClick={() => setIsSigning(false)}>Cancel Sign-Off</Button>
+          </div>
+          <SecureSignaturePad onSign={(sig) => handleSignOff(sig)} title={signMode === 'MECHANIC' ? 'Mechanic Certification' : 'Inspector RII Certification'} description={signMode === 'MECHANIC' ? 'Ensure the work defined in this task card was completed per regulatory standards.' : 'Verify the RII work was performed correctly and per the approved maintenance manual instructions.'} />
+        </CardContent>
       )}
     </Card>
   );

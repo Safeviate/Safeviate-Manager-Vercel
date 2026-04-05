@@ -38,10 +38,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const body = await request.json();
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid role payload.' }, { status: 400 });
+  }
   const name = String(body.name || '').trim();
   const category = String(body.category || 'Personnel').trim() || 'Personnel';
-  const permissions = Array.isArray(body.permissions) ? body.permissions : [];
-  const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments : [];
+  const permissions = Array.isArray(body.permissions) ? body.permissions.filter((permission) => typeof permission === 'string') : [];
+  const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments.filter((document) => typeof document === 'string') : [];
 
   if (!name) {
     return NextResponse.json({ error: 'Role name is required.' }, { status: 400 });
@@ -57,6 +60,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       updatedAt: new Date(),
     },
   });
+
+  if (role.count === 0) {
+    return NextResponse.json({ error: 'Role not found.' }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true, role }, { status: 200 });
 }

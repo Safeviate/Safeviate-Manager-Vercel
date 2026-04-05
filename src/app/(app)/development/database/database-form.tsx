@@ -65,32 +65,30 @@ export function DatabaseForm() {
   // Load Tenants from LocalStorage
   useEffect(() => {
     const loadTenants = () => {
-        try {
-            const stored = localStorage.getItem('safeviate.tenants');
-            if (stored) {
-                setTenants(JSON.parse(stored));
+        fetch('/api/tenants', { cache: 'no-store' })
+          .then((response) => response.json())
+          .then((payload) => {
+            const rows = Array.isArray(payload?.tenants) ? payload.tenants : [];
+            if (rows.length > 0) {
+              setTenants(rows as Tenant[]);
             } else {
-                // Initial Seed
-                const initial: Tenant[] = [{
-                    id: 'safeviate',
-                    name: 'Safeviate Standard',
-                    industry: 'Aviation: Flight Training (ATO)',
-                    enabledMenus: menuConfig.map(m => m.href),
-                    theme: {
-                        primaryColour: DEFAULT_MAIN.primary,
-                        backgroundColour: DEFAULT_MAIN.background,
-                        accentColour: DEFAULT_MAIN.accent,
-                        main: DEFAULT_MAIN
-                    }
-                }];
-                localStorage.setItem('safeviate.tenants', JSON.stringify(initial));
-                setTenants(initial);
+              const initial: Tenant[] = [{
+                id: 'safeviate',
+                name: 'Safeviate Standard',
+                industry: 'Aviation: Flight Training (ATO)',
+                enabledMenus: menuConfig.map(m => m.href),
+                theme: {
+                  primaryColour: DEFAULT_MAIN.primary,
+                  backgroundColour: DEFAULT_MAIN.background,
+                  accentColour: DEFAULT_MAIN.accent,
+                  main: DEFAULT_MAIN
+                }
+              }];
+              setTenants(initial);
             }
-        } catch (e) {
-            console.error('Failed to load tenants', e);
-        } finally {
-            setIsLoadingTenants(false);
-        }
+          })
+          .catch((e) => console.error('Failed to load tenants', e))
+          .finally(() => setIsLoadingTenants(false));
     };
 
     loadTenants();
@@ -207,7 +205,7 @@ export function DatabaseForm() {
     setEnabledHrefs(newEnabled);
   };
 
-  const handleSaveTenant = () => {
+  const handleSaveTenant = async () => {
     if (!tenantName) {
       toast({ variant: 'destructive', title: 'Invalid Operation', description: 'Registry Name is mandatory.' });
       return;
@@ -239,12 +237,16 @@ export function DatabaseForm() {
           nextTenants.push(tenantData);
       }
 
-      localStorage.setItem('safeviate.tenants', JSON.stringify(nextTenants));
+      await Promise.all(nextTenants.map((tenant) => fetch('/api/tenants', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant }),
+      })));
       window.dispatchEvent(new Event('safeviate-tenants-updated'));
       
       toast({
         title: selectedTenantId ? 'Registry Entry Updated' : 'Registry Entry Generated',
-        description: `"${tenantName}" is now persistent in local storage.`,
+        description: `"${tenantName}" is now persistent in the database.`,
       });
 
       if (!selectedTenantId) handleClearForm();

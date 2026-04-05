@@ -18,24 +18,22 @@ export default function AircraftFleetPage() {
 
   const canManageAssets = hasPermission('assets-create') || hasPermission('assets-edit');
 
-  const loadAircrafts = useCallback(() => {
+  const loadAircrafts = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (stored) {
-            setAircrafts(JSON.parse(stored));
-        } else {
-            setAircrafts([]);
-        }
+      const response = await fetch('/api/aircraft', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ aircraft: [] }));
+      setAircrafts(Array.isArray(payload.aircraft) ? payload.aircraft : []);
     } catch (e) {
-        console.error("Failed to load aircrafts", e);
+      console.error('Failed to load aircrafts', e);
+      setAircrafts([]);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadAircrafts();
+    void loadAircrafts();
     window.addEventListener('safeviate-aircrafts-updated', loadAircrafts);
     return () => window.removeEventListener('safeviate-aircrafts-updated', loadAircrafts);
   }, [loadAircrafts]);
@@ -52,14 +50,10 @@ export default function AircraftFleetPage() {
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <MainPageHeader 
+        <MainPageHeader
           title="Aircraft Fleet"
           description="Manage all aircraft in your organization's inventory."
-          actions={
-            canManageAssets && (
-              <AddAircraftDialog tenantId={tenantId || ''} />
-            )
-          }
+          actions={canManageAssets ? <AddAircraftDialog tenantId={tenantId || ''} /> : undefined}
         />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <AircraftList data={aircrafts || []} tenantId={tenantId || ''} />

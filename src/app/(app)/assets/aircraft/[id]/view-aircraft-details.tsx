@@ -40,14 +40,15 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
 
   useEffect(() => {
-    const storedSettings = localStorage.getItem('safeviate.document-expiry-settings');
-    if (storedSettings) {
-        try {
-            setExpirySettings(JSON.parse(storedSettings));
-        } catch (e) {
-            console.error("Failed to load expiry settings", e);
-        }
-    }
+    void fetch('/api/tenant-config', { cache: 'no-store' })
+      .then((response) => response.json().catch(() => ({})))
+      .then((payload) => {
+        const settings = payload?.config?.['document-expiry-settings'] as DocumentExpirySettings | undefined;
+        if (settings) setExpirySettings(settings);
+      })
+      .catch((e) => {
+        console.error('Failed to load expiry settings', e);
+      });
   }, []);
   
   const handleViewImage = (url: string) => {

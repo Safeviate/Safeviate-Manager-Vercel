@@ -21,7 +21,7 @@ export async function DELETE(
   });
   const tenantId = currentUser?.tenantId || 'safeviate';
 
-  await prisma.personnel.deleteMany({
+  const deletedPersonnel = await prisma.personnel.deleteMany({
     where: { id, tenantId },
   });
 
@@ -29,5 +29,88 @@ export async function DELETE(
     where: { id, tenantId },
   });
 
+  if (deletedPersonnel.count === 0) {
+    return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+  }
+
   return NextResponse.json({ ok: true });
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email?.trim().toLowerCase();
+  const { id } = await params;
+
+  if (!email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email },
+    select: { tenantId: true },
+  });
+  const tenantId = currentUser?.tenantId || 'safeviate';
+
+  const body = await request.json().catch(() => null);
+  const personnel = body?.personnel;
+  if (!personnel || typeof personnel !== 'object') {
+    return NextResponse.json({ error: 'Invalid personnel payload.' }, { status: 400 });
+  }
+
+  const existing = await prisma.personnel.findFirst({
+    where: { id, tenantId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+  }
+
+  const data = {
+    ...existing,
+    ...personnel,
+    id,
+    tenantId,
+  };
+
+  const updatedPersonnel = await prisma.personnel.updateMany({
+    where: { id, tenantId },
+    data: {
+      userNumber: data.userNumber || null,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      role: data.role,
+      departmentId: data.department || null,
+      organizationId: data.organizationId || null,
+      contactNumber: data.contactNumber || null,
+      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+      isErpIncerfaContact: !!data.isErpIncerfaContact,
+      isErpAlerfaContact: !!data.isErpAlerfaContact,
+      permissions: data.permissions || [],
+      accessOverrides: data.accessOverrides || {},
+      documents: data.documents || [],
+      pilotLicense: data.pilotLicense || null,
+      updatedAt: new Date(),
+    },
+  });
+
+  if (updatedPersonnel.count === 0) {
+    return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+  }
+
+  await prisma.user.updateMany({
+    where: { id, tenantId },
+    data: {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      role: data.role,
+      organizationId: data.organizationId || null,
+      updatedAt: new Date(),
+    },
+  });
+
+  return NextResponse.json({ personnel: data }, { status: 200 });
 }

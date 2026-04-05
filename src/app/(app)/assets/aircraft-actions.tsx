@@ -17,29 +17,23 @@ export function AircraftActions({ aircraft }: AircraftActionsProps) {
   const canDelete = hasPermission('assets-delete');
 
   const handleDelete = () => {
-    try {
-      const stored = localStorage.getItem('safeviate.aircrafts');
-      if (!stored) return;
-      
-      const aircrafts = JSON.parse(stored) as Aircraft[];
-      const nextAircrafts = aircrafts.filter(a => a.id !== aircraft.id);
-      
-      localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
-      
-      // Notify the system that the fleet has been modified
-      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
-
-      toast({
+    fetch(`/api/aircraft/${aircraft.id}`, { method: 'DELETE' })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to remove the aircraft.');
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        toast({
           title: 'Aircraft Removed',
-          description: `Aircraft ${aircraft.tailNumber} has been permanently deleted from the local inventory.`,
+          description: `Aircraft ${aircraft.tailNumber} has been permanently deleted from the database.`,
+        });
+      })
+      .catch(() => {
+        toast({
+          variant: 'destructive',
+          title: 'Deletion Failed',
+          description: 'Failed to remove the aircraft from the database.',
+        });
       });
-    } catch (e) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Deletion Failed', 
-        description: 'Failed to remove the aircraft from local storage.' 
-      });
-    }
   };
 
   return (

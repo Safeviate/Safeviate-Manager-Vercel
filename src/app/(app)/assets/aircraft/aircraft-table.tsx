@@ -21,20 +21,16 @@ interface AircraftTableProps {
 export function AircraftTable({ aircraft }: AircraftTableProps) {
   const { toast } = useToast();
 
-  const handleDelete = (id: string, tail: string) => {
+  const handleDelete = async (id: string, tail: string) => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        const nextAircrafts = aircrafts.filter(a => a.id !== id);
-        
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
-        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
-        
-        toast({ title: 'Aircraft Removed', description: `${tail} has been permanently deleted from the local inventory.` });
+      const response = await fetch(`/api/aircraft/${id}`, { method: 'DELETE' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to remove aircraft.');
+
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+      toast({ title: 'Aircraft Removed', description: `${tail} has been permanently deleted from the fleet.` });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Failed to remove aircraft from storage.' });
+      toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Failed to remove aircraft from storage.' });
     }
   };
 

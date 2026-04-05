@@ -49,26 +49,33 @@ function NewDebriefContent() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        try {
-            const storedBookings = localStorage.getItem('safeviate.bookings');
-            const bookings = storedBookings ? JSON.parse(storedBookings) as Booking[] : [];
-            const b = bookings.find(x => x.id === bookingId);
-            if (b) {
-                setBooking(b);
-                
-                const storedStudents = localStorage.getItem('safeviate.students');
-                const students = storedStudents ? JSON.parse(storedStudents) as PilotProfile[] : [];
-                setStudent(students.find(s => s.id === b.studentId) || null);
-                
-                const storedInstructors = localStorage.getItem('safeviate.instructors');
-                const instructors = storedInstructors ? JSON.parse(storedInstructors) as PilotProfile[] : [];
-                setInstructor(instructors.find(i => i.id === b.instructorId) || null);
+        let cancelled = false;
+
+        const load = async () => {
+            try {
+                const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+                const payload = await response.json().catch(() => ({}));
+                const bookings = Array.isArray(payload?.bookings) ? payload.bookings : [];
+                const students = Array.isArray(payload?.students) ? payload.students : [];
+                const instructors = Array.isArray(payload?.instructors) ? payload.instructors : [];
+
+                const b = bookings.find(x => x.id === bookingId);
+                if (b && !cancelled) {
+                    setBooking(b);
+                    setStudent(students.find((s: PilotProfile) => s.id === b.studentId) || null);
+                    setInstructor(instructors.find((i: PilotProfile) => i.id === b.instructorId) || null);
+                }
+            } catch (e) {
+                console.error('Failed to load data', e);
+            } finally {
+                if (!cancelled) setIsLoading(false);
             }
-        } catch (e) {
-            console.error('Failed to load data', e);
-        } finally {
-            setIsLoading(false);
-        }
+        };
+
+        void load();
+        return () => {
+            cancelled = true;
+        };
     }, [bookingId]);
 
     const isLoadingBooking = isLoading;
@@ -104,10 +111,15 @@ function NewDebriefContent() {
         };
 
         try {
-            const storedReports = localStorage.getItem('safeviate.student-progress-reports');
-            const reports = storedReports ? JSON.parse(storedReports) : [];
-            const nextReports = [debriefData, ...reports];
-            localStorage.setItem('safeviate.student-progress-reports', JSON.stringify(nextReports));
+            const response = await fetch('/api/student-training', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ report: debriefData }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save debrief.');
+            }
             
             window.dispatchEvent(new Event('safeviate-training-updated'));
             

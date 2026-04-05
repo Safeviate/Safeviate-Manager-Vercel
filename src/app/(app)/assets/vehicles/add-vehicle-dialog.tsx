@@ -60,32 +60,36 @@ export function AddVehicleDialog({ tenantId }: { tenantId: string }) {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-        const stored = localStorage.getItem('safeviate.vehicles');
-        const vehicles = stored ? JSON.parse(stored) as Vehicle[] : [];
-        
-        const newVehicle: Vehicle = {
-            ...values,
-            id: values.registrationNumber.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() + '-' + crypto.randomUUID().slice(0, 4),
-            nextServiceDueDate: values.nextServiceDueDate || null,
-            nextServiceDueOdometer: values.nextServiceDueOdometer === '' ? null : Number(values.nextServiceDueOdometer),
-            documents: [],
-            organizationId: tenantId,
-        };
+      const newVehicle: Vehicle = {
+        ...values,
+        id: values.registrationNumber.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() + '-' + crypto.randomUUID().slice(0, 4),
+        nextServiceDueDate: values.nextServiceDueDate || null,
+        nextServiceDueOdometer: values.nextServiceDueOdometer === '' ? null : Number(values.nextServiceDueOdometer),
+        documents: [],
+        organizationId: tenantId,
+      };
 
-        const nextVehicles = [...vehicles, newVehicle];
-        localStorage.setItem('safeviate.vehicles', JSON.stringify(nextVehicles));
-        window.dispatchEvent(new Event('safeviate-vehicles-updated'));
+      const response = await fetch('/api/vehicles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicle: newVehicle }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to register vehicle.');
+      }
 
-        toast({
-            title: 'Vehicle Added',
-            description: `${values.registrationNumber} has been added to the fleet.`,
-        });
-        setIsOpen(false);
-        form.reset();
-    } catch (e) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to register vehicle.' });
+      window.dispatchEvent(new Event('safeviate-vehicles-updated'));
+      toast({
+        title: 'Vehicle Added',
+        description: `${values.registrationNumber} has been added to the fleet.`,
+      });
+      setIsOpen(false);
+      form.reset();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e?.message || 'Failed to register vehicle.' });
     }
   };
 

@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import type { MaintenanceLog } from '@/types/aircraft';
+import type { MaintenanceLog } from '@/types/maintenance';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -67,18 +67,18 @@ function MaintenanceSummaryDialog({ logs }: { logs: MaintenanceLog[] }) {
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-auto p-8">
-            <div className="rounded-2xl border-2 bg-muted/5 p-6 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+          <div className="rounded-2xl border-2 bg-muted/5 p-6 text-sm leading-relaxed whitespace-pre-wrap font-medium">
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
                 <p className="text-[10px] font-black uppercase tracking-widest">Processing Data Streams...</p>
-                </div>
+              </div>
             ) : summary ? (
-                summary
+              summary
             ) : (
-                <p className="text-center py-10 text-muted-foreground italic">No historical analysis has been requested yet.</p>
+              <p className="text-center py-10 text-muted-foreground italic">No historical analysis has been requested yet.</p>
             )}
-            </div>
+          </div>
         </div>
         <DialogFooter className="p-8 border-t bg-muted/5">
           <Button onClick={handleSummarize} className="h-12 px-10 text-[10px] font-black uppercase shadow-lg" disabled={isLoading || !canSummarize}>
@@ -94,31 +94,31 @@ export function MaintenanceLogList({ aircraftId }: { aircraftId: string, tenantI
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadLogs = useCallback(() => {
+  const loadLogs = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem(`safeviate.maintenance-logs.${aircraftId}`);
-        if (stored) {
-            const parsed = JSON.parse(stored) as MaintenanceLog[];
-            setLogs(parsed.sort((a, b) => b.date.localeCompare(a.date)));
-        }
+      const response = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ aircraft: null }));
+      const nextLogs = ((payload.aircraft?.maintenanceLogs as MaintenanceLog[]) || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+      setLogs(nextLogs);
     } catch (e) {
-        console.error("Failed to load logs", e);
+      console.error('Failed to load logs', e);
+      setLogs([]);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, [aircraftId]);
 
   useEffect(() => {
     loadLogs();
-    window.addEventListener('safeviate-maintenance-logs-updated', loadLogs);
-    return () => window.removeEventListener('safeviate-maintenance-logs-updated', loadLogs);
+    window.addEventListener('safeviate-aircrafts-updated', loadLogs);
+    return () => window.removeEventListener('safeviate-aircrafts-updated', loadLogs);
   }, [loadLogs]);
 
   if (isLoading) return (
     <div className="py-12 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-widest">Querying Technical Logbook...</p>
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <p className="text-[10px] font-black uppercase tracking-widest">Querying Technical Logbook...</p>
     </div>
   );
 
@@ -126,8 +126,8 @@ export function MaintenanceLogList({ aircraftId }: { aircraftId: string, tenantI
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-            <History className="h-5 w-5 text-primary" />
-            <h3 className="text-sm font-black uppercase tracking-tight">Technical Log History</h3>
+          <History className="h-5 w-5 text-primary" />
+          <h3 className="text-sm font-black uppercase tracking-tight">Technical Log History</h3>
         </div>
         <MaintenanceSummaryDialog logs={logs || []} />
       </div>
@@ -151,9 +151,9 @@ export function MaintenanceLogList({ aircraftId }: { aircraftId: string, tenantI
                   </TableCell>
                   <TableCell className="w-48">
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black uppercase tracking-tight text-primary">AME: {log.ameNo}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">AMO: {log.amoNo}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground/60">{log.reference || 'NO REF'}</span>
+                      <span className="text-[10px] font-black uppercase tracking-tight text-primary">AME: {log.ameNo}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">AMO: {log.amoNo}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground/60">{log.reference || 'NO REF'}</span>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -65,45 +65,57 @@ export default function RiskMatrixPage() {
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
 
-  const queueSave = (updates: Partial<RiskMatrixSettings>) => {
+  const queueSave = (configuration: RiskMatrixSettings) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      localStorage.setItem('safeviate:risk-matrix', JSON.stringify({ colors, likelihoods, severities, ...updates }));
+      void fetch('/api/risk-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configuration }),
+      });
     }, 250);
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem('safeviate:risk-matrix');
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as Partial<{ colors: Record<string, string>; likelihoods: typeof defaultLikelihoods; severities: typeof defaultSeverities }>;
-      if (parsed.colors) setColors(parsed.colors);
-      if (parsed.likelihoods) setLikelihoods(parsed.likelihoods);
-      if (parsed.severities) setSeverities(parsed.severities);
-    } catch {
-      // ignore bad local cache
-    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/risk-matrix', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ configuration: null }));
+        const configuration = payload?.configuration;
+        if (cancelled || !configuration || typeof configuration !== 'object') return;
+        const parsed = configuration as Partial<{ colors: Record<string, string>; likelihoodDefinitions: typeof defaultLikelihoods; severityDefinitions: typeof defaultSeverities }>;
+        if (parsed.colors) setColors(parsed.colors);
+        if (parsed.likelihoodDefinitions) setLikelihoods(parsed.likelihoodDefinitions);
+        if (parsed.severityDefinitions) setSeverities(parsed.severityDefinitions);
+      } catch {
+        // use defaults
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleColorChange = (cellId: string, newColor: string) => {
     const newColors = { ...colors, [cellId]: newColor };
     setColors(newColors);
-    queueSave({ colors: newColors });
+    queueSave({ id: 'risk-matrix-config', colors: newColors, likelihoodDefinitions: likelihoods, severityDefinitions: severities });
   };
 
   const handleLikelihoodChange = (index: number, field: 'name' | 'description', value: string) => {
     const newLikelihoods = [...likelihoods];
     newLikelihoods[index] = { ...newLikelihoods[index], [field]: value };
     setLikelihoods(newLikelihoods);
-    queueSave({ likelihoodDefinitions: newLikelihoods });
+    queueSave({ id: 'risk-matrix-config', colors, likelihoodDefinitions: newLikelihoods, severityDefinitions: severities });
   };
 
   const handleSeverityChange = (index: number, field: 'name' | 'description', value: string) => {
     const newSeverities = [...severities];
     newSeverities[index] = { ...newSeverities[index], [field]: value };
     setSeverities(newSeverities);
-    queueSave({ severityDefinitions: newSeverities });
+    queueSave({ id: 'risk-matrix-config', colors, likelihoodDefinitions: likelihoods, severityDefinitions: newSeverities });
   };
 
   if (!colors) return null;

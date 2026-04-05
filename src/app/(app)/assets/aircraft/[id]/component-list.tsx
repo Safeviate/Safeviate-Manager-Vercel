@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Box, Hash, Timer, PenTool } from 'lucide-react';
-import type { Aircraft, AircraftComponent } from '@/types/aircraft';
+import type { AircraftComponent } from '@/types/aircraft';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { ComponentForm } from './component-form';
@@ -29,21 +29,16 @@ export function ComponentList({ components, isLoading, aircraftId, tenantId }: C
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to permanently remove this component from tracking?')) return;
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        if (!stored) return;
-        const aircrafts = JSON.parse(stored) as Aircraft[];
-        
-        const nextAircrafts = aircrafts.map(a => {
-            if (a.id === aircraftId) {
-                return { ...a, components: (a.components || []).filter(c => c.id !== id) };
-            }
-            return a;
+        const response = await fetch(`/api/aircraft/${aircraftId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ aircraft: { components: components.filter((component) => component.id !== id) } }),
         });
-
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to remove component.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
 
-        toast({ title: 'Component Decommissioned', description: 'The registered part has been removed from the local vault.' });
+        toast({ title: 'Component Decommissioned', description: 'The registered part has been removed from the fleet record.' });
     } catch (e: any) {
         toast({ variant: 'destructive', title: 'Deletion Failed' });
     }

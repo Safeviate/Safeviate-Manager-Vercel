@@ -15,21 +15,10 @@ import { Textarea } from '@/components/ui/textarea';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
 
-const STORAGE_KEY = 'safeviate.training-routes';
-
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
   ssr: false,
   loading: () => <div className="h-full w-full animate-pulse bg-slate-900 flex items-center justify-center text-white font-black uppercase tracking-widest text-[10px]">Loading Aeronautical Engine...</div>
 });
-
-const loadRoutes = (): TrainingRoute[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as TrainingRoute[];
-  } catch {
-    return [];
-  }
-};
 
 export default function TrainingRoutesPage() {
   const [routes, setRoutes] = useState<TrainingRoute[]>([]);
@@ -40,14 +29,27 @@ export default function TrainingRoutesPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    setRoutes(loadRoutes());
+    const loadRoutes = async () => {
+      try {
+        const res = await fetch('/api/training-routes', { cache: 'no-store' });
+        const data = await res.json();
+        const nextRoutes = Array.isArray(data.routes) ? data.routes : [];
+        setRoutes(nextRoutes);
+        if (!activeRoute && nextRoutes.length > 0) setActiveRoute(nextRoutes[0]);
+      } catch {
+        setRoutes([]);
+      }
+    };
+    loadRoutes();
   }, []);
 
-  const persistRoutes = (nextRoutes: TrainingRoute[]) => {
-    setRoutes(nextRoutes);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRoutes));
-    }
+  const persistRoute = async (route: TrainingRoute, method: 'POST' | 'PATCH') => {
+    const res = await fetch('/api/training-routes', {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ route }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Failed to save route.');
   };
 
   const handleCreateNew = () => {
@@ -57,7 +59,7 @@ export default function TrainingRoutesPage() {
       description: '',
       legs: [],
       hazards: [],
-      tenantId: 'local',
+      tenantId: 'safeviate',
       createdAt: new Date().toISOString(),
     };
     setActiveRoute(newRoute);
@@ -88,19 +90,28 @@ export default function TrainingRoutesPage() {
     setHazardToEdit(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!activeRoute) return;
-    const nextRoutes = routes.some((route) => route.id === activeRoute.id)
-      ? routes.map((route) => (route.id === activeRoute.id ? activeRoute : route))
-      : [activeRoute, ...routes];
-    persistRoutes(nextRoutes);
-    setIsEditing(false);
+    try {
+      const exists = routes.some((route) => route.id === activeRoute.id);
+      await persistRoute(activeRoute, exists ? 'PATCH' : 'POST');
+      const nextRoutes = exists ? routes.map((route) => (route.id === activeRoute.id ? activeRoute : route)) : [activeRoute, ...routes];
+      setRoutes(nextRoutes);
+      setIsEditing(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleDelete = (routeId: string) => {
-    const nextRoutes = routes.filter((route) => route.id !== routeId);
-    persistRoutes(nextRoutes);
-    if (activeRoute?.id === routeId) setActiveRoute(null);
+  const handleDelete = async (routeId: string) => {
+    try {
+      await fetch(`/api/training-routes?id=${routeId}`, { method: 'DELETE' });
+      const nextRoutes = routes.filter((route) => route.id !== routeId);
+      setRoutes(nextRoutes);
+      if (activeRoute?.id === routeId) setActiveRoute(null);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const filteredRoutes = useMemo(
@@ -114,11 +125,7 @@ export default function TrainingRoutesPage() {
         <div className="sticky top-0 z-30 border-b bg-card">
           <MainPageHeader
             title="Training Routes"
-            actions={
-              <Button onClick={handleCreateNew} className="h-9 bg-emerald-700 text-[10px] font-black uppercase text-white hover:bg-emerald-800">
-                <Plus size={14} className="mr-2" /> New Route
-              </Button>
-            }
+            actions={<Button onClick={handleCreateNew} className="h-9 bg-emerald-700 text-[10px] font-black uppercase text-white hover:bg-emerald-800"><Plus size={14} className="mr-2" /> New Route</Button>}
           />
         </div>
 
@@ -143,25 +150,14 @@ export default function TrainingRoutesPage() {
                       <p className="mt-1 line-clamp-1 text-[9px] font-bold italic text-muted-foreground">{route.description || 'No description'}</p>
                     </button>
                   ))}
-                  {filteredRoutes.length === 0 && (
-                    <div className="space-y-3 p-8 text-center opacity-40">
-                      <PlaneTakeoff size={32} className="mx-auto" />
-                      <p className="text-[10px] font-black uppercase tracking-widest">No routes found</p>
-                    </div>
-                  )}
+                  {filteredRoutes.length === 0 && (<div className="space-y-3 p-8 text-center opacity-40"><PlaneTakeoff size={32} className="mx-auto" /><p className="text-[10px] font-black uppercase tracking-widest">No routes found</p></div>)}
                 </div>
               </ScrollArea>
             </div>
 
             <div className="relative flex h-full flex-col overflow-hidden bg-slate-900">
               <AeronauticalMap legs={activeRoute?.legs || []} hazards={activeRoute?.hazards || []} onAddWaypoint={handleAddWaypoint} onAddHazard={handleAddHazardRequest} />
-              {!isEditing && activeRoute && (
-                <div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2">
-                  <Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">
-                    Edit Route Engine
-                  </Button>
-                </div>
-              )}
+              {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
             <div className="flex h-full flex-col overflow-hidden border-l bg-background">
@@ -172,9 +168,7 @@ export default function TrainingRoutesPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Profile</p>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
-                        <Button onClick={handleSave} disabled={!isEditing} className="h-8 shrink-0 bg-emerald-700 px-3 text-[9px] font-black uppercase">
-                          <Save size={14} className="mr-2" /> Save
-                        </Button>
+                        <Button onClick={handleSave} disabled={!isEditing} className="h-8 shrink-0 bg-emerald-700 px-3 text-[9px] font-black uppercase"><Save size={14} className="mr-2" /> Save</Button>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -254,7 +248,7 @@ export default function TrainingRoutesPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-sm font-black uppercase tracking-widest"><AlertTriangle className="h-4 w-4 text-destructive" /> Mark Safety Hazard</DialogTitle>
-            <DialogDescription>Describe the hazard and save it with the local route.</DialogDescription>
+            <DialogDescription>Describe the hazard and save it with the route.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

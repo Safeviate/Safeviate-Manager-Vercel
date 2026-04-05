@@ -33,15 +33,15 @@ export default function ExternalOrganizationsPage() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
 
-  const loadOrgs = useCallback(() => {
+  const loadOrgs = useCallback(async () => {
     setIsLoading(true);
     try {
-        const stored = localStorage.getItem('safeviate.external-organizations');
-        if (stored) {
-            setOrganizations(JSON.parse(stored));
-        }
+        const response = await fetch('/api/external-organizations', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ organizations: [] }));
+        setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
     } catch (e) {
-        console.error("Failed to load external orgs", e);
+        console.error('Failed to load external orgs', e);
+        setOrganizations([]);
     } finally {
         setIsLoading(false);
     }
@@ -49,8 +49,8 @@ export default function ExternalOrganizationsPage() {
 
   useEffect(() => {
     loadOrgs();
-    window.addEventListener('safeviate-external-orgs-updated', loadOrgs);
-    return () => window.removeEventListener('safeviate-external-orgs-updated', loadOrgs);
+    window.addEventListener('safeviate-external-organizations-updated', loadOrgs);
+    return () => window.removeEventListener('safeviate-external-organizations-updated', loadOrgs);
   }, [loadOrgs]);
 
   const handleOpenForm = (org: ExternalOrganization | null = null) => {
@@ -61,31 +61,22 @@ export default function ExternalOrganizationsPage() {
     setIsFormOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast({ variant: 'destructive', title: 'Error', description: 'Organization name is required.' });
       return;
     }
 
     try {
-        const stored = localStorage.getItem('safeviate.external-organizations');
-        const orgs = stored ? JSON.parse(stored) as ExternalOrganization[] : [];
-        
-        let nextOrgs: ExternalOrganization[];
-        if (editingOrg) {
-            nextOrgs = orgs.map(o => o.id === editingOrg.id ? { ...o, name, contactEmail: email, address } : o);
-        } else {
-            const newOrg: ExternalOrganization = {
-                id: crypto.randomUUID(),
-                name,
-                contactEmail: email,
-                address,
-            };
-            nextOrgs = [...orgs, newOrg];
-        }
-
-        localStorage.setItem('safeviate.external-organizations', JSON.stringify(nextOrgs));
-        window.dispatchEvent(new Event('safeviate-external-orgs-updated'));
+        const payload = { organization: { ...(editingOrg || {}), name, contactEmail: email, address } };
+        const response = await fetch(editingOrg ? `/api/external-organizations/${editingOrg.id}` : '/api/external-organizations', {
+          method: editingOrg ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to save organization.');
+        window.dispatchEvent(new Event('safeviate-external-organizations-updated'));
         toast({ title: editingOrg ? 'Organization Updated' : 'Organization Created' });
         setIsFormOpen(false);
     } catch (e) {
@@ -93,16 +84,13 @@ export default function ExternalOrganizationsPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
-        const stored = localStorage.getItem('safeviate.external-organizations');
-        if (stored) {
-            const orgs = JSON.parse(stored) as ExternalOrganization[];
-            const nextOrgs = orgs.filter(o => o.id !== id);
-            localStorage.setItem('safeviate.external-organizations', JSON.stringify(nextOrgs));
-            window.dispatchEvent(new Event('safeviate-external-orgs-updated'));
-            toast({ title: 'Organization Deleted' });
-        }
+        const response = await fetch(`/api/external-organizations/${id}`, { method: 'DELETE' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to delete organization.');
+        window.dispatchEvent(new Event('safeviate-external-organizations-updated'));
+        toast({ title: 'Organization Deleted' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete organization.' });
     }
@@ -118,12 +106,12 @@ export default function ExternalOrganizationsPage() {
         {canManage && (
           <Button
             onClick={() => handleOpenForm()}
-            variant={isMobile ? "outline" : "default"}
-            size={isMobile ? "sm" : "default"}
-            className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "font-black uppercase text-[10px] h-9 tracking-tight"}
+            variant={isMobile ? 'outline' : 'default'}
+            size={isMobile ? 'sm' : 'default'}
+            className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : 'font-black uppercase text-[10px] h-9 tracking-tight'}
           >
             <span className="flex items-center gap-2">
-              <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "mr-2 h-4 w-4"} /> Add Organization
+              <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} /> Add Organization
             </span>
             {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
           </Button>

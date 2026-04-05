@@ -20,36 +20,34 @@ export function PilotLogbook({ userId, tenantId, role }: PilotLogbookProps) {
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [isLoadingAircrafts, setIsLoadingAircrafts] = useState(true);
 
-    useEffect(() => {
-        try {
-            const bks = localStorage.getItem('safeviate.bookings');
-            if (bks) {
-                const parsed = JSON.parse(bks) as Booking[];
-                const completed = parsed.filter(b => b.status === 'Completed');
-                
-                if (role === 'private') {
-                    setRawBookings(completed);
-                } else {
-                    const field = role === 'instructor' ? 'instructorId' : 'studentId';
-                    setRawBookings(completed.filter(b => b[field] === userId));
-                }
+  useEffect(() => {
+        void (async () => {
+          try {
+            const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({ bookings: [], aircrafts: [] }));
+            const completed = Array.isArray(payload.bookings) ? (payload.bookings as Booking[]).filter(b => b.status === 'Completed') : [];
+            if (role === 'private') {
+              setRawBookings(completed);
+            } else {
+              const field = role === 'instructor' ? 'instructorId' : 'studentId';
+              setRawBookings(completed.filter(b => b[field] === userId));
             }
-        } catch {
-            // ignore
-        } finally {
+          } finally {
             setIsLoadingBookings(false);
-        }
+          }
+        })();
     }, [tenantId, userId, role]);
 
     useEffect(() => {
-        try {
-            const acs = localStorage.getItem('safeviate.aircrafts');
-            if (acs) setAircrafts(JSON.parse(acs));
-        } catch {
-            // ignore
-        } finally {
+        void (async () => {
+          try {
+            const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({ aircrafts: [] }));
+            if (Array.isArray(payload.aircrafts)) setAircrafts(payload.aircrafts);
+          } finally {
             setIsLoadingAircrafts(false);
-        }
+          }
+        })();
     }, [tenantId]);
 
     const aircraftMap = useMemo(() => {

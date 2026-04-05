@@ -311,23 +311,40 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
   const [riskMatrixSettings, setRiskMatrixSettings] = React.useState<RiskMatrixSettings | null>(null);
 
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const storedAreas = window.localStorage.getItem('safeviate:risk-register-areas');
-      if (storedAreas) setHazardAreas(JSON.parse(storedAreas));
-      const storedMatrix = window.localStorage.getItem('safeviate:risk-matrix');
-      if (storedMatrix) {
-        const parsed = JSON.parse(storedMatrix) as Partial<RiskMatrixSettings>;
-        setRiskMatrixSettings({
-          id: 'risk-matrix-config',
-          colors: parsed.colors || {},
-          likelihoodDefinitions: parsed.likelihoodDefinitions,
-          severityDefinitions: parsed.severityDefinitions,
-        });
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [areasResponse, matrixResponse] = await Promise.all([
+          fetch('/api/risk-register/areas', { cache: 'no-store' }),
+          fetch('/api/risk-matrix', { cache: 'no-store' }),
+        ]);
+        const [areasPayload, matrixPayload] = await Promise.all([
+          areasResponse.json().catch(() => ({ areas: DEFAULT_HAZARD_AREAS })),
+          matrixResponse.json().catch(() => ({ configuration: null })),
+        ]);
+        if (cancelled) return;
+        if (Array.isArray(areasPayload?.areas) && areasPayload.areas.length) {
+          setHazardAreas(areasPayload.areas);
+        }
+        if (matrixPayload?.configuration && typeof matrixPayload.configuration === 'object') {
+          const parsed = matrixPayload.configuration as Partial<RiskMatrixSettings>;
+          setRiskMatrixSettings({
+            id: 'risk-matrix-config',
+            colors: parsed.colors || {},
+            likelihoodDefinitions: parsed.likelihoodDefinitions,
+            severityDefinitions: parsed.severityDefinitions,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setHazardAreas(DEFAULT_HAZARD_AREAS);
+        }
       }
-    } catch {
-      // ignore bad cache
-    }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const form = useForm<RiskFormValues>({
@@ -352,13 +369,18 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
     };
 
     try {
-        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('safeviate:risk-register-data') : null;
-        const current = stored ? (JSON.parse(stored) as Risk[]) : [];
-        const next = existingRisk
-          ? current.map((risk) => (risk.id === existingRisk.id ? ({ ...risk, ...dataToSave } as Risk) : risk))
-          : [...current, ({ id: uuidv4(), ...dataToSave, status: 'Open' } as Risk)];
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('safeviate:risk-register-data', JSON.stringify(next));
+        const payload = {
+          risk: existingRisk
+            ? { ...existingRisk, ...dataToSave }
+            : { id: uuidv4(), ...dataToSave, status: 'Open' },
+        };
+        const response = await fetch('/api/risk-register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to save risk register entry');
         }
         toast({ title: existingRisk ? 'Risk Updated' : 'Hazard Added', description: existingRisk ? 'The risk has been updated in the register.' : 'The new hazard and its risks have been added to the register.' });
         if (onCancel) onCancel();

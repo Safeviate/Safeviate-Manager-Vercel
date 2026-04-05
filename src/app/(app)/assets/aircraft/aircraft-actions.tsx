@@ -27,23 +27,17 @@ export function AircraftActions({ tenantId, aircraft, canEdit }: AircraftActions
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     try {
-        const stored = localStorage.getItem('safeviate.aircrafts');
-        const aircrafts = stored ? JSON.parse(stored) as Aircraft[] : [];
-        
-        const nextAircrafts = aircrafts.filter(ac => ac.id !== aircraft.id);
-        localStorage.setItem('safeviate.aircrafts', JSON.stringify(nextAircrafts));
-        
-        // Also cleanup maintenance logs for this aircraft
-        localStorage.removeItem(`safeviate.maintenance-logs:${aircraft.id}`);
-        
-        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
-        
-        toast({ title: 'Aircraft Deleted', description: `${aircraft.tailNumber} has been removed from the fleet.` });
-        setIsDeleteDialogOpen(false);
+      const response = await fetch(`/api/aircraft/${aircraft.id}`, { method: 'DELETE' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to delete aircraft.');
+
+      window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+      toast({ title: 'Aircraft Deleted', description: `${aircraft.tailNumber} has been removed from the fleet.` });
+      setIsDeleteDialogOpen(false);
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete aircraft.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete aircraft.' });
     }
   };
 
@@ -62,7 +56,7 @@ export function AircraftActions({ tenantId, aircraft, canEdit }: AircraftActions
           </Button>
         }
       />
-      
+
       <Button
         variant="destructive"
         size="sm"

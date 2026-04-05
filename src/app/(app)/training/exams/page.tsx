@@ -68,42 +68,50 @@ export default function ExamsPage() {
   const [isLoadingResults, setIsLoadingResults] = useState(true);
 
   useEffect(() => {
-    // Load data from LocalStorage
-    const loadData = () => {
+    let cancelled = false;
+
+    const loadData = async () => {
       try {
-        const storedTemplates = localStorage.getItem('safeviate.exam-templates');
-        if (storedTemplates) setTemplates(JSON.parse(storedTemplates));
-        
-        const storedResults = localStorage.getItem('safeviate.student-exam-results');
-        if (storedResults) setResults(JSON.parse(storedResults));
-        
-        const storedPool = localStorage.getItem('safeviate.question-pool');
-        if (storedPool) setPoolItems(JSON.parse(storedPool));
-        
-        const storedTopics = localStorage.getItem('safeviate.exam-topics');
-        if (storedTopics) setTopicsData(JSON.parse(storedTopics));
+        const [examsResponse, summaryResponse] = await Promise.all([
+          fetch('/api/exams', { cache: 'no-store' }),
+          fetch('/api/dashboard-summary', { cache: 'no-store' }),
+        ]);
 
-        const p1 = JSON.parse(localStorage.getItem('safeviate.personnel') || '[]') as Personnel[];
-        const p2 = JSON.parse(localStorage.getItem('safeviate.instructors') || '[]') as PilotProfile[];
-        const p3 = JSON.parse(localStorage.getItem('safeviate.students') || '[]') as PilotProfile[];
-        setAllPeople([...p1, ...p2, ...p3]);
+        const [examsPayload, summaryPayload] = await Promise.all([
+          examsResponse.json().catch(() => ({})),
+          summaryResponse.json().catch(() => ({})),
+        ]);
 
+        if (!cancelled) {
+          setTemplates(Array.isArray(examsPayload?.templates) ? examsPayload.templates : []);
+          setResults(Array.isArray(examsPayload?.results) ? examsPayload.results : []);
+          setPoolItems(Array.isArray(examsPayload?.poolItems) ? examsPayload.poolItems : []);
+          setTopicsData(Array.isArray(examsPayload?.topics) ? { id: 'exam-topics', topics: examsPayload.topics } : null);
+          const personnel = Array.isArray(summaryPayload?.personnel) ? summaryPayload.personnel : [];
+          const instructors = Array.isArray(summaryPayload?.instructors) ? summaryPayload.instructors : [];
+          const students = Array.isArray(summaryPayload?.students) ? summaryPayload.students : [];
+          setAllPeople([...personnel, ...instructors, ...students]);
+        }
       } catch (e) {
-        console.error('Failed to load data from localStorage', e);
+        console.error('Failed to load exam data', e);
       } finally {
-        setIsLoadingTemplates(false);
-        setIsLoadingResults(false);
+        if (!cancelled) {
+          setIsLoadingTemplates(false);
+          setIsLoadingResults(false);
+        }
       }
     };
 
-    loadData();
-
+    void loadData();
     const handleUpdate = () => {
-        loadData();
+        void loadData();
     };
 
     window.addEventListener('safeviate-exams-updated', handleUpdate);
-    return () => window.removeEventListener('safeviate-exams-updated', handleUpdate);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('safeviate-exams-updated', handleUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -123,7 +131,16 @@ export default function ExamsPage() {
   const handleDelete = async (id: string) => {
     try {
       const nextTemplates = templates.filter(t => t.id !== id);
-      localStorage.setItem('safeviate.exam-templates', JSON.stringify(nextTemplates));
+      await fetch('/api/exams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templates: nextTemplates,
+          results,
+          topics: topicsData?.topics || [],
+          poolItems,
+        }),
+      });
       setTemplates(nextTemplates);
       toast({ title: 'Exam Deleted' });
     } catch (error: any) {

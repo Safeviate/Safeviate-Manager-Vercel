@@ -34,7 +34,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
-const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
         case 'Closed': return 'default';
         case 'Open': return 'destructive';
@@ -43,7 +43,7 @@ const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destr
     }
 };
 
-function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: string, reportNumber: string, tenantId: string }) {
+function DeleteReportButton({ reportId, reportNumber }: { reportId: string, reportNumber: string }) {
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
 
@@ -62,10 +62,7 @@ function DeleteReportButton({ reportId, reportNumber, tenantId }: { reportId: st
             const payload = await response.json().catch(() => null);
             throw new Error(payload?.error || 'Unable to delete this report right now.');
         }
-        toast({
-            title: 'Report Deleted',
-            description: `Safety Report #${reportNumber} is being deleted.`,
-        });
+        toast({ title: 'Report Deleted', description: `Safety Report #${reportNumber} is being deleted.` });
     };
 
     return (
@@ -90,7 +87,6 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
 
     return (
         <div className="flex flex-col h-full">
-            {/* --- DESKTOP TABLE VIEW --- */}
             <div className="hidden lg:block overflow-auto">
                 <Table>
                     <TableHeader className="bg-muted/30 sticky top-0 z-10">
@@ -115,7 +111,7 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
                                     <div className="flex justify-end gap-2">
                                         <ViewActionButton href={`/safety/safety-reports/${report.id}`} />
                                         {canManage && <EditReportDialog report={report} tenantId={tenantId} />}
-                                        <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} tenantId={tenantId} />
+                                        <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} />
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -124,7 +120,6 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
                 </Table>
             </div>
 
-            {/* --- MOBILE CARD VIEW --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden p-4">
                 {reports.map(report => (
                     <Card key={report.id} className="shadow-none border-slate-200 overflow-hidden">
@@ -164,7 +159,7 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
                             {canManage && (
                                 <div className="flex gap-1">
                                     <EditReportDialog report={report} tenantId={tenantId} />
-                                    <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} tenantId={tenantId} />
+                                    <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} />
                                 </div>
                             )}
                         </div>
@@ -295,17 +290,17 @@ export default function SafetyReportsPage() {
   }, [tenantId]);
 
   useEffect(() => {
-    const loadOrganizations = () => {
-      if (typeof window === 'undefined') return;
+    const loadOrganizations = async () => {
       try {
-        const stored = window.localStorage.getItem('safeviate.external-organizations');
-        setOrganizations(stored ? (JSON.parse(stored) as ExternalOrganization[]) : []);
+        const response = await fetch('/api/external-organizations', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ organizations: [] }));
+        setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []);
       } catch {
         setOrganizations([]);
       }
     };
 
-    loadOrganizations();
+    void loadOrganizations();
     window.addEventListener('safeviate-external-organizations-updated', loadOrganizations);
     return () => {
       window.removeEventListener('safeviate-external-organizations-updated', loadOrganizations);
@@ -340,7 +335,7 @@ export default function SafetyReportsPage() {
                             <Link href={`/safety/new-report?orgId=${orgId}`}>
                                 <span className="flex items-center gap-2">
                                     <PlusCircle className="h-4 w-4" />
-                                    {isMobile ? "File" : "File New Report"}
+                                    {isMobile ? 'File' : 'File New Report'}
                                 </span>
                                 {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                             </Link>

@@ -23,26 +23,26 @@ export function MaintenanceLogs({ aircraftId }: MaintenanceLogsProps) {
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadLogs = useCallback(() => {
+  const loadLogs = useCallback(async () => {
+    setIsLoading(true);
     try {
-        const key = `safeviate.maintenance-logs:${aircraftId}`;
-        const stored = localStorage.getItem(key);
-        if (stored) {
-            setLogs(JSON.parse(stored));
-        }
+      const response = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ aircraft: null }));
+      setLogs(((payload.aircraft?.maintenanceLogs as MaintenanceLog[]) || []).slice().sort((a, b) => b.date.localeCompare(a.date)));
     } catch (e) {
-        console.error("Failed to load local maintenance logs", e);
+      console.error('Failed to load local maintenance logs', e);
+      setLogs([]);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, [aircraftId]);
 
   useEffect(() => {
     loadLogs();
-    const eventName = `safeviate-maintenance-logs-updated:${aircraftId}`;
+    const eventName = 'safeviate-aircrafts-updated';
     window.addEventListener(eventName, loadLogs);
     return () => window.removeEventListener(eventName, loadLogs);
-  }, [loadLogs, aircraftId]);
+  }, [loadLogs]);
 
   if (isLoading) {
     return <Skeleton className="h-48 w-full rounded-2xl" />;
@@ -67,23 +67,21 @@ export function MaintenanceLogs({ aircraftId }: MaintenanceLogsProps) {
                   {format(new Date(log.date), 'dd MMM yyyy')}
                 </TableCell>
                 <TableCell className="text-center font-black uppercase text-[10px] text-primary tracking-tight">
-                    <span className="bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
-                        {log.maintenanceType}
-                    </span>
+                  <span className="bg-primary/5 px-3 py-1 rounded-full border border-primary/10">{log.maintenanceType}</span>
                 </TableCell>
                 <TableCell className="max-w-md">
-                    <div className="flex flex-col gap-1 py-3 group-hover:px-2 transition-all">
-                        <p className="text-sm font-medium leading-relaxed">{log.details}</p>
-                        <p className="text-[9px] font-black uppercase tracking-widest opacity-50 flex items-center gap-1.5">
-                            <FileText className="h-3 w-3" /> Ref: {log.reference || 'N/A'}
-                        </p>
-                    </div>
+                  <div className="flex flex-col gap-1 py-3 group-hover:px-2 transition-all">
+                    <p className="text-sm font-medium leading-relaxed">{log.details}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest opacity-50 flex items-center gap-1.5">
+                      <FileText className="h-3 w-3" /> Ref: {log.reference || 'N/A'}
+                    </p>
+                  </div>
                 </TableCell>
                 <TableCell className="text-right pr-6">
-                    <div className="flex flex-col py-3">
-                        <p className="text-xs font-black uppercase tracking-tighter text-primary">{log.ameNo || 'UNIDENTIFIED'}</p>
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-70">AMO {log.amoNo || 'N/A'}</p>
-                    </div>
+                  <div className="flex flex-col py-3">
+                    <p className="text-xs font-black uppercase tracking-tighter text-primary">{log.ameNo || 'UNIDENTIFIED'}</p>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-70">AMO {log.amoNo || 'N/A'}</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
@@ -91,8 +89,8 @@ export function MaintenanceLogs({ aircraftId }: MaintenanceLogsProps) {
             <TableRow>
               <TableCell colSpan={4} className="h-48 text-center text-muted-foreground bg-muted/5">
                 <div className="flex flex-col items-center justify-center gap-3 opacity-30 grayscale pt-8">
-                    <History className="h-10 w-10" />
-                    <p className="text-[10px] font-black uppercase tracking-widest italic">No certified maintenance history records found.</p>
+                  <History className="h-10 w-10" />
+                  <p className="text-[10px] font-black uppercase tracking-widest italic">No certified maintenance history records found.</p>
                 </div>
               </TableCell>
             </TableRow>

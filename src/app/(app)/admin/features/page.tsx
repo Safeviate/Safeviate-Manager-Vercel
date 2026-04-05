@@ -54,38 +54,26 @@ export default function FeaturesPage() {
   
   const debouncedLevelColors = useDebounce(levelColors, 500);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const storedFeatures = localStorage.getItem('safeviate.feature-settings');
-        const storedLevels = localStorage.getItem('safeviate.finding-levels-settings');
+        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        const config = payload?.config && typeof payload.config === 'object' ? payload.config : {};
 
-        if (storedFeatures) {
-            setFeatureSettings(JSON.parse(storedFeatures));
-        } else {
-            const defFeatures = { id: 'features', preFlightChecklistRequired: true, enableExternalCompanyTabs: true };
-            localStorage.setItem('safeviate.feature-settings', JSON.stringify(defFeatures));
-            setFeatureSettings(defFeatures);
-        }
+        const defFeatures = { id: 'features', preFlightChecklistRequired: true, enableExternalCompanyTabs: true };
+        const defLevels = { id: 'finding-levels', levels: defaultFindingLevels };
 
-        if (storedLevels) {
-            const levels = JSON.parse(storedLevels) as FindingLevelsSettings;
-            setFindingLevelsSettings(levels);
-            const initialColors = (levels.levels || []).reduce((acc, l) => {
-                acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
-                return acc;
-            }, {} as Record<string, { bg: string, fg: string }>);
-            setLevelColors(initialColors);
-        } else {
-            const defLevels = { id: 'finding-levels', levels: defaultFindingLevels };
-            localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(defLevels));
-            setFindingLevelsSettings(defLevels);
-            const initialColors = defaultFindingLevels.reduce((acc, l) => {
-                acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
-                return acc;
-            }, {} as Record<string, { bg: string, fg: string }>);
-            setLevelColors(initialColors);
-        }
+        const featureConfig = (config as any)['feature-settings'] || defFeatures;
+        const levelsConfig = (config as any)['finding-levels-settings'] || defLevels;
+
+        setFeatureSettings(featureConfig);
+        setFindingLevelsSettings(levelsConfig);
+        const initialColors = (levelsConfig.levels || []).reduce((acc, l) => {
+            acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
+            return acc;
+        }, {} as Record<string, { bg: string, fg: string }>);
+        setLevelColors(initialColors);
     } catch (e) {
         console.error("Failed to load feature data", e);
     } finally {
@@ -94,7 +82,7 @@ export default function FeaturesPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     const events = ['safeviate-feature-settings-updated', 'safeviate-finding-levels-updated'];
     events.forEach(e => window.addEventListener(e, loadData));
     return () => events.forEach(e => window.removeEventListener(e, loadData));
@@ -115,7 +103,11 @@ export default function FeaturesPage() {
             foregroundColor: debouncedLevelColors[l.id]?.fg || l.foregroundColor
         }));
         const nextSettings = { ...findingLevelsSettings, levels: newLevels };
-        localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(nextSettings));
+        fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: { 'feature-settings': featureSettings, 'finding-levels-settings': nextSettings } }),
+        }).catch(() => {});
         window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
       }
   }, [debouncedLevelColors, findingLevelsSettings, isLoading]);
@@ -123,7 +115,11 @@ export default function FeaturesPage() {
   const handleToggleChange = (feature: keyof Omit<FeatureSettings, 'id'>, value: boolean) => {
     const nextSettings = { ...(featureSettings || { id: 'features', preFlightChecklistRequired: true, enableExternalCompanyTabs: true }), [feature]: value };
     setFeatureSettings(nextSettings);
-    localStorage.setItem('safeviate.feature-settings', JSON.stringify(nextSettings));
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'feature-settings': nextSettings, 'finding-levels-settings': findingLevelsSettings } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-feature-settings-updated'));
   };
   
@@ -148,7 +144,11 @@ export default function FeaturesPage() {
 
     const updatedLevels = [...currentLevels, newLevel];
     const nextSettings = { ...(findingLevelsSettings || { id: 'finding-levels', levels: [] }), levels: updatedLevels };
-    localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(nextSettings));
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'feature-settings': featureSettings, 'finding-levels-settings': nextSettings } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
 
     toast({ title: 'Finding Level Added', description: `Level "${newLevel.name}" has been added.` });
@@ -161,7 +161,11 @@ export default function FeaturesPage() {
     const currentLevels = findingLevelsSettings?.levels || defaultFindingLevels;
     const updatedLevels = currentLevels.filter(l => l.id !== levelIdToRemove);
     const nextSettings = { ...(findingLevelsSettings || { id: 'finding-levels', levels: [] }), levels: updatedLevels };
-    localStorage.setItem('safeviate.finding-levels-settings', JSON.stringify(nextSettings));
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'feature-settings': featureSettings, 'finding-levels-settings': nextSettings } }),
+    }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
     toast({ title: 'Finding Level Removed' });
   };

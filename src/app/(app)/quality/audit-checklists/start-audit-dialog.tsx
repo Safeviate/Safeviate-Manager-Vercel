@@ -70,8 +70,10 @@ export function StartAuditDialog({
 
   useEffect(() => {
     if (isOpen) {
-        const storedOrgs = localStorage.getItem('safeviate.external-organizations');
-        if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
+        void fetch('/api/external-organizations', { cache: 'no-store' })
+          .then((response) => response.json())
+          .then((payload) => setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []))
+          .catch(() => setOrganizations([]));
     }
   }, [isOpen]);
 
@@ -100,13 +102,12 @@ export function StartAuditDialog({
     setIsSubmitting(true);
     
     try {
-        const storedAudits = localStorage.getItem('safeviate.quality-audits');
-        const auditsList = storedAudits ? JSON.parse(storedAudits) as QualityAudit[] : [];
-        
-        // Simple counter logic (for local storage, we can just use the length or a separate counter)
+        const auditsResponse = await fetch('/api/quality-audits', { cache: 'no-store' });
+        const auditsPayload = await auditsResponse.json().catch(() => ({ audits: [] }));
+        const auditsList = Array.isArray(auditsPayload.audits) ? (auditsPayload.audits as QualityAudit[]) : [];
         const nextCount = auditsList.length + 1;
         const newAuditNumber = `AUD-${String(nextCount).padStart(4, '0')}`;
-        
+
         // Detect if auditee is an external organization
         const isExternalOrg = organizations?.some(org => org.id === values.auditeeId);
 
@@ -125,7 +126,12 @@ export function StartAuditDialog({
             findings: [],
         };
 
-        localStorage.setItem('safeviate.quality-audits', JSON.stringify([newAuditData, ...auditsList]));
+        const response = await fetch('/api/quality-audits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audit: newAuditData }),
+        });
+        if (!response.ok) throw new Error('Failed to save audit');
         
         setNewAuditId(createdId);
         toast({ title: 'Audit Started' });
