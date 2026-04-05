@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureTrainingRoutesSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -21,6 +22,7 @@ async function getTenantId() {
 
 export async function GET() {
   try {
+    await ensureTrainingRoutesSchema();
     const tenantId = await getTenantId();
     if (!tenantId) {
       return NextResponse.json({ routes: [] }, { status: 200 });
@@ -39,60 +41,78 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    await ensureTrainingRoutesSchema();
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json().catch(() => null);
-  const route = body?.route;
-  if (!route || typeof route !== 'object') {
-    return NextResponse.json({ error: 'Invalid route payload.' }, { status: 400 });
+    const body = await request.json().catch(() => null);
+    const route = body?.route;
+    if (!route || typeof route !== 'object') {
+      return NextResponse.json({ error: 'Invalid route payload.' }, { status: 400 });
+    }
+
+    const id = route.id || randomUUID();
+    const data = { ...route, id, tenantId };
+
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO training_routes (id, tenant_id, data, created_at, updated_at)
+       VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      id,
+      tenantId,
+      JSON.stringify(data)
+    );
+
+    return NextResponse.json({ route: data }, { status: 200 });
+  } catch (error) {
+    console.error('[training-routes] write failed:', error);
+    return NextResponse.json({ error: 'Failed to save route.' }, { status: 500 });
   }
-
-  const id = route.id || randomUUID();
-  const data = { ...route, id, tenantId };
-
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO training_routes (id, tenant_id, data, created_at, updated_at)
-     VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-    id,
-    tenantId,
-    JSON.stringify(data)
-  );
-
-  return NextResponse.json({ route: data }, { status: 200 });
 }
 
 export async function PATCH(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    await ensureTrainingRoutesSchema();
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json().catch(() => null);
-  const route = body?.route;
-  if (!route || typeof route !== 'object' || !route.id) {
-    return NextResponse.json({ error: 'Invalid route payload.' }, { status: 400 });
+    const body = await request.json().catch(() => null);
+    const route = body?.route;
+    if (!route || typeof route !== 'object' || !route.id) {
+      return NextResponse.json({ error: 'Invalid route payload.' }, { status: 400 });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE training_routes SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
+      route.id,
+      JSON.stringify({ ...route, tenantId }),
+      tenantId
+    );
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[training-routes] patch failed:', error);
+    return NextResponse.json({ error: 'Failed to update route.' }, { status: 500 });
   }
-
-  await prisma.$executeRawUnsafe(
-    `UPDATE training_routes SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
-    route.id,
-    JSON.stringify({ ...route, tenantId }),
-    tenantId
-  );
-
-  return NextResponse.json({ ok: true }, { status: 200 });
 }
 
 export async function DELETE(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    await ensureTrainingRoutesSchema();
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-  if (!id) {
-    return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    }
+
+    await prisma.$executeRawUnsafe(`DELETE FROM training_routes WHERE id = $1 AND tenant_id = $2`, id, tenantId);
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[training-routes] delete failed:', error);
+    return NextResponse.json({ error: 'Failed to delete route.' }, { status: 500 });
   }
-
-  await prisma.$executeRawUnsafe(`DELETE FROM training_routes WHERE id = $1 AND tenant_id = $2`, id, tenantId);
-  return NextResponse.json({ ok: true }, { status: 200 });
 }

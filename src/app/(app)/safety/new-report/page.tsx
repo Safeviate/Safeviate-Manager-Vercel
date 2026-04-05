@@ -75,11 +75,12 @@ export default function NewSafetyReportPage() {
           }),
         });
 
+        const payload = await response.json().catch(() => null);
+
         if (!response.ok) {
-          throw new Error((await response.json())?.error || 'Failed to submit report.');
+          throw new Error(payload?.error || 'Failed to submit report.');
         }
 
-        const payload = await response.json();
         const newReportId = payload?.report?.id;
         if (!newReportId) {
           throw new Error('Report was saved but no report id was returned.');

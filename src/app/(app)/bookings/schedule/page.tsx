@@ -74,7 +74,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { boo
                 <div
                     key={`${booking.id}-${index}`}
                     className={cn(
-                        'absolute left-1 right-1 p-2 text-[10px] md:text-xs leading-tight shadow-md flex flex-col justify-center z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded',
+                        'absolute left-1 right-1 px-2 py-1.5 text-[11px] leading-tight shadow-md flex flex-col justify-start z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded overflow-hidden',
                         isCancelled && 'bg-muted text-muted-foreground opacity-60',
                         booking.status === 'Completed' && 'bg-muted text-muted-foreground border-slate-300',
                         booking.status === 'Approved' && 'bg-green-600 text-white border-green-700',
@@ -87,16 +87,18 @@ const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { boo
                         onBookingClick(booking);
                     }}
                 >
-                    <p className="font-semibold truncate">#{booking.bookingNumber} - {booking.type}</p>
-                    <p className="truncate text-[9px] font-medium opacity-90">
+                    <p className="font-black truncate text-[11px]">
+                        #{booking.bookingNumber} - {booking.type}
+                    </p>
+                    <p className="truncate text-[10px] font-semibold opacity-95">
                         Inst: {booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : 'N/A'}
                     </p>
-                    <p className="truncate text-[9px] font-medium opacity-90">
+                    <p className="truncate text-[10px] font-semibold opacity-95">
                         Stud: {booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}
                     </p>
-                    {isCancelled && <p className="font-bold uppercase text-[8px] mt-0.5">Cancelled</p>}
-                    {booking.status === 'Completed' && <p className="font-bold uppercase text-[8px] mt-0.5">Completed</p>}
-                    {booking.status === 'Approved' && <p className="font-bold uppercase text-[8px] mt-0.5">Approved</p>}
+                    {isCancelled && <p className="font-black uppercase text-[9px] mt-1 tracking-wide">Cancelled</p>}
+                    {booking.status === 'Completed' && <p className="font-black uppercase text-[9px] mt-1 tracking-wide">Completed</p>}
+                    {booking.status === 'Approved' && <p className="font-black uppercase text-[9px] mt-1 tracking-wide">Approved</p>}
                 </div>
             )
         })}

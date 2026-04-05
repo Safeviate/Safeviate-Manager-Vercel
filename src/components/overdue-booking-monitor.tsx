@@ -19,6 +19,7 @@ export function OverdueBookingMonitor() {
   const [now, setNow] = useState(Date.now());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,8 +65,44 @@ export function OverdueBookingMonitor() {
 
   const tailNumber = aircrafts.find((aircraft) => aircraft.id === activeAlert.aircraftId)?.tailNumber || 'Unknown Aircraft';
 
-  const handleConfirmLanding = () => {
-    toast({ title: 'Safety Confirmed', description: 'The aircraft landing has been recorded.' });
+  const handleConfirmLanding = async () => {
+    if (!activeAlert || isConfirming) return;
+
+    setIsConfirming(true);
+    const updatedBooking: Booking = {
+      ...activeAlert,
+      landingConfirmed: true,
+      status: activeAlert.status === 'Completed' ? activeAlert.status : 'Completed',
+    };
+
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking: updatedBooking }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to confirm the aircraft landing.');
+      }
+
+      setBookings((current) =>
+        current.map((booking) =>
+          booking.id === updatedBooking.id ? { ...booking, ...updatedBooking } : booking
+        )
+      );
+      window.dispatchEvent(new Event('safeviate-bookings-updated'));
+      toast({ title: 'Safety Confirmed', description: 'The aircraft landing has been recorded.' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Confirmation Failed',
+        description: error instanceof Error ? error.message : 'Failed to confirm the aircraft landing.',
+      });
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   return (
@@ -93,9 +130,9 @@ export function OverdueBookingMonitor() {
         </div>
 
         <DialogFooter className="flex flex-col gap-3 sm:gap-2">
-          <Button className="bg-green-600 hover:bg-green-700 text-white gap-2 font-bold w-full h-11" onClick={handleConfirmLanding}>
+          <Button className="bg-green-600 hover:bg-green-700 text-white gap-2 font-bold w-full h-11" onClick={handleConfirmLanding} disabled={isConfirming}>
             <CheckCircle2 className="h-4 w-4" />
-            Landed Safely
+            {isConfirming ? 'Confirming Landing...' : 'Landed Safely'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -40,16 +40,6 @@ const defaultColors: Record<string, string> = {
   '1A': '#f59e0b', '1B': '#10b981', '1C': '#10b981', '1D': '#10b981', '1E': '#10b981',
 };
 
-const isLightColor = (hexColor: string) => {
-  const normalized = hexColor.replace('#', '');
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return false;
-  const r = Number.parseInt(normalized.slice(0, 2), 16);
-  const g = Number.parseInt(normalized.slice(2, 4), 16);
-  const b = Number.parseInt(normalized.slice(4, 6), 16);
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luminance > 0.62;
-};
-
 export default function RiskMatrixPage() {
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
@@ -102,6 +92,12 @@ export default function RiskMatrixPage() {
     const newColors = { ...colors, [cellId]: newColor };
     setColors(newColors);
     queueSave({ id: 'risk-matrix-config', colors: newColors, likelihoodDefinitions: likelihoods, severityDefinitions: severities });
+  };
+
+  const openColorPicker = (cellId: string) => {
+    if (!canEditColors) return;
+    setActiveCell(cellId);
+    colorInputRef.current?.click();
   };
 
   const handleLikelihoodChange = (index: number, field: 'name' | 'description', value: string) => {
@@ -173,19 +169,18 @@ export default function RiskMatrixPage() {
                         {severities.map((s) => {
                           const cellId = `${l.value}${s.value}`;
                           const color = colors[cellId];
-                          const textColorClass = isLightColor(color) ? 'text-slate-900' : 'text-white';
                           return (
                             <button
                               key={cellId}
-                              onClick={() => canEditColors && setActiveCell(cellId)}
+                              onClick={() => openColorPicker(cellId)}
                               style={{ backgroundColor: color }}
                               className={cn(
                                 'h-14 rounded-lg shadow-sm flex items-center justify-center font-black text-[11px] transition-all border-2 border-white/20',
-                                textColorClass,
+                                'text-black',
                                 canEditColors ? 'hover:scale-[1.03] cursor-pointer' : 'cursor-default'
                               )}
                             >
-                              <span className="drop-shadow-md">{cellId}</span>
+                              <span>{cellId}</span>
                             </button>
                           );
                         })}

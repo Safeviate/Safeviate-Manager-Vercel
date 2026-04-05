@@ -9,6 +9,7 @@ type TableName =
   | 'tenant_configs'
   | 'alerts'
   | 'company_documents'
+  | 'external_organizations'
   | 'training_routes'
   | 'bookings'
   | 'aircrafts'
@@ -149,6 +150,40 @@ export async function ensureCompanyDocumentsSchema() {
   tableCache.set('company_documents', true);
 }
 
+export async function ensureExternalOrganizationsSchema() {
+  if (await hasTable('external_organizations')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS external_organizations (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('external_organizations', true);
+}
+
+export async function ensureTrainingRoutesSchema() {
+  if (await hasTable('training_routes')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS training_routes (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('training_routes', true);
+}
+
 export async function ensureErpStateSchema() {
   if (await hasTable('erp_state')) {
     return;
@@ -199,6 +234,40 @@ export async function ensureFlightSessionsSchema() {
     )
   `);
   tableCache.set('active_flight_sessions', true);
+}
+
+export async function ensureSafetyReportsSchema() {
+  if (await hasTable('safety_reports')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS safety_reports (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('safety_reports', true);
+}
+
+export async function ensureManagementOfChangeSchema() {
+  if (await hasTable('management_of_change')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS management_of_change (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('management_of_change', true);
 }
 
 export async function ensurePersonnelSchema() {

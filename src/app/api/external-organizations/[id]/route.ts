@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureExternalOrganizationsSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -20,6 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ organization: null }, { status: 200 });
+    await ensureExternalOrganizationsSchema();
 
     const { id } = await params;
     const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
@@ -36,31 +38,43 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureExternalOrganizationsSchema();
 
-  const { id } = await params;
-  const body = await request.json();
-  const incoming = body?.organization;
-  if (!incoming || typeof incoming !== 'object') {
-    return NextResponse.json({ error: 'Missing organization payload.' }, { status: 400 });
+    const { id } = await params;
+    const body = await request.json();
+    const incoming = body?.organization;
+    if (!incoming || typeof incoming !== 'object') {
+      return NextResponse.json({ error: 'Missing organization payload.' }, { status: 400 });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE external_organizations SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
+      id,
+      JSON.stringify({ ...incoming, id }),
+      tenantId
+    );
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[external-organizations/[id]] update failed:', error);
+    return NextResponse.json({ error: 'Failed to update external organization.' }, { status: 500 });
   }
-
-  await prisma.$executeRawUnsafe(
-    `UPDATE external_organizations SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
-    id,
-    JSON.stringify({ ...incoming, id }),
-    tenantId
-  );
-
-  return NextResponse.json({ ok: true }, { status: 200 });
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureExternalOrganizationsSchema();
 
-  const { id } = await params;
-  await prisma.$executeRawUnsafe(`DELETE FROM external_organizations WHERE id = $1 AND tenant_id = $2`, id, tenantId);
-  return NextResponse.json({ ok: true }, { status: 200 });
+    const { id } = await params;
+    await prisma.$executeRawUnsafe(`DELETE FROM external_organizations WHERE id = $1 AND tenant_id = $2`, id, tenantId);
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[external-organizations/[id]] delete failed:', error);
+    return NextResponse.json({ error: 'Failed to delete external organization.' }, { status: 500 });
+  }
 }

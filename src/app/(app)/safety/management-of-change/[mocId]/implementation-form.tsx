@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, AlertTriangle, Zap, ChevronDown, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, AlertTriangle, Zap, ChevronDown, ShieldAlert, ShieldCheck, Save } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -573,12 +573,14 @@ export interface ImplementationFormHandle {
     submit: () => void;
     analyze: () => void;
     addPhase: () => void;
+    hasUnsavedChanges: () => boolean;
 }
 
 export const ImplementationForm = forwardRef<ImplementationFormHandle, ImplementationFormProps>(({ moc, tenantId, personnel }, ref) => {
     const { toast } = useToast();
     const { matrixTheme } = useTheme();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const formKey = useMemo(() => moc.id || uuidv4(), [moc.id]);
     const riskMatrixSettings = null;
 
@@ -592,7 +594,8 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
         name: 'phases',
     });
 
-    const onSubmit = (values: FormValues) => {
+    const onSubmit = async (values: FormValues) => {
+        setIsSaving(true);
         void fetch(`/api/management-of-change?mocId=${encodeURIComponent(moc.id)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -602,6 +605,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                 if (!response.ok) {
                     throw new Error((await response.json())?.error || 'Failed to save strategy.');
                 }
+                form.reset(values);
                 toast({ title: 'Strategy Saved', description: 'The implementation plan has been synchronised.' });
             })
             .catch((error: unknown) => {
@@ -610,6 +614,9 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                     title: 'Save Failed',
                     description: error instanceof Error ? error.message : 'Failed to save strategy.',
                 });
+            })
+            .finally(() => {
+                setIsSaving(false);
             });
     };
 
@@ -632,7 +639,21 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
         submit: () => form.handleSubmit(onSubmit)(),
         analyze: handleAnalyze,
         addPhase: () => appendPhase({ id: uuidv4(), title: '', steps: [] }),
+        hasUnsavedChanges: () => form.formState.isDirty,
     }));
+
+    React.useEffect(() => {
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (!form.formState.isDirty) return;
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [form.formState.isDirty]);
 
     return (
         <FormProvider {...form}>
@@ -664,6 +685,24 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
 
                             {/* ── Phases ────────────────────────────────────── */}
                             <div className="space-y-6 p-6">
+                                <div className="sticky top-0 z-10 -mx-6 -mt-6 border-b border-slate-200 bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Phase Controls</p>
+                                            <p className="text-xs font-medium text-muted-foreground">
+                                                Save your implementation phases after editing titles, steps, hazards, and mitigations.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            type="submit"
+                                            disabled={isSaving || !form.formState.isDirty}
+                                            className="h-10 gap-2 rounded-full px-5 text-[10px] font-black uppercase tracking-[0.18em]"
+                                        >
+                                            <Save className="h-3.5 w-3.5" />
+                                            {isSaving ? 'Saving Strategy...' : form.formState.isDirty ? 'Save Strategy' : 'Strategy Saved'}
+                                        </Button>
+                                    </div>
+                                </div>
                                 {phaseFields.length > 0 ? phaseFields.map((field, pi) => (
                                     <Collapsible key={field.id} className="rounded-xl border border-slate-200 overflow-hidden shadow-sm" defaultOpen>
                                         <div

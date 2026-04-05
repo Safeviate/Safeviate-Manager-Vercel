@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureSafetyReportsSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -22,6 +23,7 @@ export async function GET() {
   try {
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ reports: [] }, { status: 200 });
+    await ensureSafetyReportsSchema();
 
     const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
       `SELECT data FROM safety_reports WHERE tenant_id = $1 ORDER BY created_at ASC`,
@@ -36,35 +38,47 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureSafetyReportsSchema();
 
-  const body = await request.json();
-  const incoming = body?.report ?? {};
-  const id = incoming.id || randomUUID();
+    const body = await request.json();
+    const incoming = body?.report ?? {};
+    const id = incoming.id || randomUUID();
 
-  const data = { ...incoming, id };
+    const data = { ...incoming, id };
 
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO safety_reports (id, tenant_id, data, created_at, updated_at)
-     VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-    id,
-    tenantId,
-    JSON.stringify(data)
-  );
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO safety_reports (id, tenant_id, data, created_at, updated_at)
+       VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      id,
+      tenantId,
+      JSON.stringify(data)
+    );
 
-  return NextResponse.json({ report: data }, { status: 201 });
+    return NextResponse.json({ report: data }, { status: 201 });
+  } catch (error) {
+    console.error('[safety-reports] write failed:', error);
+    return NextResponse.json({ error: 'Failed to submit report.' }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureSafetyReportsSchema();
 
-  const body = await request.json();
-  const reportId = body?.reportId;
-  if (!reportId) return NextResponse.json({ error: 'Missing report id.' }, { status: 400 });
+    const body = await request.json();
+    const reportId = body?.reportId;
+    if (!reportId) return NextResponse.json({ error: 'Missing report id.' }, { status: 400 });
 
-  await prisma.$executeRawUnsafe(`DELETE FROM safety_reports WHERE id = $1 AND tenant_id = $2`, reportId, tenantId);
-  return NextResponse.json({ ok: true }, { status: 200 });
+    await prisma.$executeRawUnsafe(`DELETE FROM safety_reports WHERE id = $1 AND tenant_id = $2`, reportId, tenantId);
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[safety-reports] delete failed:', error);
+    return NextResponse.json({ error: 'Failed to delete report.' }, { status: 500 });
+  }
 }

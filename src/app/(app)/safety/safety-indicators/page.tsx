@@ -21,77 +21,10 @@ import { MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 
-const initialSpiConfig: SpiConfig[] = [
-    {
-        id: 'unstable-approach',
-        name: 'Unstable Approach Rate',
-        comparison: 'lower-is-better',
-        unit: 'Rate',
-        rateFactor: 100,
-        description: 'Rate of reported unstable approaches per 100 flight hours.',
-        target: 0.5,
-        levels: {
-            acceptable: 0.5,
-            monitor: 1.0,
-            actionRequired: 1.5,
-            urgentAction: 2.0,
-        },
-        monthlyData: Array(12).fill(0),
-    },
-    {
-        id: 'tech-defect',
-        name: 'Aircraft Technical Defect Rate',
-        comparison: 'lower-is-better',
-        unit: 'Rate',
-        rateFactor: 100,
-        description: 'Number of aircraft technical defects reported per 100 flight hours.',
-        target: 1.0,
-        levels: {
-            acceptable: 1.0,
-            monitor: 2.0,
-            actionRequired: 3.0,
-            urgentAction: 4.0,
-        },
-        monthlyData: Array(12).fill(0),
-    },
-    {
-        id: 'ground-incidents',
-        name: 'Ground Incidents',
-        comparison: 'lower-is-better',
-        unit: 'Count',
-        periodLabel: 'Month',
-        description: 'Total number of ground incidents reported per month.',
-        target: 0,
-        levels: {
-            acceptable: 0,
-            monitor: 1,
-            actionRequired: 2,
-            urgentAction: 3,
-        },
-        monthlyData: Array(12).fill(0),
-    },
-    {
-        id: 'proactive-reports',
-        name: 'Proactive Reports',
-        comparison: 'greater-is-better',
-        unit: 'Count',
-        periodLabel: 'Month',
-        description: 'Total number of proactive safety reports filed by personnel.',
-        target: 10,
-        levels: {
-            acceptable: 10,
-            monitor: 8,
-            actionRequired: 5,
-            urgentAction: 2,
-        },
-        monthlyData: Array(12).fill(0),
-    }
-];
-
 const settingsDocId = 'spi-configurations';
 
 export default function SafetyIndicatorsPage() {
-  const [spiConfig, setSpiConfig] = useState<SpiConfig[]>(initialSpiConfig);
+  const [spiConfig, setSpiConfig] = useState<SpiConfig[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSpi, setSelectedSpi] = useState<SpiConfig | null>(null);
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
@@ -129,7 +62,7 @@ export default function SafetyIndicatorsPage() {
         setReports(Array.isArray(reportsPayload.reports) ? reportsPayload.reports : []);
         setBookings(Array.isArray(bookingsPayload.bookings) ? bookingsPayload.bookings : []);
         setOrganizations(Array.isArray(orgsPayload.organizations) ? orgsPayload.organizations : []);
-        setSpiConfig(Array.isArray(spiPayload.configurations) && spiPayload.configurations.length > 0 ? spiPayload.configurations : initialSpiConfig);
+        setSpiConfig(Array.isArray(spiPayload.configurations) ? spiPayload.configurations : []);
     } catch (e) {
         console.error('Failed to load safety data', e);
     } finally {
@@ -218,13 +151,55 @@ export default function SafetyIndicatorsPage() {
           {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
         </div>
         <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
-          <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
-            {spiConfig.map(spi => {
-              const isAviationOnly = spi.id === 'unstable-approach' || spi.id === 'tech-defect';
-              if (!isAviation && isAviationOnly) return null;
-              return <SPICard key={spi.id} spi={spi} onEdit={handleEdit} onDelete={async (id) => { if (window.confirm('Delete this indicator?')) { const nc = spiConfig.filter(s => s.id !== id); setSpiConfig(nc); await saveConfigToLocal(nc); } }} reports={reports.filter(r => r.organizationId === contextOrgId) || []} bookings={bookings.filter(b => b.organizationId === contextOrgId) || []} onMonthDataSave={handleMonthDataSave} />;
-            })}
-          </div>
+          {spiConfig.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
+              {spiConfig.map(spi => (
+                <SPICard
+                  key={spi.id}
+                  spi={spi}
+                  onEdit={handleEdit}
+                  onDelete={async (id) => {
+                    if (window.confirm('Delete this indicator?')) {
+                      const nc = spiConfig.filter(s => s.id !== id);
+                      setSpiConfig(nc);
+                      await saveConfigToLocal(nc);
+                    }
+                  }}
+                  reports={reports.filter(r => r.organizationId === contextOrgId) || []}
+                  bookings={bookings.filter(b => b.organizationId === contextOrgId) || []}
+                  onMonthDataSave={handleMonthDataSave}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-muted/10 px-6 py-16 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">No Indicators Configured</p>
+              <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                Add your first safety indicator to start tracking month-by-month performance against your thresholds.
+              </p>
+              <Button
+                size="sm"
+                className="mt-5 h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"
+                onClick={() => {
+                  setSelectedSpi({
+                    id: 'new-spi',
+                    name: '',
+                    comparison: 'lower-is-better',
+                    unit: 'Count',
+                    periodLabel: 'Month',
+                    description: '',
+                    target: 0,
+                    levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
+                    monthlyData: Array(12).fill(0),
+                  });
+                  setIsEditDialogOpen(true);
+                }}
+              >
+                <PlusCircle className="h-4 w-4" />
+                Add First Indicator
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureManagementOfChangeSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ mocs: [] }, { status: 200 });
+    await ensureManagementOfChangeSchema();
 
     const mocId = new URL(request.url).searchParams.get('mocId');
     if (mocId) {
@@ -50,67 +52,85 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureManagementOfChangeSchema();
 
-  const body = await request.json();
-  const incoming = body?.moc ?? {};
-  const id = incoming.id || randomUUID();
+    const body = await request.json();
+    const incoming = body?.moc ?? {};
+    const id = incoming.id || randomUUID();
 
-  const existing = await prisma.$queryRawUnsafe<{ count: number }[]>(
-    `SELECT COUNT(*)::int AS count FROM management_of_change WHERE tenant_id = $1`,
-    tenantId
-  );
-  const mocNumber = incoming.mocNumber || `MOC-${String((existing[0]?.count ?? 0) + 1).padStart(3, '0')}`;
+    const existing = await prisma.$queryRawUnsafe<{ count: number }[]>(
+      `SELECT COUNT(*)::int AS count FROM management_of_change WHERE tenant_id = $1`,
+      tenantId
+    );
+    const mocNumber = incoming.mocNumber || `MOC-${String((existing[0]?.count ?? 0) + 1).padStart(3, '0')}`;
 
-  const data = {
-    ...incoming,
-    id,
-    mocNumber,
-  };
+    const data = {
+      ...incoming,
+      id,
+      mocNumber,
+    };
 
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO management_of_change (id, tenant_id, data, created_at, updated_at)
-     VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-    id,
-    tenantId,
-    JSON.stringify(data)
-  );
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO management_of_change (id, tenant_id, data, created_at, updated_at)
+       VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      id,
+      tenantId,
+      JSON.stringify(data)
+    );
 
-  return NextResponse.json({ moc: data }, { status: 201 });
+    return NextResponse.json({ moc: data }, { status: 201 });
+  } catch (error) {
+    console.error('[management-of-change] write failed:', error);
+    return NextResponse.json({ error: 'Failed to save management of change.' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureManagementOfChangeSchema();
 
-  const url = new URL(request.url);
-  const mocId = url.searchParams.get('mocId');
-  if (!mocId) return NextResponse.json({ error: 'Missing MOC id.' }, { status: 400 });
+    const url = new URL(request.url);
+    const mocId = url.searchParams.get('mocId');
+    if (!mocId) return NextResponse.json({ error: 'Missing MOC id.' }, { status: 400 });
 
-  const body = await request.json();
-  const incoming = body?.moc;
-  if (!incoming) return NextResponse.json({ error: 'Missing MOC payload.' }, { status: 400 });
+    const body = await request.json();
+    const incoming = body?.moc;
+    if (!incoming) return NextResponse.json({ error: 'Missing MOC payload.' }, { status: 400 });
 
-  await prisma.$executeRawUnsafe(
-    `UPDATE management_of_change SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
-    mocId,
-    JSON.stringify(incoming),
-    tenantId
-  );
+    await prisma.$executeRawUnsafe(
+      `UPDATE management_of_change SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
+      mocId,
+      JSON.stringify(incoming),
+      tenantId
+    );
 
-  return NextResponse.json({ moc: incoming }, { status: 200 });
+    return NextResponse.json({ moc: incoming }, { status: 200 });
+  } catch (error) {
+    console.error('[management-of-change] update failed:', error);
+    return NextResponse.json({ error: 'Failed to update management of change.' }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: Request) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureManagementOfChangeSchema();
 
-  const body = await request.json();
-  const mocId = body?.mocId;
-  if (!mocId) return NextResponse.json({ error: 'Missing MOC id.' }, { status: 400 });
+    const body = await request.json();
+    const mocId = body?.mocId;
+    if (!mocId) return NextResponse.json({ error: 'Missing MOC id.' }, { status: 400 });
 
-  await prisma.$executeRawUnsafe(`DELETE FROM management_of_change WHERE id = $1 AND tenant_id = $2`, mocId, tenantId);
-  return NextResponse.json({ ok: true }, { status: 200 });
+    await prisma.$executeRawUnsafe(`DELETE FROM management_of_change WHERE id = $1 AND tenant_id = $2`, mocId, tenantId);
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[management-of-change] delete failed:', error);
+    return NextResponse.json({ error: 'Failed to delete management of change.' }, { status: 500 });
+  }
 }

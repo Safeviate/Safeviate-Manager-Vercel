@@ -77,7 +77,7 @@ export function AppHeader() {
             variant="outline" 
             size="sm" 
             onClick={handleBack}
-            className="rounded-md font-black uppercase text-sm border-slate-300 px-4 h-9 shadow-md transition-all shrink-0 whitespace-nowrap"
+            className="rounded-md font-black uppercase text-sm border-slate-300 px-4 h-9 shadow-none transition-all shrink-0 whitespace-nowrap text-button-primary hover:text-button-primary"
           >
             {backConfig.text}
           </Button>

@@ -94,6 +94,12 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
     window.print();
   };
 
+  const confirmLeaveWithUnsavedChanges = () => {
+    if (activeTab !== 'implementation') return true;
+    if (!implementationFormRef.current?.hasUnsavedChanges()) return true;
+    return window.confirm('You have unsaved implementation changes. Leave this section without saving?');
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1 h-full">
@@ -107,16 +113,33 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
     return (
       <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground">{error ? `Error: ${error.message}` : 'MOC not found.'}</p>
-        <Button asChild variant="link" className="mt-4">
-          <Link href="/safety/management-of-change">Return to list</Link>
-        </Button>
+          <Button asChild variant="link" className="mt-4">
+            <Link
+              href="/safety/management-of-change"
+              onClick={(event) => {
+                if (!confirmLeaveWithUnsavedChanges()) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              Return to list
+            </Link>
+          </Button>
       </div>
     );
   }
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+      <Tabs
+        value={activeTab}
+        onValueChange={(nextTab) => {
+          if (nextTab === activeTab || confirmLeaveWithUnsavedChanges()) {
+            setActiveTab(nextTab);
+          }
+        }}
+        className="flex-1 flex flex-col overflow-hidden"
+      >
         
         {/* --- STICKY HEADER SECTION --- */}
         <div className="sticky top-0 z-30 bg-card rounded-xl border overflow-hidden flex flex-col shadow-none mb-6 no-print shrink-0">

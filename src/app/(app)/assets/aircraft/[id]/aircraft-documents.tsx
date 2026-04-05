@@ -96,8 +96,7 @@ export function AircraftDocuments({ aircraft }: AircraftDocumentsProps) {
             <TableHeader className="bg-muted/5">
               <TableRow className="hover:bg-transparent border-b-2">
                 <TableHead className="text-[10px] font-black uppercase tracking-widest h-12 px-8">Document Identifier</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest h-12">Expiry Status</TableHead>
-                <TableHead className="text-center text-[10px] font-black uppercase tracking-widest h-12">Set Expiry</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest h-12">Expiry Date</TableHead>
                 <TableHead className="text-right text-[10px] font-black uppercase tracking-widest h-12 px-8">Vault Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -115,18 +114,14 @@ export function AircraftDocuments({ aircraft }: AircraftDocumentsProps) {
                         </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {statusColor && <div className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: statusColor }} />}
-                        <span className="text-xs font-black uppercase tracking-tight">
-                            {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'PERMANENT / NA'}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-9 w-9 border-2 hover:bg-muted/50 rounded-xl">
-                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <Button variant="outline" className="h-10 min-w-[180px] justify-start gap-2 border-2 hover:bg-muted/50 rounded-xl text-left font-black uppercase tracking-tight">
+                            {statusColor && <div className="h-2 w-2 rounded-full animate-pulse shrink-0" style={{ backgroundColor: statusColor }} />}
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate text-xs">
+                              {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry Date'}
+                            </span>
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0 rounded-2xl border-2 shadow-2xl overflow-hidden" align="center">

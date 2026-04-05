@@ -78,6 +78,19 @@ export default function DocumentDatesPage() {
   const [newHundredHourColor, setNewHundredHourColor] = useState('#f97316');
   const [newHundredHourFgColor, setNewHundredHourFgColor] = useState('#ffffff');
 
+  const persistTenantConfig = useCallback(async (config: Record<string, unknown>) => {
+    const response = await fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error((payload as any)?.error || 'Failed to save tenant configuration.');
+    }
+    return payload;
+  }, []);
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -173,7 +186,7 @@ export default function DocumentDatesPage() {
     }
  }, [debouncedMilestoneState, isLoading, milestoneSettings]);
 
-  const handleAddPeriod = () => {
+  const handleAddPeriod = async () => {
     const period = parseInt(newPeriod, 10);
     if (isNaN(period) || period <= 0) {
       toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of days.' });
@@ -185,26 +198,44 @@ export default function DocumentDatesPage() {
       return;
     }
     const updatedWarningPeriods = [...currentPeriods, { period, color: newPeriodColor }].sort((a, b) => a.period - b.period);
-    fetch('/api/tenant-config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'document-expiry-settings': { ...expirySettings, warningPeriods: updatedWarningPeriods }, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': inspectionSettings } }),
-    }).catch(() => {});
-    window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
-    toast({ title: 'Warning Period Added', description: `${period} days has been added.` });
-    setNewPeriod('');
-    setNewPeriodColor(defaultPeriodColor);
+    const updatedExpirySettings = { ...expirySettings, warningPeriods: updatedWarningPeriods };
+    try {
+      await persistTenantConfig({
+        'document-expiry-settings': updatedExpirySettings,
+        'student-milestone-settings': milestoneSettings,
+        'inspection-warning-settings': inspectionSettings,
+      });
+      setExpirySettings(updatedExpirySettings);
+      setPeriodColors((prev) => ({ ...prev, [period]: newPeriodColor }));
+      window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
+      toast({ title: 'Warning Period Added', description: `${period} days has been added.` });
+      setNewPeriod('');
+      setNewPeriodColor(defaultPeriodColor);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Failed to save warning period.' });
+    }
   };
 
-  const handleRemovePeriod = (periodToRemove: number) => {
+  const handleRemovePeriod = async (periodToRemove: number) => {
     const newPeriods = (expirySettings?.warningPeriods || []).filter((p: any) => p.period !== periodToRemove);
-    fetch('/api/tenant-config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'document-expiry-settings': { ...expirySettings, warningPeriods: newPeriods }, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': inspectionSettings } }),
-    }).catch(() => {});
-    window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
-    toast({ title: 'Warning Period Removed', description: `${periodToRemove} days has been removed.` });
+    const updatedExpirySettings = { ...expirySettings, warningPeriods: newPeriods };
+    try {
+      await persistTenantConfig({
+        'document-expiry-settings': updatedExpirySettings,
+        'student-milestone-settings': milestoneSettings,
+        'inspection-warning-settings': inspectionSettings,
+      });
+      setExpirySettings(updatedExpirySettings);
+      setPeriodColors((prev) => {
+        const next = { ...prev };
+        delete next[periodToRemove];
+        return next;
+      });
+      window.dispatchEvent(new Event('safeviate-document-expiry-settings-updated'));
+      toast({ title: 'Warning Period Removed', description: `${periodToRemove} days has been removed.` });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Failed to remove warning period.' });
+    }
   };
   
   const handleMilestoneWarningChange = (milestoneValue: number, warningHours: string) => {

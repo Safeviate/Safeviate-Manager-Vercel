@@ -19,6 +19,7 @@ import {
   Clock, 
   Gauge, 
   AlertCircle,
+  CalendarIcon,
   Eye,
   Pencil,
   Info
@@ -41,10 +42,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { DocumentUploader } from '@/components/document-uploader';
+import { CustomCalendar } from '@/components/ui/custom-calendar';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
 import { Separator } from '@/components/ui/separator';
@@ -52,7 +55,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
-import { getDocumentExpiryBadgeStyle, getInspectionWarningStyle } from '@/lib/document-expiry';
+import { getContrastingTextColor, getDocumentExpiryBadgeStyle, getInspectionWarningStyle } from '@/lib/document-expiry';
 
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
@@ -395,15 +398,36 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
   
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
 
-  useEffect(() => {
-  void fetch('/api/tenant-config', { cache: 'no-store' })
-    .then((response) => response.json().catch(() => ({})))
-    .then((payload) => {
-      const settings = payload?.config?.['document-expiry-settings'] as DocumentExpirySettings | undefined;
-      if (settings) setExpirySettings(settings);
-    })
-    .catch(() => undefined);
+  const loadExpirySettings = useCallback(() => {
+    void fetch('/api/tenant-config', { cache: 'no-store' })
+      .then((response) => response.json().catch(() => ({})))
+      .then((payload) => {
+        const settings = payload?.config?.['document-expiry-settings'] as DocumentExpirySettings | undefined;
+        setExpirySettings(
+          settings || {
+            id: 'document-expiry',
+            defaultColor: '#22c55e',
+            expiredColor: '#ef4444',
+            warningPeriods: [],
+          }
+        );
+      })
+      .catch(() =>
+        setExpirySettings({
+          id: 'document-expiry',
+          defaultColor: '#22c55e',
+          expiredColor: '#ef4444',
+          warningPeriods: [],
+        })
+      );
   }, []);
+
+  useEffect(() => {
+    loadExpirySettings();
+    const events = ['safeviate-document-expiry-settings-updated', 'safeviate-tenant-config-updated'];
+    events.forEach((eventName) => window.addEventListener(eventName, loadExpirySettings));
+    return () => events.forEach((eventName) => window.removeEventListener(eventName, loadExpirySettings));
+  }, [loadExpirySettings]);
 
   const handleDocUpload = async (newDoc: any) => {
     try {
@@ -434,6 +458,30 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
         toast({ title: 'Document Removed' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to remove document.' });
+    }
+  };
+
+  const handleExpirationDateChange = async (docName: string, date: Date | undefined) => {
+    try {
+        const updatedDocuments = (aircraft.documents || []).map((doc) =>
+          doc.name === docName
+            ? { ...doc, expirationDate: date ? date.toISOString() : null }
+            : doc
+        );
+        const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aircraft: { ...aircraft, documents: updatedDocuments } }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Failed to update expiry date.');
+        window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
+        toast({
+          title: 'Expiry Date Updated',
+          description: date ? `"${docName}" expiry updated.` : `"${docName}" expiry cleared.`,
+        });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Failed to save expiry date.' });
     }
   };
 
@@ -472,13 +520,33 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
                   <TableCell className="font-black text-sm uppercase px-8">{doc.name}</TableCell>
                   <TableCell className="text-[11px] font-black uppercase tracking-tight opacity-70">{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
                   <TableCell className="text-xs">
-                    {doc.expirationDate ? (
-                      <Badge variant="outline" className="font-black h-8 px-4 border-2 shadow-sm uppercase text-[10px]" style={expiryStyle || undefined}>
-                        {format(new Date(doc.expirationDate), 'dd MMM yyyy')}
-                      </Badge>
-                    ) : (
-                      <span className="text-[10px] font-black uppercase text-muted-foreground opacity-30 italic">No Expiry Date</span>
-                    )}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "h-10 min-w-[180px] justify-start gap-2 border-2 shadow-sm uppercase text-[10px] font-black",
+                            !doc.expirationDate && "text-muted-foreground italic border-dashed"
+                          )}
+                          style={doc.expirationDate && expiryStyle ? {
+                            backgroundColor: expiryStyle.borderColor || '#ffffff',
+                            borderColor: expiryStyle.borderColor || '#ffffff',
+                            color: getContrastingTextColor(expiryStyle.borderColor || '#ffffff'),
+                          } : undefined}
+                        >
+                          <CalendarIcon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">
+                            {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry Date'}
+                          </span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 rounded-2xl border-2 shadow-2xl overflow-hidden" align="start">
+                        <CustomCalendar
+                          selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                          onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </TableCell>
                   <TableCell className="text-right pr-8">
                     <div className="flex justify-end gap-2">

@@ -26,16 +26,6 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
-const DEFAULT_HAZARD_AREAS = [
-    'Flight Operations', 
-    'Ground Operations',
-    'Maintenance', 
-    'Cabin Safety', 
-    'Occupational Safety', 
-    'Security', 
-    'Administration & Management'
-];
-
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
     severity: z.number().min(1).max(5),
@@ -307,7 +297,7 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
   const router = useRouter();
   const { toast } = useToast();
   const { tenantId } = useUserProfile();
-  const [hazardAreas, setHazardAreas] = React.useState(DEFAULT_HAZARD_AREAS);
+  const [hazardAreas, setHazardAreas] = React.useState<string[]>([]);
   const [riskMatrixSettings, setRiskMatrixSettings] = React.useState<RiskMatrixSettings | null>(null);
 
   React.useEffect(() => {
@@ -319,13 +309,11 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
           fetch('/api/risk-matrix', { cache: 'no-store' }),
         ]);
         const [areasPayload, matrixPayload] = await Promise.all([
-          areasResponse.json().catch(() => ({ areas: DEFAULT_HAZARD_AREAS })),
+          areasResponse.json().catch(() => ({ areas: [] })),
           matrixResponse.json().catch(() => ({ configuration: null })),
         ]);
         if (cancelled) return;
-        if (Array.isArray(areasPayload?.areas) && areasPayload.areas.length) {
-          setHazardAreas(areasPayload.areas);
-        }
+        setHazardAreas(Array.isArray(areasPayload?.areas) ? areasPayload.areas : []);
         if (matrixPayload?.configuration && typeof matrixPayload.configuration === 'object') {
           const parsed = matrixPayload.configuration as Partial<RiskMatrixSettings>;
           setRiskMatrixSettings({
@@ -337,7 +325,7 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
         }
       } catch {
         if (!cancelled) {
-          setHazardAreas(DEFAULT_HAZARD_AREAS);
+          setHazardAreas([]);
         }
       }
     };
@@ -405,7 +393,7 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
           )}
           <CardContent className="px-0 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 border rounded-xl bg-muted/5">
-                <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-11 bg-background border-slate-300 font-bold"><SelectValue placeholder="Select area..." /></SelectTrigger></FormControl><SelectContent>{hazardAreas.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="hazardArea" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Hazard Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!hazardAreas.length}><FormControl><SelectTrigger className="h-11 bg-background border-slate-300 font-bold"><SelectValue placeholder={hazardAreas.length ? "Select area..." : "No managed areas available"} /></SelectTrigger></FormControl><SelectContent>{hazardAreas.map(area => ( <SelectItem key={area} value={area}>{area}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="hazard" render={({ field }) => ( <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Identifying Hazard</FormLabel><FormControl><Input placeholder="e.g., Unstable approach conditions..." {...field} className="h-11 bg-background border-slate-300 font-bold" /></FormControl><FormMessage /></FormItem> )} />
             </div>
             

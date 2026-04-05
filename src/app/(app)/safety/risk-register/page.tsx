@@ -29,17 +29,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-const DEFAULT_HAZARD_AREAS = [
-  'Flight Operations',
-  'Ground Operations',
-  'Maintenance',
-  'Cabin Safety',
-  'Occupational Safety',
-  'Security',
-  'Administration & Management',
-];
-
-function ManageAreasDialog({ settings, trigger }: { settings: string[]; trigger?: ReactNode }) {
+function ManageAreasDialog({ settings, trigger, onAreasChange }: { settings: string[]; trigger?: ReactNode; onAreasChange?: (areas: string[]) => void }) {
   const { toast } = useToast();
   const [newArea, setNewArea] = useState('');
   const [areas, setAreas] = useState<string[]>(settings);
@@ -54,6 +44,7 @@ function ManageAreasDialog({ settings, trigger }: { settings: string[]; trigger?
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ areas: updatedAreas }),
     });
+    onAreasChange?.(updatedAreas);
     window.dispatchEvent(new Event('safeviate-risk-register-updated'));
     toast({ title: 'Hazard Areas Updated' });
   };
@@ -133,7 +124,7 @@ export default function RiskRegisterPage() {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [allRisks, setAllRisks] = useState<Risk[]>([]);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
-  const [hazardAreas, setHazardAreas] = useState<string[]>(DEFAULT_HAZARD_AREAS);
+  const [hazardAreas, setHazardAreas] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const canManageAreas = hasPermission('risk-register-manage-definitions');
@@ -144,15 +135,32 @@ export default function RiskRegisterPage() {
     const loadAreas = async () => {
       try {
         const response = await fetch('/api/risk-register/areas', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ areas: DEFAULT_HAZARD_AREAS }));
-        if (!cancelled) setHazardAreas(Array.isArray(payload.areas) && payload.areas.length ? payload.areas : DEFAULT_HAZARD_AREAS);
+        const payload = await response.json().catch(() => ({ areas: [] }));
+        if (!cancelled) setHazardAreas(Array.isArray(payload.areas) ? payload.areas : []);
       } catch {
-        if (!cancelled) setHazardAreas(DEFAULT_HAZARD_AREAS);
+        if (!cancelled) setHazardAreas([]);
       }
     };
     void loadAreas();
-    return () => { cancelled = true; };
+    const handleAreasUpdated = () => {
+      void loadAreas();
+    };
+    window.addEventListener('safeviate-risk-register-updated', handleAreasUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('safeviate-risk-register-updated', handleAreasUpdated);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!hazardAreas.length) {
+      if (activeAreaTab) setActiveAreaTab('');
+      return;
+    }
+    if (!hazardAreas.includes(activeAreaTab)) {
+      setActiveAreaTab(hazardAreas[0]);
+    }
+  }, [hazardAreas, activeAreaTab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,7 +234,7 @@ export default function RiskRegisterPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {canManageAreas && <ManageAreasDialog settings={hazardAreas} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}><Settings2 className="mr-2 h-4 w-4" />Manage Areas</DropdownMenuItem>} />}
+                    {canManageAreas && <ManageAreasDialog settings={hazardAreas} onAreasChange={setHazardAreas} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}><Settings2 className="mr-2 h-4 w-4" />Manage Areas</DropdownMenuItem>} />}
                     <DropdownMenuItem asChild>
                       <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -237,7 +245,7 @@ export default function RiskRegisterPage() {
                 </DropdownMenu>
               ) : (
                 <div className="flex w-full items-center gap-3 sm:w-auto">
-                  {canManageAreas && <ManageAreasDialog settings={hazardAreas} />}
+                  {canManageAreas && <ManageAreasDialog settings={hazardAreas} onAreasChange={setHazardAreas} />}
                   <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
                     <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
                       <PlusCircle className="h-4 w-4" />
@@ -251,13 +259,20 @@ export default function RiskRegisterPage() {
         </div>
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <Tabs value={activeAreaTab} onValueChange={setActiveAreaTab} className="h-full flex flex-col">
-            <ResponsiveTabRow
-              value={activeAreaTab}
-              onValueChange={setActiveAreaTab}
-              placeholder="Select Area"
-              className="border-b bg-muted/5 px-4 py-3 shrink-0"
-              options={displayAreas.map((area) => ({ value: area, label: area, icon: LayoutGrid }))}
-            />
+            {displayAreas.length > 0 ? (
+              <ResponsiveTabRow
+                value={activeAreaTab}
+                onValueChange={setActiveAreaTab}
+                placeholder="Select Area"
+                className="border-b bg-muted/5 px-4 py-3 shrink-0"
+                options={displayAreas.map((area) => ({ value: area, label: area, icon: LayoutGrid }))}
+              />
+            ) : (
+              <div className="border-b bg-muted/5 px-4 py-6 text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">No Risk Areas Configured</p>
+                <p className="mt-1 text-sm text-muted-foreground">Use Manage Areas to add the tabs you want for this register.</p>
+              </div>
+            )}
             <div className="flex-1 overflow-auto">
               {displayAreas.map((area) => {
                 const areaRisks = area === 'Uncategorized' ? uncategorizedRisks : orgRisks.filter((r) => r.hazardArea === area && r.status === 'Open');
