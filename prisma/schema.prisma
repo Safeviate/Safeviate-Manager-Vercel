@@ -33,6 +33,9 @@ model Tenant {
   erpStates             ErpState[]
   workpacks             WorkpackRecord[]
   maintenanceTaskCards  MaintenanceTaskCardRecord[]
+  tools                 ToolRecord[]
+  activeFlightSessions  ActiveFlightSessionRecord[]
+  alerts                AlertRecord[]
 
   @@map("tenants")
 }
@@ -316,4 +319,5 @@ model AlertRecord {
 
   @@map("alerts")
 }
+
 
