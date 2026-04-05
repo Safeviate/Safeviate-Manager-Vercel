@@ -1,6 +1,6 @@
 import NextAuth, { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { compare } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
 export const authOptions: NextAuthOptions = {
@@ -31,9 +31,19 @@ export const authOptions: NextAuthOptions = {
         const dbUser = await prisma.user.findUnique({ where: { email } });
 
         if (dbUser?.passwordHash) {
-          const ok = await compare(password, dbUser.passwordHash);
-          console.info('[AUTH] Database password compare result:', ok);
+          const looksHashed = /^\$2[aby]\$\d{2}\$/.test(dbUser.passwordHash);
+          const ok = looksHashed ? await compare(password, dbUser.passwordHash) : password === dbUser.passwordHash;
+          console.info('[AUTH] Database password compare result:', ok, { looksHashed });
+
           if (ok) {
+            if (!looksHashed) {
+              const upgradedHash = await hash(password, 12);
+              await prisma.user.update({
+                where: { id: dbUser.id },
+                data: { passwordHash: upgradedHash },
+              });
+            }
+
             return {
               id: dbUser.id,
               email: dbUser.email,
