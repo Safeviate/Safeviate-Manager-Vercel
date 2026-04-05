@@ -309,21 +309,6 @@ export const menuConfig: MenuItem[] = [
         label: 'All Users',
         permissionId: 'users-view',
       },
-      {
-        href: '/users/administration',
-        label: 'Administration',
-        permissionId: 'users-view',
-      },
-      {
-        href: '/users/training',
-        label: 'Training',
-        permissionId: 'users-view',
-      },
-      {
-        href: '/users/external-instructors',
-        label: 'External Instructors',
-        permissionId: 'users-view',
-      },
     ],
   },
   {

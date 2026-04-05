@@ -45,6 +45,9 @@ import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const LAST_SUBMENU_STORAGE_KEY = 'safeviate:last-submenu-by-parent';
+const USERS_STATIC_SUB_ITEMS: SubMenuItem[] = [
+  { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
+];
 
 const getLastSubmenuByParent = (): Record<string, string> => {
     if (typeof window === 'undefined') return {};
@@ -90,7 +93,7 @@ const SidebarItems = () => {
     const lastSubmenuByParent = useMemo(() => getLastSubmenuByParent(), [pathname]);
     const [openParents, setOpenParents] = useState<Record<string, boolean>>({});
     const [dismissedParents, setDismissedParents] = useState<Record<string, boolean>>({});
-    const [departmentBasedUserSubItems, setDepartmentBasedUserSubItems] = useState<SubMenuItem[]>([]);
+    const [roleBasedUserSubItems, setRoleBasedUserSubItems] = useState<SubMenuItem[]>([]);
 
     useEffect(() => {
       let cancelled = false;
@@ -101,11 +104,7 @@ const SidebarItems = () => {
           const apiRoles = (Array.isArray(payload?.roles) ? payload.roles : []) as Role[];
 
           const dynamicItems: SubMenuItem[] = [
-            {
-              href: '/users/personnel',
-              label: 'All Users',
-              permissionId: 'users-view',
-            },
+            ...USERS_STATIC_SUB_ITEMS,
             ...apiRoles
               .filter((role) => role?.id && role?.name)
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -116,12 +115,10 @@ const SidebarItems = () => {
               })),
           ];
 
-          if (!cancelled) setDepartmentBasedUserSubItems(dynamicItems);
+          if (!cancelled) setRoleBasedUserSubItems(dynamicItems);
         } catch {
           if (!cancelled) {
-            setDepartmentBasedUserSubItems([
-              { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
-            ]);
+            setRoleBasedUserSubItems(USERS_STATIC_SUB_ITEMS);
           }
         }
       };
@@ -161,17 +158,17 @@ const SidebarItems = () => {
         router.prefetch(basePath);
       };
 
-      filteredItems.forEach((item) => {
+        filteredItems.forEach((item) => {
         prefetch(item.href);
         const configuredSubItems =
-          item.href === '/users' && departmentBasedUserSubItems.length > 0
-            ? departmentBasedUserSubItems
+          item.href === '/users' && roleBasedUserSubItems.length > 0
+            ? roleBasedUserSubItems
             : item.subItems || [];
-        configuredSubItems
-          .filter((sub) => canAccessMenuItem(sub, item))
-          .forEach((sub) => prefetch(sub.href));
+          configuredSubItems
+            .filter((sub) => canAccessMenuItem(sub, item))
+            .forEach((sub) => prefetch(sub.href));
       });
-    }, [filteredItems, departmentBasedUserSubItems, canAccessMenuItem, router]);
+    }, [filteredItems, roleBasedUserSubItems, canAccessMenuItem, router]);
 
     return (
         <SidebarMenu>
@@ -179,12 +176,7 @@ const SidebarItems = () => {
                 const Icon = item.icon;
                 const configuredSubItems =
                   item.href === '/users'
-                    ? [
-                        ...(item.subItems || []),
-                        ...departmentBasedUserSubItems.filter(di => 
-                          !(item.subItems || []).some(si => si.href === di.href || si.label === di.label)
-                        )
-                      ]
+                    ? (roleBasedUserSubItems.length > 0 ? roleBasedUserSubItems : item.subItems || [])
                     : item.subItems || [];
                 const subItems = configuredSubItems.filter((sub) => canAccessMenuItem(sub, item));
                 const activeSubItem = subItems.find((sub) => pathname === sub.href || pathname === sub.href.split('?')[0]);
