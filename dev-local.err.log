@@ -1,0 +1,72 @@
+Loaded Prisma config from prisma.config.ts.
+
+Prisma config detected, skipping environment variable loading.
+[dashboard-summary] fallback for risks: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].risk.findMany()` invocation in
+C:\Safeviate\Safeviate-Manager-Vercel\.next\server\chunks\[root-of-the-server]__cb3c19ec._.js:703:169
+
+  700         data: true
+  701     }
+  702 })),
+→ 703 safeFindMany('risks', __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].risk.findMany(
+The table `public.risks` does not exist in the current database.
+    at <unknown> (src\app\api\dashboard-summary\route.ts:73:41)
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:27:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:65:9)
+  71 |       safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId }, select: { data: true } })),
+  72 |       safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId }, select: { data: true } })),
+> 73 |       safeFindMany('risks', prisma.risk.findMany({ where: { tenantId }, select: { data: true } })),
+     |                                         ^
+  74 |     ]);
+  75 |
+  76 |     const personnelList = []; {
+  code: 'P2021',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for quality_audits: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].qualityAudit.findMany()` invocation in
+C:\Safeviate\Safeviate-Manager-Vercel\.next\server\chunks\[root-of-the-server]__cb3c19ec._.js:679:186
+
+  676         data: true
+  677     }
+  678 })),
+→ 679 safeFindMany('quality_audits', __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].qualityAudit.findMany(
+The table `public.quality_audits` does not exist in the current database.
+    at <unknown> (src\app\api\dashboard-summary\route.ts:70:58)
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:27:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:65:9)
+  68 |       safeFindMany('personnel', prisma.personnel.findMany({ where: { tenantId } })),
+  69 |       safeFindMany('management_of_change', prisma.managementOfChange.findMany({ where: { tenantId }, select: { data: true } })),
+> 70 |       safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId }, select: { data: true } })),
+     |                                                          ^
+  71 |       safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId }, select: { data: true } })),
+  72 |       safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId }, select: { data: true } })),
+  73 |       safeFindMany('risks', prisma.risk.findMany({ where: { tenantId }, select: { data: true } })), {
+  code: 'P2021',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].correctiveActionPlan.findMany()` invocation in
+C:\Safeviate\Safeviate-Manager-Vercel\.next\server\chunks\[root-of-the-server]__cb3c19ec._.js:695:203
+
+  692         data: true
+  693     }
+  694 })),
+→ 695 safeFindMany('corrective_action_plans', __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].correctiveActionPlan.findMany(
+The table `public.corrective_action_plans` does not exist in the current database.
+    at <unknown> (src\app\api\dashboard-summary\route.ts:72:75)
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:27:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:65:9)
+  70 |       safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId }, select: { data: true } })),
+  71 |       safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId }, select: { data: true } })),
+> 72 |       safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId }, select: { data: true } })),
+     |                                                                           ^
+  73 |       safeFindMany('risks', prisma.risk.findMany({ where: { tenantId }, select: { data: true } })),
+  74 |     ]);
+  75 | {
+  code: 'P2021',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}

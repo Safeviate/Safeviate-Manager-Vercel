@@ -285,6 +285,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         sidebarColors: (effectiveTheme.sidebar as any) || {
             'sidebar-background': effectiveTheme.backgroundColour || sidebarTheme['sidebar-background'],
             'sidebar-foreground': sidebarTheme['sidebar-foreground'],
+            'sidebar-button-background': sidebarTheme['sidebar-button-background'],
             'sidebar-accent': effectiveTheme.accentColour || sidebarTheme['sidebar-accent'],
             'sidebar-accent-foreground': sidebarTheme['sidebar-accent-foreground'],
             'sidebar-border': sidebarTheme['sidebar-border'],
@@ -356,6 +357,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     setPopoverThemeValue('popover', preset.colors.background);
     setPopoverThemeValue('popover-accent', preset.colors.primary);
     setSidebarThemeValue('sidebar-background', preset.colors.background);
+    setSidebarThemeValue('sidebar-button-background', preset.colors.background);
     setSidebarThemeValue('sidebar-accent', preset.colors.accent);
     setCardThemeValue('card', preset.colors.background);
     toast({
@@ -380,6 +382,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const formatLabel = (key: string) => {
     const clean = key.replace('popover-', '').replace('button-primary-', '').replace('sidebar-', '').replace('header-', '').replace('swimlane-header-', '');
     if (clean === 'popover' || clean === 'card' || clean === 'background') return 'Background';
+    if (clean === 'button-background') return 'Sidebar Menu Surface';
     if (clean === 'foreground') return 'Text';
     if (clean === 'accent') return 'Selection / Hover';
     if (clean === 'accent-foreground') return 'Selection Text';
@@ -492,6 +495,9 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             <div className="space-y-2">
                                 <div className="rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: sidebarTheme['sidebar-accent'], color: sidebarTheme['sidebar-accent-foreground'] }}>
                                     Selected item
+                                </div>
+                                <div className="rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: sidebarTheme['sidebar-button-background'], color: sidebarTheme['sidebar-foreground'] }}>
+                                    Sidebar menu surface
                                 </div>
                                 <div className="rounded-xl border px-3 py-2 text-[9px] font-black uppercase tracking-widest" style={{ borderColor: sidebarTheme['sidebar-border'] }}>
                                     Border sample
@@ -705,6 +711,53 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     </section>
                 </Collapsible>
 
+                <Collapsible open={isSectionOpen('sidebar')} onOpenChange={() => toggleAdvancedSection('sidebar')}>
+                    <section className="space-y-4">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Sidebar</span>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('sidebar') ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4">
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls the sidebar base surface, button surface, and navigation contrast.</p>
+                            {(() => {
+                                const sidebarMenuSurface =
+                                    sidebarTheme['sidebar-button-background'] ??
+                                    sidebarTheme['sidebar-background'] ??
+                                    '#e8f1fa';
+
+                                return (
+                            <div className="rounded-2xl border bg-muted/10 p-4 shadow-inner">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sidebar Menu Surface</p>
+                                    <p className="text-[9px] font-black uppercase tracking-tight text-foreground/75">Sets the fill behind each sidebar menu row.</p>
+                                </div>
+                                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="sidebar-button-background" className="text-[9px] font-black uppercase text-foreground">Sidebar Menu Surface</Label>
+                                        <Input
+                                            id="sidebar-button-background"
+                                            type="color"
+                                            value={sidebarMenuSurface}
+                                            onChange={(e) => setSidebarThemeValue('sidebar-button-background', e.target.value)}
+                                            className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                                );
+                            })()}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {Object.entries(sidebarTheme).map(([name, value]) => (
+                                <div key={name} className="space-y-1.5">
+                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                    <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </section>
+                </Collapsible>
+
                 <Collapsible open={isSectionOpen('swimlanes')} onOpenChange={() => toggleAdvancedSection('swimlanes')}>
                     <section className="space-y-4">
                         <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
@@ -785,62 +838,6 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                     </section>
                 </Collapsible>
 
-                <Collapsible open={isSectionOpen('sidebar')} onOpenChange={() => toggleAdvancedSection('sidebar')}>
-                    <section className="space-y-4">
-                        <CollapsibleTrigger className="flex w-full items-center justify-between border-b pb-2 text-left">
-                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Sidebar</span>
-                            <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('sidebar') ? 'rotate-180' : ''}`} />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="space-y-4">
-                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Used by the navigation shell and sidebar surface.</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {Object.entries(sidebarTheme).map(([name, value]) => (
-                                <div key={name} className="space-y-1.5">
-                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                                    <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
-                                </div>
-                                ))}
-                            </div>
-                            <div className="space-y-3 rounded-2xl border bg-muted/10 p-5 shadow-inner mt-4">
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sidebar Background Image</p>
-                                    <p className="text-[9px] font-black uppercase tracking-tight text-foreground/75">Paste a direct image URL to use it for the sidebar background.</p>
-                                    <div className="flex flex-col gap-2 sm:flex-row mt-2">
-                                        <Input
-                                            value={sidebarImageUrl}
-                                            onChange={(e) => setSidebarImageUrl(e.target.value)}
-                                            placeholder="https://example.com/texture.jpg"
-                                            className="h-11 flex-1 font-bold text-sm bg-background"
-                                        />
-                                        <Button type="button" variant="outline" className="h-11 px-6 font-black uppercase text-[10px] border-slate-300 shadow-sm" onClick={handleApplySidebarBackgroundUrl}>
-                                            Apply URL
-                                        </Button>
-                                    </div>
-                                </div>
-                                {sidebarBackgroundImage ? (
-                                    <div className="relative h-40 overflow-hidden rounded-xl border-2 shadow-sm mt-2">
-                                        <Image
-                                            src={sidebarBackgroundImage}
-                                            alt="Sidebar background preview"
-                                            fill
-                                            className="object-cover"
-                                            unoptimized
-                                        />
-                                        <div className="absolute top-2 right-2">
-                                            <Button size="icon" variant="destructive" onClick={() => setSidebarBackgroundImage('')} className="h-8 w-8 shadow-lg">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="rounded-xl border-2 border-dashed p-8 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-background/50">
-                                        No sidebar background selected
-                                    </div>
-                                )}
-                            </div>
-                        </CollapsibleContent>
-                    </section>
-                </Collapsible>
             </div>
         </div>
 

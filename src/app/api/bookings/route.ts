@@ -5,6 +5,10 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
+function isCompletedStatus(status: unknown) {
+  return status === 'Completed';
+}
+
 async function getTenantId() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
@@ -76,6 +80,42 @@ export async function PUT(request: Request) {
     }
 
     await ensureBookingsSchema();
+
+    const existing = await prisma.bookingRecord.findFirst({
+      where: { id: bookingId, tenantId },
+      select: { data: true },
+    });
+
+    const existingData = (existing?.data as Record<string, any> | null) || null;
+    const incomingStatus = incoming.status ?? existingData?.status;
+    const incomingAircraftId = incoming.aircraftId ?? existingData?.aircraftId;
+    const incomingStart = incoming.start ?? existingData?.start;
+
+    if (isCompletedStatus(incomingStatus) && incomingAircraftId && incomingStart) {
+      const earlierBookings = await prisma.bookingRecord.findMany({
+        where: {
+          tenantId,
+          id: { not: bookingId },
+        },
+        select: { data: true },
+      });
+
+      const blockingBooking = earlierBookings
+        .map((record) => record.data as Record<string, any>)
+        .filter((booking) => booking?.aircraftId === incomingAircraftId)
+        .filter((booking) => typeof booking.start === 'string' && booking.start < incomingStart)
+        .filter((booking) => booking.status !== 'Cancelled' && booking.status !== 'Cancelled with Reason')
+        .find((booking) => booking.status !== 'Completed');
+
+      if (blockingBooking) {
+        return NextResponse.json(
+          {
+            error: 'This flight cannot be marked completed until all earlier non-cancelled bookings for the same aircraft are completed.',
+          },
+          { status: 409 },
+        );
+      }
+    }
 
     await prisma.bookingRecord.upsert({
       where: { id: bookingId },

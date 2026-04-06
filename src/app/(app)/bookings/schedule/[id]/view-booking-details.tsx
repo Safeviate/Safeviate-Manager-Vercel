@@ -4,13 +4,14 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import type { Booking, NavlogLeg } from "@/types/booking";
+import type { Booking, NavlogLeg, ChecklistPhoto } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Map as MapIcon, Loader2, X, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon } from 'lucide-react';
+import { Save, AlertTriangle, Map as MapIcon, Loader2, X, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, ClipboardCheck, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -153,6 +154,24 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [basicEmpty, setBasicEmpty] = useState(DEFAULT_BASIC_EMPTY);
     const [stations, setStations] = useState<any[]>(DEFAULT_STATIONS);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
+    const [preFlight, setPreFlight] = useState(booking.preFlightData || {
+        hobbs: 0,
+        tacho: 0,
+        fuelUpliftGallons: 0,
+        fuelUpliftLitres: 0,
+        oilUplift: 0,
+        documentsChecked: false,
+    });
+    const [postFlight, setPostFlight] = useState(booking.postFlightData || {
+        hobbs: 0,
+        tacho: 0,
+        fuelUpliftGallons: 0,
+        fuelUpliftLitres: 0,
+        oilUplift: 0,
+        defects: '',
+    });
+    const preFlightPhotos = (booking.preFlightData?.photos || []) as ChecklistPhoto[];
+    const postFlightPhotos = (booking.postFlightData?.photos || []) as ChecklistPhoto[];
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
@@ -318,6 +337,30 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         });
     };
 
+    const handleSaveChecks = () => {
+        void fetch('/api/bookings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking: {
+                    ...booking,
+                    preFlightData: stripUndefinedDeep(preFlight),
+                    postFlightData: stripUndefinedDeep(postFlight),
+                    preFlight: true,
+                    postFlight: (postFlight.hobbs || 0) > 0,
+                },
+            }),
+        }).then(async (res) => {
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Save failed.');
+            }
+            toast({ title: 'Checks Saved' });
+        }).catch((error: any) => {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        });
+    };
+
     const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
         setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
     };
@@ -385,6 +428,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     return (
         <Card className="flex h-full min-h-0 flex-1 flex-col shadow-none border overflow-hidden">
+            <div className="border-b bg-amber-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-amber-700">
+                Booking detail shell mounted
+            </div>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
@@ -417,6 +463,117 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         ) : null
                     }
                     />
+                {activeTab === 'checks' ? (
+                    <div className="border-t bg-background p-4 md:p-6 space-y-4">
+                        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                            Checks tab active
+                        </div>
+                        <div className="rounded-xl border bg-white p-4 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Test</p>
+                            <p className="mt-2 text-sm font-semibold">If you can see this card, the checks panel is rendering.</p>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+                            <div className="space-y-4">
+                                <div className="rounded-xl border bg-gradient-to-br from-muted/40 to-background p-4 space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instructor Checks</p>
+                                            <p className="text-sm text-muted-foreground">DB-backed final sign-off checklist.</p>
+                                        </div>
+                                        <Badge variant={(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                            {(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'Ready' : 'Incomplete'}
+                                        </Badge>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {[
+                                            { label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits },
+                                            { label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length },
+                                            { label: 'Pre-flight complete', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight },
+                                            { label: 'Post-flight recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight },
+                                            { label: 'Photos attached', ok: (preFlightPhotos.length + postFlightPhotos.length) > 0 },
+                                            { label: 'Fuel uplift logged', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0 },
+                                        ].map((item) => (
+                                            <div key={item.label} className="rounded-lg border bg-background px-3 py-3 flex items-center gap-2">
+                                                <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black", item.ok ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                                                    {item.ok ? '✓' : '—'}
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Input value={booking.preFlightData?.hobbs ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.tacho ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.oilUplift ?? 0} readOnly />
+                                            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+                                                <Checkbox checked={!!booking.preFlightData?.documentsChecked} disabled />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Docs checked</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Post-flight</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Input value={booking.postFlightData?.hobbs ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.tacho ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.fuelUpliftGallons ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.fuelUpliftLitres ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.oilUplift ?? 0} readOnly />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border bg-background p-4 space-y-3">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {(preFlightPhotos.length || postFlightPhotos.length) ? (
+                                            <>
+                                                {preFlightPhotos.map((photo) => (
+                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
+                                                        <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
+                                                    </a>
+                                                ))}
+                                                {postFlightPhotos.map((photo) => (
+                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
+                                                        <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
+                                                    </a>
+                                                ))}
+                                            </>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">No checklist photos stored.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="rounded-xl border bg-background p-4 space-y-3">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Summary</p>
+                                    <div className="grid gap-3">
+                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mass & Balance</p>
+                                            <p className="text-sm font-black">{booking.massAndBalance?.takeoffWeight ?? 'N/A'} lbs</p>
+                                            <p className="text-xs text-muted-foreground">CG {booking.massAndBalance?.takeoffCg ?? 'N/A'} in</p>
+                                        </div>
+                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Navlog</p>
+                                            <p className="text-sm font-black">{booking.navlog?.legs?.length || 0} leg(s)</p>
+                                            <p className="text-xs text-muted-foreground">{booking.navlog?.departureIcao || '---'} to {booking.navlog?.arrivalIcao || '---'}</p>
+                                        </div>
+                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
+                                            <p className="text-sm font-black">{booking.status || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <ScrollArea className="min-h-0 flex-1">
@@ -629,6 +786,188 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </ScrollArea>
                         </div>
                     </TabsContent>
+
+                    {activeTab === 'checks' ? (
+                        <div className="m-0 flex h-full min-h-0 flex-1 flex-col overflow-auto">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="text-xl flex items-center gap-2">
+                                    <ClipboardCheck className="h-5 w-5 text-primary" /> Instructor Checks
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pb-20">
+                                <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                                    Checks tab active
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+                                    <div className="space-y-6">
+                                        <div className="rounded-xl border bg-gradient-to-br from-muted/40 to-background p-4 space-y-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Approval Gate</p>
+                                                    <p className="text-sm font-semibold text-muted-foreground">
+                                                        Final instructor review of the full flight plan before sign-off.
+                                                    </p>
+                                                </div>
+                                                <Badge variant={(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && !!booking.preFlightData?.documentsChecked && !!booking.postFlightData?.hobbs) ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                                    {(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && !!booking.preFlightData?.documentsChecked && !!booking.postFlightData?.hobbs) ? 'Ready' : 'Incomplete'}
+                                                </Badge>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                {[
+                                                    { label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits, detail: booking.massAndBalance?.isWithinLimits ? 'Within limits' : 'Needs review' },
+                                                    { label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length, detail: booking.navlog?.legs?.length ? `${booking.navlog.legs.length} legs planned` : 'No navlog found' },
+                                                    { label: 'Pre-flight checks completed', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight, detail: booking.preFlightData?.documentsChecked ? 'Documents checked' : 'Pre-flight not confirmed' },
+                                                    { label: 'Post-flight checks recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight, detail: (booking.postFlightData?.hobbs || 0) > 0 ? 'Hobbs recorded' : 'Post-flight pending' },
+                                                    { label: 'Photos attached', ok: (preFlightPhotos.length + postFlightPhotos.length) > 0, detail: `${preFlightPhotos.length + postFlightPhotos.length} photo(s)` },
+                                                    { label: 'Fuel uplift recorded', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0, detail: 'Gallons and litres mirrored' },
+                                                ].map((item) => (
+                                                    <div key={item.label} className="rounded-lg border bg-background px-3 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black", item.ok ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                                                                {item.ok ? '✓' : '—'}
+                                                            </div>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                                                        </div>
+                                                        <p className="mt-1.5 pl-7 text-[10px] text-muted-foreground">{item.detail}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900">
+                                                The instructor confirms the flight planning, mass and balance, navlog, and the student&apos;s pre/post-flight checks before the booking is closed.
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight</p>
+                                                    <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
+                                                </div>
+                                                <Badge variant={booking.preFlightData?.documentsChecked ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                                    {booking.preFlightData?.documentsChecked ? 'Ready' : 'Incomplete'}
+                                                </Badge>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Hobbs Start</UILabel>
+                                                    <Input type="number" step="0.1" value={booking.preFlightData?.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Tacho Start</UILabel>
+                                                    <Input type="number" step="0.1" value={booking.preFlightData?.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</UILabel>
+                                                    <Input type="number" value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</UILabel>
+                                                    <Input type="number" value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</UILabel>
+                                                    <Input type="number" value={booking.preFlightData?.oilUplift ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-3 p-3 bg-background border rounded-lg">
+                                                <Checkbox id="docs-checks" checked={!!booking.preFlightData?.documentsChecked} disabled />
+                                                <label htmlFor="docs-checks" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Post-flight</p>
+                                                    <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
+                                                </div>
+                                                <Badge variant={(booking.postFlightData?.hobbs || 0) > 0 ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                                    {(booking.postFlightData?.hobbs || 0) > 0 ? 'Recorded' : 'Pending'}
+                                                </Badge>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Hobbs End</UILabel>
+                                                    <Input type="number" step="0.1" value={booking.postFlightData?.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Tacho End</UILabel>
+                                                    <Input type="number" step="0.1" value={booking.postFlightData?.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</UILabel>
+                                                    <Input type="number" value={booking.postFlightData?.fuelUpliftGallons ?? 0} readOnly className="font-bold h-9 bg-muted/30" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</UILabel>
+                                                    <Input type="number" value={booking.postFlightData?.fuelUpliftLitres ?? 0} readOnly className="font-bold h-9 bg-muted/30" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <UILabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</UILabel>
+                                                    <Input type="number" value={booking.postFlightData?.oilUplift ?? 0} readOnly className="font-bold h-9 bg-muted/30" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="rounded-xl border bg-background p-4 space-y-3">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
+                                            <div className="space-y-4">
+                                                {preFlightPhotos.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight Photos</p>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {preFlightPhotos.map((photo) => (
+                                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
+                                                                    <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {postFlightPhotos.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Post-flight Photos</p>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {postFlightPhotos.map((photo) => (
+                                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
+                                                                    <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="rounded-xl border bg-background p-4 space-y-3">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Summary</p>
+                                            <div className="grid gap-3">
+                                                <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mass & Balance</p>
+                                                    <p className="text-sm font-black">{booking.massAndBalance?.takeoffWeight ?? 'N/A'} lbs</p>
+                                                    <p className="text-xs text-muted-foreground">CG {booking.massAndBalance?.takeoffCg ?? 'N/A'} in</p>
+                                                </div>
+                                                <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Navlog</p>
+                                                    <p className="text-sm font-black">{booking.navlog?.legs?.length || 0} leg(s)</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {booking.navlog?.departureIcao || '---'} to {booking.navlog?.arrivalIcao || '---'}
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
+                                                    <p className="text-sm font-black">{booking.status || 'N/A'}</p>
+                                                    <p className="text-xs text-muted-foreground">Instructor final sign-off goes here.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </div>
+                    ) : null}
 
                     <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <div className="min-h-0 flex-1 overflow-hidden">

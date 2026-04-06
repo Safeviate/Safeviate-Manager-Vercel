@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
 
@@ -43,6 +44,7 @@ function WBCalculatorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const aircraftId = searchParams.get('aircraftId');
   const bookingId = searchParams.get('bookingId');
@@ -227,6 +229,19 @@ function WBCalculatorContent() {
   const finalXMax = allX.length > 0 ? Math.max(graphConfig.xMax, ...allX) + 1 : 100;
   const finalYMin = allY.length > 0 ? Math.min(graphConfig.yMin, ...allY) - 100 : 1000;
   const finalYMax = allY.length > 0 ? Math.max(graphConfig.yMax, ...allY) + 100 : 3000;
+  const chartMargin = isMobile
+    ? { top: 8, right: 4, bottom: 16, left: 0 }
+    : { top: 20, right: 20, bottom: 40, left: 20 };
+  const chartTickCount = isMobile ? 4 : 8;
+  const mobileYAxisTicks = isMobile ? [...generateNiceTicks(finalYMin, finalYMax, chartTickCount)].reverse() : [];
+  const chartTickClassName = cn(
+    'font-mono font-bold',
+    isMobile ? 'text-[8px]' : 'text-[10px]'
+  );
+  const chartLabelClassName = cn(
+    'fill-muted-foreground font-black uppercase tracking-widest',
+    isMobile ? 'text-[9px]' : 'text-[10px]'
+  );
 
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-8 pt-4 px-1">
@@ -262,16 +277,25 @@ function WBCalculatorContent() {
             <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Verification of center of gravity against manufacturer structural limits.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="h-[550px] w-full relative bg-background border rounded-3xl p-6 shadow-sm overflow-hidden border-slate-200">
-                <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+            <div className={cn(
+              "w-full relative bg-background border rounded-3xl shadow-sm border-slate-200",
+              isMobile ? "aspect-[1.15/1] min-h-[320px] p-1 overflow-visible" : "h-[550px] p-6 overflow-hidden"
+            )}>
+                <div
+                  className={cn("w-full h-full", isMobile && "-translate-x-3")}
+                  style={isMobile ? { overflow: 'auto', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' } : undefined}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={chartMargin}>
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={generateNiceTicks(finalXMin, finalXMax, 8)} allowDataOverflow={true} axisLine={false} tickLine={false} className="font-mono text-[10px] font-bold">
-                            <Label value="CG (inches)" offset={0} position="insideBottom" dy={20} className="fill-muted-foreground font-black uppercase text-[10px] tracking-widest" />
+                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={generateNiceTicks(finalXMin, finalXMax, chartTickCount)} allowDataOverflow={true} axisLine={false} tickLine={false} tickMargin={isMobile ? 2 : 6} className={chartTickClassName}>
+                            {!isMobile && <Label value="CG (inches)" offset={0} position="insideBottom" dy={20} className={chartLabelClassName} />}
                         </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" domain={[finalYMin, finalYMax]} ticks={generateNiceTicks(finalYMin, finalYMax, 8)} allowDataOverflow={true} axisLine={false} tickLine={false} className="font-mono text-[10px] font-bold">
-                            <Label value="Weight (lbs)" angle={-90} position="insideLeft" className="fill-muted-foreground font-black uppercase text-[10px] tracking-widest" />
-                        </YAxis>
+                        {!isMobile && (
+                          <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" width={44} ticks={generateNiceTicks(finalYMin, finalYMax, chartTickCount)} domain={[finalYMin, finalYMax]} allowDataOverflow={true} axisLine={false} tickLine={false} tickMargin={6} className={chartTickClassName}>
+                              <Label value="Weight (lbs)" angle={-90} position="insideLeft" className={chartLabelClassName} />
+                          </YAxis>
+                        )}
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                                 return (
@@ -284,13 +308,25 @@ function WBCalculatorContent() {
                             }
                             return null;
                         }} />
-                        <Scatter name="Envelope" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 4, strokeLinecap: 'round' }} shape={() => <g />} isAnimationActive={false} />
+                        <Scatter name="Envelope" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: isMobile ? 3 : 4, strokeLinecap: 'round' }} shape={() => <g />} isAnimationActive={false} />
                         <Scatter name="Current Load" data={[{ x: results.cg, y: results.weight }]} isAnimationActive={false}>
-                            <ReferenceDot x={results.cg} y={results.weight} r={14} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={4} />
+                            <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 10 : 14} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={isMobile ? 3 : 4} />
                         </Scatter>
                     </ScatterChart>
-                </ResponsiveContainer>
-                <div className={cn("absolute bottom-12 right-12 px-10 py-3 rounded-2xl font-black shadow-xl text-white text-sm uppercase tracking-widest border-4 border-white animate-in zoom-in duration-300", results.isSafe ? 'bg-emerald-600' : 'bg-red-600')}>
+                  </ResponsiveContainer>
+                </div>
+                {isMobile && (
+                  <div className="pointer-events-none absolute inset-y-2 left-0 z-10 w-7 pr-0">
+                    <div className="flex h-full flex-col justify-between">
+                      {mobileYAxisTicks.map((tick) => (
+                        <span key={tick} className="block text-right font-mono text-[8px] font-bold leading-none text-muted-foreground/80">
+                          {tick}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className={cn("absolute bottom-3 right-3 sm:bottom-12 sm:right-12 px-3 sm:px-10 py-1.5 sm:py-3 rounded-2xl font-black shadow-xl text-white text-[9px] sm:text-sm uppercase tracking-widest border-4 border-white animate-in zoom-in duration-300", results.isSafe ? 'bg-emerald-600' : 'bg-red-600')}>
                     {results.isSafe ? "Within Limits" : "DANGER: Out of Limits"}
                 </div>
             </div>

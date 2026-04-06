@@ -8,16 +8,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { DocumentUploader } from '@/components/document-uploader';
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
-import type { Booking, OverrideLog, TrainingRoute } from '@/types/booking';
-import { Trash2, ShieldAlert, Lock, Eye, MapIcon } from 'lucide-react';
+import type { Booking, OverrideLog, TrainingRoute, ChecklistPhoto } from '@/types/booking';
+import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, CheckCircle2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
@@ -63,6 +66,24 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
     const { userProfile } = useUserProfile();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const canEditBooking = hasPermission('bookings-schedule-manage');
+    const [preFlight, setPreFlight] = useState(existingBooking?.preFlightData || {
+        hobbs: 0,
+        tacho: 0,
+        fuelUpliftGallons: 0,
+        fuelUpliftLitres: 0,
+        oilUplift: 0,
+        documentsChecked: false,
+    });
+    const [postFlight, setPostFlight] = useState(existingBooking?.postFlightData || {
+        hobbs: 0,
+        tacho: 0,
+        fuelUpliftGallons: 0,
+        fuelUpliftLitres: 0,
+        oilUplift: 0,
+    });
+    const [preFlightPhotos, setPreFlightPhotos] = useState<ChecklistPhoto[]>(existingBooking?.preFlightData?.photos || []);
+    const [postFlightPhotos, setPostFlightPhotos] = useState<ChecklistPhoto[]>(existingBooking?.postFlightData?.photos || []);
 
     // Fetch Training Routes
     const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
@@ -84,9 +105,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     }, [tenantId]);
 
     // PERMISSIONS: Can user edit/save?
-    const canManageSchedule = hasPermission('bookings-schedule-manage');
+    const canManageSchedule = canEditBooking;
     const canOverride = hasPermission('bookings-approve-override');
-    
     // LOGIC: A booking is "underway" if it is Approved or tech logs have started
     const isUnderway = existingBooking?.status === 'Approved' || existingBooking?.status === 'Completed' || existingBooking?.preFlight;
     const canEditUnderway = canOverride; // If you have override, you can edit underway bookings
@@ -126,7 +146,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const watchStatus = form.watch('status');
 
     const onSubmit = async (data: z.infer<typeof bookingFormSchema>) => {
-        if (!canManageSchedule) {
+        if (!canEditBooking) {
             toast({ variant: 'destructive', title: 'Permission Denied', description: 'You do not have permission to manage the schedule.' });
             return;
         }
@@ -208,6 +228,19 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             bookingData.notes = `Cancelled: ${data.cancellationReason}\n\n${data.notes || ''}`;
             bookingData.status = 'Cancelled';
         }
+
+        bookingData.preFlightData = {
+            ...preFlight,
+            fuelUpliftLitres: preFlight.fuelUpliftLitres || 0,
+            photos: preFlightPhotos,
+        };
+        bookingData.postFlightData = {
+            ...postFlight,
+            fuelUpliftLitres: postFlight.fuelUpliftLitres || 0,
+            photos: postFlightPhotos,
+        };
+        bookingData.preFlight = !!preFlight.documentsChecked || (preFlight.hobbs > 0 || preFlight.tacho > 0);
+        bookingData.postFlight = (postFlight.hobbs || 0) > 0;
 
         // Audit Admin/Locked Record Override
         if (existingBooking && isUnderway && canEditUnderway && userProfile) {
@@ -296,6 +329,16 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                     </div>
                 )}
 
+                {!isPermissionsLoading && !canEditBooking && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-md p-3 mb-4 flex items-start gap-3">
+                        <Lock className="h-5 w-5 text-slate-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-slate-700">
+                            <p className="font-bold">Read-Only Booking</p>
+                            <p>You can view this booking, but you do not have permission to edit the booking details or checks.</p>
+                        </div>
+                    </div>
+                )}
+
                 {canEditUnderway && isUnderway && (
                     <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 flex items-start gap-3">
                         <Lock className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
@@ -319,8 +362,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )}/>
+                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
                         </div>
 
                         {watchStatus === 'Cancelled with Reason' && (
@@ -328,13 +371,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         </div>
 
                         {!existingBooking && (
@@ -345,7 +388,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 <FormField control={form.control} name="routeId" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-[9px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canManageSchedule}>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}>
                                             <FormControl>
                                                 <SelectTrigger className="bg-background">
                                                     <SelectValue placeholder="Select a training route to pre-fill navlog..." />
@@ -366,16 +409,206 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             </div>
                         )}
 
-                        <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes..." {...field} disabled={!canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
+                        <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} /></FormControl><FormMessage /></FormItem> )}/>
+
+                        <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <ClipboardCheck className="h-4 w-4 text-primary" />
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre / Post-Flight Checks</p>
+                                        <p className="text-xs font-semibold text-muted-foreground">Complete these here in the booking popup.</p>
+                                    </div>
+                                </div>
+                                <Badge variant={(postFlight.hobbs || 0) > 0 ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                    {(postFlight.hobbs || 0) > 0 ? 'Recorded' : 'Pending'}
+                                </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="space-y-3 rounded-lg border bg-background p-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <Activity className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Pre-flight</p>
+                                            <p className="text-[10px] text-muted-foreground">Must be completed before approval.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Hobbs Start</FormLabel>
+                                            <Input type="number" step="0.1" value={preFlight.hobbs} onChange={(e) => setPreFlight({ ...preFlight, hobbs: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Tacho Start</FormLabel>
+                                            <Input type="number" step="0.1" value={preFlight.tacho} onChange={(e) => setPreFlight({ ...preFlight, tacho: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</FormLabel>
+                                            <Input type="number" value={preFlight.fuelUpliftGallons} onChange={(e) => setPreFlight({ ...preFlight, fuelUpliftGallons: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</FormLabel>
+                                            <Input
+                                                type="number"
+                                                value={preFlight.fuelUpliftLitres}
+                                                onChange={(e) => {
+                                                    const litres = parseFloat(e.target.value) || 0;
+                                                    setPreFlight({
+                                                        ...preFlight,
+                                                        fuelUpliftLitres: litres,
+                                                        fuelUpliftGallons: Number((litres / 3.785).toFixed(1)),
+                                                    });
+                                                }}
+                                                className="h-9 font-bold"
+                                                disabled={!canEditBooking}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</FormLabel>
+                                            <Input type="number" value={preFlight.oilUplift} onChange={(e) => setPreFlight({ ...preFlight, oilUplift: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center space-x-3 rounded-lg border p-3">
+                                        <Checkbox id="popup-docs" checked={preFlight.documentsChecked} onCheckedChange={(val) => setPreFlight({ ...preFlight, documentsChecked: !!val })} disabled={!canEditBooking} />
+                                        <label htmlFor="popup-docs" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
+                                            <DocumentUploader
+                                                defaultFileName="Pre-flight photo"
+                                                restrictedMode="camera"
+                                                onDocumentUploaded={(photo) => setPreFlightPhotos((current) => [...current, photo])}
+                                                trigger={(open) => (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 text-[10px] font-black uppercase"
+                                                        disabled={!canEditBooking}
+                                                        onClick={() => open('camera')}
+                                                    >
+                                                        Add Photo
+                                                    </Button>
+                                                )}
+                                            />
+                                        </div>
+                                        {preFlightPhotos.length > 0 && (
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {preFlightPhotos.map((photo) => (
+                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border bg-muted/20">
+                                                        <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="space-y-3 rounded-lg border bg-background p-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-7 w-7 rounded-full bg-orange-500/10 flex items-center justify-center">
+                                            <CheckCircle2 className="h-4 w-4 text-orange-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Post-flight</p>
+                                            <p className="text-[10px] text-muted-foreground">Complete this last after the flight.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Hobbs End</FormLabel>
+                                            <Input type="number" step="0.1" value={postFlight.hobbs} onChange={(e) => setPostFlight({ ...postFlight, hobbs: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Tacho End</FormLabel>
+                                            <Input type="number" step="0.1" value={postFlight.tacho} onChange={(e) => setPostFlight({ ...postFlight, tacho: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</FormLabel>
+                                            <Input
+                                                type="number"
+                                                value={postFlight.fuelUpliftGallons}
+                                                onChange={(e) => {
+                                                    const gallons = parseFloat(e.target.value) || 0;
+                                                    setPostFlight({
+                                                        ...postFlight,
+                                                        fuelUpliftGallons: gallons,
+                                                        fuelUpliftLitres: Number((gallons * 3.785).toFixed(1)),
+                                                    });
+                                                }}
+                                                className="h-9 font-bold"
+                                                disabled={!canEditBooking}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</FormLabel>
+                                            <Input
+                                                type="number"
+                                                value={postFlight.fuelUpliftLitres}
+                                                onChange={(e) => {
+                                                    const litres = parseFloat(e.target.value) || 0;
+                                                    setPostFlight({
+                                                        ...postFlight,
+                                                        fuelUpliftLitres: litres,
+                                                        fuelUpliftGallons: Number((litres / 3.785).toFixed(1)),
+                                                    });
+                                                }}
+                                                className="h-9 font-bold"
+                                                disabled={!canEditBooking}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <FormLabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</FormLabel>
+                                            <Input type="number" value={postFlight.oilUplift} onChange={(e) => setPostFlight({ ...postFlight, oilUplift: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
+                                            <DocumentUploader
+                                                defaultFileName="Post-flight photo"
+                                                restrictedMode="camera"
+                                                onDocumentUploaded={(photo) => setPostFlightPhotos((current) => [...current, photo])}
+                                                trigger={(open) => (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 text-[10px] font-black uppercase"
+                                                        disabled={!canEditBooking}
+                                                        onClick={() => open('camera')}
+                                                    >
+                                                        Add Photo
+                                                    </Button>
+                                                )}
+                                            />
+                                        </div>
+                                        {postFlightPhotos.length > 0 && (
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {postFlightPhotos.map((photo) => (
+                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border bg-muted/20">
+                                                        <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div className="flex items-center space-x-2">
-                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" disabled={isLocked || !canManageSchedule} /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
+                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" disabled={isLocked || !canEditBooking} /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
                         </div>
 
                         {isOvernight && (
                             <div className="grid grid-cols-2 gap-4 p-4 border rounded-md">
-                                <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canManageSchedule} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         )}
 
@@ -403,7 +636,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
                                 <DialogClose asChild><Button type="button" variant="outline" className="flex-1 sm:flex-none">Cancel</Button></DialogClose>
                                 {canManageSchedule && !isLocked && (
-                                    <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+                                    <Button type="submit" disabled={isSubmitting || !canEditBooking} className="flex-1 sm:flex-none">
                                         {isSubmitting ? 'Saving...' : 'Save Booking'}
                                     </Button>
                                 )}

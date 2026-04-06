@@ -383,12 +383,6 @@ export const menuConfig: MenuItem[] = [
         description: 'View a matrix of what users and roles can access.',
         permissionId: 'admin-permissions-view',
       },
-      {
-        href: '/admin/data-portability',
-        label: 'Data Portability',
-        description: 'Full Export/Import of local system state and schematics.',
-        permissionId: 'admin-settings-manage',
-      },
     ],
   },
   {

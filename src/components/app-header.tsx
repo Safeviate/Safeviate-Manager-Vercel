@@ -99,21 +99,21 @@ export function AppHeader() {
   return (
     <header 
       style={{ '--header-opacity': headerOpacity } as any}
-      className="app-topbar sticky top-0 z-20 flex h-14 min-w-0 items-center justify-between gap-3 border-none bg-header pr-4 text-header-foreground sm:pr-6 shadow-none"
+      className="app-topbar sticky top-0 z-20 flex h-[68px] min-w-0 items-center justify-between gap-3 border-b border-white/5 bg-header pr-4 text-header-foreground shadow-[inset_0_-1px_0_rgba(255,255,255,0.03)] sm:pr-6"
     >
       <div className="flex min-w-0 items-center h-full">
-        <div className="flex items-center gap-2 w-auto sm:w-[--sidebar-width] px-4 md:px-6 shrink-0 h-full">
+        <div className="flex h-full w-auto shrink-0 items-center gap-2 px-4 sm:w-[--sidebar-width] md:px-6">
            {!isDetailPage && <SidebarTrigger className="h-8 w-8 sm:hidden -ml-1 text-header-foreground" />}
-           <span className="app-sidebar-brand-label truncate font-headline text-lg font-bold tracking-tight">Safeviate</span>
+           <span className="app-sidebar-brand-label truncate font-headline text-[15px] font-semibold tracking-[-0.01em]">Safeviate</span>
         </div>
-        <div className="h-full w-px bg-white/10 hidden sm:block"></div>
+        <div className="hidden h-full w-px bg-white/10 sm:block"></div>
         <div className="flex min-w-0 items-center gap-3 px-4">
         {isDetailPage ? (
           <Button 
             variant="outline" 
             size="sm" 
             onClick={handleBack}
-            className="rounded-md font-black uppercase text-sm border-slate-300 px-4 h-9 shadow-none transition-all shrink-0 whitespace-nowrap text-button-primary hover:text-button-primary"
+            className="h-9 shrink-0 whitespace-nowrap rounded-xl border-white/10 px-4 text-sm font-semibold uppercase text-button-primary shadow-none transition-all hover:bg-white/5 hover:text-button-primary"
           >
             {backConfig.text}
           </Button>
@@ -121,7 +121,7 @@ export function AppHeader() {
           null
         )}
         {!isDetailPage && title && (
-          <h1 className="truncate text-base font-bold tracking-tight sm:text-lg uppercase opacity-90">{title}</h1>
+          <h1 className="truncate text-[15px] font-semibold tracking-[-0.01em] uppercase opacity-90 sm:text-[16px]">{title}</h1>
         )}
       </div>
     </div>
@@ -133,15 +133,15 @@ export function AppHeader() {
         <Button variant="ghost" size="icon" className="app-topbar-icon">
           <Bell className="h-4 w-4" />
         </Button>
-        <div className="app-topbar-profile flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-1.5 py-1">
-          <Avatar className="h-7 w-7">
+        <div className="app-topbar-profile flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <Avatar className="h-7 w-7 ring-1 ring-white/10">
             <AvatarImage
               src={`https://picsum.photos/seed/${userDisplayName}/64/64`}
               alt={`${userDisplayName} profile avatar`}
             />
             <AvatarFallback>{userFallback}</AvatarFallback>
           </Avatar>
-          <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 md:block" />
+          <ChevronDown className="hidden h-3.5 w-3.5 opacity-60 md:block" />
         </div>
       </div>
     </header>

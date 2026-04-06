@@ -7,23 +7,22 @@ import { format } from "date-fns";
 import type { Booking, NavlogLeg, Navlog, PreFlightData, PostFlightData } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Activity, CheckCircle2, AlertOctagon, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label as UILabel } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 
@@ -44,6 +43,8 @@ const AeronauticalMap = dynamic(
 );
 
 const FUEL_WEIGHT_PER_GALLON = 6;
+const POINT_COLORS = ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'];
+const formatLitres = (gallons: number | undefined) => (((gallons || 0) * 3.78541).toFixed(1));
 const DEFAULT_GRAPH_CONFIG = {
     xMin: 80,
     xMax: 94,
@@ -65,6 +66,29 @@ const DEFAULT_STATIONS = [
     { id: 4, name: 'Rear Pax', weight: 0, arm: 118.1, type: 'standard' },
     { id: 5, name: 'Baggage', weight: 0, arm: 142.8, type: 'standard' },
 ];
+
+const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
+    const start = Number(min);
+    const end = Number(max);
+    if (isNaN(start) || isNaN(end) || start >= end) return [];
+    const diff = end - start;
+    const roughStep = diff / (stepCount - 1);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    const normalizedStep = roughStep / magnitude;
+    let step;
+    if (normalizedStep < 1.5) step = 1 * magnitude;
+    else if (normalizedStep < 3) step = 2 * magnitude;
+    else if (normalizedStep < 7) step = 5 * magnitude;
+    else step = 10 * magnitude;
+    const ticks = [];
+    let current = Math.ceil(start / step) * step;
+    if (current > start) ticks.push(start);
+    while (current <= end) {
+        ticks.push(current);
+        current += step;
+    }
+    return ticks;
+};
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -290,10 +314,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [isLookingUpDep, setIsLookingUpDep] = useState(false);
     const [isLookingUpArr, setIsLookingUpArr] = useState(false);
 
-    // Operations state
-    const [preFlight, setPreFlight] = useState<PreFlightData>(booking.preFlightData || { hobbs: 0, tacho: 0, fuelUpliftGallons: 0, fuelUpliftLitres: 0, oilUplift: 0, documentsChecked: false });
-    const [postFlight, setPostFlight] = useState<PostFlightData>(booking.postFlightData || { hobbs: 0, tacho: 0, fuelUpliftGallons: 0, fuelUpliftLitres: 0, oilUplift: 0, defects: '' });
-
     useEffect(() => {
         if (aircraft) {
         if (aircraft?.cgEnvelope?.length) {
@@ -392,10 +412,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     booking: {
                         ...booking,
                         massAndBalance: sanitizedMassAndBalance,
-                        preFlightData: stripUndefinedDeep(preFlight),
-                        postFlightData: stripUndefinedDeep(postFlight),
-                        preFlight: true,
-                        postFlight: postFlight.hobbs > 0,
                     },
                 }),
             });
@@ -679,42 +695,61 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="mass-balance" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden bg-muted/5">
-                        <ScrollArea className="flex-1">
-                            <CardContent className="pt-8 pb-20 max-w-7xl mx-auto space-y-12">
-                                {/* Mass & Balance Section */}
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-primary/10 p-2 rounded-xl"><Scale className="h-5 w-5 text-primary" /></div>
-                                        <h2 className="text-xl font-bold uppercase tracking-tight">Mass & Balance</h2>
-                                    </div>
-                                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
-                                        <div className="flex flex-col">
-                                            <div className="rounded-xl border bg-background p-4 shadow-sm">
-                                                <div className="mb-4 flex items-center justify-between">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading Envelope</p>
-                                                    <Badge variant={results.isSafe ? 'default' : 'destructive'} className="text-[10px] font-black uppercase">{results.isSafe ? 'Within Limits' : 'Out Of Limits'}</Badge>
-                                                </div>
-                                                <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[420px]")}>
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={{ top: 20, right: 28, bottom: 32, left: 20 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                                            <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} />
-                                                            <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} />
-                                                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
-                                                            <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
-                                                            </Scatter>
-                                                        </ScatterChart>
-                                                    </ResponsiveContainer>
-                                                </div>
+                        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5 min-w-0">
+                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_350px] h-full overflow-hidden min-w-0">
+                                <div className="h-full min-w-0 border-r bg-background overflow-hidden">
+                                    <div className="p-6 min-w-0">
+                                        <div
+                                            className={cn(
+                                                "min-w-0 overflow-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner",
+                                                isMobile ? "h-[360px] p-2" : "h-auto"
+                                            )}
+                                            style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+                                        >
+                                            <div className={cn(
+                                                "min-w-[980px] relative bg-background rounded-xl border shadow-sm p-4",
+                                                isMobile ? "min-w-[720px] min-h-[520px] h-[520px] p-2" : "min-h-[550px] h-[550px]"
+                                            )}>
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ScatterChart margin={isMobile ? { top: 12, right: 24, bottom: 36, left: 32 } : { top: 20, right: 60, bottom: 60, left: 60 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
+                                                            <Label value="CG (inches)" offset={isMobile ? -10 : -20} position="insideBottom" className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
+                                                        </XAxis>
+                                                        <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
+                                                            <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" offset={isMobile ? -18 : -40} className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
+                                                        </YAxis>
+                                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                                        <Scatter data={envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: isMobile ? 1.5 : 2 }} shape={() => <g />} />
+                                                        <Scatter data={envelope}>
+                                                            {envelope.map((entry, index) => <Cell key={index} fill={POINT_COLORS[index % POINT_COLORS.length]} />)}
+                                                        </Scatter>
+                                                        <Scatter data={[{ x: results.cg, y: results.weight }]}>
+                                                            <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 7 : 10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={isMobile ? 2 : 3} />
+                                                        </Scatter>
+                                                    </ScatterChart>
+                                                </ResponsiveContainer>
                                             </div>
                                         </div>
-                                        <div className="space-y-6">
+                                    </div>
+                                </div>
+
+                                <ScrollArea className="h-full min-w-0">
+                                    <div className="p-6 space-y-8 pb-24 min-w-0">
+                                        <section className="space-y-4">
+                                            <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Summary</h2>
                                             <div className="p-4 bg-muted/30 rounded-xl space-y-4">
                                                 <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
                                                 <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
                                                 <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Loading & Logs</Button>
+                                            </div>
+                                        </section>
+
+                                        <Separator />
+
+                                        <section className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Loading Stations</h2>
                                             </div>
                                             <div className="space-y-4">
                                                 <div className="rounded-lg border bg-muted/20 px-3 py-2">
@@ -722,7 +757,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     <p className="text-sm font-black">{basicEmpty.weight} lbs @ {basicEmpty.arm} in</p>
                                                 </div>
                                                 {stations.map(s => (
-                                                    <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background">
+                                                    <div key={s.id} className="space-y-2 p-3 border rounded-lg bg-background">
                                                         <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
                                                         <div className="grid grid-cols-2 gap-2">
                                                             <Input type="number" value={s.weight} onChange={(e) => handleStationWeightChange(s.id, e.target.value)} className="h-8 text-xs font-bold" placeholder="Weight" />
@@ -730,88 +765,138 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         </div>
                                                         {s.type === 'fuel' && (
                                                             <div className="space-y-2 pt-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Input type="number" value={s.gallons ?? ''} onChange={(e) => handleGallonsChange(s.id, e.target.value)} className="h-8 text-xs font-bold" placeholder="Gallons" />
-                                                                    <div className="text-[10px] font-bold text-muted-foreground">
-                                                                        MAX: {s.maxGallons || 50}
-                                                                    </div>
+                                                                <div className="flex justify-between items-center text-[9px] font-black uppercase text-foreground/75">
+                                                                    <span>{s.gallons} GAL / {formatLitres(s.gallons)} L</span>
+                                                                    <span>Max: {s.maxGallons}</span>
                                                                 </div>
-                                                                <input
-                                                                    type="range"
-                                                                    min="0"
-                                                                    max={s.maxGallons || 50}
-                                                                    step="0.1"
-                                                                    value={s.gallons || 0}
-                                                                    onChange={(e) => handleGallonsChange(s.id, e.target.value)}
-                                                                    className="w-full h-2 accent-yellow-600 rounded-full cursor-pointer"
-                                                                />
+                                                                <input aria-label={`${s.name} fuel gallons`} type="range" min="0" max={s.maxGallons || 50} step="0.1" value={s.gallons || 0} onChange={(e) => handleGallonsChange(s.id, e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500" />
                                                             </div>
                                                         )}
                                                     </div>
                                                 ))}
                                             </div>
+                                        </section>
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        </CardContent>
+                    </TabsContent>
+
+                    <TabsContent value="checks" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
+                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-auto p-4 md:p-6 space-y-4">
+                            <div className="rounded-xl border bg-background p-4 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instructor Checks</p>
+                                        <p className="text-sm font-semibold text-muted-foreground">Final instructor review of the full flight plan.</p>
+                                    </div>
+                                    <Badge variant={(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                        {(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'Ready' : 'Incomplete'}
+                                    </Badge>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {[
+                                        { label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits },
+                                        { label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length },
+                                        { label: 'Pre-flight complete', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight },
+                                        { label: 'Post-flight recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight },
+                                        { label: 'Photos attached', ok: ((booking.preFlightData?.photos?.length || 0) + (booking.postFlightData?.photos?.length || 0)) > 0 },
+                                        { label: 'Fuel uplift logged', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0 },
+                                    ].map((item) => (
+                                        <div key={item.label} className="rounded-lg border bg-muted/20 px-3 py-3 flex items-center gap-2">
+                                            <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black", item.ok ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                                                {item.ok ? '✓' : '—'}
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+                                <div className="space-y-4">
+                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight</p>
+                                                <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
+                                            </div>
+                                            <Badge variant={booking.preFlightData?.documentsChecked ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                                {booking.preFlightData?.documentsChecked ? 'Ready' : 'Incomplete'}
+                                            </Badge>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Input value={booking.preFlightData?.hobbs ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.tacho ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly />
+                                            <Input value={booking.preFlightData?.oilUplift ?? 0} readOnly />
+                                            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+                                                <Badge variant="outline" className="text-[9px] font-black uppercase">Docs</Badge>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{booking.preFlightData?.documentsChecked ? 'Checked' : 'Pending'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Post-flight</p>
+                                                <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
+                                            </div>
+                                            <Badge variant={(booking.postFlightData?.hobbs || 0) > 0 ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                                {(booking.postFlightData?.hobbs || 0) > 0 ? 'Recorded' : 'Pending'}
+                                            </Badge>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Input value={booking.postFlightData?.hobbs ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.tacho ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.fuelUpliftGallons ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.fuelUpliftLitres ?? 0} readOnly />
+                                            <Input value={booking.postFlightData?.oilUplift ?? 0} readOnly />
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-background p-4 space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {(booking.preFlightData?.photos || []).map((photo) => (
+                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
+                                                    <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
+                                                </a>
+                                            ))}
+                                            {(booking.postFlightData?.photos || []).map((photo) => (
+                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
+                                                    <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
+                                                </a>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="h-px bg-border w-full" />
-
-                                {/* Ops Logs Section */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                    {/* Pre-flight */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-primary/10 p-2 rounded-xl"><Activity className="h-5 w-5 text-primary" /></div>
-                                            <h2 className="text-lg font-black uppercase tracking-widest">Pre-flight Record</h2>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <UILabel className="text-[9px] font-bold uppercase">Hobbs Start</UILabel>
-                                                <Input type="number" step="0.1" value={preFlight.hobbs} onChange={(e) => setPreFlight({ ...preFlight, hobbs: parseFloat(e.target.value) || 0 })} className="font-bold h-10" />
+                                <div className="space-y-4">
+                                    <div className="rounded-xl border bg-background p-4 space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Summary</p>
+                                        <div className="grid gap-3">
+                                            <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mass & Balance</p>
+                                                <p className="text-sm font-black">{booking.massAndBalance?.takeoffWeight ?? 'N/A'} lbs</p>
+                                                <p className="text-xs text-muted-foreground">CG {booking.massAndBalance?.takeoffCg ?? 'N/A'} in</p>
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <UILabel className="text-[9px] font-bold uppercase">Tacho Start</UILabel>
-                                                <Input type="number" step="0.1" value={preFlight.tacho} onChange={(e) => setPreFlight({ ...preFlight, tacho: parseFloat(e.target.value) || 0 })} className="font-bold h-10" />
+                                            <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Navlog</p>
+                                                <p className="text-sm font-black">{booking.navlog?.legs?.length || 0} leg(s)</p>
+                                                <p className="text-xs text-muted-foreground">{booking.navlog?.departureIcao || '---'} to {booking.navlog?.arrivalIcao || '---'}</p>
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</UILabel>
-                                                <Input type="number" value={preFlight.fuelUpliftGallons} onChange={(e) => setPreFlight({ ...preFlight, fuelUpliftGallons: parseFloat(e.target.value) || 0 })} className="font-bold h-10" />
+                                            <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
+                                                <p className="text-sm font-black">{booking.status || 'N/A'}</p>
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <UILabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</UILabel>
-                                                <Input type="number" value={preFlight.oilUplift} onChange={(e) => setPreFlight({ ...preFlight, oilUplift: parseFloat(e.target.value) || 0 })} className="font-bold h-10" />
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center space-x-3 p-3 bg-background border rounded-lg">
-                                            <Checkbox id="docs" checked={preFlight.documentsChecked} onCheckedChange={(val) => setPreFlight({ ...preFlight, documentsChecked: !!val })} />
-                                            <label htmlFor="docs" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
-                                        </div>
-                                    </div>
-
-                                    {/* Post-flight */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-orange-500/10 p-2 rounded-xl"><CheckCircle2 className="h-5 w-5 text-orange-600" /></div>
-                                            <h2 className="text-lg font-black uppercase tracking-widest">Post-flight Record</h2>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <UILabel className="text-[9px] font-bold uppercase">Hobbs End</UILabel>
-                                                <Input type="number" step="0.1" value={postFlight.hobbs} onChange={(e) => setPostFlight({ ...postFlight, hobbs: parseFloat(e.target.value) || 0 })} className="font-bold h-10" />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <UILabel className="text-[9px] font-bold uppercase">Tacho End</UILabel>
-                                                <Input type="number" step="0.1" value={postFlight.tacho} onChange={(e) => setPostFlight({ ...postFlight, tacho: parseFloat(e.target.value) || 0 })} className="font-bold h-10" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <UILabel className="text-[9px] font-bold uppercase flex items-center gap-2"><AlertOctagon className="h-3 w-3 text-orange-600" /> Defects</UILabel>
-                                            <Textarea placeholder="Mechanical issues..." className="min-h-[80px] font-medium text-sm border" value={postFlight.defects} onChange={(e) => setPostFlight({ ...postFlight, defects: e.target.value })} />
                                         </div>
                                     </div>
                                 </div>
-                            </CardContent>
-                        </ScrollArea>
+                            </div>
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">

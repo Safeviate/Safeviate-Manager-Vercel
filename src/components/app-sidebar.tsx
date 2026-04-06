@@ -18,12 +18,14 @@ import {
   SidebarMenuSubButton,
   SidebarMobile,
   SidebarMobileContent,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { LogOut, ChevronDown, ChevronDown as BrandChevron, Plane } from 'lucide-react';
+import { LogOut, ChevronDown } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useEffect, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 import {
   menuConfig,
   type SubMenuItem,
@@ -78,6 +80,7 @@ const SidebarItems = () => {
     const [openParents, setOpenParents] = useState<Record<string, boolean>>({});
     const [dismissedParents, setDismissedParents] = useState<Record<string, boolean>>({});
     const [roleBasedUserSubItems, setRoleBasedUserSubItems] = useState<SubMenuItem[]>([]);
+    const normalizePath = (path: string) => path.replace(/\/+$/, '');
 
     useEffect(() => {
       let cancelled = false;
@@ -163,7 +166,7 @@ const SidebarItems = () => {
                     ? (roleBasedUserSubItems.length > 0 ? roleBasedUserSubItems : item.subItems || [])
                     : item.subItems || [];
                 const subItems = configuredSubItems.filter((sub) => canAccessMenuItem(sub, item));
-                const activeSubItem = subItems.find((sub) => pathname === sub.href || pathname === sub.href.split('?')[0]);
+                const activeSubItem = subItems.find((sub) => normalizePath(pathname) === normalizePath(sub.href));
                 const rememberedSubHref = lastSubmenuByParent[item.href];
                 const rememberedSubItem = subItems.find((sub) => sub.href === rememberedSubHref);
                 const isOpen = openParents[item.href] ?? false;
@@ -177,7 +180,7 @@ const SidebarItems = () => {
                         <SidebarCollapsible open={isOpen}>
                             <SidebarCollapsibleTrigger asChild>
                                 <SidebarMenuButton
-                                    isActive={!!selectedSubItem}
+                                    isActive={isParentActive}
                                     tooltip={item.label}
                                     className="justify-between"
                                     onClick={() => {
@@ -207,7 +210,8 @@ const SidebarItems = () => {
                                         <SidebarMenuSubItem key={subItem.href}>
                                             <SidebarMenuSubButton
                                               asChild
-                                              isActive={pathname === subItem.href || selectedSubItem?.href === subItem.href || pathname === subItem.href.split('?')[0]}
+                                              isActive={normalizePath(pathname) === normalizePath(subItem.href) || selectedSubItem?.href === subItem.href}
+                                              className="ml-0 w-full px-2.5"
                                             >
                                                 <Link
                                                   href={subItem.href}
@@ -231,12 +235,13 @@ const SidebarItems = () => {
                     content = (
                         <SidebarMenuButton
                             asChild
-                            isActive={pathname === item.href}
+                            isActive={normalizePath(pathname) === normalizePath(item.href)}
                             tooltip={item.label}
+                            className="justify-start pl-2.5 pr-3"
                         >
                             <Link href={item.href} onClick={() => setOpenMobile(false)}>
                                 <Icon className="h-5 w-5" />
-                                <span>{item.label}</span>
+                                <span className="-ml-1">{item.label}</span>
                             </Link>
                         </SidebarMenuButton>
                     );
@@ -245,11 +250,6 @@ const SidebarItems = () => {
                 return (
                     <React.Fragment key={item.href}>
                         <SidebarMenuItem>{content}</SidebarMenuItem>
-
-
-
-
-
                     </React.Fragment>
                 );
             })}
@@ -274,38 +274,41 @@ const SidebarFooterContent = ({ userDisplayName, userFallback }: Pick<SidebarSha
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     tooltip={userDisplayName}
-                    className="w-full h-auto py-2 justify-start items-center gap-3"
+                    className="h-auto w-full justify-start gap-3 rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/25 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                   >
-                    <Avatar className="h-8 w-8 shrink-0">
+                    <Avatar className="h-9 w-9 shrink-0 ring-1 ring-white/10">
                       <AvatarImage
                         src={`https://picsum.photos/seed/${userDisplayName}/100/100`}
                         alt={`${userDisplayName} profile avatar`}
                       />
                       <AvatarFallback>{userFallback}</AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col gap-0.5 items-start overflow-hidden group-data-[collapsible=icon]:hidden">
-                      <span className="text-sm font-bold truncate w-full">
+                    <div className="flex min-w-0 flex-col items-start gap-0.5 overflow-hidden group-data-[collapsible=icon]:hidden">
+                      <span className="w-full truncate text-sm font-semibold tracking-[-0.01em]">
                         {userDisplayName}
                       </span>
-                      <span className="text-[10px] text-muted-foreground font-mono truncate w-full opacity-60">
+                      <span className="w-full truncate font-mono text-[10px] text-muted-foreground/70">
                         {session?.user?.email ?? 'Signed in'}
                       </span>
                     </div>
+                    <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   side="right"
                   align="end"
-                  className="w-56"
+                  className="w-56 rounded-2xl border border-sidebar-border/70 bg-sidebar shadow-[0_18px_50px_rgba(0,0,0,0.35)] backdrop-blur-md"
                 >
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs font-semibold tracking-[0.08em] text-sidebar-foreground/70 uppercase">
+                    My Account
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-[9px] font-mono opacity-50 uppercase tracking-tighter">
+                  <DropdownMenuLabel className="text-[9px] font-mono uppercase tracking-tighter text-sidebar-foreground/45">
                     Project: Vercel
                   </DropdownMenuLabel>
                 </DropdownMenuContent>
@@ -332,7 +335,7 @@ export function AppSidebarMobile() {
           <SheetHeader>
             <SheetTitle className="sr-only">Main Menu</SheetTitle>
           </SheetHeader>
-          <SidebarHeader className="h-14 flex flex-row items-center gap-3 shrink-0 bg-header/90 backdrop-blur-xl px-4 pt-[env(safe-area-inset-top)] box-content">
+          <SidebarHeader className="h-14 flex flex-row items-center gap-3 shrink-0 bg-header px-4 pt-[env(safe-area-inset-top)] box-content">
             <SidebarTrigger className="h-8 w-8 text-header-foreground opacity-80" />
             <span className="truncate font-headline text-lg font-bold tracking-tight text-header-foreground">
               Safeviate
@@ -358,14 +361,19 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="app-sidebar-brand flex items-center gap-2 px-2 py-2">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="app-sidebar-brand-label truncate font-headline text-lg">Safeviate</span>
+        <div className="app-sidebar-brand flex items-center gap-2 rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/25 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-sidebar-border/70 bg-sidebar text-sm font-semibold text-sidebar-foreground">
+              S
+            </div>
+            <span className="app-sidebar-brand-label truncate font-headline text-[15px] font-semibold tracking-[-0.01em] text-sidebar-foreground">
+              Safeviate
+            </span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="pt-6">
+      <SidebarContent className="pt-3">
         <SidebarItems />
       </SidebarContent>
       <SidebarFooter>

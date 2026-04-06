@@ -149,7 +149,7 @@ const SidebarProvider = React.forwardRef<
               } as React.CSSProperties
             }
             className={cn(
-              "group/sidebar-wrapper flex h-svh w-full has-[[data-variant=inset]]:bg-sidebar overflow-hidden",
+              "group/sidebar-wrapper flex h-svh w-full overflow-hidden has-[[data-variant=inset]]:bg-sidebar",
               className
             )}
             ref={ref}
@@ -209,7 +209,7 @@ const Sidebar = React.forwardRef<
     return (
       <div
         ref={ref}
-        className="group peer hidden md:block text-sidebar-foreground"
+        className="group peer hidden text-sidebar-foreground md:block"
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
@@ -242,7 +242,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
             style={sidebarBackgroundStyle}
           >
             {children}
@@ -523,7 +523,7 @@ const SidebarMenu = React.forwardRef<
   <ul
     ref={ref}
     data-sidebar="menu"
-    className={cn("flex w-full min-w-0 flex-col gap-2", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-0", className)}
     {...props}
   />
 ))
@@ -536,14 +536,17 @@ const SidebarMenuItem = React.forwardRef<
   <li
     ref={ref}
     data-sidebar="menu-item"
-    className={cn("group/menu-item relative", className)}
+    className={cn(
+      "group/menu-item relative border-b border-sidebar-border/40 last:border-b-0",
+      className
+    )}
     {...props}
   />
 ))
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-[calc(100%-1rem)] mx-2 items-center gap-3 overflow-hidden rounded-lg p-2.5 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent/80 disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-bold data-[active=true]:text-sidebar-accent-foreground data-[active=true]:shadow-md data-[active=true]:shadow-black/20 data-[state=open]:hover:bg-sidebar-accent group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:opacity-60 data-[active=true]:[&>svg]:opacity-100 hover:[&>svg]:opacity-100",
+        "peer/menu-button mx-0 flex w-full items-center gap-3 overflow-hidden rounded-none border-l-[3px] border-l-sidebar-border/70 bg-[hsl(var(--sidebar-button-background))] px-3 py-2.5 text-left text-sm outline-none ring-sidebar-ring transition-colors hover:bg-[hsl(var(--sidebar-button-background)/0.92)] focus-visible:ring-2 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:border-l-sidebar-foreground/80 data-[active=true]:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:font-semibold data-[active=true]:hover:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:hover:text-sidebar-foreground data-[active=true]:hover:[&>svg]:opacity-100 data-[state=open]:hover:bg-[hsl(var(--sidebar-button-background)/0.92)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:opacity-65 data-[active=true]:[&>svg]:opacity-100 hover:[&>svg]:opacity-100",
   {
     variants: {
       variant: {
@@ -721,7 +724,7 @@ const SidebarMenuSub = React.forwardRef<
     ref={ref}
     data-sidebar="menu-sub"
     className={cn(
-      "mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5",
+      "mx-3.5 mt-px flex min-w-0 translate-x-px flex-col gap-0 border-l border-sidebar-border/25 px-2.5 py-0.5",
       "group-data-[collapsible=icon]:hidden",
       className
     )}
@@ -733,7 +736,13 @@ SidebarMenuSub.displayName = "SidebarMenuSub"
 const SidebarMenuSubItem = React.forwardRef<
   HTMLLIElement,
   React.ComponentProps<"li">
->(({ ...props }, ref) => <li ref={ref} {...props} />)
+>(({ className, ...props }, ref) => (
+  <li
+    ref={ref}
+    className={cn("border-b border-sidebar-border/20 last:border-b-0", className)}
+    {...props}
+  />
+))
 SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef<
@@ -752,8 +761,8 @@ const SidebarMenuSubButton = React.forwardRef<
       data-size={size}
       data-active={isActive}
       className={cn(
-        "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
-        "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
+        "flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-none border-0 bg-[hsl(var(--sidebar-button-background)/0.72)] px-2.5 text-sidebar-foreground outline-none ring-sidebar-ring transition-[background-color,box-shadow,color] hover:bg-[hsl(var(--sidebar-button-background)/0.84)] focus-visible:ring-2 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
+        "data-[active=true]:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border)/0.4)] data-[active=true]:hover:bg-[hsl(var(--sidebar-button-background)/0.88)] data-[active=true]:hover:text-sidebar-foreground data-[active=true]:hover:[&>svg]:opacity-100",
         size === "sm" && "text-xs",
         size === "md" && "text-sm",
         "group-data-[collapsible=icon]:hidden",

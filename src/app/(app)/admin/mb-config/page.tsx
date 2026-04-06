@@ -337,38 +337,47 @@ const WBCalculator = () => {
           </div>
         </div>
 
-        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] h-full overflow-hidden">
-            <ScrollArea className="h-full border-r bg-background">
-              <div className="p-6">
-                <div className="overflow-x-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner">
-                  <div className="min-w-[800px] h-[550px] relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ScatterChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
+        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5 min-w-0">
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_350px] h-full overflow-hidden min-w-0">
+                <div className="h-full min-w-0 border-r bg-background overflow-hidden">
+                  <div className="p-6 min-w-0">
+                    <div
+                      className={cn(
+                        "min-w-0 overflow-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner",
+                        isMobile ? "h-[360px] p-2" : "h-auto"
+                      )}
+                      style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+                    >
+                      <div className={cn(
+                        "min-w-[980px] relative bg-background rounded-xl border shadow-sm p-4",
+                        isMobile ? "min-w-[720px] min-h-[520px] h-[520px] p-2" : "min-h-[550px] h-[550px]"
+                      )}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart margin={isMobile ? { top: 12, right: 24, bottom: 36, left: 32 } : { top: 20, right: 60, bottom: 60, left: 60 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, 8)} allowDataOverflow>
-                          <Label value="CG (inches)" offset={-20} position="insideBottom" className="text-[10px] font-black uppercase fill-muted-foreground" />
+                        <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
+                          <Label value="CG (inches)" offset={isMobile ? -10 : -20} position="insideBottom" className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
                         </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, 8)} allowDataOverflow>
-                          <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" offset={-40} className="text-[10px] font-black uppercase fill-muted-foreground" />
+                        <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
+                          <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" offset={isMobile ? -18 : -40} className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
                         </YAxis>
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter data={envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
+                        <Scatter data={envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: isMobile ? 1.5 : 2 }} shape={() => <g />} />
                         <Scatter data={envelope}>
                           {envelope.map((entry, index) => <Cell key={index} fill={POINT_COLORS[index % POINT_COLORS.length]} />)}
                         </Scatter>
                         <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                          <ReferenceDot x={results.cg} y={results.weight} r={10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
+                          <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 7 : 10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={isMobile ? 2 : 3} />
                         </Scatter>
                       </ScatterChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
-              </div>
-            </ScrollArea>
+                  </div>
+                </div>
 
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-8 pb-24">
+                <ScrollArea className="h-full min-w-0">
+                  <div className="p-6 space-y-8 pb-24 min-w-0">
                 <section className="space-y-4">
                   <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Basic Empty Weight</h2>
                   <div className="grid grid-cols-2 gap-3">

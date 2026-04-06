@@ -129,10 +129,9 @@
   }
   .bg-sidebar {
     background: linear-gradient(180deg, 
-      hsl(var(--sidebar-background) / 0.8) 0%, 
-      color-mix(in srgb, hsl(var(--sidebar-background) / 0.9), black 20%) 100%
+      hsl(var(--sidebar-background)) 0%, 
+      color-mix(in srgb, hsl(var(--sidebar-background)), black 20%) 100%
     );
-    backdrop-filter: blur(20px);
     box-shadow: inset -10px 0 20px -15px rgba(0,0,0,0.5);
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentType, ReactNode } from 'react';
-import { Clock, FileText, Map as NavIcon, Scale, Settings2 } from 'lucide-react';
+import { Clock, FileText, Map as NavIcon, Scale, Settings2, ClipboardCheck } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -74,6 +74,7 @@ export function BookingDetailHeader({
               { value: 'planning', label: 'Planning', icon: Settings2 },
               { value: 'mass-balance', label: 'Mass & Balance', icon: Scale },
               { value: 'navlog', label: 'Navlog', icon: NavIcon },
+              { value: 'checks', label: 'Checks', icon: ClipboardCheck },
             ]}
           />
         </div>
