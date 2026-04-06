@@ -43,7 +43,12 @@ export const authOptions: NextAuthOptions = {
           nextAuthUrl: cleanEnvValue(process.env.NEXTAUTH_URL),
         });
 
-        const dbUser = await prisma.user.findUnique({ where: { email } });
+        let dbUser = null;
+        try {
+          dbUser = await prisma.user.findUnique({ where: { email } });
+        } catch (error) {
+          console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+        }
 
         if (dbUser?.passwordHash) {
           const looksHashed = /^\$2[aby]\$\d{2}\$/.test(dbUser.passwordHash);

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, RotateCcw, Fuel, AlertTriangle, ArrowLeft, Scale, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -14,31 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
+import { MassBalanceEnvelopeChart } from '@/components/mass-balance-envelope-chart';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
-
-const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
-  const start = Number(min);
-  const end = Number(max);
-  if (isNaN(start) || isNaN(end) || start >= end) return [];
-  const diff = end - start;
-  const roughStep = diff / (stepCount - 1);
-  const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
-  const normalizedStep = roughStep / magnitude;
-  let step;
-  if (normalizedStep < 1.5) step = 1 * magnitude;
-  else if (normalizedStep < 3) step = 2 * magnitude;
-  else if (normalizedStep < 7) step = 5 * magnitude;
-  else step = 10 * magnitude;
-  const ticks = [];
-  let current = Math.ceil(start / step) * step;
-  if (current > start) ticks.push(start);
-  while (current <= end) {
-    ticks.push(current);
-    current += step;
-  }
-  return ticks;
-};
 
 function WBCalculatorContent() {
   const searchParams = useSearchParams();
@@ -229,20 +206,6 @@ function WBCalculatorContent() {
   const finalXMax = allX.length > 0 ? Math.max(graphConfig.xMax, ...allX) + 1 : 100;
   const finalYMin = allY.length > 0 ? Math.min(graphConfig.yMin, ...allY) - 100 : 1000;
   const finalYMax = allY.length > 0 ? Math.max(graphConfig.yMax, ...allY) + 100 : 3000;
-  const chartMargin = isMobile
-    ? { top: 8, right: 4, bottom: 16, left: 0 }
-    : { top: 20, right: 20, bottom: 40, left: 20 };
-  const chartTickCount = isMobile ? 4 : 8;
-  const mobileYAxisTicks = isMobile ? [...generateNiceTicks(finalYMin, finalYMax, chartTickCount)].reverse() : [];
-  const chartTickClassName = cn(
-    'font-mono font-bold',
-    isMobile ? 'text-[8px]' : 'text-[10px]'
-  );
-  const chartLabelClassName = cn(
-    'fill-muted-foreground font-black uppercase tracking-widest',
-    isMobile ? 'text-[9px]' : 'text-[10px]'
-  );
-
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-8 pt-4 px-1">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-2">
@@ -281,51 +244,17 @@ function WBCalculatorContent() {
               "w-full relative bg-background border rounded-3xl shadow-sm border-slate-200",
               isMobile ? "aspect-[1.15/1] min-h-[320px] p-1 overflow-visible" : "h-[550px] p-6 overflow-hidden"
             )}>
-                <div
-                  className={cn("w-full h-full", isMobile && "-translate-x-3")}
-                  style={isMobile ? { overflow: 'auto', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' } : undefined}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart margin={chartMargin}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis type="number" dataKey="x" name="CG" unit=" in" domain={[finalXMin, finalXMax]} ticks={generateNiceTicks(finalXMin, finalXMax, chartTickCount)} allowDataOverflow={true} axisLine={false} tickLine={false} tickMargin={isMobile ? 2 : 6} className={chartTickClassName}>
-                            {!isMobile && <Label value="CG (inches)" offset={0} position="insideBottom" dy={20} className={chartLabelClassName} />}
-                        </XAxis>
-                        {!isMobile && (
-                          <YAxis type="number" dataKey="y" name="Weight" unit=" lbs" width={44} ticks={generateNiceTicks(finalYMin, finalYMax, chartTickCount)} domain={[finalYMin, finalYMax]} allowDataOverflow={true} axisLine={false} tickLine={false} tickMargin={6} className={chartTickClassName}>
-                              <Label value="Weight (lbs)" angle={-90} position="insideLeft" className={chartLabelClassName} />
-                          </YAxis>
-                        )}
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                                return (
-                                    <div className="bg-background border rounded-xl p-3 shadow-xl font-mono text-[10px] font-bold">
-                                        <p className="text-primary mb-1">DATA POINT</p>
-                                        <p>CG: {payload[0].value} in</p>
-                                        <p>WT: {payload[1].value} lbs</p>
-                                    </div>
-                                );
-                            }
-                            return null;
-                        }} />
-                        <Scatter name="Envelope" data={graphConfig.envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: isMobile ? 3 : 4, strokeLinecap: 'round' }} shape={() => <g />} isAnimationActive={false} />
-                        <Scatter name="Current Load" data={[{ x: results.cg, y: results.weight }]} isAnimationActive={false}>
-                            <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 10 : 14} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={isMobile ? 3 : 4} />
-                        </Scatter>
-                    </ScatterChart>
-                  </ResponsiveContainer>
-                </div>
-                {isMobile && (
-                  <div className="pointer-events-none absolute inset-y-2 left-0 z-10 w-7 pr-0">
-                    <div className="flex h-full flex-col justify-between">
-                      {mobileYAxisTicks.map((tick) => (
-                        <span key={tick} className="block text-right font-mono text-[8px] font-bold leading-none text-muted-foreground/80">
-                          {tick}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <MassBalanceEnvelopeChart
+                  envelope={graphConfig.envelope}
+                  currentPoint={{ x: results.cg, y: results.weight }}
+                  xMin={finalXMin}
+                  xMax={finalXMax}
+                  yMin={finalYMin}
+                  yMax={finalYMax}
+                  isSafe={results.isSafe}
+                  isMobile={isMobile}
+                  className="h-full"
+                />
                 <div className={cn("absolute bottom-3 right-3 sm:bottom-12 sm:right-12 px-3 sm:px-10 py-1.5 sm:py-3 rounded-2xl font-black shadow-xl text-white text-[9px] sm:text-sm uppercase tracking-widest border-4 border-white animate-in zoom-in duration-300", results.isSafe ? 'bg-emerald-600' : 'bg-red-600')}>
                     {results.isSafe ? "Within Limits" : "DANGER: Out of Limits"}
                 </div>

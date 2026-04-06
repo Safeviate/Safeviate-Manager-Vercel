@@ -287,6 +287,23 @@ export async function ensureRisksSchema() {
   tableCache.set('risks', true);
 }
 
+export async function ensureCorrectiveActionPlansSchema() {
+  if (await hasTable('corrective_action_plans')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS corrective_action_plans (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('corrective_action_plans', true);
+}
+
 export async function ensurePersonnelSchema() {
   if (!(await hasTable('personnel'))) {
     return;

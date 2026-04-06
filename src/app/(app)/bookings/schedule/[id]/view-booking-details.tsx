@@ -7,7 +7,6 @@ import { format } from "date-fns";
 import type { Booking, NavlogLeg, ChecklistPhoto } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
 import { Save, AlertTriangle, Map as MapIcon, Loader2, X, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, ClipboardCheck, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -26,6 +25,7 @@ import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { MassBalanceEnvelopeChart } from '@/components/mass-balance-envelope-chart';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -70,28 +70,6 @@ interface ViewBookingDetailsProps {
     booking: Booking;
 }
 
-const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
-    const start = Number(min);
-    const end = Number(max);
-    if (isNaN(start) || isNaN(end) || start >= end) return [];
-    const diff = end - start;
-    const roughStep = diff / (stepCount - 1);
-    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
-    const normalizedStep = roughStep / magnitude;
-    let step;
-    if (normalizedStep < 1.5) step = 1 * magnitude;
-    else if (normalizedStep < 3) step = 2 * magnitude;
-    else if (normalizedStep < 7) step = 5 * magnitude;
-    else step = 10 * magnitude;
-    const ticks = [];
-    let current = Math.ceil(start / step) * step;
-    if (current > start) ticks.push(start);
-    while (current <= end) {
-        ticks.push(current);
-        current += step;
-    }
-    return ticks;
-};
 
 const DetailItem = ({ label, value, children }: { label: string, value?: string | undefined | null, children?: React.ReactNode }) => (
     <div>
@@ -677,7 +655,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <CardContent className="min-h-full pb-20">
                                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
                                         <div className="flex flex-col">
-                                            <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile && "mx-auto w-full max-w-[430px]")}>
+                                                <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile ? "mx-auto w-full max-w-[430px]" : "mx-auto w-full max-w-[820px]")}>
                                                 <div className="mb-3 flex items-center justify-between">
                                                     <div>
                                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading Envelope</p>
@@ -687,43 +665,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         {results.isSafe ? 'Within Limits' : 'Out Of Limits'}
                                                     </Badge>
                                                 </div>
-                                                <div className={cn("relative w-full", isMobile ? "h-[280px]" : "h-[420px]")}>
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <ScatterChart margin={isMobile ? { top: 12, right: 16, bottom: 16, left: 4 } : { top: 20, right: 28, bottom: 32, left: 20 }}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                                            <XAxis
-                                                                type="number"
-                                                                dataKey="x"
-                                                                name="CG"
-                                                                domain={[fXMin, fXMax]}
-                                                                ticks={generateNiceTicks(fXMin, fXMax, isMobile ? 5 : 8)}
-                                                                allowDataOverflow
-                                                                tick={{ fontSize: isMobile ? 10 : 11 }}
-                                                                tickMargin={6}
-                                                            >
-                                                                {!isMobile ? <Label value="CG (in)" offset={-10} position="insideBottom" /> : null}
-                                                            </XAxis>
-                                                            <YAxis
-                                                                type="number"
-                                                                dataKey="y"
-                                                                name="Weight"
-                                                                domain={[fYMin, fYMax]}
-                                                                ticks={generateNiceTicks(fYMin, fYMax, isMobile ? 5 : 8)}
-                                                                allowDataOverflow
-                                                                width={isMobile ? 38 : 52}
-                                                                tick={{ fontSize: isMobile ? 10 : 11 }}
-                                                                tickMargin={4}
-                                                            >
-                                                                {!isMobile ? <Label value="Weight (lbs)" angle={-90} position="insideLeft" offset={-8} /> : null}
-                                                            </YAxis>
-                                                            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                            <Scatter data={envelope} line={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} shape={() => <g />} />
-                                                            <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                                <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 7 : 10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={3} />
-                                                            </Scatter>
-                                                        </ScatterChart>
-                                                    </ResponsiveContainer>
-                                                </div>
+                                                <MassBalanceEnvelopeChart
+                                                    envelope={envelope}
+                                                    currentPoint={{ x: results.cg, y: results.weight }}
+                                                    xMin={fXMin}
+                                                    xMax={fXMax}
+                                                    yMin={fYMin}
+                                                    yMax={fYMax}
+                                                    isSafe={results.isSafe}
+                                                    isMobile={isMobile}
+                                                />
                                                 {isMobile ? (
                                                     <div className="mt-3 grid grid-cols-2 gap-3 text-center">
                                                         <div className="rounded-lg border bg-muted/20 px-3 py-2">
