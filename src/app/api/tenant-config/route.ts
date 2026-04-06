@@ -43,14 +43,29 @@ export async function PUT(request: Request) {
     }
 
     await ensureTenantConfigSchema();
+
+    // Fetch existing config to avoid wiping out other settings (e.g. enabledMenus)
+    const existingRow = await prisma.tenantConfig.findUnique({
+      where: { tenantId: auth.tenantId },
+      select: { data: true },
+    });
+    
+    // Perform a shallow merge of the config data
+    const existingData = (existingRow?.data as Record<string, unknown>) || {};
+    const mergedData = {
+      ...existingData,
+      ...config,
+    };
+
     await prisma.tenantConfig.upsert({
       where: { tenantId: auth.tenantId },
       create: {
         tenantId: auth.tenantId,
-        data: config,
+        data: mergedData,
       },
       update: {
-        data: config,
+        data: mergedData,
+        updatedAt: new Date(),
       },
     });
 

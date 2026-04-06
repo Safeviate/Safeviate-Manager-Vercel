@@ -332,20 +332,11 @@ export function AppSidebarMobile() {
           <SheetHeader>
             <SheetTitle className="sr-only">Main Menu</SheetTitle>
           </SheetHeader>
-          <SidebarHeader className="h-14 border-b border-white/5 px-4 bg-white/5 backdrop-blur-md flex flex-row items-center gap-3 shrink-0">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
-                <Plane className="h-4 w-4 rotate-45" />
-              </div>
-              <div className="flex flex-col justify-center">
-                <span className="font-headline text-xl font-black tracking-tighter text-sidebar-foreground leading-none">
-                  Safeviate
-                </span>
-                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-0.5">
-                  Aviation Manager
-                </span>
-              </div>
-            </Link>
+          <SidebarHeader className="h-14 flex flex-row items-center gap-3 shrink-0 bg-header/90 backdrop-blur-xl px-4 pt-[env(safe-area-inset-top)] box-content">
+            <SidebarTrigger className="h-8 w-8 text-header-foreground opacity-80" />
+            <span className="truncate font-headline text-lg font-bold tracking-tight text-header-foreground">
+              Safeviate
+            </span>
           </SidebarHeader>
 
           <SidebarContent className="pt-0">

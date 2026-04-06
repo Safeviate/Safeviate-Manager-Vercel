@@ -136,6 +136,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const [sidebarImageUrl, setSidebarImageUrl] = useState('');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoadingTenants, setIsLoadingTenants] = useState(true);
+  const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [openAdvancedSections, setOpenAdvancedSections] = useState<string[]>(['buttons', 'headers']);
 
   const canManageOrganization = hasPermission('admin-settings-manage');
@@ -171,30 +172,33 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   }, []);
 
   const handleSaveToOrganization = async () => {
-    const updatedTenant = {
-      id: tenantId || 'safeviate',
-      theme: {
-        primaryColour: theme.primary,
-        backgroundColour: theme.background,
-        accentColour: theme.accent,
-        scale,
-        main: theme,
-        button: buttonTheme,
-        card: cardTheme,
-        popover: popoverTheme,
-        sidebar: sidebarTheme,
-        sidebarBackgroundImage,
-        header: headerTheme,
-        swimlane: swimlaneTheme,
-        matrix: matrixTheme,
-      }
+    setIsSavingOrganization(true);
+    const updatedTheme = {
+      primaryColour: theme.primary,
+      backgroundColour: theme.background,
+      accentColour: theme.accent,
+      scale,
+      main: theme,
+      button: buttonTheme,
+      card: cardTheme,
+      popover: popoverTheme,
+      sidebar: sidebarTheme,
+      sidebarBackgroundImage,
+      header: headerTheme,
+      swimlane: swimlaneTheme,
+      matrix: matrixTheme,
+    };
+
+    const configUpdate = {
+        id: tenantId || 'safeviate',
+        theme: updatedTheme
     };
 
     try {
         const response = await fetch('/api/tenant-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ config: updatedTenant }),
+          body: JSON.stringify({ config: configUpdate }),
         });
 
         if (!response.ok) {
@@ -203,7 +207,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         }
 
         try {
-          window.localStorage.setItem(LOCAL_TENANT_CONFIG_KEY, JSON.stringify(updatedTenant));
+          window.localStorage.setItem(LOCAL_TENANT_CONFIG_KEY, JSON.stringify(configUpdate));
           window.dispatchEvent(new Event('storage'));
         } catch {
           // Ignore browser storage failures and rely on the server copy.
@@ -213,12 +217,12 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         loadTenants();
 
         toast({
-            title: "Organization Default Updated",
-            description: "These branding settings have been saved as the default for all members of your organization."
+            title: "Branding Saved to Cloud",
+            description: "Organization default colors have been synchronized with the database for all users."
         });
     } catch (e) {
       try {
-        window.localStorage.setItem(LOCAL_TENANT_CONFIG_KEY, JSON.stringify(updatedTenant));
+        window.localStorage.setItem(LOCAL_TENANT_CONFIG_KEY, JSON.stringify(configUpdate));
         window.dispatchEvent(new Event('storage'));
         window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
         loadTenants();
@@ -230,6 +234,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         title: "Saved Locally",
         description: e instanceof Error ? `${e.message} The branding was kept in this browser.` : "The organization branding could not be saved to the server, but the changes were kept in this browser.",
       });
+    } finally {
+        setIsSavingOrganization(false);
     }
   };
 
@@ -405,8 +411,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             Save these colors as the shared default for everyone in the tenant.
                         </p>
                     </div>
-                    <Button onClick={handleSaveToOrganization} className="w-full sm:w-auto text-[10px] font-black uppercase h-9 px-8 shadow-md">
-                        <Save className="mr-2 h-4 w-4" /> Save as Organization Default
+                    <Button onClick={handleSaveToOrganization} disabled={isSavingOrganization} className="w-full sm:w-auto text-[10px] font-black uppercase h-9 px-8 shadow-md">
+                        {isSavingOrganization ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> Save as Organization Default</>}
                     </Button>
                 </div>
                 <Separator />

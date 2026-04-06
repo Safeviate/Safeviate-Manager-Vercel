@@ -143,6 +143,7 @@ export interface Tenant {
         header?: Record<string, string>;
         swimlane?: Record<string, string>;
         matrix?: Record<string, string>;
+        scale?: number;
     };
     enabledMenus?: string[];
 }
