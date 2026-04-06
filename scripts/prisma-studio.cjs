@@ -16,6 +16,18 @@ if (!process.env.DATABASE_URL_UNPOOLED && process.env.POSTGRES_URL_NON_POOLING) 
   process.env.DATABASE_URL_UNPOOLED = process.env.POSTGRES_URL_NON_POOLING;
 }
 
+if (!process.env.DATABASE_URL_UNPOOLED && process.env.NEON2_DATABASE_URL_UNPOOLED) {
+  process.env.DATABASE_URL_UNPOOLED = process.env.NEON2_DATABASE_URL_UNPOOLED;
+}
+
+if (!process.env.DATABASE_URL_UNPOOLED && process.env.NEON2_POSTGRES_URL_NON_POOLING) {
+  process.env.DATABASE_URL_UNPOOLED = process.env.NEON2_POSTGRES_URL_NON_POOLING;
+}
+
+if (process.env.DATABASE_URL_UNPOOLED) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_UNPOOLED;
+}
+
 if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is missing after loading ${envFile}.`);
   process.exit(1);
