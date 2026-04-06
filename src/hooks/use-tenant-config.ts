@@ -9,12 +9,41 @@ const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
 const FALLBACK_TENANT_ID = 'safeviate';
 const FALLBACK_TENANT_NAME = 'Safeviate';
 
+const mergeTenantConfig = (
+  serverConfig: Record<string, unknown> | null,
+  localConfig: Record<string, unknown> | null
+) => {
+  if (!serverConfig && !localConfig) return null;
+  if (!serverConfig) return localConfig;
+  if (!localConfig) return serverConfig;
+
+  const serverTheme =
+    serverConfig.theme && typeof serverConfig.theme === 'object'
+      ? (serverConfig.theme as Record<string, unknown>)
+      : null;
+  const localTheme =
+    localConfig.theme && typeof localConfig.theme === 'object'
+      ? (localConfig.theme as Record<string, unknown>)
+      : null;
+
+  return {
+    ...localConfig,
+    ...serverConfig,
+    theme: serverTheme || localTheme
+      ? {
+          ...(localTheme || {}),
+          ...(serverTheme || {}),
+        }
+      : undefined,
+  };
+};
+
 /**
  * A custom hook to fetch the configuration for the current tenant.
  * Supports a developer override for testing industry-specific layouts.
  */
 export const useTenantConfig = () => {
-  const { tenantId, userProfile } = useUserProfile();
+  const { tenantId, userProfile, isLoading: isProfileLoading } = useUserProfile();
   const [tenantData, setTenantData] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -55,6 +84,16 @@ export const useTenantConfig = () => {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      if (isProfileLoading) {
+        return;
+      }
+
+      if (!userProfile) {
+        setTenantData(null);
+        setIsLoading(false);
+        return;
+      }
+
       if (!tenantId) {
         setTenantData(null);
         setIsLoading(false);
@@ -71,16 +110,18 @@ export const useTenantConfig = () => {
         const configPayload = configResponse.ok ? await configResponse.json().catch(() => ({})) : {};
         const tenantFromApi = payload?.tenant ?? null;
         const tenantConfig = configPayload?.config ?? null;
-        const mergedConfig = {
-          ...(tenantConfig || {}),
-          ...(localOverride || {}),
-        };
+        const mergedConfig = mergeTenantConfig(
+          tenantConfig && typeof tenantConfig === 'object'
+            ? (tenantConfig as Record<string, unknown>)
+            : null,
+          localOverride
+        );
 
         if (!cancelled) {
           if (tenantFromApi) {
             setTenantData({
               ...tenantFromApi,
-              ...mergedConfig,
+              ...(mergedConfig || {}),
             });
           } else if (localOverride) {
             setTenantData(buildLocalTenant(localOverride));
@@ -106,11 +147,13 @@ export const useTenantConfig = () => {
           const response = await fetch('/api/tenant-config', { cache: 'no-store' });
           const payload = response.ok ? await response.json().catch(() => ({})) : {};
           if (!cancelled) {
-            const nextConfig = {
-              ...(payload?.config || {}),
-              ...(localOverride || {}),
-            };
-            if (Object.keys(nextConfig).length > 0) {
+            const nextConfig = mergeTenantConfig(
+              payload?.config && typeof payload.config === 'object'
+                ? (payload.config as Record<string, unknown>)
+                : null,
+              localOverride
+            );
+            if (nextConfig && Object.keys(nextConfig).length > 0) {
               setTenantData((current) => (current ? { ...current, ...nextConfig } : buildLocalTenant(nextConfig)));
             }
           }
@@ -124,7 +167,7 @@ export const useTenantConfig = () => {
       cancelled = true;
       window.removeEventListener('safeviate-tenant-config-updated', handleUpdate);
     };
-  }, [tenantId, localOverride]);
+  }, [tenantId, localOverride, userProfile?.id, isProfileLoading]);
 
   const isDeveloper =
     userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';

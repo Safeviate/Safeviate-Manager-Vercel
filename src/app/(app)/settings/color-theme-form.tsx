@@ -91,6 +91,35 @@ const PALETTE_PRESETS: PalettePreset[] = [
 
 const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
 
+function mergeTenantConfig(
+  serverConfig: Record<string, unknown> | null,
+  localConfig: Record<string, unknown> | null
+) {
+  if (!serverConfig && !localConfig) return null;
+  if (!serverConfig) return localConfig;
+  if (!localConfig) return serverConfig;
+
+  const serverTheme =
+    serverConfig.theme && typeof serverConfig.theme === 'object'
+      ? (serverConfig.theme as Record<string, unknown>)
+      : null;
+  const localTheme =
+    localConfig.theme && typeof localConfig.theme === 'object'
+      ? (localConfig.theme as Record<string, unknown>)
+      : null;
+
+  return {
+    ...localConfig,
+    ...serverConfig,
+    theme: serverTheme || localTheme
+      ? {
+          ...(localTheme || {}),
+          ...(serverTheme || {}),
+        }
+      : undefined,
+  };
+}
+
 function readLocalTenantOverride() {
   if (typeof window === 'undefined') return null;
 
@@ -166,7 +195,13 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         const localOverride = readLocalTenantOverride();
 
         if (tenant) {
-          const mergedTenant = { ...tenant, ...(tenantConfig || {}), ...(localOverride || {}) } as Tenant;
+          const mergedConfig = mergeTenantConfig(
+            tenantConfig && typeof tenantConfig === 'object'
+              ? (tenantConfig as Record<string, unknown>)
+              : null,
+            localOverride
+          );
+          const mergedTenant = { ...tenant, ...(mergedConfig || {}) } as Tenant;
           setTenants([mergedTenant]);
         } else {
           setTenants([]);
