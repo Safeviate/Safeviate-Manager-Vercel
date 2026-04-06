@@ -270,6 +270,23 @@ export async function ensureManagementOfChangeSchema() {
   tableCache.set('management_of_change', true);
 }
 
+export async function ensureRisksSchema() {
+  if (await hasTable('risks')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS risks (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('risks', true);
+}
+
 export async function ensurePersonnelSchema() {
   if (!(await hasTable('personnel'))) {
     return;

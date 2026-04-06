@@ -1,6 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureAircraftSchema, ensureBookingsSchema, ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
+import { ensureAircraftSchema, ensureBookingsSchema, ensurePersonnelSchema, ensureRisksSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -52,7 +52,7 @@ export async function GET() {
     });
     const tenantId = currentUser?.tenantId || 'safeviate';
 
-    await Promise.all([ensureAircraftSchema(), ensureBookingsSchema(), ensurePersonnelSchema()]);
+    await Promise.all([ensureAircraftSchema(), ensureBookingsSchema(), ensurePersonnelSchema(), ensureRisksSchema()]);
     const [
       bookingRows,
       aircraftRows,

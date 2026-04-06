@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureRisksSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -16,6 +17,7 @@ export async function GET() {
   try {
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ risks: [] }, { status: 200 });
+    await ensureRisksSchema();
     const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(`SELECT data FROM risks WHERE tenant_id = $1 ORDER BY created_at ASC`, tenantId);
     return NextResponse.json({ risks: rows.map((row) => row.data) }, { status: 200 });
   } catch (error) {
@@ -27,6 +29,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const tenantId = await getTenantId();
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  await ensureRisksSchema();
   const body = await request.json();
   const incoming = body?.risk ?? {};
   const id = incoming.id || randomUUID();
