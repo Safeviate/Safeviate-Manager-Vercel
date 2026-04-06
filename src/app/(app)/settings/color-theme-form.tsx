@@ -670,6 +670,31 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                                 </div>
                                 ))}
                             </div>
+                            <Separator />
+                            <div className="space-y-3 pt-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Glass Opacity</h4>
+                                <p className="text-[9px] font-black uppercase italic text-foreground/60">Blends the background and blur level of the top bar.</p>
+                                <div className="flex items-center gap-6 bg-muted/5 p-4 border rounded-xl">
+                                    <Slider 
+                                        aria-label="Glass Opacity" 
+                                        value={[parseFloat(localStorage.getItem('safeviate-header-opacity') || '0.8') * 100]} 
+                                        onValueChange={(value) => {
+                                            const opacity = value[0] / 100;
+                                            localStorage.setItem('safeviate-header-opacity', opacity.toString());
+                                            window.dispatchEvent(new Event('storage'));
+                                            // We need to trigger a re-render in AppHeader
+                                            window.dispatchEvent(new Event('safeviate-header-opacity-updated'));
+                                        }} 
+                                        min={10} 
+                                        max={100} 
+                                        step={5} 
+                                        className="flex-1" 
+                                    />
+                                    <span className="text-sm font-black text-primary w-12 text-right">
+                                        {Math.round(parseFloat(localStorage.getItem('safeviate-header-opacity') || '0.8') * 100)}%
+                                    </span>
+                                </div>
+                            </div>
                         </CollapsibleContent>
                     </section>
                 </Collapsible>

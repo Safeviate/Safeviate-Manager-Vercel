@@ -87,7 +87,7 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --sidebar-background: 215 28% 17%;
-    --sidebar-background-image: none;
+    --sidebar-background-image: url("/safeviate-background.png");
     --sidebar-foreground: 205 67% 95%;
     --sidebar-accent: 215 20% 25%;
     --sidebar-accent-foreground: 205 67% 95%;
@@ -126,6 +126,19 @@
   }
   input[type=number] {
     -moz-appearance: textfield;
+  }
+  .bg-sidebar {
+    background: linear-gradient(180deg, 
+      hsl(var(--sidebar-background) / 0.8) 0%, 
+      color-mix(in srgb, hsl(var(--sidebar-background) / 0.9), black 20%) 100%
+    );
+    backdrop-filter: blur(20px);
+    box-shadow: inset -10px 0 20px -15px rgba(0,0,0,0.5);
+  }
+
+  .bg-header {
+    background-color: hsl(var(--header-background) / var(--header-opacity, 0.8)) !important;
+    backdrop-filter: blur(20px);
   }
 }
 

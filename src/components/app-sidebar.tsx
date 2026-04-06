@@ -19,7 +19,7 @@ import {
   SidebarMobile,
   SidebarMobileContent,
 } from '@/components/ui/sidebar';
-import { LogOut, ChevronDown, ChevronDown as BrandChevron } from 'lucide-react';
+import { LogOut, ChevronDown, ChevronDown as BrandChevron, Plane } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -328,19 +328,27 @@ export function AppSidebarMobile() {
   
     return (
       <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
-        <SidebarMobileContent>
+        <SidebarMobileContent className="p-0 overflow-hidden">
           <SheetHeader>
             <SheetTitle className="sr-only">Main Menu</SheetTitle>
           </SheetHeader>
-          <SidebarHeader>
-            <div className="app-sidebar-brand flex items-center gap-2 px-2 py-2">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <span className="app-sidebar-brand-label truncate font-headline text-lg">Safeviate</span>
+          <SidebarHeader className="h-14 border-b border-white/5 px-4 bg-white/5 backdrop-blur-md flex flex-row items-center gap-3 shrink-0">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
+                <Plane className="h-4 w-4 rotate-45" />
               </div>
-            </div>
+              <div className="flex flex-col justify-center">
+                <span className="font-headline text-xl font-black tracking-tighter text-sidebar-foreground leading-none">
+                  Safeviate
+                </span>
+                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/50 mt-0.5">
+                  Aviation Manager
+                </span>
+              </div>
+            </Link>
           </SidebarHeader>
 
-          <SidebarContent>
+          <SidebarContent className="pt-0">
             <SidebarItems />
           </SidebarContent>
           <SidebarFooter>
@@ -366,7 +374,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="pt-6">
         <SidebarItems />
       </SidebarContent>
       <SidebarFooter>

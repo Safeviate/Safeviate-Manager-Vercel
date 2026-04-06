@@ -51,17 +51,17 @@ export default function AppLayout({
 
   return (
     <AuthGuard>
-        <SidebarProvider className="h-svh overflow-hidden">
-        {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
-        <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
-            <AppHeader />
-            <SidebarInset className="flex-1 min-h-0 overflow-hidden flex flex-col p-3 md:pb-4 md:p-4 lg:p-6">
-            <div className="mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col overflow-hidden">
-                <OverdueBookingMonitor />
-                {children}
-            </div>
-            </SidebarInset>
-        </div>
+        <SidebarProvider className="h-svh flex-col overflow-hidden">
+          <AppHeader />
+          <div className="flex flex-1 min-w-0 h-full overflow-hidden">
+              {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
+              <SidebarInset className="flex-1 min-h-0 overflow-hidden flex flex-col p-3 md:pb-4 md:p-4 lg:p-6">
+              <div className="mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col overflow-hidden">
+                  <OverdueBookingMonitor />
+                  {children}
+              </div>
+              </SidebarInset>
+          </div>
         </SidebarProvider>
     </AuthGuard>
   );

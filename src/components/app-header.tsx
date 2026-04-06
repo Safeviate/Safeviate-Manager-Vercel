@@ -11,6 +11,7 @@ import { getBackConfig } from '@/lib/back-navigation';
 import { Bell, Search, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import React, { useState, useEffect } from 'react';
 
 const findCurrentItem = (
   items: (MenuItem | SubMenuItem)[],
@@ -59,6 +60,25 @@ export function AppHeader() {
   const isMobile = useIsMobile();
   const { userProfile } = useUserProfile();
   const title = getTitle(pathname);
+  const [headerOpacity, setHeaderOpacity] = useState(0.8);
+
+  useEffect(() => {
+    const handleOpacityUpdate = () => {
+      const saved = localStorage.getItem('safeviate-header-opacity');
+      if (saved) setHeaderOpacity(parseFloat(saved));
+    };
+
+    window.addEventListener('safeviate-header-opacity-updated', handleOpacityUpdate);
+    window.addEventListener('storage', handleOpacityUpdate);
+    
+    // Initial load
+    handleOpacityUpdate();
+
+    return () => {
+      window.removeEventListener('safeviate-header-opacity-updated', handleOpacityUpdate);
+      window.removeEventListener('storage', handleOpacityUpdate);
+    };
+  }, []);
 
   const segments = pathname.split('/').filter(Boolean);
   const isDetailPage = segments.length >= 3;
@@ -77,8 +97,17 @@ export function AppHeader() {
   const userFallback = userDisplayName.charAt(0).toUpperCase();
 
   return (
-    <header className="app-topbar sticky top-0 z-20 flex h-14 min-w-0 items-center justify-between gap-3 border-none bg-header px-3 text-header-foreground sm:px-6 shadow-none">
-      <div className="flex min-w-0 items-center gap-3">
+    <header 
+      style={{ '--header-opacity': headerOpacity } as any}
+      className="app-topbar sticky top-0 z-20 flex h-14 min-w-0 items-center justify-between gap-3 border-none bg-header pr-4 text-header-foreground sm:pr-6 shadow-none"
+    >
+      <div className="flex min-w-0 items-center h-full">
+        <div className="flex items-center gap-2 w-auto sm:w-[--sidebar-width] px-4 md:px-6 shrink-0 h-full">
+           {!isDetailPage && <SidebarTrigger className="h-8 w-8 sm:hidden -ml-1 text-header-foreground" />}
+           <span className="app-sidebar-brand-label truncate font-headline text-lg font-bold tracking-tight">Safeviate</span>
+        </div>
+        <div className="h-full w-px bg-white/10 hidden sm:block"></div>
+        <div className="flex min-w-0 items-center gap-3 px-4">
         {isDetailPage ? (
           <Button 
             variant="outline" 
@@ -89,12 +118,13 @@ export function AppHeader() {
             {backConfig.text}
           </Button>
         ) : (
-          <SidebarTrigger className={cn(isMobile ? '' : 'hidden')} />
+          null
         )}
         {!isDetailPage && title && (
           <h1 className="truncate text-base font-bold tracking-tight sm:text-lg uppercase opacity-90">{title}</h1>
         )}
       </div>
+    </div>
 
       <div className="app-topbar-actions flex items-center gap-2">
         <Button variant="ghost" size="icon" className="app-topbar-icon hidden md:inline-flex">
