@@ -140,7 +140,10 @@ export interface Tenant {
         popover?: Record<string, string>;
         sidebar?: Record<string, string>;
         sidebarBackgroundImage?: string;
+        sidebarBackgroundOpacity?: number;
         header?: Record<string, string>;
+        headerBackgroundImage?: string;
+        headerBackgroundOpacity?: number;
         swimlane?: Record<string, string>;
         matrix?: Record<string, string>;
         scale?: number;

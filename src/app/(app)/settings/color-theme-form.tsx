@@ -33,6 +33,9 @@ type PalettePreset = {
   };
 };
 
+const HEADER_BANNER_RECOMMENDED_SIZE = '1600 x 240 px';
+const SIDEBAR_BANNER_RECOMMENDED_SIZE = '900 x 1600 px';
+
 const PALETTE_PRESETS: PalettePreset[] = [
   {
     name: 'Aero',
@@ -116,8 +119,14 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     setSidebarThemeValue, 
     sidebarBackgroundImage,
     setSidebarBackgroundImage,
+    sidebarBackgroundOpacity,
+    setSidebarBackgroundOpacity,
     headerTheme, 
     setHeaderThemeValue,
+    headerBackgroundImage,
+    setHeaderBackgroundImage,
+    headerBackgroundOpacity,
+    setHeaderBackgroundOpacity,
     swimlaneTheme,
     setSwimlaneThemeValue,
     matrixTheme,
@@ -133,7 +142,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
 
   const [themeName, setThemeName] = useState('');
   const [isMounted, setIsMounted] = useState(false);
-  const [sidebarImageUrl, setSidebarImageUrl] = useState('');
+  const [isUploadingSidebarImage, setIsUploadingSidebarImage] = useState(false);
+  const [isUploadingHeaderImage, setIsUploadingHeaderImage] = useState(false);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoadingTenants, setIsLoadingTenants] = useState(true);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
@@ -184,7 +194,10 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
       popover: popoverTheme,
       sidebar: sidebarTheme,
       sidebarBackgroundImage,
+      sidebarBackgroundOpacity,
       header: headerTheme,
+      headerBackgroundImage,
+      headerBackgroundOpacity,
       swimlane: swimlaneTheme,
       matrix: matrixTheme,
     };
@@ -294,11 +307,23 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
           effectiveTheme.sidebarBackgroundImage !== undefined
             ? effectiveTheme.sidebarBackgroundImage
             : sidebarBackgroundImage,
+        sidebarBackgroundOpacity:
+          typeof effectiveTheme.sidebarBackgroundOpacity === 'number'
+            ? effectiveTheme.sidebarBackgroundOpacity
+            : sidebarBackgroundOpacity,
         headerColors: (effectiveTheme.header as any) || { 
             'header-background': effectiveTheme.backgroundColour || headerTheme['header-background'], 
             'header-foreground': headerTheme['header-foreground'], 
             'header-border': headerTheme['header-border'] 
         },
+        headerBackgroundImage:
+          effectiveTheme.headerBackgroundImage !== undefined
+            ? effectiveTheme.headerBackgroundImage
+            : headerBackgroundImage,
+        headerBackgroundOpacity:
+          typeof effectiveTheme.headerBackgroundOpacity === 'number'
+            ? effectiveTheme.headerBackgroundOpacity
+            : headerBackgroundOpacity,
         swimlaneColors: (effectiveTheme.swimlane as any) || swimlaneTheme,
         matrixColors: (effectiveTheme.matrix as any) || matrixTheme,
         scale: typeof effectiveTheme.scale === 'number' ? effectiveTheme.scale : scale,
@@ -334,16 +359,56 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     toast({ title: "Tenant Branding Restored", description: "This device has been reset to the shared organization branding." });
   }
 
-  const handleApplySidebarBackgroundUrl = () => {
-    const trimmed = sidebarImageUrl.trim();
-    if (!trimmed) {
-      toast({ variant: 'destructive', title: 'No Image URL', description: 'Paste a direct image URL first.' });
+  const uploadThemeImage = async (
+    file: File,
+    displayName: string
+  ) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('displayName', displayName);
+
+    const response = await fetch('/api/uploads', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(payload.error || 'Upload failed');
+    }
+
+    return response.json() as Promise<{ url: string }>;
+  };
+
+  const handleThemeImageUpload = async (
+    file: File | undefined,
+    target: 'sidebar' | 'header'
+  ) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ variant: 'destructive', title: 'Invalid file', description: 'Please upload an image file.' });
       return;
     }
 
-    setSidebarBackgroundImage(trimmed);
-    setSidebarImageUrl('');
-    toast({ title: 'Sidebar Background Applied', description: 'The image URL has been applied to the sidebar preview.' });
+    const setLoading = target === 'sidebar' ? setIsUploadingSidebarImage : setIsUploadingHeaderImage;
+    const setImage = target === 'sidebar' ? setSidebarBackgroundImage : setHeaderBackgroundImage;
+    const label = target === 'sidebar' ? 'Sidebar' : 'Header';
+
+    try {
+      setLoading(true);
+      const uploaded = await uploadThemeImage(file, `${target}-banner`);
+      setImage(uploaded.url);
+      toast({ title: `${label} image uploaded`, description: `${label} background preview updated.` });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: `${label} upload failed`,
+        description: error instanceof Error ? error.message : 'Could not upload image.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const applyPalettePreset = (preset: PalettePreset) => {
@@ -684,6 +749,62 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             </div>
                             <Separator />
                             <div className="space-y-3 pt-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Header Banner</h4>
+                                <p className="text-[9px] font-black uppercase italic text-foreground/60">Upload an image for the top menu background.</p>
+                                <p className="text-[9px] font-black uppercase tracking-tight text-foreground/55">Recommended size: {HEADER_BANNER_RECOMMENDED_SIZE}</p>
+                                <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+                                    <div className="overflow-hidden rounded-2xl border bg-muted/10">
+                                        {headerBackgroundImage ? (
+                                            <Image src={headerBackgroundImage} alt="Header banner preview" width={440} height={180} className="h-28 w-full object-cover" unoptimized />
+                                        ) : (
+                                            <div className="flex h-28 items-center justify-center text-[9px] font-black uppercase tracking-widest text-foreground/50">
+                                                No header image
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => void handleThemeImageUpload(e.target.files?.[0], 'header')}
+                                            className="cursor-pointer"
+                                        />
+                                        <div className="flex gap-3">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="text-[10px] font-black uppercase"
+                                                disabled={isUploadingHeaderImage}
+                                                onClick={() => setHeaderBackgroundImage('')}
+                                            >
+                                                Remove Header Image
+                                            </Button>
+                                            {isUploadingHeaderImage && (
+                                                <span className="text-[10px] font-black uppercase text-foreground/60">Uploading...</span>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[9px] font-black uppercase text-foreground">Header Image Opacity</Label>
+                                            <div className="flex items-center gap-4 rounded-xl border bg-muted/5 px-4 py-3">
+                                                <Slider
+                                                    aria-label="Header image opacity"
+                                                    value={[Math.round(headerBackgroundOpacity * 100)]}
+                                                    onValueChange={(value) => setHeaderBackgroundOpacity(value[0] / 100)}
+                                                    min={0}
+                                                    max={100}
+                                                    step={5}
+                                                    className="flex-1"
+                                                />
+                                                <span className="w-10 text-right text-[10px] font-black uppercase text-foreground/70">
+                                                    {Math.round(headerBackgroundOpacity * 100)}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="space-y-3 pt-2">
                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Glass Opacity</h4>
                                 <p className="text-[9px] font-black uppercase italic text-foreground/60">Blends the background and blur level of the top bar.</p>
                                 <div className="flex items-center gap-6 bg-muted/5 p-4 border rounded-xl">
@@ -753,6 +874,62 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                                     <Input id={name} type="color" value={value} onChange={(e) => setSidebarThemeValue(name as keyof typeof sidebarTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
                                 </div>
                                 ))}
+                            </div>
+                            <Separator />
+                            <div className="space-y-3 pt-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Sidebar Banner</h4>
+                                <p className="text-[9px] font-black uppercase italic text-foreground/60">Upload an image for the sidebar background.</p>
+                                <p className="text-[9px] font-black uppercase tracking-tight text-foreground/55">Recommended size: {SIDEBAR_BANNER_RECOMMENDED_SIZE}</p>
+                                <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+                                    <div className="overflow-hidden rounded-2xl border bg-muted/10">
+                                        {sidebarBackgroundImage ? (
+                                            <Image src={sidebarBackgroundImage} alt="Sidebar banner preview" width={440} height={320} className="h-36 w-full object-cover" unoptimized />
+                                        ) : (
+                                            <div className="flex h-36 items-center justify-center text-[9px] font-black uppercase tracking-widest text-foreground/50">
+                                                No sidebar image
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => void handleThemeImageUpload(e.target.files?.[0], 'sidebar')}
+                                            className="cursor-pointer"
+                                        />
+                                        <div className="flex gap-3">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="text-[10px] font-black uppercase"
+                                                disabled={isUploadingSidebarImage}
+                                                onClick={() => setSidebarBackgroundImage('')}
+                                            >
+                                                Remove Sidebar Image
+                                            </Button>
+                                            {isUploadingSidebarImage && (
+                                                <span className="text-[10px] font-black uppercase text-foreground/60">Uploading...</span>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[9px] font-black uppercase text-foreground">Sidebar Image Opacity</Label>
+                                            <div className="flex items-center gap-4 rounded-xl border bg-muted/5 px-4 py-3">
+                                                <Slider
+                                                    aria-label="Sidebar image opacity"
+                                                    value={[Math.round(sidebarBackgroundOpacity * 100)]}
+                                                    onValueChange={(value) => setSidebarBackgroundOpacity(value[0] / 100)}
+                                                    min={0}
+                                                    max={100}
+                                                    step={5}
+                                                    className="flex-1"
+                                                />
+                                                <span className="w-10 text-right text-[10px] font-black uppercase text-foreground/70">
+                                                    {Math.round(sidebarBackgroundOpacity * 100)}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </CollapsibleContent>
                     </section>

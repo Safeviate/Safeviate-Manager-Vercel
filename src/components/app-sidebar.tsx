@@ -182,7 +182,7 @@ const SidebarItems = () => {
                                 <SidebarMenuButton
                                     isActive={isParentActive}
                                     tooltip={item.label}
-                                    className={cn("justify-between", isOpen && "border-b border-sidebar-border/45")}
+                                    className="justify-between"
                                     onClick={() => {
                                       setOpenParents((current) => {
                                         const nextOpen = !current[item.href];
@@ -205,13 +205,13 @@ const SidebarItems = () => {
                                 </SidebarMenuButton>
                             </SidebarCollapsibleTrigger>
                             <SidebarCollapsibleContent>
-                                <SidebarMenuSub className="-mt-px mb-1 w-full pl-0">
+                                <SidebarMenuSub className="mb-1 w-full border-t border-sidebar-border/45 pl-0">
                                     {subItems.map((subItem) => (
                                         <SidebarMenuSubItem key={subItem.href} className="border-b border-sidebar-border/10 last:border-b-0">
                                             <SidebarMenuSubButton
                                               asChild
                                               isActive={normalizePath(pathname) === normalizePath(subItem.href) || selectedSubItem?.href === subItem.href}
-                                              className="ml-0 w-full rounded-none px-3 py-2 text-[13px] font-medium tracking-[-0.01em] text-sidebar-foreground/80 hover:bg-sidebar-accent/25 data-[active=true]:bg-sidebar-accent/45 data-[active=true]:text-sidebar-foreground"
+                                              className="ml-0 w-full rounded-none px-3 py-2 text-[11px] font-medium tracking-[-0.01em] text-sidebar-foreground/80 hover:bg-sidebar-accent/25 data-[active=true]:bg-sidebar-accent/45 data-[active=true]:text-sidebar-foreground"
                                             >
                                                 <Link
                                                   href={subItem.href}

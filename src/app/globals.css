@@ -38,12 +38,15 @@
     --radius: 0.5rem;
     --sidebar-background: 205 50% 90%;
     --sidebar-background-image: none;
+    --sidebar-background-opacity: 0.2;
     --sidebar-foreground: 215 28% 17%;
     --sidebar-accent: 205 67% 95%;
     --sidebar-accent-foreground: 215 28% 17%;
     --sidebar-border: 205 30% 85%;
     --sidebar-ring: 205 85% 65%;
     --header-background: 20 7% 8%;
+    --header-background-image: none;
+    --header-background-opacity: 0.22;
     --header-foreground: 34 33% 94%;
     --header-border: 23 14% 20%;
     --swimlane-header-background: 147 100% 12%;
@@ -87,13 +90,16 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --sidebar-background: 215 28% 17%;
-    --sidebar-background-image: url("/safeviate-background.png");
+    --sidebar-background-image: none;
+    --sidebar-background-opacity: 0.2;
     --sidebar-foreground: 205 67% 95%;
     --sidebar-accent: 215 20% 25%;
     --sidebar-accent-foreground: 205 67% 95%;
     --sidebar-border: 215 20% 25%;
     --sidebar-ring: 205 85% 65%;
     --header-background: 215 28% 17%;
+    --header-background-image: none;
+    --header-background-opacity: 0.22;
     --header-foreground: 205 67% 95%;
     --header-border: 215 20% 25%;
     --swimlane-header-background: 215 20% 25%;
@@ -128,15 +134,32 @@
     -moz-appearance: textfield;
   }
   .bg-sidebar {
-    background: linear-gradient(180deg, 
-      hsl(var(--sidebar-background)) 0%, 
-      color-mix(in srgb, hsl(var(--sidebar-background)), black 20%) 100%
-    );
-    box-shadow: inset -10px 0 20px -15px rgba(0,0,0,0.5);
+    background-color: hsl(var(--sidebar-background));
+    background-image:
+      linear-gradient(
+        180deg,
+        hsl(var(--sidebar-background) / var(--sidebar-background-opacity, 0.2)),
+        hsl(var(--sidebar-background) / calc(var(--sidebar-background-opacity, 0.2) + 0.08))
+      ),
+      var(--sidebar-background-image, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: none;
   }
 
   .bg-header {
     background-color: hsl(var(--header-background) / var(--header-opacity, 0.8)) !important;
+    background-image:
+      linear-gradient(
+        180deg,
+        hsl(var(--header-background) / calc(var(--header-background-opacity, 0.22) - 0.1)),
+        hsl(var(--header-background) / var(--header-background-opacity, 0.22))
+      ),
+      var(--header-background-image, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     backdrop-filter: blur(20px);
   }
 }

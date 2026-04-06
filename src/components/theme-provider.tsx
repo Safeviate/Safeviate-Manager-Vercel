@@ -66,7 +66,10 @@ export type SavedTheme = {
   cardColors: CardThemeColors;
   sidebarColors: SidebarThemeColors;
   sidebarBackgroundImage?: string;
+  sidebarBackgroundOpacity?: number;
   headerColors: HeaderThemeColors;
+  headerBackgroundImage?: string;
+  headerBackgroundOpacity?: number;
   popoverColors: PopoverThemeColors;
   swimlaneColors: SwimlaneThemeColors;
   matrixColors: MatrixThemeColors;
@@ -88,8 +91,14 @@ type ThemeContextType = {
   setSidebarThemeValue: (key: keyof SidebarThemeColors, value: string) => void;
   sidebarBackgroundImage: string;
   setSidebarBackgroundImage: (value: string) => void;
+  sidebarBackgroundOpacity: number;
+  setSidebarBackgroundOpacity: (value: number) => void;
   headerTheme: HeaderThemeColors;
   setHeaderThemeValue: (key: keyof HeaderThemeColors, value: string) => void;
+  headerBackgroundImage: string;
+  setHeaderBackgroundImage: (value: string) => void;
+  headerBackgroundOpacity: number;
+  setHeaderBackgroundOpacity: (value: number) => void;
   swimlaneTheme: SwimlaneThemeColors;
   setSwimlaneThemeValue: (key: keyof SwimlaneThemeColors, value: string) => void;
   matrixTheme: MatrixThemeColors;
@@ -112,6 +121,7 @@ export const CARD_THEME_KEY = 'safeviate-card-theme';
 export const POPOVER_THEME_KEY = 'safeviate-popover-theme';
 export const SIDEBAR_THEME_KEY = 'safeviate-sidebar-theme';
 export const SIDEBAR_BACKGROUND_IMAGE_KEY = 'safeviate-sidebar-background-image';
+export const HEADER_BACKGROUND_IMAGE_KEY = 'safeviate-header-background-image';
 export const HEADER_THEME_KEY = 'safeviate-header-theme';
 export const SWIMLANE_THEME_KEY = 'safeviate-swimlane-theme';
 export const MATRIX_THEME_KEY = 'safeviate-matrix-theme';
@@ -150,8 +160,8 @@ const defaultSidebarColors: SidebarThemeColors = {
   'sidebar-accent-foreground': '#1e293b',
   'sidebar-border': '#94a3b8',
 };
-const defaultSidebarBackgroundImage = '/safeviate-background.png';
-const legacySidebarBackgroundImage = '/sidebar-background.png';
+const defaultSidebarBackgroundImage = '';
+const legacySidebarBackgroundImage = '';
 const defaultHeaderColors: HeaderThemeColors = {
   'header-background': '#171514',
   'header-foreground': '#f3efe8',
@@ -183,6 +193,19 @@ const applySidebarBackgroundImageToDOM = (value: string) => {
     '--sidebar-background-image',
     value ? `url("${value}")` : 'none'
   );
+};
+
+const applyHeaderBackgroundImageToDOM = (value: string) => {
+  if (typeof window === 'undefined') return;
+  document.documentElement.style.setProperty(
+    '--header-background-image',
+    value ? `url("${value}")` : 'none'
+  );
+};
+
+const applyCssNumberToDOM = (key: string, value: number) => {
+  if (typeof window === 'undefined') return;
+  document.documentElement.style.setProperty(key, String(value));
 };
 
 const applyScaleToDOM = (scale: number) => {
@@ -243,7 +266,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [popoverTheme, setPopoverTheme] = useState<PopoverThemeColors>(defaultPopoverColors);
   const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(defaultSidebarColors);
   const [sidebarBackgroundImage, setSidebarBackgroundImageState] = useState<string>(defaultSidebarBackgroundImage);
+  const [sidebarBackgroundOpacity, setSidebarBackgroundOpacityState] = useState<number>(0.2);
   const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(defaultHeaderColors);
+  const [headerBackgroundImage, setHeaderBackgroundImageState] = useState<string>('');
+  const [headerBackgroundOpacity, setHeaderBackgroundOpacityState] = useState<number>(0.22);
   const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(defaultSwimlaneColors);
   const [matrixTheme, setMatrixTheme] = useState<MatrixThemeColors>(defaultMatrixColors);
   const [uiMode, setUiModeState] = useState<UiMode>('classic');
@@ -254,9 +280,20 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const { tenant, tenantId } = useTenantConfig();
 
   const resolveSidebarBackgroundImage = (value: string | null | undefined) => {
-    if (value === '') return '';
-    if (value == null) return defaultSidebarBackgroundImage;
+    if (!value) return '';
     return value;
+  };
+
+  const resolveHeaderBackgroundImage = (value: string | null | undefined) => {
+    if (!value) return '';
+    return value;
+  };
+
+  const resolveOpacity = (value: unknown, fallback: number) => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return Math.min(1, Math.max(0, value));
+    }
+    return fallback;
   };
 
   const resolveScale = (value: unknown) => {
@@ -298,6 +335,17 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       ...defaultHeaderColors,
       ...(tenant?.theme?.header || {}),
     };
+    const nextHeaderBackgroundImage = resolveHeaderBackgroundImage(
+      tenant?.theme?.headerBackgroundImage
+    );
+    const nextSidebarBackgroundOpacity = resolveOpacity(
+      tenant?.theme?.sidebarBackgroundOpacity,
+      0.2
+    );
+    const nextHeaderBackgroundOpacity = resolveOpacity(
+      tenant?.theme?.headerBackgroundOpacity,
+      0.22
+    );
     const nextSwimlaneTheme = {
       ...defaultSwimlaneColors,
       ...(tenant?.theme?.swimlane || {}),
@@ -323,7 +371,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setPopoverTheme(nextPopoverTheme);
     setSidebarTheme(nextSidebarTheme);
     setSidebarBackgroundImageState(nextSidebarBackgroundImage);
+    setSidebarBackgroundOpacityState(nextSidebarBackgroundOpacity);
     setHeaderTheme(nextHeaderTheme);
+    setHeaderBackgroundImageState(nextHeaderBackgroundImage);
+    setHeaderBackgroundOpacityState(nextHeaderBackgroundOpacity);
     setSwimlaneTheme(nextSwimlaneTheme);
     setMatrixTheme(nextMatrixTheme);
     setUiModeState('classic');
@@ -338,11 +389,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(popoverTheme);
     applyColorsToDOM(sidebarTheme);
     applySidebarBackgroundImageToDOM(sidebarBackgroundImage);
+    applyCssNumberToDOM('--sidebar-background-opacity', sidebarBackgroundOpacity);
     applyColorsToDOM(headerTheme);
+    applyHeaderBackgroundImageToDOM(headerBackgroundImage);
+    applyCssNumberToDOM('--header-background-opacity', headerBackgroundOpacity);
     applyColorsToDOM(swimlaneTheme);
     applyColorsToDOM(matrixTheme);
     applyScaleToDOM(scale);
-  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, sidebarBackgroundImage, headerTheme, swimlaneTheme, matrixTheme, scale]);
+  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, sidebarBackgroundImage, sidebarBackgroundOpacity, headerTheme, headerBackgroundImage, headerBackgroundOpacity, swimlaneTheme, matrixTheme, scale]);
   
 
   const updateTheme = <T extends object>(
@@ -379,7 +433,19 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarBackgroundImageState(value);
     applySidebarBackgroundImageToDOM(value);
   };
+  const setSidebarBackgroundOpacity = (value: number) => {
+    setSidebarBackgroundOpacityState(value);
+    applyCssNumberToDOM('--sidebar-background-opacity', value);
+  };
   const setHeaderThemeValue = (prop: keyof HeaderThemeColors, value: string) => updateTheme(headerTheme, setHeaderTheme, prop, value);
+  const setHeaderBackgroundImage = (value: string) => {
+    setHeaderBackgroundImageState(value);
+    applyHeaderBackgroundImageToDOM(value);
+  };
+  const setHeaderBackgroundOpacity = (value: number) => {
+    setHeaderBackgroundOpacityState(value);
+    applyCssNumberToDOM('--header-background-opacity', value);
+  };
   const setSwimlaneThemeValue = (prop: keyof SwimlaneThemeColors, value: string) => updateTheme(swimlaneTheme, setSwimlaneTheme, prop, value);
   const setMatrixThemeValue = (prop: keyof MatrixThemeColors, value: string) => updateTheme(matrixTheme, setMatrixTheme, prop, value);
 
@@ -402,6 +468,17 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const newSidebarBackgroundImage = resolveSidebarBackgroundImage(
       themeToApply.sidebarBackgroundImage
     );
+    const newSidebarBackgroundOpacity = resolveOpacity(
+      themeToApply.sidebarBackgroundOpacity,
+      0.2
+    );
+    const newHeaderBackgroundImage = resolveHeaderBackgroundImage(
+      themeToApply.headerBackgroundImage
+    );
+    const newHeaderBackgroundOpacity = resolveOpacity(
+      themeToApply.headerBackgroundOpacity,
+      0.22
+    );
 
     const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
     const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
@@ -414,7 +491,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setPopoverTheme(newPopoverTheme);
     setSidebarTheme(newSidebarTheme);
     setSidebarBackgroundImageState(newSidebarBackgroundImage);
+    setSidebarBackgroundOpacityState(newSidebarBackgroundOpacity);
     setHeaderTheme(newHeaderTheme);
+    setHeaderBackgroundImageState(newHeaderBackgroundImage);
+    setHeaderBackgroundOpacityState(newHeaderBackgroundOpacity);
     setSwimlaneTheme(newSwimlaneTheme);
     setMatrixTheme(newMatrixTheme);
     setUiModeState('classic');
@@ -426,7 +506,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyColorsToDOM(newPopoverTheme);
     applyColorsToDOM(newSidebarTheme);
     applySidebarBackgroundImageToDOM(newSidebarBackgroundImage);
+    applyCssNumberToDOM('--sidebar-background-opacity', newSidebarBackgroundOpacity);
     applyColorsToDOM(newHeaderTheme);
+    applyHeaderBackgroundImageToDOM(newHeaderBackgroundImage);
+    applyCssNumberToDOM('--header-background-opacity', newHeaderBackgroundOpacity);
     applyColorsToDOM(newSwimlaneTheme);
     applyColorsToDOM(newMatrixTheme);
     applyScaleToDOM(newScale);
@@ -441,7 +524,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       popoverColors: popoverTheme,
       sidebarColors: sidebarTheme,
       sidebarBackgroundImage,
+      sidebarBackgroundOpacity,
       headerColors: headerTheme,
+      headerBackgroundImage,
+      headerBackgroundOpacity,
       swimlaneColors: swimlaneTheme,
       matrixColors: matrixTheme,
       scale,
@@ -489,10 +575,19 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarBackgroundImageState(
       resolveSidebarBackgroundImage(tenant?.theme?.sidebarBackgroundImage)
     );
+    setSidebarBackgroundOpacityState(
+      resolveOpacity(tenant?.theme?.sidebarBackgroundOpacity, 0.2)
+    );
     setHeaderTheme({
       ...defaultHeaderColors,
       ...(tenant?.theme?.header || {}),
     });
+    setHeaderBackgroundImageState(
+      resolveHeaderBackgroundImage(tenant?.theme?.headerBackgroundImage)
+    );
+    setHeaderBackgroundOpacityState(
+      resolveOpacity(tenant?.theme?.headerBackgroundOpacity, 0.22)
+    );
     setSwimlaneTheme({
       ...defaultSwimlaneColors,
       ...(tenant?.theme?.swimlane || {}),
@@ -522,8 +617,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarThemeValue,
     sidebarBackgroundImage,
     setSidebarBackgroundImage,
+    sidebarBackgroundOpacity,
+    setSidebarBackgroundOpacity,
     headerTheme,
     setHeaderThemeValue,
+    headerBackgroundImage,
+    setHeaderBackgroundImage,
+    headerBackgroundOpacity,
+    setHeaderBackgroundOpacity,
     swimlaneTheme,
     setSwimlaneThemeValue,
     matrixTheme,
