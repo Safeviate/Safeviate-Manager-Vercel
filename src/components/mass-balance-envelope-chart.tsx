@@ -205,6 +205,72 @@ export function MassBalanceEnvelopeChart({
     pinchCenterRef.current = null;
   }, []);
 
+  const cGMargin = useMemo(() => {
+    if (!envelope.length) return null;
+    const xs = envelope.map((point) => point.x).filter((value) => Number.isFinite(value));
+    if (!xs.length) return null;
+    return Math.min(Math.abs(currentPoint.x - Math.min(...xs)), Math.abs(Math.max(...xs) - currentPoint.x));
+  }, [currentPoint.x, envelope]);
+
+  if (isMobile) {
+    return (
+      <div className={cn('relative', className)}>
+        <div className="rounded-xl border bg-background p-3 shadow-sm">
+          <div className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mass & balance</p>
+                <p className="text-sm font-semibold text-muted-foreground">Quick read for the current load. Open the full graph only if needed.</p>
+              </div>
+              <div className={cn('rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest', isSafe ? 'bg-emerald-500/15 text-emerald-700' : 'bg-red-500/15 text-red-700')}>
+                {isSafe ? 'Within limits' : 'Review'}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG</p>
+                <p className="text-base font-black">{currentPoint.x.toFixed(2)} in</p>
+              </div>
+              <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Weight</p>
+                <p className="text-base font-black">{currentPoint.y.toFixed(0)} lbs</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 rounded-lg border bg-muted/10 px-2 py-2 text-center">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                <p className={cn('text-[11px] font-black uppercase', isSafe ? 'text-emerald-700' : 'text-red-700')}>
+                  {isSafe ? 'Safe' : 'Watch'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Margin</p>
+                <p className="text-[11px] font-black uppercase text-foreground/80">{cGMargin === null ? '--' : `${cGMargin.toFixed(1)} in`}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mode</p>
+                <p className="text-[11px] font-black uppercase text-foreground/80">Quick read</p>
+              </div>
+            </div>
+
+            <div className="rounded-lg border bg-muted/5 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Envelope points</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {envelope.map((point, index) => (
+                  <span key={`${point.x}-${point.y}-${index}`} className="rounded-full border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-widest text-foreground/80">
+                    {point.x.toFixed(1)} / {point.y.toFixed(0)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('relative', className)}>
       <div

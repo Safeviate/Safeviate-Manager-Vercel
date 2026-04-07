@@ -7,9 +7,8 @@ import { format } from "date-fns";
 import type { Booking, NavlogLeg, Navlog, PreFlightData, PostFlightData } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +24,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -43,7 +43,6 @@ const AeronauticalMap = dynamic(
 );
 
 const FUEL_WEIGHT_PER_GALLON = 6;
-const POINT_COLORS = ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'];
 const formatLitres = (gallons: number | undefined) => (((gallons || 0) * 3.78541).toFixed(1));
 const DEFAULT_GRAPH_CONFIG = {
     xMin: 80,
@@ -66,29 +65,6 @@ const DEFAULT_STATIONS = [
     { id: 4, name: 'Rear Pax', weight: 0, arm: 118.1, type: 'standard' },
     { id: 5, name: 'Baggage', weight: 0, arm: 142.8, type: 'standard' },
 ];
-
-const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
-    const start = Number(min);
-    const end = Number(max);
-    if (isNaN(start) || isNaN(end) || start >= end) return [];
-    const diff = end - start;
-    const roughStep = diff / (stepCount - 1);
-    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
-    const normalizedStep = roughStep / magnitude;
-    let step;
-    if (normalizedStep < 1.5) step = 1 * magnitude;
-    else if (normalizedStep < 3) step = 2 * magnitude;
-    else if (normalizedStep < 7) step = 5 * magnitude;
-    else step = 10 * magnitude;
-    const ticks = [];
-    let current = Math.ceil(start / step) * step;
-    if (current > start) ticks.push(start);
-    while (current <= end) {
-        ticks.push(current);
-        current += step;
-    }
-    return ticks;
-};
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -367,6 +343,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }, [stations, basicEmpty, graphConfig.envelope]);
 
     const handleStationWeightChange = (id: number, weight: string) => {
+        if (weight === '') {
+            setStations(prev => prev.map(s => {
+                if (s.id !== id) return s;
+                if (s.type === 'fuel') {
+                    return { ...s, weight: '', gallons: '' };
+                }
+                return { ...s, weight: '' };
+            }));
+            return;
+        }
+
         const val = parseFloat(weight) || 0;
         setStations(prev => prev.map(s => {
             if (s.id !== id) return s;
@@ -378,6 +365,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleGallonsChange = (id: number, gallons: string) => {
+        if (gallons === '') {
+            setStations(prev => prev.map(s => {
+                if (s.id !== id || s.type !== 'fuel') return s;
+                return { ...s, gallons: '', weight: '' };
+            }));
+            return;
+        }
+
         const val = parseFloat(gallons) || 0;
         setStations(prev => prev.map(s => {
             if (s.id !== id || s.type !== 'fuel') return s;
@@ -490,12 +485,28 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     if (loadingAc || loadingPeople) return <Skeleton className="h-64 w-full" />;
 
     const envelope = graphConfig.envelope;
-    const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
-    const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-    const fXMin = allX.length > 0 ? Math.min(graphConfig.xMin, ...allX) - 1 : graphConfig.xMin;
-    const fXMax = allX.length > 0 ? Math.max(graphConfig.xMax, ...allX) + 1 : graphConfig.xMax;
-    const fYMin = allY.length > 0 ? Math.min(graphConfig.yMin, ...allY) - 100 : graphConfig.yMin;
-    const fYMax = allY.length > 0 ? Math.max(graphConfig.yMax, ...allY) + 100 : graphConfig.yMax;
+    const envelopeXs = envelope.map((point) => point.x);
+    const cgMargin =
+        envelopeXs.length > 0
+            ? Math.min(
+                Math.abs(results.cg - Math.min(...envelopeXs)),
+                Math.abs(Math.max(...envelopeXs) - results.cg)
+            )
+            : null;
+    const graphTemplate: MassBalanceGraphTemplate = {
+        id: booking.id,
+        name: aircraft ? `${aircraft.make} ${aircraft.model}` : booking.type,
+        family: aircraft?.tailNumber || 'History',
+        xLabel: 'CG (inches)',
+        yLabel: 'Gross Weight (lbs)',
+        xDomain: [graphConfig.xMin, graphConfig.xMax],
+        yDomain: [graphConfig.yMin, graphConfig.yMax],
+        envelope: envelope.map((point, index) => ({
+            ...point,
+            color: ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'][index % 5],
+        })) as MassBalanceGraphPoint[],
+        currentPoint: { x: results.cg, y: results.weight },
+    };
 
     return (
         <Card className="flex h-full min-h-0 flex-1 flex-col shadow-none border overflow-hidden">
@@ -694,68 +705,72 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="mass-balance" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden bg-muted/5">
-                        <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5 min-w-0">
-                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_350px] h-full overflow-hidden min-w-0">
+                    <TabsContent value="mass-balance" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden overflow-x-hidden bg-muted/5">
+                        <CardContent className="flex-1 p-0 overflow-hidden overflow-x-hidden bg-muted/5 min-w-0">
+                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_350px] h-full overflow-hidden overflow-x-hidden min-w-0">
                                 <div className="h-full min-w-0 border-r bg-background overflow-hidden">
                                     <div className="p-6 min-w-0">
-                                        <div
-                                            className={cn(
-                                                "min-w-0 overflow-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner",
-                                                isMobile ? "h-[360px] p-2" : "h-auto"
-                                            )}
-                                            style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-                                        >
-                                            <div className={cn(
-                                                "min-w-[980px] relative bg-background rounded-xl border shadow-sm p-4",
-                                                isMobile ? "min-w-[720px] min-h-[520px] h-[520px] p-2" : "min-h-[550px] h-[550px]"
-                                            )}>
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <ScatterChart margin={isMobile ? { top: 12, right: 24, bottom: 36, left: 32 } : { top: 20, right: 60, bottom: 60, left: 60 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" />
-                                                        <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
-                                                            <Label value="CG (inches)" offset={isMobile ? -10 : -20} position="insideBottom" className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
-                                                        </XAxis>
-                                                        <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
-                                                            <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" offset={isMobile ? -18 : -40} className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
-                                                        </YAxis>
-                                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                                        <Scatter data={envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: isMobile ? 1.5 : 2 }} shape={() => <g />} />
-                                                        <Scatter data={envelope}>
-                                                            {envelope.map((entry, index) => <Cell key={index} fill={POINT_COLORS[index % POINT_COLORS.length]} />)}
-                                                        </Scatter>
-                                                        <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                                                            <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 7 : 10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={isMobile ? 2 : 3} />
-                                                        </Scatter>
-                                                    </ScatterChart>
-                                                </ResponsiveContainer>
-                                            </div>
+                                        <div className={cn("max-w-full overflow-x-hidden", isMobile ? "mx-auto w-full max-w-[430px]" : "mx-auto w-full max-w-[860px]")}>
+                                            <MasterMassBalanceGraph
+                                                template={graphTemplate}
+                                                currentPoint={{ x: results.cg, y: results.weight }}
+                                                showHeader={false}
+                                                showLayoutBadge={false}
+                                                inlineTitle
+                                                showCompactMetrics={false}
+                                                compactHeightMode="tight"
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
-                                <ScrollArea className="h-full min-w-0">
+                                <ScrollArea className="h-full min-w-0 max-w-full overflow-x-hidden">
                                     <div className="p-6 space-y-8 pb-24 min-w-0">
-                                        <section className="space-y-4">
-                                            <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Summary</h2>
-                                            <div className="p-4 bg-muted/30 rounded-xl space-y-4">
-                                                <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
-                                                <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
-                                                <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Loading & Logs</Button>
+                                        <section className="rounded-xl border bg-background p-4 space-y-4">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
+                                                <div className="flex flex-wrap items-baseline gap-2">
+                                                    <span className="text-sm font-black uppercase tracking-[0.18em] text-primary">
+                                                        {aircraft?.tailNumber || booking.aircraftId}
+                                                    </span>
+                                                    <span className="text-lg font-black uppercase tracking-tight">
+                                                        {aircraft ? `${aircraft.make} ${aircraft.model}` : booking.type}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/70 pt-3">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG</p>
+                                                    <p className="text-sm font-black tabular-nums">{results.cg.toFixed(2)} in</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Weight</p>
+                                                    <p className="text-sm font-black tabular-nums">{results.weight.toFixed(0)} lbs</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                                                    <p className={cn('text-sm font-black uppercase', results.isSafe ? 'text-emerald-700' : 'text-red-700')}>
+                                                        {results.isSafe ? 'Within limits' : 'Review'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG Margin</p>
+                                                    <p className="text-sm font-black tabular-nums">
+                                                        {cgMargin === null ? '--' : `${cgMargin.toFixed(1)} in`}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </section>
 
-                                        <Separator />
-
                                         <section className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Loading Stations</h2>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Input Stations</h2>
+                                                    <p className="mt-1 text-xs text-muted-foreground">Adjust only the live loading inputs for this booking.</p>
+                                                </div>
+                                                <Button size="sm" onClick={handleSaveToBooking} className="h-10 uppercase text-xs font-black bg-emerald-700">Save Loading & Logs</Button>
                                             </div>
                                             <div className="space-y-4">
-                                                <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Basic Empty</p>
-                                                    <p className="text-sm font-black">{basicEmpty.weight} lbs @ {basicEmpty.arm} in</p>
-                                                </div>
                                                 {stations.map(s => (
                                                     <div key={s.id} className="space-y-2 p-3 border rounded-lg bg-background">
                                                         <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>

@@ -6,7 +6,6 @@ import { AppHeader } from '@/components/app-header';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AuthGuard } from '@/components/auth-guard';
-import { OverdueBookingMonitor } from '@/components/overdue-booking-monitor';
 
 let chunkReloadAttempted = false;
 
@@ -51,13 +50,12 @@ export default function AppLayout({
 
   return (
     <AuthGuard>
-        <SidebarProvider className="h-svh flex-col overflow-hidden">
+        <SidebarProvider className="h-svh flex-col overflow-hidden overflow-x-hidden">
           <AppHeader />
-          <div className="flex flex-1 min-w-0 h-full overflow-hidden">
+          <div className="flex flex-1 min-w-0 h-full overflow-hidden overflow-x-hidden">
               {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
-              <SidebarInset className="flex-1 min-h-0 overflow-hidden flex flex-col p-3 md:pb-4 md:p-4 lg:p-6">
-              <div className="mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col overflow-hidden">
-                  <OverdueBookingMonitor />
+              <SidebarInset className="flex-1 min-h-0 overflow-hidden overflow-x-hidden flex flex-col p-3 md:pb-4 md:p-4 lg:p-6">
+              <div className="mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col overflow-hidden overflow-x-hidden">
                   {children}
               </div>
               </SidebarInset>

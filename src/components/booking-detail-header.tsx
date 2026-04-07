@@ -31,22 +31,22 @@ export function BookingDetailHeader({
   return (
     <>
       {/* Primary Header Section (White background like Bookings History) */}
-      <div className="border-b px-4 md:px-6 py-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-0.5">
-            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">
-              {title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2">
+      <div className="border-b px-4 py-4 md:px-6 overflow-x-hidden">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 space-y-1">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground uppercase break-words">
+                {title}
+              </h1>
               {status ? (
-                <Badge variant={status === 'Approved' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                <Badge variant={status === 'Approved' ? 'default' : 'secondary'} className="shrink-0 text-[10px] font-black uppercase">
                   {status}
                 </Badge>
               ) : null}
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                {subtitle}
-              </span>
             </div>
+            <span className="block break-words text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              {subtitle}
+            </span>
           </div>
           {flightHours ? (
             <div className="flex items-center gap-2 self-start md:self-auto">

@@ -110,10 +110,10 @@ export function AppHeader() {
         <div className="flex min-w-0 items-center gap-3 px-4">
         {isDetailPage ? (
           <Button 
-            variant="outline" 
+            variant="default" 
             size="sm" 
             onClick={handleBack}
-            className="h-9 shrink-0 whitespace-nowrap rounded-xl border-white/10 px-4 text-sm font-semibold uppercase text-button-primary shadow-none transition-all hover:bg-white/5 hover:text-button-primary"
+            className="h-9 shrink-0 whitespace-nowrap rounded-xl px-4 text-sm font-semibold uppercase shadow-none"
           >
             {backConfig.text}
           </Button>

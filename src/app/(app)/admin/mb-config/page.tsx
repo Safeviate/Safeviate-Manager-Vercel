@@ -1,50 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label, ReferenceDot, Cell } from 'recharts';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, Plus, Trash2, RotateCcw, Maximize, Fuel, AlertTriangle, Plane, Upload, Library, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Fuel, AlertTriangle, Plane, Upload, Library, Plus, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, poundsToKilograms, type FuelType } from '@/lib/fuel';
+import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, type FuelType } from '@/lib/fuel';
 import type { Aircraft, AircraftModelProfile } from '@/types/aircraft';
 import { MainPageHeader } from '@/components/page-header';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 
-const POINT_COLORS = ["#ef4444", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#06b6d4", "#84cc16"];
-
-const generateNiceTicks = (min: number | string, max: number | string, stepCount = 6) => {
-  const start = Number(min);
-  const end = Number(max);
-  if (isNaN(start) || isNaN(end) || start >= end) return [];
-  const diff = end - start;
-  const roughStep = diff / (stepCount - 1);
-  const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
-  const normalizedStep = roughStep / magnitude;
-  let step;
-  if (normalizedStep < 1.5) step = 1 * magnitude;
-  else if (normalizedStep < 3) step = 2 * magnitude;
-  else if (normalizedStep < 7) step = 5 * magnitude;
-  else step = 10 * magnitude;
-  const ticks = [];
-  let current = Math.ceil(start / step) * step;
-  if (current > start) ticks.push(start);
-  while (current <= end) {
-    ticks.push(current);
-    current += step;
-  }
-  return ticks;
-};
-
+const POINT_COLORS = ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'];
 const formatLitres = (gallons: number) => gallonsToLitres(gallons).toFixed(1);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const normalizeFuelStation = (station: any) => {
@@ -79,12 +52,9 @@ const serializeStation = (station: any) => {
 
 const WBCalculator = () => {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
-  const { tenantId } = useUserProfile();
 
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [savedTemplates, setSavedTemplates] = useState<AircraftModelProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   const [graphConfig, setGraphConfig] = useState({
     modelName: "Piper PA-28-180",
@@ -110,7 +80,6 @@ const WBCalculator = () => {
   const [loadedAircraft, setLoadedAircraft] = useState<Aircraft | null>(null);
 
   const loadData = useCallback(async () => {
-    setIsLoading(true);
     try {
         const [aircraftResponse, configResponse] = await Promise.all([
           fetch('/api/dashboard-summary', { cache: 'no-store' }),
@@ -125,8 +94,6 @@ const WBCalculator = () => {
         setSavedTemplates(Array.isArray((config as any)['mass-and-balance-templates']) ? (config as any)['mass-and-balance-templates'] : []);
     } catch (e) {
         console.error("Failed to load M&B data", e);
-    } finally {
-        setIsLoading(false);
     }
   }, []);
 
@@ -301,6 +268,20 @@ const WBCalculator = () => {
   const fXMax = Math.max(Number(graphConfig.xMax), ...allX) + 2;
   const fYMin = Math.min(Number(graphConfig.yMin), ...allY) - 100;
   const fYMax = Math.max(Number(graphConfig.yMax), ...allY) + 100;
+  const graphTemplate = useMemo<MassBalanceGraphTemplate>(() => ({
+    id: loadedAircraft?.id || graphConfig.modelName.toLowerCase().replace(/\s+/g, '-'),
+    name: loadedAircraft ? `${loadedAircraft.make} ${loadedAircraft.model}` : graphConfig.modelName,
+    family: loadedAircraft?.tailNumber || loadedAircraft?.make || 'Configurator',
+    xLabel: 'CG (inches)',
+    yLabel: 'Gross Weight (lbs)',
+    xDomain: [fXMin, fXMax],
+    yDomain: [fYMin, fYMax],
+    envelope: envelope.map((point, index) => ({
+      ...point,
+      color: ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'][index % 5],
+    })) as MassBalanceGraphPoint[],
+    currentPoint: { x: results.cg, y: results.weight },
+  }), [loadedAircraft, graphConfig.modelName, fXMin, fXMax, fYMin, fYMax, envelope, results.cg, results.weight]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden gap-4 px-1">
@@ -316,63 +297,20 @@ const WBCalculator = () => {
               </div>
             }
           />
-          <div className="bg-muted/10 px-6 py-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/85">Active:</span>
-              <span className="text-sm font-black uppercase">{loadedAircraft?.tailNumber || graphConfig.modelName}</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-[9px] font-black uppercase text-foreground/80 leading-none mb-1">Total Weight</p>
-                <p className="text-xl font-black text-foreground leading-none">{results.weight} lbs</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[9px] font-black uppercase text-foreground/80 leading-none mb-1">Take-off CG</p>
-                <p className="text-xl font-black text-foreground leading-none">{results.cg} in</p>
-              </div>
-              <Badge variant={results.isSafe ? 'default' : 'destructive'} className="h-8 px-4 font-black uppercase">
-                {results.isSafe ? 'WITHIN LIMITS' : 'OUT OF LIMITS'}
-              </Badge>
-            </div>
-          </div>
         </div>
 
         <CardContent className="flex-1 p-0 overflow-hidden bg-muted/5 min-w-0">
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_350px] h-full overflow-hidden min-w-0">
                 <div className="h-full min-w-0 border-r bg-background overflow-hidden">
                   <div className="p-6 min-w-0">
-                    <div
-                      className={cn(
-                        "min-w-0 overflow-auto custom-scrollbar pb-4 rounded-xl border p-4 bg-muted/5 shadow-inner",
-                        isMobile ? "h-[360px] p-2" : "h-auto"
-                      )}
-                      style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-                    >
-                      <div className={cn(
-                        "min-w-[980px] relative bg-background rounded-xl border shadow-sm p-4",
-                        isMobile ? "min-w-[720px] min-h-[520px] h-[520px] p-2" : "min-h-[550px] h-[550px]"
-                      )}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ScatterChart margin={isMobile ? { top: 12, right: 24, bottom: 36, left: 32 } : { top: 20, right: 60, bottom: 60, left: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name="CG" domain={[fXMin, fXMax]} ticks={generateNiceTicks(fXMin, fXMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
-                          <Label value="CG (inches)" offset={isMobile ? -10 : -20} position="insideBottom" className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
-                        </XAxis>
-                        <YAxis type="number" dataKey="y" name="Weight" domain={[fYMin, fYMax]} ticks={generateNiceTicks(fYMin, fYMax, isMobile ? 5 : 8)} allowDataOverflow tick={{ fontSize: isMobile ? 9 : 10 }}>
-                          <Label value="Gross Weight (lbs)" angle={-90} position="insideLeft" offset={isMobile ? -18 : -40} className={cn("font-black uppercase fill-muted-foreground", isMobile ? "text-[8px]" : "text-[10px]")} />
-                        </YAxis>
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                        <Scatter data={envelope} fill="transparent" line={{ stroke: 'hsl(var(--primary))', strokeWidth: isMobile ? 1.5 : 2 }} shape={() => <g />} />
-                        <Scatter data={envelope}>
-                          {envelope.map((entry, index) => <Cell key={index} fill={POINT_COLORS[index % POINT_COLORS.length]} />)}
-                        </Scatter>
-                        <Scatter data={[{ x: results.cg, y: results.weight }]}>
-                          <ReferenceDot x={results.cg} y={results.weight} r={isMobile ? 7 : 10} fill={results.isSafe ? "#10b981" : "#ef4444"} stroke="white" strokeWidth={isMobile ? 2 : 3} />
-                        </Scatter>
-                      </ScatterChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                    <MasterMassBalanceGraph
+                      template={graphTemplate}
+                      currentPoint={{ x: results.cg, y: results.weight }}
+                      showLayoutBadge={false}
+                      inlineTitle
+                      showCompactMetrics={false}
+                      compactHeightMode="tight"
+                    />
                   </div>
                 </div>
 

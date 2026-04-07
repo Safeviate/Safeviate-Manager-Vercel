@@ -25,7 +25,7 @@ import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
-import { MassBalanceEnvelopeChart } from '@/components/mass-balance-envelope-chart';
+import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -260,6 +260,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }, [stations, basicEmpty, graphConfig.envelope]);
 
     const handleStationWeightChange = (id: number, weight: string) => {
+        if (weight === '') {
+            setStations(prev => prev.map(s => {
+                if (s.id !== id) return s;
+                if (s.type === 'fuel') {
+                    return { ...s, weight: '', gallons: '' };
+                }
+                return { ...s, weight: '' };
+            }));
+            return;
+        }
+
         const val = parseFloat(weight) || 0;
         setStations(prev => prev.map(s => {
             if (s.id !== id) return s;
@@ -271,6 +282,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     const handleGallonsChange = (id: number, gallons: string) => {
+        if (gallons === '') {
+            setStations(prev => prev.map(s => {
+                if (s.id !== id || s.type !== 'fuel') return s;
+                return { ...s, gallons: '', weight: '' };
+            }));
+            return;
+        }
+
         const val = parseFloat(gallons) || 0;
         setStations(prev => prev.map(s => {
             if (s.id !== id || s.type !== 'fuel') return s;
@@ -397,18 +416,31 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     if (loadingAc || loadingPeople) return <Skeleton className="h-64 w-full" />;
 
     const envelope = graphConfig.envelope;
-    const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
-    const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-    const fXMin = allX.length > 0 ? Math.min(graphConfig.xMin, ...allX) - 1 : graphConfig.xMin;
-    const fXMax = allX.length > 0 ? Math.max(graphConfig.xMax, ...allX) + 1 : graphConfig.xMax;
-    const fYMin = allY.length > 0 ? Math.min(graphConfig.yMin, ...allY) - 100 : graphConfig.yMin;
-    const fYMax = allY.length > 0 ? Math.max(graphConfig.yMax, ...allY) + 100 : graphConfig.yMax;
+    const envelopeXs = envelope.map((point) => point.x);
+    const cgMargin =
+        envelopeXs.length > 0
+            ? Math.min(
+                Math.abs(results.cg - Math.min(...envelopeXs)),
+                Math.abs(Math.max(...envelopeXs) - results.cg)
+            )
+            : null;
+    const graphTemplate: MassBalanceGraphTemplate = {
+        id: booking.id,
+        name: aircraft ? `${aircraft.make} ${aircraft.model}` : booking.type,
+        family: aircraft?.tailNumber || 'Booking',
+        xLabel: 'CG (inches)',
+        yLabel: 'Gross Weight (lbs)',
+        xDomain: [graphConfig.xMin, graphConfig.xMax],
+        yDomain: [graphConfig.yMin, graphConfig.yMax],
+        envelope: envelope.map((point, index) => ({
+            ...point,
+            color: ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'][index % 5],
+        })) as MassBalanceGraphPoint[],
+        currentPoint: { x: results.cg, y: results.weight },
+    };
 
     return (
-        <Card className="flex h-full min-h-0 flex-1 flex-col shadow-none border overflow-hidden">
-            <div className="border-b bg-amber-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-amber-700">
-                Booking detail shell mounted
-            </div>
+        <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
@@ -648,59 +680,73 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="mass-balance" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-                            <ScrollArea className="min-h-0 flex-1">
+                    <TabsContent value="mass-balance" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden overflow-x-hidden">
+                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden overflow-x-hidden">
+                            <ScrollArea className="min-h-0 flex-1 max-w-full overflow-x-hidden">
                                 <CardHeader><CardTitle className="text-xl flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-primary" /> Mass & Balance</CardTitle></CardHeader>
-                                <CardContent className="min-h-full pb-20">
-                                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+                                <CardContent className="min-h-full overflow-x-hidden pb-20">
+                                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8 overflow-x-hidden">
                                         <div className="flex flex-col">
-                                                <div className={cn("rounded-xl border bg-background p-3 sm:p-4", isMobile ? "mx-auto w-full max-w-[430px]" : "mx-auto w-full max-w-[820px]")}>
-                                                <div className="mb-3 flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading Envelope</p>
-                                                        <p className="text-xs font-semibold text-muted-foreground">Current position against approved limits</p>
-                                                    </div>
-                                                    <Badge variant={results.isSafe ? 'default' : 'destructive'} className="text-[10px] font-black uppercase">
-                                                        {results.isSafe ? 'Within Limits' : 'Out Of Limits'}
-                                                    </Badge>
-                                                </div>
-                                                <MassBalanceEnvelopeChart
-                                                    envelope={envelope}
+                                            <div className={cn("max-w-full overflow-x-hidden", isMobile ? "mx-auto w-full max-w-[430px]" : "mx-auto w-full max-w-[860px]")}>
+                                                <MasterMassBalanceGraph
+                                                    template={graphTemplate}
                                                     currentPoint={{ x: results.cg, y: results.weight }}
-                                                    xMin={fXMin}
-                                                    xMax={fXMax}
-                                                    yMin={fYMin}
-                                                    yMax={fYMax}
-                                                    isSafe={results.isSafe}
-                                                    isMobile={isMobile}
+                                                    showHeader={false}
+                                                    showLayoutBadge={false}
+                                                    inlineTitle
+                                                    showCompactMetrics={false}
+                                                    compactHeightMode="tight"
                                                 />
-                                                {isMobile ? (
-                                                    <div className="mt-3 grid grid-cols-2 gap-3 text-center">
-                                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG</p>
-                                                            <p className="text-sm font-black">{results.cg} in</p>
-                                                        </div>
-                                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Weight</p>
-                                                            <p className="text-sm font-black">{results.weight} lbs</p>
-                                                        </div>
-                                                    </div>
-                                                ) : null}
                                             </div>
                                         </div>
                                         <div className="space-y-6">
-                                            <div className="p-4 bg-muted/30 rounded-xl space-y-4">
-                                                <DetailItem label="Total Weight"><p className="text-2xl font-black">{results.weight} lbs</p></DetailItem>
-                                                <DetailItem label="Center Gravity"><p className="text-2xl font-black">{results.cg} in</p></DetailItem>
-                                                <Button size="sm" onClick={handleSaveToBooking} className="w-full h-10 uppercase text-xs font-black bg-emerald-700">Save Load config</Button>
-                                            </div>
-                                            <ScrollArea className="h-[400px] pr-4">
-                                                <div className="space-y-4">
-                                                    <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Basic Empty</p>
-                                                        <p className="text-sm font-black">{basicEmpty.weight} lbs @ {basicEmpty.arm} in</p>
+                                            <div className="rounded-xl border bg-background p-4 space-y-4">
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
+                                                    <div className="flex flex-wrap items-baseline gap-2">
+                                                        <span className="text-sm font-black uppercase tracking-[0.18em] text-primary">
+                                                            {aircraft?.tailNumber || booking.aircraftId}
+                                                        </span>
+                                                        <span className="text-lg font-black uppercase tracking-tight">
+                                                            {aircraft ? `${aircraft.make} ${aircraft.model}` : booking.type}
+                                                        </span>
                                                     </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/70 pt-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG</p>
+                                                        <p className="text-sm font-black tabular-nums">{results.cg.toFixed(2)} in</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Weight</p>
+                                                        <p className="text-sm font-black tabular-nums">{results.weight.toFixed(0)} lbs</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                                                        <p className={cn('text-sm font-black uppercase', results.isSafe ? 'text-emerald-700' : 'text-red-700')}>
+                                                            {results.isSafe ? 'Within limits' : 'Review'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG Margin</p>
+                                                        <p className="text-sm font-black tabular-nums">
+                                                            {cgMargin === null ? '--' : `${cgMargin.toFixed(1)} in`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-xl border bg-background p-4 space-y-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Input Stations</p>
+                                                        <p className="text-xs text-muted-foreground">Adjust only the live loading inputs for this booking.</p>
+                                                    </div>
+                                                    <Button size="sm" onClick={handleSaveToBooking} className="h-10 uppercase text-xs font-black bg-emerald-700">
+                                                        Save Load Config
+                                                    </Button>
+                                                </div>
+                                                <div className="space-y-4">
                                                     {stations.map(s => (
                                                         <div key={s.id} className="space-y-1.5 p-3 border rounded-lg bg-background">
                                                             <UILabel className="text-[10px] font-black uppercase text-muted-foreground">{s.name}</UILabel>
@@ -730,7 +776,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </ScrollArea>
+                                            </div>
                                         </div>
                                     </div>
                                 </CardContent>

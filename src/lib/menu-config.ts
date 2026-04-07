@@ -422,6 +422,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'development-view',
       },
       {
+        href: '/development/graph-test',
+        label: 'Graph Test',
+        description: 'Build and tune a mass and balance envelope from scratch.',
+        permissionId: 'development-view',
+      },
+      {
         href: '/development/test',
         label: 'Welcome Email Test',
         description: 'Send a test welcome email to any address.',
