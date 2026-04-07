@@ -32,7 +32,7 @@ import { addMonths, format } from 'date-fns';
 import type { Tool } from '@/types/tool';
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Tool name is required.'),
+  name: z.string().min(1, 'Equipment name is required.'),
   manufacturer: z.string().optional(),
   modelNumber: z.string().optional(),
   serialNumber: z.string().min(1, 'Serial number is crucial for traceability.'),
@@ -42,7 +42,7 @@ const formSchema = z.object({
   calibrationIntervalMonths: z.coerce.number().min(0).optional(),
 });
 
-export function AddToolDialog({ tenantId }: { tenantId: string }) {
+export function AddToolDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -85,9 +85,10 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'Failed to add tool.');
       window.dispatchEvent(new Event('safeviate-tools-updated'));
+      window.dispatchEvent(new Event('safeviate-assets-tools-updated'));
       
       toast({
-        title: 'Tool Added',
+        title: 'Equipment Added',
         description: `${values.name} (${values.serialNumber}) has been added to the registry.`,
       });
       setIsOpen(false);
@@ -110,21 +111,21 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
           className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full sm:w-auto shadow-md gap-2 h-9 px-6 text-xs font-black uppercase'}
         >
           <span className="flex items-center gap-2">
-            <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} /> Add Tool
+            <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} /> Add Equipment
           </span>
           {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Register New Tool</DialogTitle>
-          <DialogDescription>Add a new tool to the calibration registry.</DialogDescription>
+          <DialogTitle>Register New Equipment</DialogTitle>
+          <DialogDescription>Add a new equipment item to the calibration registry.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>Tool Name</FormLabel><FormControl><Input placeholder="e.g. Torque Wrench" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Equipment Name</FormLabel><FormControl><Input placeholder="e.g. Torque Wrench" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="serialNumber" render={({ field }) => (
                 <FormItem><FormLabel>Serial Number</FormLabel><FormControl><Input placeholder="Required for tracing" {...field} /></FormControl><FormMessage /></FormItem>
@@ -160,7 +161,7 @@ export function AddToolDialog({ tenantId }: { tenantId: string }) {
 
             <DialogFooter className="pt-4">
               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Register Tool</Button>
+              <Button type="submit">Register Equipment</Button>
             </DialogFooter>
           </form>
         </Form>

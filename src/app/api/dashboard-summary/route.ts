@@ -1,6 +1,15 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureAircraftSchema, ensureBookingsSchema, ensureCorrectiveActionPlansSchema, ensurePersonnelSchema, ensureRisksSchema } from '@/lib/server/bootstrap-db';
+import {
+  ensureAircraftSchema,
+  ensureBookingsSchema,
+  ensureCorrectiveActionPlansSchema,
+  ensureManagementOfChangeSchema,
+  ensurePersonnelSchema,
+  ensureQualityAuditsSchema,
+  ensureRisksSchema,
+  ensureSafetyReportsSchema,
+} from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -55,9 +64,12 @@ export async function GET() {
     await Promise.all([
       ensureAircraftSchema(),
       ensureBookingsSchema(),
+      ensureManagementOfChangeSchema(),
       ensurePersonnelSchema(),
+      ensureQualityAuditsSchema(),
       ensureCorrectiveActionPlansSchema(),
       ensureRisksSchema(),
+      ensureSafetyReportsSchema(),
     ]);
     const [
       bookingRows,

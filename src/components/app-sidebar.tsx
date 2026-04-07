@@ -1,12 +1,12 @@
 'use client';
 import {
   Sidebar,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
   SidebarContent,
+  SidebarHeader,
   SidebarGroup,
   SidebarSeparator,
   useSidebar,
@@ -205,13 +205,13 @@ const SidebarItems = () => {
                                 </SidebarMenuButton>
                             </SidebarCollapsibleTrigger>
                             <SidebarCollapsibleContent>
-                                <SidebarMenuSub className="mb-1 w-full border-t border-sidebar-border/45 pl-0">
+                                <SidebarMenuSub className="mx-3 mb-1 mt-1 w-auto translate-x-0 gap-0.5 border-t-0 border-sidebar-border/25 px-2 py-0.5">
                                     {subItems.map((subItem) => (
-                                        <SidebarMenuSubItem key={subItem.href} className="border-b border-sidebar-border/10 last:border-b-0">
+                                        <SidebarMenuSubItem key={subItem.href} className="border-b-0">
                                             <SidebarMenuSubButton
                                               asChild
                                               isActive={normalizePath(pathname) === normalizePath(subItem.href) || selectedSubItem?.href === subItem.href}
-                                              className="ml-0 w-full rounded-none px-3 py-2 text-[11px] font-medium tracking-[-0.01em] text-sidebar-foreground/80 hover:bg-sidebar-accent/25 data-[active=true]:bg-sidebar-accent/45 data-[active=true]:text-sidebar-foreground"
+                                              className="h-9 w-full translate-x-0 rounded-md bg-transparent px-3.5 py-0 text-sm leading-none font-medium tracking-[-0.01em] text-sidebar-foreground/76 transition-[background-color,color] hover:bg-sidebar-accent/20 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent/20 focus-visible:text-sidebar-foreground data-[active=true]:bg-sidebar-accent/20 data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-none data-[active=true]:hover:bg-sidebar-accent/20"
                                             >
                                                 <Link
                                                   href={subItem.href}
@@ -359,21 +359,8 @@ export function AppSidebar() {
   const userFallback = userDisplayName.charAt(0).toUpperCase();
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="app-sidebar-brand flex items-center gap-2 rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/25 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-sidebar-border/70 bg-sidebar text-sm font-semibold text-sidebar-foreground">
-              S
-            </div>
-            <span className="app-sidebar-brand-label truncate font-headline text-[15px] font-semibold tracking-[-0.01em] text-sidebar-foreground">
-              Safeviate
-            </span>
-          </div>
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent className="pt-3">
+    <Sidebar className="top-0 h-svh">
+      <SidebarContent className="pt-[69px]">
         <SidebarItems />
       </SidebarContent>
       <SidebarFooter>

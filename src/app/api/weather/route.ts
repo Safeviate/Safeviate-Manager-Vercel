@@ -4,6 +4,44 @@ import { NextRequest, NextResponse } from 'next/server';
  * Proxy for aviationweather.gov (NOAA)
  * This does NOT require an API key for basic METAR/TAF data.
  */
+async function fetchObservation(
+  url: string,
+  label: 'METAR' | 'TAF',
+  icao: string,
+  headers: Record<string, string>
+) {
+  try {
+    const response = await fetch(url, {
+      headers,
+      next: { revalidate: 300 }
+    });
+
+    if (!response.ok) {
+      console.warn(`[Weather API] ${label} fetch failed for ${icao}: ${response.status}`);
+      return null;
+    }
+
+    const raw = await response.text();
+
+    if (!raw.trim()) {
+      console.warn(`[Weather API] ${label} returned an empty body for ${icao}`);
+      return null;
+    }
+
+    const payload = JSON.parse(raw);
+
+    if (!Array.isArray(payload)) {
+      console.warn(`[Weather API] ${label} returned an unexpected payload for ${icao}`);
+      return null;
+    }
+
+    return payload[0] || null;
+  } catch (error: any) {
+    console.warn(`[Weather API] ${label} request failed for ${icao}: ${error.message}`);
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const ids = searchParams.get('ids');
@@ -22,33 +60,20 @@ export async function GET(request: NextRequest) {
     console.log(`[Weather API] Fetching METAR/TAF for: ${icao}`);
     
     // Fetch METAR and TAF in parallel
-    const [metarRes, tafRes] = await Promise.all([
-      fetch(`https://aviationweather.gov/api/data/metar?ids=${icao}&format=json`, { 
-        headers,
-        next: { revalidate: 300 } 
-      }),
-      fetch(`https://aviationweather.gov/api/data/taf?ids=${icao}&format=json`, { 
-        headers,
-        next: { revalidate: 300 } 
-      })
+    const [metar, taf] = await Promise.all([
+      fetchObservation(
+        `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json`,
+        'METAR',
+        icao,
+        headers
+      ),
+      fetchObservation(
+        `https://aviationweather.gov/api/data/taf?ids=${icao}&format=json`,
+        'TAF',
+        icao,
+        headers
+      )
     ]);
-
-    let metar = null;
-    let taf = null;
-
-    if (metarRes.ok) {
-        const metarData = await metarRes.json();
-        metar = Array.isArray(metarData) ? (metarData[0] || null) : null;
-    } else {
-        console.warn(`[Weather API] METAR fetch failed for ${icao}: ${metarRes.status}`);
-    }
-
-    if (tafRes.ok) {
-        const tafData = await tafRes.json();
-        taf = Array.isArray(tafData) ? (tafData[0] || null) : null;
-    } else {
-        console.warn(`[Weather API] TAF fetch failed for ${icao}: ${tafRes.status}`);
-    }
 
     if (!metar && !taf) {
         return NextResponse.json({ error: `No weather data found for station ${icao}` }, { status: 404 });

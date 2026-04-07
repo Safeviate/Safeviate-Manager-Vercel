@@ -61,23 +61,22 @@ export function BookingDetailHeader({
       </div>
 
       {/* Navigation Sub-header (Muted background strip like Filter pins) */}
-      <div className="px-4 md:px-6 py-3 sticky top-0 z-20 backdrop-blur-sm bg-transparent">
-        <div className="relative">
-          <ResponsiveTabRow
-            value={activeTab}
-            onValueChange={onTabChange}
-            placeholder="Select Section"
-            action={tabRowAction}
-            joinedDesktopTabs={false}
-            options={[
-              { value: 'flight-details', label: 'Flight Details', icon: FileText },
-              { value: 'planning', label: 'Planning', icon: Settings2 },
-              { value: 'mass-balance', label: 'Mass & Balance', icon: Scale },
-              { value: 'navlog', label: 'Navlog', icon: NavIcon },
-              { value: 'checks', label: 'Checks', icon: ClipboardCheck },
-            ]}
-          />
-        </div>
+      <div className="sticky top-0 z-20 backdrop-blur-sm bg-transparent">
+        <ResponsiveTabRow
+          className="relative shrink-0 border-b bg-muted/5 px-4 py-3 md:px-6"
+          value={activeTab}
+          onValueChange={onTabChange}
+          placeholder="Select Section"
+          action={tabRowAction}
+          joinedDesktopTabs={false}
+          options={[
+            { value: 'flight-details', label: 'Flight Details', icon: FileText },
+            { value: 'planning', label: 'Planning', icon: Settings2 },
+            { value: 'mass-balance', label: 'Mass & Balance', icon: Scale },
+            { value: 'navlog', label: 'Navlog', icon: NavIcon },
+            { value: 'checks', label: 'Checks', icon: ClipboardCheck },
+          ]}
+        />
       </div>
     </>
   );

@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureToolsSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -14,6 +15,7 @@ async function getTenantId() {
 
 export async function GET() {
   try {
+    await ensureToolsSchema();
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ tools: [] }, { status: 200 });
     const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
@@ -28,6 +30,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  await ensureToolsSchema();
   const tenantId = await getTenantId();
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await request.json().catch(() => null);

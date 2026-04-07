@@ -145,6 +145,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'moc-manage',
       },
       {
+        href: '/safety/safety-files',
+        label: 'Safety Files',
+        description: 'Track on-site construction health and safety file readiness.',
+        permissionId: 'safety-view',
+      },
+      {
         href: '/safety/risk-matrix',
         label: 'Risk Matrix',
         description: 'Visualize the organizational risk landscape.',

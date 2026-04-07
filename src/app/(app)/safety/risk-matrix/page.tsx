@@ -58,11 +58,21 @@ export default function RiskMatrixPage() {
   const queueSave = (configuration: RiskMatrixSettings) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      void fetch('/api/risk-matrix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ configuration }),
-      });
+      void (async () => {
+        try {
+          const response = await fetch('/api/risk-matrix', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ configuration }),
+          });
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error((payload as { error?: string })?.error || 'Failed to save risk matrix settings.');
+          }
+        } catch (error) {
+          console.error('[risk-matrix] failed to persist configuration:', error);
+        }
+      })();
     }, 250);
   };
 
@@ -85,6 +95,7 @@ export default function RiskMatrixPage() {
     void load();
     return () => {
       cancelled = true;
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, []);
 
@@ -97,7 +108,15 @@ export default function RiskMatrixPage() {
   const openColorPicker = (cellId: string) => {
     if (!canEditColors) return;
     setActiveCell(cellId);
-    colorInputRef.current?.click();
+    requestAnimationFrame(() => {
+      const input = colorInputRef.current;
+      if (!input) return;
+      if ('showPicker' in input && typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+      }
+      input.click();
+    });
   };
 
   const handleLikelihoodChange = (index: number, field: 'name' | 'description', value: string) => {
@@ -188,7 +207,15 @@ export default function RiskMatrixPage() {
                     ))}
                   </div>
                 </div>
-                <Input type="color" ref={colorInputRef} className="hidden" onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)} />
+                <Input
+                  type="color"
+                  ref={colorInputRef}
+                  tabIndex={-1}
+                  value={activeCell ? colors[activeCell] ?? '#000000' : '#000000'}
+                  className="pointer-events-none absolute h-0 w-0 opacity-0"
+                  onChange={(e) => activeCell && handleColorChange(activeCell, e.target.value)}
+                  onBlur={() => setActiveCell(null)}
+                />
               </div>
             </div>
             <Separator />

@@ -6,6 +6,9 @@ type TableName =
   | 'roles'
   | 'departments'
   | 'personnel'
+  | 'tools'
+  | 'safety_file_projects'
+  | 'safety_file_assignments'
   | 'tenant_configs'
   | 'alerts'
   | 'company_documents'
@@ -94,6 +97,63 @@ export async function ensureAircraftSchema() {
     )
   `);
   tableCache.set('aircrafts', true);
+}
+
+export async function ensureToolsSchema() {
+  if (await hasTable('tools')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS tools (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('tools', true);
+}
+
+export async function ensureSafetyFileProjectsSchema() {
+  if (await hasTable('safety_file_projects')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS safety_file_projects (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('safety_file_projects', true);
+}
+
+export async function ensureSafetyFileAssignmentsSchema() {
+  if (await hasTable('safety_file_assignments')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS safety_file_assignments (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      project_id VARCHAR(128) NOT NULL,
+      personnel_id VARCHAR(128) NOT NULL,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS safety_file_assignments_project_idx
+    ON safety_file_assignments (tenant_id, project_id)
+  `);
+  tableCache.set('safety_file_assignments', true);
 }
 
 export async function ensureTenantConfigSchema() {
@@ -251,6 +311,23 @@ export async function ensureSafetyReportsSchema() {
     )
   `);
   tableCache.set('safety_reports', true);
+}
+
+export async function ensureQualityAuditsSchema() {
+  if (await hasTable('quality_audits')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS quality_audits (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('quality_audits', true);
 }
 
 export async function ensureManagementOfChangeSchema() {
