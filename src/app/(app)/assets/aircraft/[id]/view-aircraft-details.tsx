@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, Upload, Trash2, Calendar, ShieldCheck, Gauge, Timer, Box, FileText, Zap, Settings, Edit3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
@@ -76,7 +77,7 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button variant="outline" onClick={onEdit} className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border-2 gap-2 rounded-2xl shadow-sm hover:bg-muted/50">
+                            <Button variant="outline" onClick={onEdit} className={HEADER_ACTION_BUTTON_CLASS}>
                                 <Edit3 className="h-4 w-4" /> Edit Core Data
                             </Button>
                         </div>

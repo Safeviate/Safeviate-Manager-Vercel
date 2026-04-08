@@ -22,7 +22,7 @@ type UploadMode = 'file' | 'camera';
 interface DocumentUploaderProps {
   trigger: (open: (mode?: UploadMode) => void) => ReactNode;
   defaultFileName?: string;
-  onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => void;
+  onDocumentUploaded: (document: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => Promise<void> | void;
   restrictedMode?: UploadMode;
 }
 
@@ -194,7 +194,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
       }
 
       const uploaded = await uploadToServer(selectedFile, fileName);
-      finishUpload(uploaded.url, uploaded.uploadDate);
+      await finishUpload(uploaded.url, uploaded.uploadDate);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -206,8 +206,8 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     }
   };
   
-  const finishUpload = (url: string, uploadDate: string) => {
-    onDocumentUploaded({
+  const finishUpload = async (url: string, uploadDate: string) => {
+    await onDocumentUploaded({
         name: fileName,
         url,
         uploadDate,
@@ -215,8 +215,8 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     });
 
     toast({
-        title: 'Document Uploaded',
-        description: `"${fileName}" has been prepared for saving.`,
+      title: 'Document Uploaded',
+      description: `"${fileName}" has been saved successfully.`,
     });
     
     setIsOpen(false);

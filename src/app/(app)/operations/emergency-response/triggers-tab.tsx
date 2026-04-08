@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 interface TriggersTabProps {
   tenantId: string;
@@ -85,7 +86,7 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
         {canAdmin && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Define Trigger</Button>
+              <Button className={HEADER_ACTION_BUTTON_CLASS}><PlusCircle className="mr-2 h-4 w-4" /> Define Trigger</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -99,8 +100,8 @@ export function TriggersTab({ tenantId }: TriggersTabProps) {
                 <div className="space-y-2"><Label>Activation Criteria</Label><Textarea name="criteria" placeholder="Describe exactly what triggers this action..." required /></div>
                 <div className="space-y-2"><Label>Initial Checklist (One per line)</Label><Textarea name="checklist" placeholder="1. Secure flight log&#10;2. Call Safety Manager..." required /></div>
                 <DialogFooter>
-                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                  <Button type="submit">Define Trigger</Button>
+                  <DialogClose asChild><Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button></DialogClose>
+                  <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>Define Trigger</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

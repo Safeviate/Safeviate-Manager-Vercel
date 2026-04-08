@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import {
   Dialog,
   DialogClose,
@@ -113,7 +114,7 @@ export function AssignPersonnelDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="h-9 gap-2 px-4 text-[10px] font-black uppercase tracking-widest">
+        <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>
           <PlusCircle className="h-3.5 w-3.5" />
           Assign Personnel
         </Button>

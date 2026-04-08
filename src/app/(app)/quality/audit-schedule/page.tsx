@@ -5,7 +5,7 @@ import {
   Card,
   CardContent,
 } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from "@/components/page-header";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -336,12 +336,7 @@ export default function AuditSchedulePage() {
                         variant={isMobile ? 'outline' : 'default'}
                         size="sm"
                         onClick={() => setIsAddAreaOpen(true)}
-                        className={cn(
-                            'h-9 text-[10px] font-black uppercase tracking-tight gap-2',
-                            isMobile
-                                ? 'w-full justify-between bg-background px-3 text-foreground shadow-sm border-border hover:bg-muted/40'
-                                : 'px-6 shadow-md'
-                        )}
+                        className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
                     >
                         <span className="flex items-center gap-2">
                             <PlusCircle className="h-4 w-4" />

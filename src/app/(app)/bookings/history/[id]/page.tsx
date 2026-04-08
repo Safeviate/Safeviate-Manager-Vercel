@@ -4,7 +4,6 @@ import { use, useEffect, useState } from 'react';
 import type { Booking } from '@/types/booking';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ViewBookingDetails } from './view-booking-details';
-import { BackNavButton } from '@/components/back-nav-button';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 interface BookingDetailPageProps {
@@ -69,7 +68,6 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
                 <p className="text-destructive mb-4">
                     {error ? `Error: ${error}` : "Booking not found."}
                 </p>
-                <BackNavButton href="/bookings/history" text="Back to History" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
             </div>
         )
     }

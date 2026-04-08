@@ -35,9 +35,9 @@ export type FindingLevelsSettings = {
 
 const defaultFindingLevels: FindingLevel[] = [
     { id: 'obs', name: 'Observation', color: '#3b82f6', foregroundColor: '#ffffff' },
-    { id: 'lvl1', name: 'Level 1', color: '#facc15', foregroundColor: '#000000' },
+    { id: 'lvl1', name: 'Level 1', color: '#ef4444', foregroundColor: '#ffffff' },
     { id: 'lvl2', name: 'Level 2', color: '#f97316', foregroundColor: '#ffffff' },
-    { id: 'lvl3', name: 'Level 3', color: '#ef4444', foregroundColor: '#ffffff' },
+    { id: 'lvl3', name: 'Level 3', color: '#facc15', foregroundColor: '#000000' },
 ];
 
 export default function FeaturesPage() {
@@ -106,7 +106,13 @@ export default function FeaturesPage() {
         fetch('/api/tenant-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ config: { 'feature-settings': featureSettings, 'finding-levels-settings': nextSettings } }),
+          body: JSON.stringify({
+            config: {
+              'feature-settings': featureSettings,
+              'finding-levels-settings': nextSettings,
+              'finding-levels': newLevels,
+            },
+          }),
         }).catch(() => {});
         window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
       }
@@ -118,7 +124,13 @@ export default function FeaturesPage() {
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'feature-settings': nextSettings, 'finding-levels-settings': findingLevelsSettings } }),
+      body: JSON.stringify({
+        config: {
+          'feature-settings': nextSettings,
+          'finding-levels-settings': findingLevelsSettings,
+          'finding-levels': findingLevelsSettings?.levels || defaultFindingLevels,
+        },
+      }),
     }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-feature-settings-updated'));
   };
@@ -147,7 +159,13 @@ export default function FeaturesPage() {
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'feature-settings': featureSettings, 'finding-levels-settings': nextSettings } }),
+      body: JSON.stringify({
+        config: {
+          'feature-settings': featureSettings,
+          'finding-levels-settings': nextSettings,
+          'finding-levels': updatedLevels,
+        },
+      }),
     }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
 
@@ -164,7 +182,13 @@ export default function FeaturesPage() {
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'feature-settings': featureSettings, 'finding-levels-settings': nextSettings } }),
+      body: JSON.stringify({
+        config: {
+          'feature-settings': featureSettings,
+          'finding-levels-settings': nextSettings,
+          'finding-levels': updatedLevels,
+        },
+      }),
     }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-finding-levels-updated'));
     toast({ title: 'Finding Level Removed' });

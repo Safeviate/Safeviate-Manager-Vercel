@@ -29,6 +29,7 @@ type ResponsiveTabRowProps = {
   action?: ReactNode;
   joinedDesktopTabs?: boolean;
   flatTabs?: boolean;
+  buttonLikeTabs?: boolean;
 };
 
 export function ResponsiveTabRow({
@@ -40,6 +41,7 @@ export function ResponsiveTabRow({
   action,
   joinedDesktopTabs = false,
   flatTabs = false,
+  buttonLikeTabs = false,
 }: ResponsiveTabRowProps) {
   const isMobile = useIsMobile();
 
@@ -48,7 +50,7 @@ export function ResponsiveTabRow({
       {isMobile ? (
         <div className="space-y-2">
           <Select value={value} onValueChange={onValueChange}>
-            <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground text-[10px] font-bold uppercase h-9 px-3 shadow-sm hover:bg-accent/40">
+            <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground h-10 px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent/40">
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent className="w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]">
@@ -84,9 +86,11 @@ export function ResponsiveTabRow({
                   key={option.value}
                   value={option.value}
                   className={cn(
-                    flatTabs
-                      ? "rounded-md border border-input bg-transparent px-5 py-2 text-[10px] font-black uppercase tracking-widest shadow-none data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                      : `${HEADER_TAB_TRIGGER_CLASS} border bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`,
+                    buttonLikeTabs
+                      ? "h-10 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm gap-2.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                      : flatTabs
+                        ? "rounded-md border border-input bg-transparent px-5 py-2 text-[10px] font-black uppercase tracking-widest shadow-none data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                        : `${HEADER_TAB_TRIGGER_CLASS} border bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`,
                     joinedDesktopTabs && !flatTabs
                       ? "!rounded-none border-0 border-r border-input last:border-r-0 data-[state=active]:rounded-none"
                       : flatTabs
@@ -113,6 +117,7 @@ type OrganizationTabsRowProps = {
   onTabChange: (value: string) => void;
   className?: string;
   flatTabs?: boolean;
+  buttonLikeTabs?: boolean;
 };
 
 export function OrganizationTabsRow({
@@ -121,6 +126,7 @@ export function OrganizationTabsRow({
   onTabChange,
   className,
   flatTabs = false,
+  buttonLikeTabs = false,
 }: OrganizationTabsRowProps) {
   return (
     <ResponsiveTabRow
@@ -129,6 +135,7 @@ export function OrganizationTabsRow({
       placeholder="Select Organization"
       className={className}
       flatTabs={flatTabs}
+      buttonLikeTabs={buttonLikeTabs}
       options={[
         { value: 'internal', label: 'Internal', icon: Building },
         ...organizations.map((organization) => ({

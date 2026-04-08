@@ -49,6 +49,10 @@
     --header-background-opacity: 0.22;
     --header-foreground: 34 33% 94%;
     --header-border: 23 14% 20%;
+    --header-button-background: 0 0% 100%;
+    --header-button-foreground: 215 28% 17%;
+    --header-button-border: 214 32% 84%;
+    --header-button-hover: 210 60% 96%;
     --swimlane-header-background: 147 100% 12%;
     --swimlane-header-foreground: 0 0% 100%;
     /* Matrix hierarchy colors — also managed by theme-provider.tsx */
@@ -102,6 +106,10 @@
     --header-background-opacity: 0.22;
     --header-foreground: 205 67% 95%;
     --header-border: 215 20% 25%;
+    --header-button-background: 215 20% 22%;
+    --header-button-foreground: 205 67% 95%;
+    --header-button-border: 215 20% 30%;
+    --header-button-hover: 215 20% 28%;
     --swimlane-header-background: 215 20% 25%;
     --swimlane-header-foreground: 205 67% 95%;
     /* Matrix hierarchy colors — also managed by theme-provider.tsx */

@@ -17,7 +17,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
-import { MainPageHeader } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 
@@ -124,7 +124,7 @@ export default function SafetyIndicatorsPage() {
               <Button
                 size="sm"
                 variant={isMobile ? "outline" : "default"}
-                className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : "w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"}
+                className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`}
                 onClick={() => {
                   setSelectedSpi({
                     id: 'new-spi',
@@ -179,7 +179,7 @@ export default function SafetyIndicatorsPage() {
               </p>
               <Button
                 size="sm"
-                className="mt-5 h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"
+                className={`mt-5 ${HEADER_ACTION_BUTTON_CLASS}`}
                 onClick={() => {
                   setSelectedSpi({
                     id: 'new-spi',

@@ -19,6 +19,8 @@ import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MainPageHeader } from '@/components/page-header';
+import { BackNavButton } from '@/components/back-nav-button';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -102,11 +104,9 @@ export default function VehicleDetailPage({ params }: VehicleDetailPageProps) {
                 <p className="text-xl font-black uppercase tracking-tight">Vehicle Not Found</p>
                 <p className="text-xs font-bold uppercase tracking-widest text-foreground/80 italic">The requested ground asset could not be located in the fleet inventory.</p>
             </div>
-            <Button asChild variant="outline" className="mt-4 text-[10px] font-black uppercase h-10 px-8 border-slate-300 shadow-sm">
-                <Link href="/assets/vehicles">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Vehicles
-                </Link>
-            </Button>
+            <div className="mt-4">
+                <BackNavButton href="/assets/vehicles" text="Back to Vehicles" />
+            </div>
         </div>
       </div>
     );
@@ -117,21 +117,16 @@ export default function VehicleDetailPage({ params }: VehicleDetailPageProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab} className={cn('w-full flex-1 flex flex-col', isMobile ? 'overflow-visible' : 'overflow-hidden')}>
         <div className={cn('flex-1 pb-10', isMobile ? 'overflow-visible' : 'overflow-y-auto no-scrollbar')}>
           <Card className="shadow-none border rounded-xl overflow-hidden flex flex-col">
-            <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-8 shrink-0">
-              <div className="flex items-center gap-4">
-                <Button asChild variant="ghost" size="icon" className="h-10 w-10 border rounded-full bg-background hover:bg-muted shadow-sm">
-                    <Link href="/assets/vehicles"><ArrowLeft className="h-5 w-5" /></Link>
-                </Button>
-                <div>
-                    <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase tracking-tight">
-                    <Car className="h-6 w-6 text-primary" />
-                    {vehicle.registrationNumber}
-                    </CardTitle>
-                    <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{vehicle.make} {vehicle.model}</CardDescription>
+            <MainPageHeader
+              title={vehicle.registrationNumber}
+              description={`${vehicle.make} ${vehicle.model}`}
+              actions={
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <BackNavButton href="/assets/vehicles" text="Back to Vehicles" />
+                  <EditVehicleDialog vehicle={vehicle} tenantId={tenantId || ''} />
                 </div>
-              </div>
-              <EditVehicleDialog vehicle={vehicle} tenantId={tenantId || ''} />
-            </CardHeader>
+              }
+            />
 
             <div className="border-b bg-muted/5 px-6 py-2 shrink-0 overflow-hidden">
                 <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar w-full flex items-center">

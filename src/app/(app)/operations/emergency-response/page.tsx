@@ -16,6 +16,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import type { ExternalOrganization } from '@/types/quality';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 export default function EmergencyResponsePage() {
   const { tenantId } = useUserProfile();
@@ -58,7 +59,7 @@ export default function EmergencyResponsePage() {
               activeTab={activeCompanyTab}
               onTabChange={setActiveCompanyTab}
               className="border-b bg-transparent px-4 py-2 shrink-0"
-              flatTabs
+              buttonLikeTabs
             />
           )}
 
@@ -67,7 +68,7 @@ export default function EmergencyResponsePage() {
             onValueChange={setActiveTab}
             placeholder="Select Section"
             className="border-b bg-transparent px-4 py-2 shrink-0"
-            flatTabs
+            buttonLikeTabs
             options={tabs}
           />
 

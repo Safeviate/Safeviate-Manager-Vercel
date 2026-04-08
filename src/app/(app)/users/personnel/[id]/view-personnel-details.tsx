@@ -77,6 +77,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [hiddenMenus, setHiddenMenus] = useState<string[]>(user.accessOverrides?.hiddenMenus || []);
+  const [documents, setDocuments] = useState<Document[]>(user.documents || []);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   
   const { toast } = useToast();
@@ -90,6 +91,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   useEffect(() => {
     setHiddenMenus(user.accessOverrides?.hiddenMenus || []);
   }, [user]);
+
+  useEffect(() => {
+    setDocuments(user.documents || []);
+  }, [user.id]);
 
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
 
@@ -114,16 +119,27 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     setIsImageViewerOpen(true);
   };
   
-  const handleDocumentUpdate = (updatedDocuments: Document[]) => {
-    void fetch(`/api/personnel/${user.id}`, {
+  const handleDocumentUpdate = async (updatedDocuments: Document[]) => {
+    const previousDocuments = documents;
+    setDocuments(updatedDocuments);
+
+    const response = await fetch(`/api/personnel/${user.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ personnel: { ...user, documents: updatedDocuments } }),
     });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setDocuments(previousDocuments);
+      throw new Error(payload.error || 'Failed to update personnel documents.');
+    }
+
+    window.dispatchEvent(new Event('safeviate-personnel-updated'));
   };
 
-  const onDocumentUploaded = (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
-    const currentDocs = user.documents || [];
+  const onDocumentUploaded = async (docDetails: { name: string; url: string; uploadDate: string; expirationDate: string | null }) => {
+    const currentDocs = documents || [];
     const existingDocIndex = currentDocs.findIndex(d => d.name === docDetails.name);
 
     let updatedDocs;
@@ -134,25 +150,52 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     } else {
         updatedDocs = [...currentDocs, docDetails];
     }
-    handleDocumentUpdate(updatedDocs);
+
+    try {
+      await handleDocumentUpdate(updatedDocs);
+      toast({ title: 'Document Saved', description: `"${docDetails.name}" now appears in the document section.` });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: error.message || 'Could not save the uploaded document.',
+      });
+    }
   };
 
-  const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
-    const currentDocs = user.documents || [];
+  const handleExpirationDateChange = async (docName: string, date: Date | undefined) => {
+    const currentDocs = documents || [];
     const docIndex = currentDocs.findIndex(d => d.name === docName);
     
     if (docIndex > -1) {
         const updatedDocs = [...currentDocs];
         updatedDocs[docIndex].expirationDate = date ? date.toISOString() : null;
-        handleDocumentUpdate(updatedDocs);
+        try {
+          await handleDocumentUpdate(updatedDocs);
+          toast({ title: 'Document Updated' });
+        } catch (error: any) {
+          toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: error.message || 'Could not update the document expiry date.',
+          });
+        }
     }
   };
 
-  const handleDocumentDelete = (docNameToDelete: string) => {
-    const currentDocs = user.documents || [];
+  const handleDocumentDelete = async (docNameToDelete: string) => {
+    const currentDocs = documents || [];
     const updatedDocs = currentDocs.filter(doc => doc.name !== docNameToDelete);
-    handleDocumentUpdate(updatedDocs);
-    toast({ title: "Document Deleted" });
+    try {
+      await handleDocumentUpdate(updatedDocs);
+      toast({ title: "Document Deleted" });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error.message || 'Could not delete the document.',
+      });
+    }
   };
 
   const handleSendWelcomeEmail = async () => {
@@ -192,7 +235,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
 
   const combinedDocuments = useMemo(() => {
     const required = role?.requiredDocuments || [];
-    const uploaded = user.documents || [];
+    const uploaded = documents || [];
     const allDocNames = new Set([...required, ...uploaded.map(d => d.name)]);
 
     return Array.from(allDocNames).map(docName => {
@@ -206,7 +249,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
             isRequired: isRequired,
         };
     });
-  }, [role, user.documents]);
+  }, [role, documents]);
 
   const handleToggleMenuOverride = async (href: string, hidden: boolean, subHrefs?: string[]) => {
     if (!canEdit) return;

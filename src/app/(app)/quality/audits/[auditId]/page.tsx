@@ -92,7 +92,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     return (
       <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground mb-4">Audit record not found.</p>
-        <BackNavButton href="/quality/audits" text="Back to Audits" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
+        <BackNavButton href="/quality/audits" text="Back to Audits" />
       </div>
     );
   }

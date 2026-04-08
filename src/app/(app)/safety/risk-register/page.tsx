@@ -24,7 +24,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { MainPageHeader } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -68,7 +68,7 @@ function ManageAreasDialog({ settings, trigger, onAreasChange }: { settings: str
     <Dialog>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+          <Button variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
             <Settings2 className="h-4 w-4" />
             <span className="hidden sm:inline">Manage Areas</span>
           </Button>
@@ -225,7 +225,7 @@ export default function RiskRegisterPage() {
               isMobile ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 w-full justify-between bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50">
+                    <Button variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
                       <span className="flex items-center gap-2">
                         <MoreHorizontal className="h-3.5 w-3.5" />
                         Actions
@@ -246,7 +246,7 @@ export default function RiskRegisterPage() {
               ) : (
                 <div className="flex w-full items-center gap-3 sm:w-auto">
                   {canManageAreas && <ManageAreasDialog settings={hazardAreas} onAreasChange={setHazardAreas} />}
-                  <Button asChild size="sm" className="h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2">
+                  <Button asChild size="sm" className={HEADER_ACTION_BUTTON_CLASS}>
                     <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
                       <PlusCircle className="h-4 w-4" />
                       Add Hazard

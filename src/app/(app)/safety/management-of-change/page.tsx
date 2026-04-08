@@ -15,7 +15,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { MocActions } from './moc-actions';
-import { MainPageHeader } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
@@ -119,8 +119,7 @@ export default function ManagementOfChangePage() {
                             ) : (
                                 <Button
                                     asChild
-                                    size="sm"
-                                    className="w-full sm:w-auto h-9 px-6 text-xs font-black uppercase tracking-tight bg-emerald-700 hover:bg-emerald-800 text-white shadow-md gap-2"
+                                    className={HEADER_ACTION_BUTTON_CLASS}
                                 >
                                     <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
                                         <PlusCircle className="h-4 w-4" />

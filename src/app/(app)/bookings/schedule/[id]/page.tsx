@@ -69,7 +69,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
                 <p className="text-destructive mb-4">
                     {error ? `Error: ${error}` : "Booking not found."}
                 </p>
-                <BackNavButton href="/bookings/schedule" text="Back to Daily Schedule" className="border-slate-300 bg-background text-foreground hover:bg-muted" />
+                <BackNavButton href="/bookings/schedule" text="Back to Daily Schedule" />
             </div>
         )
     }

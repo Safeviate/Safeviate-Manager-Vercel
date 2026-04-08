@@ -30,7 +30,7 @@ export type SummarizeDocumentOutput = z.infer<typeof SummarizeDocumentOutputSche
 const OpenAiRequirementSchema = z.object({
   regulationCode: z.string(),
   regulationStatement: z.string(),
-  technicalStandard: z.string(),
+  technicalStandardLines: z.array(z.string()).default([]),
   companyReference: z.string(),
   parentRegulationCode: z.string().optional(),
 });
@@ -49,11 +49,12 @@ function buildUserContent(input: SummarizeDocumentInput) {
   const textInstructions = [
     'Extract individual compliance requirements for the coherence matrix.',
     'Return only valid JSON in exactly this shape:',
-    '{ "requirements": [ { "regulationCode": string, "regulationStatement": string, "technicalStandard": string, "companyReference": string, "parentRegulationCode": string } ] }',
+    '{ "requirements": [ { "regulationCode": string, "regulationStatement": string, "technicalStandardLines": string[], "companyReference": string, "parentRegulationCode": string } ] }',
     'Only extract items that belong under the selected parent section.',
     'Do not output the higher-level header or sub-regulation row itself.',
     'Create one card per top-level numbered heading under the selected parent section.',
-    'If a top-level heading contains subordinate numbered or lettered lines, keep those subordinate lines inside the same card technicalStandard.',
+    'If a top-level heading contains subordinate numbered or lettered lines, return each subordinate line as a separate string in technicalStandardLines in the same order they appear.',
+    'Do not summarize, rewrite, merge, or omit any subordinate line text.',
     'Preserve numbering order and preserve wording as closely as possible.',
     `Selected Parent Code: ${input.targetParentCode || ''}`,
     input.isMultiPage ? 'Treat the supplied images as pages of a single continuous document.' : '',
@@ -91,11 +92,12 @@ async function runOpenAiSummarizeDocument(input: SummarizeDocumentInput) {
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL_SUMMARIZE_DOCUMENT || process.env.OPENAI_MODEL || 'gpt-4.1-mini',
       temperature: 0.1,
+      max_completion_tokens: 6000,
       messages: [
         {
           role: 'system',
           content:
-            'You are an expert aviation regulatory compliance analyst. Return only valid JSON. Extract compliance requirements with careful numbering fidelity and concise headings.',
+            'You are an expert aviation regulatory compliance analyst. Return only valid JSON. Extract compliance requirements with careful numbering fidelity. Never summarize subordinate text; preserve every line in order.',
         },
         {
           role: 'user',
@@ -129,7 +131,10 @@ export async function summarizeDocument(input: SummarizeDocumentInput): Promise<
   const normalized = output.requirements.map((requirement) => ({
     regulationCode: requirement.regulationCode.trim(),
     regulationStatement: requirement.regulationStatement.trim(),
-    technicalStandard: requirement.technicalStandard.trim(),
+    technicalStandard: requirement.technicalStandardLines
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join('\n'),
     companyReference: requirement.companyReference.trim() || 'Ops Manual, Sec TBD',
     parentRegulationCode: requirement.parentRegulationCode?.trim() || input.targetParentCode?.trim() || '',
   }));

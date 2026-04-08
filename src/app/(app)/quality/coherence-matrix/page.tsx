@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, Layers, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, Layers, MoreHorizontal, Copy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -123,6 +123,7 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
     const { toast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const isMobile = useIsMobile();
     
     const [file, setFile] = useState<File | null>(null);
@@ -131,6 +132,8 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
     const [isMultiImageMode, setIsMultiImageMode] = useState(false);
     const [targetFamily, setTargetFamily] = useState<RegulationFamily>(regulationFamily);
     const [targetHeader, setTargetHeader] = useState('');
+    const [previewRequirements, setPreviewRequirements] = useState<SummarizeDocumentOutput['requirements'] | null>(null);
+    const [previewInput, setPreviewInput] = useState<SummarizeDocumentInput | null>(null);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -169,14 +172,10 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
         setStagedImages(prev => prev.filter((_, i) => i !== index));
     };
 
-    const processAndSave = async (input: SummarizeDocumentInput) => {
+    const saveRequirements = async (input: SummarizeDocumentInput, requirements: SummarizeDocumentOutput['requirements']) => {
+        setIsSaving(true);
         setIsProcessing(true);
         try {
-            const { requirements } = await callAiFlow<
-                SummarizeDocumentInput,
-                SummarizeDocumentOutput
-            >('summarizeDocument', input);
-
             if (!requirements || requirements.length === 0) {
                 toast({ variant: 'destructive', title: 'No Regulations Found', description: 'The AI could not identify any regulations in the provided content.' });
                 return;
@@ -208,6 +207,7 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
             console.error('Error processing document:', error);
             toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
         } finally {
+            setIsSaving(false);
             setIsProcessing(false);
             setFile(null);
             setPastedText('');
@@ -216,6 +216,8 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
             setIsOpen(false);
             setTargetFamily(regulationFamily);
             setTargetHeader('');
+            setPreviewRequirements(null);
+            setPreviewInput(null);
         }
     };
 
@@ -227,20 +229,61 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
 
         let input: SummarizeDocumentInput = { targetParentCode: targetHeader, document: {} };
         
-        if (file) {
+        setIsProcessing(true);
+
+        try {
+            let extractedInput: SummarizeDocumentInput = input;
+
+            if (file) {
             const reader = new FileReader();
-            reader.onload = async (e) => {
-                input.document.text = e.target?.result as string;
-                await processAndSave(input);
-            };
-            reader.readAsText(file);
-        } else if (pastedText) {
-            input.document.text = pastedText;
-            await processAndSave(input);
-        } else if (stagedImages.length > 0) {
-            input.document.images = stagedImages;
-            input.isMultiPage = isMultiImageMode;
-            await processAndSave(input);
+                reader.onload = async (e) => {
+                    extractedInput.document.text = e.target?.result as string;
+                    const preview = await callAiFlow<SummarizeDocumentInput, SummarizeDocumentOutput>('summarizeDocument', extractedInput);
+                    setPreviewInput(extractedInput);
+                    setPreviewRequirements(preview.requirements || []);
+                    setIsProcessing(false);
+                };
+                reader.readAsText(file);
+            } else if (pastedText) {
+                extractedInput.document.text = pastedText;
+                const preview = await callAiFlow<SummarizeDocumentInput, SummarizeDocumentOutput>('summarizeDocument', extractedInput);
+                setPreviewInput(extractedInput);
+                setPreviewRequirements(preview.requirements || []);
+                setIsProcessing(false);
+            } else if (stagedImages.length > 0) {
+                extractedInput.document.images = stagedImages;
+                extractedInput.isMultiPage = isMultiImageMode;
+                const preview = await callAiFlow<SummarizeDocumentInput, SummarizeDocumentOutput>('summarizeDocument', extractedInput);
+                setPreviewInput(extractedInput);
+                setPreviewRequirements(preview.requirements || []);
+                setIsProcessing(false);
+            }
+        } catch (error: any) {
+            setIsProcessing(false);
+            console.error('Error processing document:', error);
+            toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
+        }
+    };
+
+    const handleSavePreview = async () => {
+        if (!previewInput || !previewRequirements) return;
+        await saveRequirements(previewInput, previewRequirements);
+    };
+
+    const resetPreview = () => {
+        setPreviewRequirements(null);
+        setPreviewInput(null);
+    };
+
+    const copyPreviewJson = async () => {
+        if (!previewRequirements) return;
+        const payload = JSON.stringify({ requirements: previewRequirements }, null, 2);
+        try {
+            await navigator.clipboard.writeText(payload);
+            toast({ title: 'Copied', description: 'The raw AI preview JSON was copied to the clipboard.' });
+        } catch (error) {
+            console.error('Failed to copy preview JSON', error);
+            toast({ variant: 'destructive', title: 'Copy Failed', description: 'Could not copy the preview JSON.' });
         }
     };
 
@@ -250,6 +293,9 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
         <Dialog open={isOpen} onOpenChange={(open) => {
             setIsOpen(open);
             if (open) setTargetFamily(regulationFamily);
+            if (!open) {
+                resetPreview();
+            }
         }}>
             <DialogTrigger asChild>
                 {trigger || (
@@ -361,11 +407,41 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                         </div>
                     </TabsContent>
                 </Tabs>
+                {previewRequirements && previewRequirements.length > 0 ? (
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">AI Preview</p>
+                                <p className="text-xs text-muted-foreground">Review the extracted JSON before saving it to the matrix.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button type="button" variant="ghost" size="sm" onClick={copyPreviewJson}>
+                                    <Copy className="mr-2 h-3.5 w-3.5" />
+                                    Copy JSON
+                                </Button>
+                                <Button type="button" variant="ghost" size="sm" onClick={resetPreview}>
+                                    Clear Preview
+                                </Button>
+                            </div>
+                        </div>
+                        <ScrollArea className="max-h-72 rounded-md border bg-white">
+                            <pre className="p-3 text-[11px] leading-5 whitespace-pre-wrap break-words">
+                                {JSON.stringify({ requirements: previewRequirements }, null, 2)}
+                            </pre>
+                        </ScrollArea>
+                    </div>
+                ) : null}
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="outline" size="compact" disabled={isProcessing}>Cancel</Button></DialogClose>
-                    <Button onClick={handleProcess} size="compact" disabled={isProcessing || !canProcess}>
-                        {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Upload and Process'}
-                    </Button>
+                    <DialogClose asChild><Button variant="outline" size="compact" disabled={isProcessing || isSaving}>Cancel</Button></DialogClose>
+                    {!previewRequirements ? (
+                        <Button onClick={handleProcess} size="compact" disabled={isProcessing || !canProcess}>
+                            {isProcessing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Preview Extraction'}
+                        </Button>
+                    ) : (
+                        <Button onClick={handleSavePreview} size="compact" disabled={isSaving}>
+                            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save to Matrix'}
+                        </Button>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -608,17 +684,17 @@ export default function CoherenceMatrixPage() {
         if (lines.length === 0) return null;
 
         return (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
                 {lines.map((line, index) => (
                     <div
                         key={`${line.marker}-${line.content}-${index}`}
                         className={cn(
-                            'flex items-start text-sm font-medium leading-relaxed text-muted-foreground',
+                            'flex items-start text-sm font-medium leading-6 text-foreground/80',
                             line.className
                         )}
                     >
                         {line.marker ? (
-                            <span className={cn('shrink-0', line.markerClassName)}>
+                            <span className={cn('shrink-0 font-semibold text-foreground/55', line.markerClassName)}>
                                 {line.marker}
                             </span>
                         ) : null}
@@ -833,9 +909,8 @@ export default function CoherenceMatrixPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    size="sm"
                                     aria-label="Open coherence matrix actions"
-                                    className="h-9 w-full justify-between border-border bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-muted/40"
+                                    className="h-10 w-full justify-between border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
                                 >
                                     <span className="flex items-center gap-2">
                                         <MoreHorizontal className="h-3.5 w-3.5" />
@@ -871,26 +946,23 @@ export default function CoherenceMatrixPage() {
                         <div className="flex flex-wrap items-center gap-2">
                             <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={currentFamilySubheaders} />
                             <Button
-                                size="sm"
                                 variant="outline"
-                                className="shadow-sm gap-2"
+                                className="h-10 px-4 py-2 text-sm font-medium gap-2"
                                 onClick={() => handleOpenForm(null, 'header')}
                             >
                                 <Layers className="h-4 w-4" />
                                 Add Header
                             </Button>
                             <Button
-                                size="sm"
                                 variant="outline"
-                                className="shadow-sm gap-2"
+                                className="h-10 px-4 py-2 text-sm font-medium gap-2"
                                 onClick={() => handleOpenForm(null, 'subheader')}
                             >
                                 <Layers className="h-4 w-4" />
                                 Add Subheader
                             </Button>
                             <Button 
-                                size="sm"
-                                className="shadow-sm gap-2" 
+                                className="h-10 px-4 py-2 text-sm font-medium gap-2"
                                 onClick={() => handleOpenForm()}
                             >
                                 <PlusCircle className="h-4 w-4" /> 
@@ -906,6 +978,7 @@ export default function CoherenceMatrixPage() {
                     organizations={organizations || []}
                     activeTab={activeOrgTab}
                     onTabChange={setActiveOrgTab}
+                    buttonLikeTabs
                     className="px-4 py-3 border-b bg-muted/5 shrink-0 md:px-6"
                 />
             )}
@@ -914,7 +987,7 @@ export default function CoherenceMatrixPage() {
                 <Tabs value={regulationTabToUiValue(activeRegulationTab)} onValueChange={(value) => setActiveRegulationTab(uiValueToRegulationTab(value))} className="w-full">
                     <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center gap-2">
                         {REGULATION_TABS.map((tab) => (
-                            <TabsTrigger key={tab.value} value={regulationTabToUiValue(tab.value)} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-black text-[10px] uppercase shrink-0">
+                            <TabsTrigger key={tab.value} value={regulationTabToUiValue(tab.value)} className="rounded-md h-10 px-4 py-2 border text-sm font-medium data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                                 {tab.label}
                             </TabsTrigger>
                         ))}

@@ -89,7 +89,7 @@ export default function SafetyFilesPage() {
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
         <MainPageHeader
           title="Safety Files"
-          description="Create site-based safety file projects, assign personnel from the user database, and review their existing document packs in one place."
+          description="Create site-based safety file projects, upload the actual project file contents, assign personnel from the user database, and manage risks in one place."
           actions={<AddProjectDialog onProjectCreated={(project) => setProjects((current) => [{ ...project, assignmentCount: 0 }, ...current])} />}
         />
 
@@ -114,10 +114,11 @@ export default function SafetyFilesPage() {
                     must ensure it is kept and maintained. That means one live site pack per job, not one generic
                     company folder.
                   </p>
-                  <p>
-                    This workflow treats each site or project as its own compliance container, then links the
-                    assigned personnel and their existing documents to that project.
-                  </p>
+                    <p>
+                      This workflow treats each site or project as its own compliance container. Each project carries
+                      its own uploaded site file, assigned personnel, and risk assessments instead of relying on one
+                      generic company folder.
+                    </p>
                 </CardContent>
               </Card>
 
@@ -224,7 +225,7 @@ export default function SafetyFilesPage() {
                     <FolderKanban className="mx-auto mb-4 h-12 w-12 opacity-25" />
                     <p className="text-lg font-semibold text-foreground">No safety file projects yet.</p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Create a project first, then assign the personnel who will work on that site.
+                      Create a project first, then upload the project file contents and assign the personnel who will work on that site.
                     </p>
                   </div>
                 )}

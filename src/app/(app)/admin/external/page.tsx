@@ -104,7 +104,6 @@ export default function ExternalCompaniesPage() {
           <CardTitle>External Companies</CardTitle>
           {canManage && (
             <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
-              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Company Control</p>
               <Button
                 onClick={() => handleOpenForm()}
                 variant={isMobile ? 'outline' : 'default'}

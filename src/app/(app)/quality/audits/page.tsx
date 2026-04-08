@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -191,16 +192,11 @@ export default function AuditsPage() {
                     title="Audits"
                     actions={
                         <Button
-                            asChild
-                            variant="outline"
-                            size={isMobile ? "compact" : "sm"}
-                            className={cn(
-                                'border-slate-300',
-                                isMobile
-                                    ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100'
-                                    : ''
-                            )}
-                        >
+                          asChild
+                          variant="outline"
+                          size={isMobile ? "compact" : "sm"}
+                          className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
+                      >
                             <Link href="/quality/audit-checklists">
                                 <span className="flex items-center gap-2">
                                     <ShieldCheck className="h-4 w-4" /> 

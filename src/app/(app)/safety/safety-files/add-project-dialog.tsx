@@ -8,6 +8,7 @@ import { ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import {
   Dialog,
   DialogClose,
@@ -114,8 +115,8 @@ export function AddProjectDialog({
           size={isMobile ? 'sm' : 'default'}
           className={
             isMobile
-              ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40'
-              : 'w-full sm:w-auto shadow-md gap-2 h-9 px-6 text-xs font-black uppercase'
+              ? HEADER_MOBILE_ACTION_BUTTON_CLASS
+              : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`
           }
         >
           <span className="flex items-center gap-2">

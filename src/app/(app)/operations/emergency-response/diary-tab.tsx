@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import type { Personnel, PilotProfile } from '../../users/personnel/page';
 import { usePermissions } from '@/hooks/use-permissions';
 
@@ -318,7 +319,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
               ) : null}
             </h2>
             {viewingEvent && (
-              <Button variant="ghost" size="sm" onClick={() => setSelectedEventId(null)} className="h-8 gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedEventId(null)} className={HEADER_SECONDARY_BUTTON_CLASS}>
                 <ArrowLeft className="h-4 w-4" /> Return to History
               </Button>
             )}
@@ -328,7 +329,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
             {activeEvent && canManage && (
               <Dialog open={isCloseOpen} onOpenChange={setIsCloseOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm"><StopCircle className="mr-2 h-4 w-4" /> Close Session</Button>
+                  <Button variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}><StopCircle className="mr-2 h-4 w-4" /> Close Session</Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -419,7 +420,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                       <Switch checked={isMilestone} onCheckedChange={setIsMilestone} id="milestone-sw" />
                       <Label htmlFor="milestone-sw" className="text-xs cursor-pointer">Mark as Milestone</Label>
                     </div>
-                    <Button onClick={() => handleAddLog()} disabled={!newLogEntry.trim()}><PlusCircle className="mr-2 h-4 w-4" /> Log Event</Button>
+                    <Button onClick={() => handleAddLog()} disabled={!newLogEntry.trim()} className={HEADER_ACTION_BUTTON_CLASS}><PlusCircle className="mr-2 h-4 w-4" /> Log Event</Button>
                   </div>
                 </div>
               </CardFooter>
@@ -497,7 +498,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
               {canManage && (
                 <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="destructive" className="shadow-lg sm:self-start">
+                    <Button variant="destructive" className={HEADER_ACTION_BUTTON_CLASS}>
                       <Play className="mr-2 h-4 w-4" /> Start ERP Session
                     </Button>
                   </DialogTrigger>
@@ -530,7 +531,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
                       <p className="text-xs italic text-muted-foreground">Initiating based on an internal trigger provides immediate response context.</p>
                       <DialogFooter>
                         <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button type="submit" variant="destructive">Activate Protocol</Button>
+                        <Button type="submit" variant="destructive" className={HEADER_ACTION_BUTTON_CLASS}>Activate Protocol</Button>
                       </DialogFooter>
                     </form>
                   </DialogContent>

@@ -29,7 +29,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/generate-safety-protocol-recommendations';
-import { MainPageHeader } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
@@ -326,10 +326,9 @@ export default function SafetyReportsPage() {
                             variant={isMobile ? 'outline' : 'default'}
                             size="sm"
                             className={cn(
-                              'h-9 text-xs font-black uppercase tracking-tight gap-2',
                               isMobile
-                                ? 'w-full justify-between bg-background px-3 text-foreground shadow-sm border-input hover:bg-accent/40 sm:w-auto'
-                                : 'shadow-md'
+                                ? HEADER_MOBILE_ACTION_BUTTON_CLASS
+                                : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`
                             )}
                         >
                             <Link href={`/safety/new-report?orgId=${orgId}`}>

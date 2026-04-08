@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff } from 'lucide-react';
-import { MainPageHeader } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -123,9 +123,9 @@ export default function TrainingRoutesPage() {
     <div className="flex h-full flex-col gap-4 overflow-hidden px-1">
       <Card className="flex h-full flex-col overflow-hidden border shadow-none">
         <div className="sticky top-0 z-30 border-b bg-card">
-          <MainPageHeader
+            <MainPageHeader
             title="Training Routes"
-            actions={<Button onClick={handleCreateNew} className="h-9 bg-emerald-700 text-[10px] font-black uppercase text-white hover:bg-emerald-800"><Plus size={14} className="mr-2" /> New Route</Button>}
+            actions={<Button onClick={handleCreateNew} className={HEADER_ACTION_BUTTON_CLASS}><Plus size={14} className="mr-2" /> New Route</Button>}
           />
         </div>
 
@@ -168,7 +168,7 @@ export default function TrainingRoutesPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Profile</p>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
-                        <Button onClick={handleSave} disabled={!isEditing} className="h-8 shrink-0 bg-emerald-700 px-3 text-[9px] font-black uppercase"><Save size={14} className="mr-2" /> Save</Button>
+                        <Button onClick={handleSave} disabled={!isEditing} className={HEADER_ACTION_BUTTON_CLASS}><Save size={14} className="mr-2" /> Save</Button>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -257,9 +257,9 @@ export default function TrainingRoutesPage() {
             </div>
             <p className="text-center font-mono text-[9px] font-bold text-muted-foreground">Target: {hazardToEdit?.lat.toFixed(4)}, {hazardToEdit?.lng.toFixed(4)}</p>
           </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="ghost" className="text-[10px] font-black uppercase">Cancel</Button></DialogClose>
-            <Button onClick={confirmAddHazard} className="bg-destructive text-[10px] font-black uppercase text-destructive-foreground hover:bg-destructive/90">Add Marker</Button>
+            <DialogFooter>
+            <DialogClose asChild><Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button></DialogClose>
+            <Button onClick={confirmAddHazard} className={HEADER_ACTION_BUTTON_CLASS}>Add Marker</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

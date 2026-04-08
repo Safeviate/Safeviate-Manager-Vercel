@@ -49,7 +49,11 @@ export async function GET() {
       personnel: Array.isArray(config['personnel']) ? config['personnel'] : [],
       departments: Array.isArray(config['departments']) ? config['departments'] : [],
       organizations: Array.isArray(config['external-organizations']) ? config['external-organizations'] : [],
-      findingLevels: Array.isArray(config['finding-levels']) ? config['finding-levels'] : [],
+      findingLevels: Array.isArray(config['finding-levels'])
+        ? config['finding-levels']
+        : Array.isArray(config['finding-levels-settings']?.levels)
+          ? config['finding-levels-settings'].levels
+          : [],
     }, { status: 200 });
   } catch (error) {
     console.error('[quality-audits] fallback to empty payload:', error);

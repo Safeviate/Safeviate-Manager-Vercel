@@ -93,6 +93,7 @@ model Personnel {
   role                 String
   permissions          Json     @default("[]")
   accessOverrides      Json?    @map("access_overrides")
+  documents            Json     @default("[]")
   userType             String   @default("Personnel") @map("user_type")
   canBeInstructor      Boolean  @default(false) @map("can_be_instructor")
   canBeStudent         Boolean  @default(false) @map("can_be_student")

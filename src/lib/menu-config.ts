@@ -434,6 +434,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'development-view',
       },
       {
+        href: '/development/moc-lab',
+        label: 'MOC Lab',
+        description: 'Prototype alternative management of change layouts.',
+        permissionId: 'development-view',
+      },
+      {
         href: '/development/test',
         label: 'Welcome Email Test',
         description: 'Send a test welcome email to any address.',

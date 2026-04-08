@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -7,6 +8,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await ensurePersonnelSchema();
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   const { id } = await params;
@@ -40,6 +42,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await ensurePersonnelSchema();
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   const { id } = await params;
@@ -74,32 +77,47 @@ export async function PATCH(
     tenantId,
   };
 
-  const updatedPersonnel = await prisma.personnel.updateMany({
-    where: { id, tenantId },
-    data: {
-      userNumber: data.userNumber || null,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      userType: data.userType || existing.userType,
-      canBeInstructor: typeof data.canBeInstructor === 'boolean' ? data.canBeInstructor : existing.canBeInstructor,
-      canBeStudent: typeof data.canBeStudent === 'boolean' ? data.canBeStudent : existing.canBeStudent,
-      role: data.role,
-      department: data.department || null,
-      organizationId: data.organizationId || null,
-      contactNumber: data.contactNumber || null,
-      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-      isErpIncerfaContact: !!data.isErpIncerfaContact,
-      isErpAlerfaContact: !!data.isErpAlerfaContact,
-      permissions: data.permissions || [],
-      accessOverrides: data.accessOverrides || {},
-      documents: data.documents || [],
-      pilotLicense: data.pilotLicense || null,
-      updatedAt: new Date(),
-    },
-  });
+  const updatedRows = await prisma.$executeRawUnsafe(
+    `UPDATE personnel
+     SET user_number = $3,
+         first_name = $4,
+         last_name = $5,
+         email = $6,
+         user_type = $7,
+         can_be_instructor = $8,
+         can_be_student = $9,
+         role = $10,
+         department = $11,
+         organization_id = $12,
+         contact_number = $13,
+         is_erp_incerfa_contact = $14,
+         is_erp_alerfa_contact = $15,
+         permissions = $16::jsonb,
+         access_overrides = $17::jsonb,
+         documents = $18::jsonb,
+         updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $2`,
+    id,
+    tenantId,
+    data.userNumber || null,
+    data.firstName,
+    data.lastName,
+    data.email,
+    data.userType || existing.userType,
+    typeof data.canBeInstructor === 'boolean' ? data.canBeInstructor : existing.canBeInstructor,
+    typeof data.canBeStudent === 'boolean' ? data.canBeStudent : existing.canBeStudent,
+    data.role,
+    data.department || null,
+    data.organizationId || null,
+    data.contactNumber || null,
+    !!data.isErpIncerfaContact,
+    !!data.isErpAlerfaContact,
+    JSON.stringify(data.permissions || []),
+    JSON.stringify(data.accessOverrides || {}),
+    JSON.stringify(data.documents || []),
+  );
 
-  if (updatedPersonnel.count === 0) {
+  if (!updatedRows) {
     return NextResponse.json({ error: 'User not found.' }, { status: 404 });
   }
 

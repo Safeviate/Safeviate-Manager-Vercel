@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Megaphone, Copy, Database, Printer, Pencil } from 'lucide-react';
 import type { ERPMediaTemplate } from '@/types/erp';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -166,13 +167,13 @@ export function MediaTab({ tenantId }: MediaTabProps) {
       <div className="flex justify-end px-6">
         {canAdmin && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleSeedStandardTemplates}>
+            <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={handleSeedStandardTemplates}>
               <Database className="mr-2 h-4 w-4" /> Seed Standard Templates
             </Button>
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> New Template</Button>
-              </DialogTrigger>
+              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                <DialogTrigger asChild>
+                 <Button className={HEADER_ACTION_BUTTON_CLASS}><PlusCircle className="mr-2 h-4 w-4" /> New Template</Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>New Media Statement Template</DialogTitle>
@@ -200,8 +201,8 @@ export function MediaTab({ tenantId }: MediaTabProps) {
                     <Textarea name="content" className="min-h-64" placeholder="Use placeholders like [DATE], [LOCATION], [AIRCRAFT]..." required />
                   </div>
                   <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button type="submit">Save Template</Button>
+                     <DialogClose asChild><Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button></DialogClose>
+                     <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>Save Template</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -222,8 +223,8 @@ export function MediaTab({ tenantId }: MediaTabProps) {
                 <p className="text-sm text-muted-foreground">Type: {template.type}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => handlePrint(template)}><Printer className="h-4 w-4 mr-2" /> Print</Button>
-                <Button variant="outline" size="sm" onClick={() => handleCopy(template.content)}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
+                <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={() => handlePrint(template)}><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={() => handleCopy(template.content)}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
                 {canAdmin && (
                   <>
                     <Button variant="ghost" size="icon" onClick={() => { setEditingTemplate(template); setIsEditOpen(true); }}><Pencil className="h-4 w-4" /></Button>
@@ -278,8 +279,8 @@ export function MediaTab({ tenantId }: MediaTabProps) {
               <Textarea name="content" className="min-h-64" defaultValue={editingTemplate?.content} required />
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit">Update Template</Button>
+               <DialogClose asChild><Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button></DialogClose>
+               <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>Update Template</Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -14,6 +14,7 @@ type BookingDetailHeaderProps = {
   flightHours?: string | null;
   activeTab: string;
   onTabChange: (value: string) => void;
+  headerAction?: ReactNode;
   tabRowAction?: ReactNode;
 };
 
@@ -24,6 +25,7 @@ export function BookingDetailHeader({
   flightHours,
   activeTab,
   onTabChange,
+  headerAction,
   tabRowAction,
 }: BookingDetailHeaderProps) {
   const isMobile = useIsMobile();
@@ -57,6 +59,7 @@ export function BookingDetailHeader({
               </p>
             </div>
           ) : null}
+          {headerAction ? <div className="flex shrink-0 items-start md:self-start">{headerAction}</div> : null}
         </div>
       </div>
 

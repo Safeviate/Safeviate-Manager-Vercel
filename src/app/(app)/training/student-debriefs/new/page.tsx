@@ -14,13 +14,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Trash2, ArrowLeft, Save, User } from 'lucide-react';
-import Link from 'next/link';
+import { PlusCircle, Trash2, Save, User } from 'lucide-react';
 import type { Booking } from '@/types/booking';
 import type { PilotProfile } from '@/app/(app)/users/personnel/page';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { BackNavButton } from '@/components/back-nav-button';
+import { MainPageHeader } from '@/components/page-header';
 
 const debriefSchema = z.object({
     overallComment: z.string().min(1, "Please provide an overall comment."),
@@ -151,9 +152,7 @@ function NewDebriefContent() {
         return (
             <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">No booking found for this debrief.</p>
-                <Button asChild variant="outline">
-                    <Link href="/bookings/history">Back to History</Link>
-                </Button>
+                <BackNavButton href="/bookings/history" text="Back to History" />
             </div>
         );
     }
@@ -163,13 +162,11 @@ function NewDebriefContent() {
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto h-full flex flex-col overflow-hidden">
-            <div className="shrink-0">
-                <Button asChild variant="ghost" className="mb-4">
-                    <Link href="/bookings/history">
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
-                    </Link>
-                </Button>
-            </div>
+            <MainPageHeader
+                title="Post-Flight Instructor Debrief"
+                description={`Booking #${booking.bookingNumber} · ${booking.type}`}
+                actions={<BackNavButton href="/bookings/history" text="Back to History" />}
+            />
 
             <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/20">

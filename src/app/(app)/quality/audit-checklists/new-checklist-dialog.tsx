@@ -32,11 +32,11 @@ import type { QualityAuditChecklistTemplate, AuditChecklistItem, ChecklistSectio
 import type { Department } from '../../admin/department/page';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import { AiChecklistGenerator } from './ai-checklist-generator';
 import { ImportFromMatrixDialog } from './import-from-matrix-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 
 
 const checklistItemSchema = z.object({
@@ -282,19 +282,15 @@ export function NewChecklistDialog({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       {trigger ? (
         <DialogTrigger asChild>{trigger}</DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button
-            variant={isMobile ? 'outline' : 'default'}
-            className={cn(
-              isMobile
-                ? 'w-full justify-between bg-white px-3 text-slate-900 shadow-sm border-slate-200 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100'
-                : ''
-            )}
-          >
-            <span className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" />
-              New Checklist Template
+        ) : (
+          <DialogTrigger asChild>
+            <Button
+              variant={isMobile ? 'outline' : 'default'}
+              className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
+            >
+              <span className="flex items-center gap-2">
+                <PlusCircle className="h-4 w-4" />
+                New Checklist Template
             </span>
             {isMobile ? <Library className="h-3.5 w-3.5 text-muted-foreground" /> : null}
           </Button>

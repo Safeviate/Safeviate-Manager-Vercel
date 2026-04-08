@@ -1,5 +1,10 @@
 export type SafetyFileProjectStatus = 'PLANNING' | 'ACTIVE' | 'CLOSED';
 export type SafetyFileRiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
+export type SafetyFileProjectDocumentSection =
+  | 'core-pack'
+  | 'appointments'
+  | 'site-controls'
+  | 'emergency';
 
 export interface SafetyFileRiskAssessmentValue {
   severity: number;
@@ -37,6 +42,18 @@ export interface SafetyFileTaskRiskAssessment {
   updatedAt?: string;
 }
 
+export interface SafetyFileProjectDocument {
+  id: string;
+  name: string;
+  url: string;
+  uploadDate: string;
+  expirationDate?: string | null;
+  section: SafetyFileProjectDocumentSection;
+  requirementId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface SafetyFileProject {
   id: string;
   name: string;
@@ -50,6 +67,7 @@ export interface SafetyFileProject {
   status: SafetyFileProjectStatus;
   permitRequired?: boolean;
   notificationRequired?: boolean;
+  projectDocuments?: SafetyFileProjectDocument[];
   baselineRiskAssessments?: SafetyFileBaselineRiskAssessment[];
   taskSpecificRiskAssessments?: SafetyFileTaskRiskAssessment[];
   createdAt?: string;

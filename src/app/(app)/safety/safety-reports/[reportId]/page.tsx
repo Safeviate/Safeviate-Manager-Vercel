@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { EditReportDialog } from '../edit-report-dialog';
 import { cn } from '@/lib/utils';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 interface SafetyReportDetailPageProps {
   params: Promise<{ reportId: string }>;
@@ -151,13 +152,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                     report={report} 
                     tenantId={tenantId} 
                     trigger={
-                      <Button variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+                      <Button variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
                           <Pencil className="h-3.5 w-3.5" />
                           Edit Report
                       </Button>
                     }
                   />
-                  <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+                  <Button onClick={handlePrint} variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
                       <Printer className="h-4 w-4" />
                       Print Report
                   </Button>

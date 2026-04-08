@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronsUpDown, PlusCircle, Plane, Box, Timer, Gauge, ShieldCheck } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 
 const formSchema = z.object({
   tailNumber: z.string().min(1, 'Tail number is required.'),
@@ -77,11 +78,10 @@ export function AddAircraftDialog({ tenantId }: { tenantId: string }) {
         <Button
           variant={isMobile ? 'outline' : 'default'}
           size={isMobile ? 'sm' : 'default'}
-          className={isMobile ? 'h-11 w-full justify-between items-center px-4 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest bg-background' : 'h-11 px-8 rounded-2xl shadow-xl shadow-primary/20 text-[10px] font-black uppercase tracking-widest gap-2 bg-primary hover:bg-primary/90 text-white'}
+          className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
         >
-          <span className="flex items-center gap-2">
-            <PlusCircle className={isMobile ? 'h-4 w-4' : 'h-5 w-5'} /> Register New Asset
-          </span>
+          <PlusCircle className="h-4 w-4" />
+          <span>Register Asset</span>
           {isMobile ? <ChevronsUpDown className="h-4 w-4 opacity-30" /> : null}
         </Button>
       </DialogTrigger>

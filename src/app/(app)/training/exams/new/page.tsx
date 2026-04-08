@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ExamForm, type ExamFormValues } from '../exam-form';
 import { Card } from '@/components/ui/card';
 import { BackNavButton } from '@/components/back-nav-button';
+import { MainPageHeader } from '@/components/page-header';
 
 export default function NewExamPage() {
   const router = useRouter();
@@ -42,15 +43,13 @@ export default function NewExamPage() {
 
   return (
     <div className="max-w-5xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
-      <div className="shrink-0 px-1">
-        <BackNavButton href="/training/exams" text="Back to Exams" className="mb-2 border-slate-300 bg-background text-foreground hover:bg-muted" />
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight font-headline">New Exam Template</h1>
-          <p className="text-muted-foreground">Define questions and subject matter for official or mock assessments.</p>
-        </div>
-      </div>
+      <MainPageHeader
+        title="New Exam Template"
+        description="Define questions and subject matter for official or mock assessments."
+        actions={<BackNavButton href="/training/exams" text="Back to Exams" />}
+      />
 
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border mt-4">
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <ExamForm 
           onSubmit={handleCreate}
           onCancel={() => router.push('/training/exams')}

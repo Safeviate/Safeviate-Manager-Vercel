@@ -16,8 +16,8 @@ import type { AlertType } from '@/types/alert';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 const alertTypes: AlertType[] = ['Red Tag', 'Yellow Tag', 'Company Notice'];
 
@@ -84,15 +84,10 @@ export function AlertForm({ onCreate }: AlertFormProps) {
                 <Button 
                     variant={isMobile ? "outline" : "default"}
                     size={isMobile ? "sm" : "default"}
-                    className={cn(
-                        "shadow-sm",
-                        isMobile && "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                    )}
+                    className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
                 >
-                    <span className="flex items-center gap-2">
-                        <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
-                        {isMobile ? "Create" : "Create Alert"}
-                    </span>
+                    <PlusCircle className="h-4 w-4" />
+                    <span>{isMobile ? "Create" : "Create Alert"}</span>
                     {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
                 </Button>
             </DialogTrigger>
@@ -170,8 +165,8 @@ export function AlertForm({ onCreate }: AlertFormProps) {
                             )}
                         />
                         <DialogFooter className="flex-col sm:flex-row gap-2">
-                            <DialogClose asChild><Button type="button" variant="outline" size="compact" className="w-full sm:w-auto">Cancel</Button></DialogClose>
-                            <Button type="submit" size="compact" className="w-full sm:w-auto">Post Alert</Button>
+                            <DialogClose asChild><Button type="button" variant="outline" className={`${HEADER_SECONDARY_BUTTON_CLASS} w-full sm:w-auto`}>Cancel</Button></DialogClose>
+                            <Button type="submit" className={`${HEADER_ACTION_BUTTON_CLASS} w-full sm:w-auto`}>Post Alert</Button>
                         </DialogFooter>
                     </form>
                 </Form>

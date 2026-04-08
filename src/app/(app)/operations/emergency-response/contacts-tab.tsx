@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { DeleteActionButton } from '@/components/record-action-buttons';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 interface ContactsTabProps {
   tenantId: string;
@@ -125,9 +126,9 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
       <div className="flex justify-end px-6">
         {canAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingContact(null); setIsDialogOpen(open); }}>
-            <DialogTrigger asChild>
-              <Button size="sm" onClick={() => handleOpenDialog()}><PlusCircle className="mr-2 h-4 w-4" /> Add Emergency Contact</Button>
-            </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()} className={HEADER_ACTION_BUTTON_CLASS}><PlusCircle className="mr-2 h-4 w-4" /> Add Emergency Contact</Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingContact ? 'Edit' : 'New'} Emergency Contact</DialogTitle>
@@ -172,8 +173,8 @@ export function ContactsTab({ tenantId }: ContactsTabProps) {
                   </div>
                 </div>
                 <DialogFooter>
-                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                  <Button type="submit">Save Contact</Button>
+                  <DialogClose asChild><Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button></DialogClose>
+                  <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>Save Contact</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

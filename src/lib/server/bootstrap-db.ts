@@ -415,6 +415,11 @@ export async function ensurePersonnelSchema() {
     columnNames.add('access_overrides');
   }
 
+  if (!columnNames.has('documents')) {
+    await addColumn(`documents JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    columnNames.add('documents');
+  }
+
   if (!columnNames.has('permissions')) {
     await addColumn('permissions JSONB NOT NULL DEFAULT \'[]\'::jsonb');
     columnNames.add('permissions');

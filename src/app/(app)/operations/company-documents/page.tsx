@@ -177,24 +177,33 @@ export default function CompanyDocumentsPage() {
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 space-y-3 p-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Document Register</p>
-              <h2 className="text-xl font-black tracking-tight">Company Documents</h2>
+        <CardHeader className="shrink-0 border-b bg-muted/5 p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1 min-w-0">
+              <h2 className="text-xl font-black tracking-tight uppercase">Company Documents</h2>
             </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-            {canManage && (
-              <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
-                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Document Control</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end min-w-0">
+              <div className="relative w-full sm:w-96 lg:w-[360px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents..."
+                  className="pl-9 bg-background"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Badge variant="outline" className="font-mono text-[10px] h-9 px-3 whitespace-nowrap">
+                {filteredDocs.length} TOTAL
+              </Badge>
+              {canManage && (
                 <DocumentUploader
                   onDocumentUploaded={handleDocumentUploaded}
                   trigger={(open) => (
-                    <Button 
-                      onClick={() => open()} 
+                    <Button
+                      onClick={() => open()}
                       variant={isMobile ? "outline" : "default"}
-                      size={isMobile ? "sm" : "default"} 
-                      className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100" : undefined}
+                      size={isMobile ? "sm" : "default"}
+                      className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 lg:w-auto" : undefined}
                     >
                       <span className="flex items-center gap-2">
                         <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
@@ -204,24 +213,7 @@ export default function CompanyDocumentsPage() {
                     </Button>
                   )}
                 />
-              </div>
-            )}
-          </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:w-96">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search documents..."
-                className="pl-9 bg-background"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-[10px]">
-                {filteredDocs.length} TOTAL
-              </Badge>
+              )}
             </div>
           </div>
         </CardHeader>

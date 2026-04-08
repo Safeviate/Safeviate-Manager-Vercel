@@ -14,7 +14,7 @@ import { DocumentUploader } from '../../../users/personnel/[id]/document-uploade
 import { FileUp, Camera, Trash2, ZoomIn, Edit, Save, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FindingLevel } from '@/app/(app)/admin/features/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -33,12 +33,20 @@ import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { ManageCapDialog } from '../../cap-tracker/manage-cap-dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type EnrichedAudit = QualityAudit & { template: QualityAuditChecklistTemplate };
 type EnrichedCorrectiveActionPlan = CorrectiveActionPlan & {
   auditNumber: string;
   findingDescription: string;
 };
+
+const defaultFindingLevels: FindingLevel[] = [
+    { id: 'obs', name: 'Observation', color: '#3b82f6', foregroundColor: '#ffffff' },
+    { id: 'lvl1', name: 'Level 1', color: '#ef4444', foregroundColor: '#ffffff' },
+    { id: 'lvl2', name: 'Level 2', color: '#f97316', foregroundColor: '#ffffff' },
+    { id: 'lvl3', name: 'Level 3', color: '#facc15', foregroundColor: '#000000' },
+];
 
 interface AuditChecklistProps {
   audit: EnrichedAudit;
@@ -78,7 +86,54 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
 
     const isReadOnly = audit.status === 'Finalized' || audit.status === 'Closed' || audit.status === 'Archived';
 
-    const allChecklistItems = audit.template.sections.flatMap(section => section.items);
+    const normalizedSections = useMemo(() => {
+        return audit.template.sections.map((section) => {
+            const hasItems = Array.isArray(section.items) && section.items.length > 0;
+
+            return {
+                ...section,
+                items: hasItems
+                    ? section.items
+                    : [{
+                        id: `section-fallback-${section.id}`,
+                        text: section.title,
+                        type: 'Checkbox' as const,
+                      }],
+                usesTitleAsItem: !hasItems,
+            };
+        });
+    }, [audit.template.sections]);
+
+    const allChecklistItems = normalizedSections.flatMap(section => section.items);
+    const defaultOpenSections = useMemo(
+        () => normalizedSections.length > 0 ? [normalizedSections[0].id] : [],
+        [normalizedSections]
+    );
+    const effectiveFindingLevels = findingLevels.length > 0 ? findingLevels : defaultFindingLevels;
+
+    const persistAudit = async (nextAudit: Partial<QualityAudit>, toastMessage?: { title: string; description: string }) => {
+        const response = await fetch('/api/quality-audits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audit: {
+              ...audit,
+              ...nextAudit,
+            },
+          }),
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+            throw new Error(payload?.error || 'Failed to save audit');
+        }
+
+        window.dispatchEvent(new Event('safeviate-quality-updated'));
+
+        if (toastMessage) {
+            toast(toastMessage);
+        }
+    };
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -116,7 +171,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
     };
 
 
-    const onSubmit = (values: FormValues) => {
+    const onSubmit = async (values: FormValues) => {
         try {
             const filledFindings = values.findings.map(f => {
                 if (f.finding === 'Not Applicable') {
@@ -125,18 +180,10 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                 return f;
             });
 
-            void fetch('/api/quality-audits', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                audit: {
-                  ...audit,
-                  findings: filledFindings,
-                },
-              }),
-            });
-            window.dispatchEvent(new Event('safeviate-quality-updated'));
-            toast({ title: "Findings Saved", description: "Your audit progress has been recorded." });
+            await persistAudit(
+                { findings: filledFindings },
+                { title: 'Findings Saved', description: 'Your audit progress has been recorded.' }
+            );
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'Error', description: e.message });
         }
@@ -153,17 +200,10 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
             : 100;
 
         try {
-            await fetch('/api/quality-audits', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                audit: {
-                  ...audit,
-                  findings: values.findings,
-                  status: 'Finalized' as const,
-                  complianceScore,
-                },
-              }),
+            await persistAudit({
+                findings: values.findings,
+                status: 'Finalized' as const,
+                complianceScore,
             });
 
             const newCaps = nonCompliantFindings.map(finding => ({
@@ -205,33 +245,45 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         if (itemIndex === -1) return;
 
         const currentEvidence = form.getValues(`findings.${itemIndex}.evidence`) || [];
-        form.setValue(`findings.${itemIndex}.evidence`, [...currentEvidence, { url: docDetails.url, description: docDetails.name }]);
-        // Trigger auto-save or wait for manual? The original said "All changes are saved to the server" but there's a manual "Save Draft" button.
-        // I'll stick to the original behavior and wait for "Save Draft".
+        const nextEvidence = [...currentEvidence, { url: docDetails.url, description: docDetails.name }];
+        const nextFindings = form.getValues('findings').map((finding, index) => (
+            index === itemIndex
+                ? { ...finding, evidence: nextEvidence }
+                : finding
+        ));
+
+        form.setValue(`findings.${itemIndex}.evidence`, nextEvidence);
+        void persistAudit({ findings: nextFindings }).catch((error: any) => {
+            toast({ variant: 'destructive', title: 'Evidence Save Failed', description: error.message });
+        });
     };
 
-    const renderChecklistItem = (item: AuditChecklistItem) => {
+    const renderChecklistItem = (item: AuditChecklistItem, options?: { hideTitle?: boolean }) => {
         const itemIndex = form.getValues('findings').findIndex(f => f.checklistItemId === item.id);
         if (itemIndex === -1) return null;
+        const hideTitle = options?.hideTitle ?? false;
+        const showHeader = !hideTitle || !!item.regulationReference;
 
         const findingType = form.watch(`findings.${itemIndex}.finding`);
         const evidence = form.watch(`findings.${itemIndex}.evidence`) || [];
         
         const selectedLevelName = form.watch(`findings.${itemIndex}.level`);
-        const selectedLevel = findingLevels.find(l => l.name === selectedLevelName);
-        const observationLevel = findingLevels.find(l => l.name === 'Observation');
-        const otherLevels = findingLevels.filter(l => l.name !== 'Observation');
+        const selectedLevel = effectiveFindingLevels.find(l => l.name === selectedLevelName);
+        const observationLevel = effectiveFindingLevels.find(l => l.name === 'Observation');
+        const otherLevels = effectiveFindingLevels.filter(l => l.name !== 'Observation');
         
         const cap = caps.find(c => c.findingId === item.id);
         const openActionsCount = cap?.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0;
 
         return (
             <Card key={item.id} className="mb-4 shadow-sm border-muted transition-colors hover:border-primary/20">
-                <CardHeader className="py-3 px-4 flex flex-row items-start justify-between gap-4">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight">{item.text}</CardTitle>
-                    {item.regulationReference && <Badge variant="outline" className="text-[9px] h-5 py-0 shrink-0 font-mono border-primary/20 bg-primary/5 text-primary">{item.regulationReference}</Badge>}
-                </CardHeader>
-                <CardContent className="space-y-4 px-4 pb-4">
+                {showHeader && (
+                    <CardHeader className="py-3 px-4 flex flex-row items-start justify-between gap-4">
+                        {!hideTitle ? <CardTitle className="text-sm font-bold uppercase tracking-tight">{item.text}</CardTitle> : <div />}
+                        {item.regulationReference && <Badge variant="outline" className="text-[9px] h-5 py-0 shrink-0 font-mono border-primary/20 bg-primary/5 text-primary">{item.regulationReference}</Badge>}
+                    </CardHeader>
+                )}
+                <CardContent className={cn("space-y-4 px-4 pb-4", !showHeader && "pt-4")}>
                      <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
                         <div className="flex flex-wrap items-center gap-6">
                             <FormField
@@ -245,7 +297,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                                                 field.onChange(value);
                                                 form.setValue(`findings.${itemIndex}.level`, '');
                                             }}
-                                            defaultValue={field.value}
+                                            value={field.value}
                                             className="flex flex-wrap gap-4"
                                             disabled={isReadOnly}
                                             >
@@ -401,17 +453,26 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
                     <ScrollArea className="flex-1 no-scrollbar">
-                        <div className="p-6 space-y-10">
-                            {audit.template.sections.map((section) => (
-                                <div key={section.id}>
-                                    <h2 className="mb-6 border-b border-primary/20 py-2 pb-2 text-sm font-black uppercase tracking-widest text-primary">
-                                        {section.title}
-                                    </h2>
-                                    <div className="space-y-4">
-                                        {section.items.map(item => renderChecklistItem(item))}
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="p-0">
+                            <Accordion type="multiple" defaultValue={defaultOpenSections} className="w-full">
+                                {normalizedSections.map((section) => (
+                                    <AccordionItem key={section.id} value={section.id} className="border-b border-slate-200 last:border-b-0">
+                                        <AccordionTrigger className="px-6 py-5 text-left text-sm font-black uppercase tracking-widest text-primary hover:no-underline">
+                                            <div className="flex flex-1 items-center justify-between gap-4 pr-3">
+                                                <span>{section.title}</span>
+                                                <Badge variant="outline" className="shrink-0 border-primary/20 bg-primary/5 text-[9px] font-black uppercase text-primary">
+                                                    {section.items.length} item{section.items.length === 1 ? '' : 's'}
+                                                </Badge>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-6 pb-6">
+                                            <div className="space-y-4 pt-2">
+                                                {section.items.map((item) => renderChecklistItem(item, { hideTitle: section.usesTitleAsItem && item.text === section.title }))}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
                         </div>
                     </ScrollArea>
                     

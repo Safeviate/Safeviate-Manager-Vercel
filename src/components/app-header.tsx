@@ -5,9 +5,7 @@ import { menuConfig } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { getBackConfig } from '@/lib/back-navigation';
 import { Bell, Search, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -80,19 +78,6 @@ export function AppHeader() {
     };
   }, []);
 
-  const segments = pathname.split('/').filter(Boolean);
-  const isDetailPage = segments.length >= 3;
-
-  const backConfig = getBackConfig(pathname);
-
-  const handleBack = () => {
-    if (backConfig.href) {
-      router.push(backConfig.href);
-    } else {
-      router.back();
-    }
-  };
-
   const userDisplayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'User';
   const userFallback = userDisplayName.charAt(0).toUpperCase();
 
@@ -103,24 +88,12 @@ export function AppHeader() {
     >
       <div className="flex min-w-0 items-center h-full">
         <div className="flex h-full w-auto shrink-0 items-center gap-2 px-4 sm:w-[--sidebar-width] md:px-6">
-           {!isDetailPage && <SidebarTrigger className="h-8 w-8 sm:hidden -ml-1 text-header-foreground" />}
+           <SidebarTrigger className="h-8 w-8 sm:hidden -ml-1 text-header-foreground" />
            <span className="app-sidebar-brand-label truncate font-headline text-[15px] font-semibold tracking-[-0.01em]">Safeviate</span>
         </div>
         <div className="hidden h-full w-px bg-white/10 sm:block"></div>
         <div className="flex min-w-0 items-center gap-3 px-4">
-        {isDetailPage ? (
-          <Button 
-            variant="default" 
-            size="sm" 
-            onClick={handleBack}
-            className="h-9 shrink-0 whitespace-nowrap rounded-xl px-4 text-sm font-semibold uppercase shadow-none"
-          >
-            {backConfig.text}
-          </Button>
-        ) : (
-          null
-        )}
-        {!isDetailPage && title && (
+        {title && (
           <h1 className="truncate text-[15px] font-semibold tracking-[-0.01em] uppercase opacity-90 sm:text-[16px]">{title}</h1>
         )}
       </div>

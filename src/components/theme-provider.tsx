@@ -45,6 +45,10 @@ type HeaderThemeColors = {
   'header-background': string;
   'header-foreground': string;
   'header-border': string;
+  'header-button-background': string;
+  'header-button-foreground': string;
+  'header-button-border': string;
+  'header-button-hover': string;
 };
 
 type SwimlaneThemeColors = {
@@ -166,6 +170,10 @@ const defaultHeaderColors: HeaderThemeColors = {
   'header-background': '#171514',
   'header-foreground': '#f3efe8',
   'header-border': '#3a312b',
+  'header-button-background': '#ffffff',
+  'header-button-foreground': '#1e293b',
+  'header-button-border': '#cbd5e1',
+  'header-button-hover': '#eef4fb',
 };
 const defaultSwimlaneColors: SwimlaneThemeColors = {
     'swimlane-header-background': '#f1f5f9',

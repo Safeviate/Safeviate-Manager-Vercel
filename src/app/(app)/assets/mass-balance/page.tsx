@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
 import { MassBalanceEnvelopeChart } from '@/components/mass-balance-envelope-chart';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 const FUEL_WEIGHT_PER_GALLON = 6;
 
@@ -193,7 +194,7 @@ function WBCalculatorContent() {
                 <p className="text-xl font-black uppercase tracking-tight">Aircraft Profile Missing</p>
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground italic">Select an aircraft from the fleet to perform Mass & Balance calculations.</p>
             </div>
-            <Button asChild variant="outline" className="mt-4 text-[10px] font-black uppercase h-10 px-8 border-slate-300 shadow-sm" onClick={() => router.back()}>
+            <Button asChild variant="outline" className={`${HEADER_SECONDARY_BUTTON_CLASS} mt-4`} onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
             </Button>
         </div>
@@ -210,7 +211,7 @@ function WBCalculatorContent() {
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-8 pt-4 px-1">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-2">
         <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="h-12 w-12 border rounded-full bg-background hover:bg-muted shadow-sm" onClick={() => router.back()}>
+            <Button variant="ghost" size="icon" className="h-10 w-10 border rounded-md bg-background hover:bg-muted shadow-sm" onClick={() => router.back()}>
                 <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -224,7 +225,7 @@ function WBCalculatorContent() {
             </div>
         </div>
         {booking && (
-            <Button onClick={handleSaveToBooking} className="gap-2 h-12 px-8 text-[11px] font-black uppercase shadow-lg">
+            <Button onClick={handleSaveToBooking} className={HEADER_ACTION_BUTTON_CLASS}>
                 <Save className="h-4 w-4" /> Save to Booking
             </Button>
         )}

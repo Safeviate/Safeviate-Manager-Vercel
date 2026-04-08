@@ -59,6 +59,7 @@ export const personnel = pgTable('personnel', {
   role: text('role').notNull(),
   permissions: jsonb('permissions').notNull().default([]),
   accessOverrides: jsonb('access_overrides'),
+  documents: jsonb('documents').notNull().default([]),
   userType: text('user_type').notNull().default('Personnel'),
   isErpIncerfaContact: boolean('is_erp_incerfa_contact').notNull().default(false),
   isErpAlerfaContact: boolean('is_erp_alerfa_contact').notNull().default(false),

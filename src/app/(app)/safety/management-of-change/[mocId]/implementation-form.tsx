@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, AlertTriangle, Zap, ChevronDown, ShieldAlert, ShieldCheck, Save } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, AlertTriangle, Zap, ShieldAlert, ShieldCheck, Save, ChevronDown, ChevronRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -25,7 +25,6 @@ import type { RiskMatrixSettings } from '@/types/risk';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { MainPageHeader } from '@/components/page-header';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // ─── Zod Schemas ─────────────────────────────────────────────────────────────
 const riskAssessmentSchema = z.object({
@@ -184,12 +183,6 @@ const MatrixRowHeader = ({
     </div>
 );
 
-const ExpandButton = () => (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background text-muted-foreground">
-        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-    </div>
-);
-
 const SummaryCard = ({ label, value }: { label: string; value: string }) => (
     <div className="rounded-xl border border-slate-200 bg-background/80 p-4">
         <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1.5">{label}</p>
@@ -287,42 +280,69 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
     const { fields, append, remove } = useFieldArray({ control, name: basePath });
 
     return (
-        <div className="space-y-3 pb-2">
+        <div className="space-y-2 pb-2">
+            <div className="flex justify-end">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                    onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}
+                >
+                    <PlusCircle className="h-3 w-3" />
+                    Add Mitigation
+                </Button>
+            </div>
             {fields.map((field, mi) => (
-                <Collapsible key={field.id} className="rounded-lg border border-slate-200 overflow-hidden bg-background shadow-sm" defaultOpen>
-                    <div className="flex items-center justify-between bg-white border-b border-slate-100 px-4 py-2">
-                        <CollapsibleTrigger className="flex items-center gap-2 min-w-0 flex-1 text-left group">
-                            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-500 opacity-60" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/40">
+                <div key={field.id} className="border border-slate-200 bg-white">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-slate-400 opacity-80" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
                                 Mitigation {mi + 1}
                             </span>
-                            <div className="flex h-5 w-5 items-center justify-center rounded border border-slate-100 bg-white text-muted-foreground ml-auto mr-1">
-                                <ChevronDown className="h-2.5 w-2.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            </div>
-                        </CollapsibleTrigger>
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => remove(mi)}>
-                            <Trash2 className="h-3 w-3" />
-                        </Button>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                                onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}
+                            >
+                                <PlusCircle className="h-3 w-3" />
+                                Add
+                            </Button>
+                            <RiskAssessmentEditor
+                                path={`${basePath}.${mi}.residualRiskAssessment`}
+                                label="Residual Risk"
+                                riskMatrixColors={riskMatrixColors}
+                            />
+                            <Badge variant="secondary" className="h-6 px-2 text-[9px] font-black uppercase border border-slate-200 shadow-none bg-slate-50 text-slate-700">
+                                Status: Open
+                            </Badge>
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => remove(mi)}>
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </div>
                     </div>
 
-                    <CollapsibleContent>
-                        <div className="p-4 pt-1 space-y-4">
+                    <div className="space-y-3 p-3">
                             <FormField control={control} name={`${basePath}.${mi}.description`}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1.5">Action Description</FormLabel>
-                                        <FormControl><textarea placeholder="Describe the mitigation action..." {...field} className="w-full min-h-[60px] rounded-md border border-slate-200 p-2 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary shadow-sm" /></FormControl>
+                                        <FormControl><textarea placeholder="Describe the mitigation action..." {...field} className="w-full min-h-[60px] rounded-md border border-slate-200 bg-white p-2 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary" /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
                             
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <FormField control={control} name={`${basePath}.${mi}.responsiblePersonId`}
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Assignee</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger className="h-9 shadow-sm"><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl>
+                                                <FormControl><SelectTrigger className="h-9 border-slate-200 bg-white"><SelectValue placeholder="Assign..." /></SelectTrigger></FormControl>
                                                 <SelectContent>{personnel.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>)}</SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -335,7 +355,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                     <FormControl>
-                                                        <Button variant="outline" className={cn('w-full h-9 pl-3 font-medium text-sm justify-start shadow-sm', !field.value && 'text-muted-foreground')}>
+                                                        <Button variant="outline" className={cn('w-full h-9 justify-start border-slate-200 bg-white pl-3 text-sm font-medium', !field.value && 'text-muted-foreground')}>
                                                             {field.value ? format(field.value, 'dd MMM yyyy') : 'Select date'}
                                                             <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
                                                         </Button>
@@ -353,7 +373,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                                         <FormItem>
                                             <FormLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Status</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger className="h-9 shadow-sm"><SelectValue /></SelectTrigger></FormControl>
+                                                <FormControl><SelectTrigger className="h-9 border-slate-200 bg-white"><SelectValue /></SelectTrigger></FormControl>
                                                 <SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -361,21 +381,9 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                                     )} />
                             </div>
 
-                            <RiskAssessmentEditor
-                                path={`${basePath}.${mi}.residualRiskAssessment`}
-                                label="Residual Risk After Mitigation"
-                                riskMatrixColors={riskMatrixColors}
-                            />
                         </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                </div>
             ))}
-
-            <Button type="button" variant="outline" size="sm"
-                onClick={() => append({ id: uuidv4(), description: '', responsiblePersonId: '', completionDate: new Date(), status: 'Open', residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' } })}
-                className="w-full h-8 border-none bg-slate-50 text-slate-500 font-extrabold uppercase text-[9px] tracking-widest gap-2 hover:bg-slate-100 flex items-center justify-center">
-                <PlusCircle className="h-3 w-3" /> Add Mitigation Control
-            </Button>
         </div>
     );
 };
@@ -390,24 +398,52 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
     const { fields, append, remove } = useFieldArray({ control, name: basePath });
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
+            <div className="flex justify-end">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                    onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}
+                >
+                    <PlusCircle className="h-3 w-3" />
+                    Add Risk
+                </Button>
+            </div>
             {fields.map((field, ri) => (
-                <Collapsible key={field.id} className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm" defaultOpen>
-                    <div className="flex items-center justify-between border-b border-slate-100 p-4 py-2 bg-slate-50/40">
-                        <CollapsibleTrigger className="flex items-center gap-2 min-w-0 flex-1 group">
+                <div key={field.id} className="border border-slate-200 bg-white">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 bg-white">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 opacity-60" />
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Risk Assessment</span>
-                            <div className="flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-white text-muted-foreground ml-auto mr-1">
-                                <ChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            </div>
-                        </CollapsibleTrigger>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => remove(ri)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                                onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}
+                            >
+                                <PlusCircle className="h-3 w-3" />
+                                Add
+                            </Button>
+                            <RiskAssessmentEditor
+                                path={`${basePath}.${ri}.initialRiskAssessment`}
+                                label="Initial Risk"
+                                riskMatrixColors={riskMatrixColors}
+                            />
+                            <Badge variant="secondary" className="h-6 px-2 text-[9px] font-black uppercase border border-slate-200 shadow-none bg-emerald-50 text-emerald-800">
+                                Status: Low
+                            </Badge>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => remove(ri)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
                     </div>
 
-                    <CollapsibleContent>
-                        <div className="p-5 space-y-5">
+                    <div className="space-y-4 p-3">
                             <FormField control={control} name={`${basePath}.${ri}.description`}
                                 render={({ field }) => (
                                     <FormItem>
@@ -415,40 +451,22 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
                                             <textarea 
                                                 placeholder="Describe the potential data integrity risks and integration impacts..." 
                                                 {...field} 
-                                                className="w-full min-h-[50px] bg-white rounded-lg border border-slate-200 p-3 text-sm font-medium leading-relaxed shadow-inner placeholder:italic focus-visible:outline-none focus:ring-1 focus:ring-amber-200" 
+                                                className="w-full min-h-[50px] rounded-md border border-slate-200 bg-white p-3 text-sm font-medium leading-relaxed placeholder:italic focus-visible:outline-none focus:ring-1 focus:ring-amber-200" 
                                             />
                                         </FormControl>
                                     </FormItem>
                                 )} />
                             
-                            <div className="flex flex-wrap gap-2 items-center">
-                                <RiskAssessmentEditor
-                                    path={`${basePath}.${ri}.initialRiskAssessment`}
-                                    label="Initial Risk"
-                                    riskMatrixColors={riskMatrixColors}
-                                />
-                                <Badge variant="secondary" className="h-6 px-2 text-[9px] font-black uppercase border border-slate-200 shadow-none bg-emerald-50 text-emerald-800">Status: Low</Badge>
-                            </div>
-
-                            <div className="pt-2 border-t border-slate-100">
+                            <div className="border-t border-slate-100 pt-2">
                                 <MitigationsArray
                                     phaseIndex={phaseIndex} stepIndex={stepIndex}
                                     hazardIndex={hazardIndex} riskIndex={ri}
                                     personnel={personnel} riskMatrixColors={riskMatrixColors}
                                 />
                             </div>
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                    </div>
+                </div>
             ))}
-
-            <div className="flex justify-center text-center">
-                <button type="button" 
-                    onClick={() => append({ id: uuidv4(), description: '', initialRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] })}
-                    className="text-[10px] font-black uppercase tracking-widest text-primary/70 hover:text-primary flex items-center gap-1.5 py-1">
-                    <PlusCircle className="h-3 w-3" /> Define Potential Risk
-                </button>
-            </div>
         </div>
     );
 };
@@ -463,12 +481,24 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: {
     const { fields, append, remove } = useFieldArray({ control, name: basePath });
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-2">
+            <div className="flex justify-end">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                    onClick={() => append({ id: uuidv4(), description: '', risks: [] })}
+                >
+                    <PlusCircle className="h-3 w-3" />
+                    Add Hazard
+                </Button>
+            </div>
             {fields.map((field, hi) => (
-                <Collapsible key={field.id} className="rounded-xl border border-amber-100 shadow-sm overflow-hidden bg-[#fffdf5]" defaultOpen>
-                    <div className="flex items-center justify-between p-4 py-2 border-b border-amber-100/50">
-                        <CollapsibleTrigger className="flex items-center gap-2 min-w-0 flex-1 text-left group">
-                            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                <div key={field.id} className="border border-slate-200 bg-white">
+                    <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                            <AlertTriangle className="h-4 w-4 shrink-0 text-slate-400" />
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mr-2">Hazard No</span>
                             <FormField control={control} name={`${basePath}.${hi}.description`}
                                 render={({ field }) => (
@@ -479,32 +509,33 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: {
                                         </FormControl>
                                     </FormItem>
                                 )} />
-                            <div className="flex h-7 w-7 items-center justify-center rounded border border-amber-200 bg-white text-muted-foreground ml-2 shrink-0">
-                                <ChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            </div>
-                        </CollapsibleTrigger>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 ml-1.5 text-muted-foreground hover:text-destructive" onClick={() => remove(hi)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                                onClick={() => append({ id: uuidv4(), description: '', risks: [] })}
+                            >
+                                <PlusCircle className="h-3 w-3" />
+                                Add
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => remove(hi)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
                     </div>
 
-                    <CollapsibleContent>
-                        <div className="p-5 space-y-4">
+                    <div className="space-y-3 px-3 py-3">
                             <RisksArray
                                 phaseIndex={phaseIndex} stepIndex={stepIndex}
                                 hazardIndex={hi} personnel={personnel}
                                 riskMatrixColors={riskMatrixColors}
                             />
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                    </div>
+                </div>
             ))}
-
-            <Button type="button" variant="ghost"
-                onClick={() => append({ id: uuidv4(), description: '', risks: [] })}
-                className="w-full h-9 border border-amber-100 bg-amber-50/30 text-amber-800 font-extrabold uppercase text-[9px] tracking-[0.2em] gap-2 hover:bg-amber-50">
-                <PlusCircle className="h-3.5 w-3.5" /> Identify New Hazard
-            </Button>
         </div>
     );
 };
@@ -519,45 +550,46 @@ const StepsArray = ({ phaseIndex, personnel, riskMatrixColors, matrixTheme }: {
     const { fields, append, remove } = useFieldArray({ control, name: `phases.${phaseIndex}.steps` });
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-2">
+            <div className="flex justify-end">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                    onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
+                >
+                    <PlusCircle className="h-3 w-3" />
+                    Add Step
+                </Button>
+            </div>
             {fields.map((step, si) => (
-                <Collapsible key={step.id} className="rounded-xl border border-slate-200 overflow-hidden shadow-none bg-background" defaultOpen>
-                    <div className="flex items-center justify-between px-5 py-2 border-b border-slate-100 bg-background uppercase">
-                        <CollapsibleTrigger className="flex items-center gap-3 min-w-0 flex-1 text-left group">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Phase {phaseIndex + 1} &gt; Step {si + 1}</p>
-                                <FormField control={control} name={`phases.${phaseIndex}.steps.${si}.description`}
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                            <FormControl>
-                                                <Input placeholder="Describe this step..." {...field}
-                                                    className="border-none shadow-none font-bold text-sm p-0 h-auto focus-visible:ring-0 bg-transparent text-foreground uppercase tracking-tight" />
-                                            </FormControl>
-                                        </FormItem>
-                                    )} />
-                            </div>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-slate-100 bg-background text-muted-foreground transition-transform">
-                                <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            </div>
-                        </CollapsibleTrigger>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 ml-1.5 text-muted-foreground hover:text-destructive" onClick={() => remove(si)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                <div key={step.id} className="border border-slate-200 bg-white">
+                    <div className="flex items-start justify-between gap-3 px-3 py-3 uppercase">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Phase {phaseIndex + 1} &gt; Step {si + 1}</p>
+                            <FormField control={control} name={`phases.${phaseIndex}.steps.${si}.description`}
+                                render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                        <FormControl>
+                                            <Input placeholder="Describe this step..." {...field}
+                                                className="border-none shadow-none font-bold text-sm p-0 h-auto focus-visible:ring-0 bg-transparent text-foreground uppercase tracking-tight" />
+                                        </FormControl>
+                                    </FormItem>
+                                )} />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => remove(si)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
                     </div>
 
-                    <CollapsibleContent>
-                        <div className="p-5">
-                            <HazardsArray phaseIndex={phaseIndex} stepIndex={si} personnel={personnel} riskMatrixColors={riskMatrixColors} />
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                    <div className="border-t border-slate-100 pb-3 pl-3 pr-3 pt-3">
+                        <HazardsArray phaseIndex={phaseIndex} stepIndex={si} personnel={personnel} riskMatrixColors={riskMatrixColors} />
+                    </div>
+                </div>
             ))}
-
-            <Button type="button" variant="ghost"
-                onClick={() => append({ id: uuidv4(), description: '', hazards: [] })}
-                className="w-full h-10 border border-slate-200 bg-slate-50/50 font-black uppercase text-[10px] gap-2 tracking-[0.2em] text-slate-500 hover:bg-slate-100">
-                <PlusCircle className="h-4 w-4" /> Add Execution Step
-            </Button>
         </div>
     );
 };
@@ -581,8 +613,8 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
     const { matrixTheme } = useTheme();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [collapsedPhases, setCollapsedPhases] = useState<Record<string, boolean>>({});
     const formKey = useMemo(() => moc.id || uuidv4(), [moc.id]);
-    const riskMatrixSettings = null;
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -658,33 +690,34 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
     return (
         <FormProvider {...form}>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0 h-full flex flex-col" key={formKey}>
-                    <Card className="shadow-none border rounded-xl overflow-hidden flex flex-col flex-1 border-slate-200">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-col space-y-0" key={formKey}>
+                    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 shadow-none">
                         <MainPageHeader title="Implementation Strategy" />
 
-                        <CardContent className="p-0 bg-background flex-1 overflow-y-auto no-scrollbar">
+                        <CardContent className="min-h-0 flex-1 overflow-hidden bg-background p-0 no-scrollbar">
 
                             {/* ── Title card ─────────────────────────────────── */}
                             <div className="border-b bg-muted/10 p-6">
-                                <Card className="overflow-hidden border-slate-200 shadow-none">
-                                    <CardHeader className="border-b bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary mb-1">Title Card</p>
-                                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                    <div className="border-b bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
+                                        <p className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">Change Brief</p>
+                                        <div className="mb-2 flex flex-wrap items-center gap-2">
                                             <Badge variant="outline" className="border-primary/30 bg-primary/5 text-[10px] font-black uppercase text-primary">{moc.mocNumber}</Badge>
                                             <Badge variant="outline" className="text-[10px] font-black uppercase">{moc.status}</Badge>
                                         </div>
                                         <h2 className="text-xl font-black tracking-tight text-foreground">{moc.title}</h2>
-                                    </CardHeader>
-                                    <CardContent className="grid gap-4 p-5 md:grid-cols-3">
-                                        <SummaryCard label="Detailed Description" value={moc.description} />
-                                        <SummaryCard label="Reason For Change" value={moc.reason} />
-                                        <SummaryCard label="Scope Of Change" value={moc.scope} />
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                    <div className="grid gap-0 md:grid-cols-3">
+                                        <div className="border-b border-slate-100 p-5 md:border-b-0 md:border-r"><SummaryCard label="Detailed Description" value={moc.description} /></div>
+                                        <div className="border-b border-slate-100 p-5 md:border-b-0 md:border-r"><SummaryCard label="Reason For Change" value={moc.reason} /></div>
+                                        <div className="p-5"><SummaryCard label="Scope Of Change" value={moc.scope} /></div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* ── Phases ────────────────────────────────────── */}
-                            <div className="space-y-6 p-6">
+                            <div className="min-h-0 flex-1 overflow-y-auto">
+                            <div className="mx-auto w-full max-w-6xl space-y-5 px-6 pb-24">
                                 <div className="sticky top-0 z-10 -mx-6 -mt-6 border-b border-slate-200 bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="min-w-0">
@@ -701,18 +734,29 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                             <Save className="h-3.5 w-3.5" />
                                             {isSaving ? 'Saving Strategy...' : form.formState.isDirty ? 'Save Strategy' : 'Strategy Saved'}
                                         </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-10 gap-2 rounded-full px-5 text-[10px] font-black uppercase tracking-[0.18em]"
+                                            onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })}
+                                        >
+                                            <PlusCircle className="h-3.5 w-3.5" />
+                                            Add Phase
+                                        </Button>
                                     </div>
                                 </div>
-                                {phaseFields.length > 0 ? phaseFields.map((field, pi) => (
-                                    <Collapsible key={field.id} className="rounded-xl border border-slate-200 overflow-hidden shadow-sm" defaultOpen>
+                                {phaseFields.length > 0 ? phaseFields.map((field, pi) => {
+                                    const isCollapsed = collapsedPhases[field.id] ?? false;
+                                    return (
+                                    <div key={field.id} className="border border-slate-200 bg-white shadow-none">
                                         <div
-                                            className="flex items-center justify-between px-5 py-2.5 border-b"
+                                            className="flex items-center justify-between border-b px-4 py-3"
                                             style={{
                                                 backgroundColor: '#059669',
                                                 color: 'white',
                                             }}
                                         >
-                                            <CollapsibleTrigger className="flex items-center gap-3 min-w-0 flex-1 text-left group">
+                                            <div className="flex min-w-0 flex-1 items-center gap-3 text-left">
                                                 <div className="h-8 w-8 rounded bg-white/20 flex items-center justify-center text-white shrink-0">
                                                     <Zap className="h-4 w-4" />
                                                 </div>
@@ -727,31 +771,42 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                                             </FormItem>
                                                         )} />
                                                 </div>
-                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-white/20 bg-transparent text-white mr-1.5 opacity-60">
-                                                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                                </div>
-                                            </CollapsibleTrigger>
-                                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/10" onClick={() => removePhase(pi)}>
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-white hover:bg-white/10"
+                                                    onClick={() => setCollapsedPhases(prev => ({ ...prev, [field.id]: !isCollapsed }))}
+                                                >
+                                                    {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                    <span className="sr-only">Toggle phase</span>
+                                                </Button>
+                                                <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/10" onClick={() => removePhase(pi)}>
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
                                         </div>
 
-                                        <CollapsibleContent>
-                                            <div className="p-6 space-y-6 bg-slate-50/20">
+                                        {!isCollapsed && (
+                                            <div className="space-y-5 bg-white p-4">
                                                 <StepsArray
                                                     phaseIndex={pi}
                                                     personnel={personnel}
-                                                    riskMatrixColors={riskMatrixSettings?.colors}
+                                                    riskMatrixColors={undefined}
                                                     matrixTheme={matrixTheme as Record<string, string>}
                                                 />
                                             </div>
-                                        </CollapsibleContent>
-                                    </Collapsible>
-                                )) : (
+                                        )}
+                                    </div>
+                                );
+                                }) : (
                                     <div className="py-24 text-center text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest opacity-40">
                                         No strategy phases defined. Use &ldquo;Add Phase&rdquo; to begin.
                                     </div>
                                 )}
+                            </div>
                             </div>
                         </CardContent>
                     </Card>

@@ -480,6 +480,10 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   ))?.name;
 
   const formatLabel = (key: string) => {
+    if (key === 'header-button-background') return 'Header Button Fill';
+    if (key === 'header-button-foreground') return 'Header Button Text';
+    if (key === 'header-button-border') return 'Header Button Border';
+    if (key === 'header-button-hover') return 'Header Button Hover';
     const clean = key.replace('popover-', '').replace('button-primary-', '').replace('sidebar-', '').replace('header-', '').replace('swimlane-header-', '');
     if (clean === 'popover' || clean === 'card' || clean === 'background') return 'Background';
     if (clean === 'button-background') return 'Sidebar Menu Surface';
@@ -578,7 +582,19 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             <p className="text-[10px] font-black uppercase tracking-widest">Header Preview</p>
                             <p className="text-[9px] font-bold uppercase tracking-tight opacity-80">Top bars and key framing</p>
                         </div>
-                        <LayoutGrid className="h-5 w-5 opacity-70" />
+                        <div className="flex items-center gap-2">
+                            <div
+                                className="rounded-md border px-3 py-1.5 text-[9px] font-black uppercase tracking-widest shadow-sm"
+                                style={{
+                                    backgroundColor: headerTheme['header-button-background'],
+                                    color: headerTheme['header-button-foreground'],
+                                    borderColor: headerTheme['header-button-border'],
+                                }}
+                            >
+                                Header Button
+                            </div>
+                            <LayoutGrid className="h-5 w-5 opacity-70" />
+                        </div>
                     </div>
                     <div className="grid gap-0 md:grid-cols-[180px_1fr]">
                         <div

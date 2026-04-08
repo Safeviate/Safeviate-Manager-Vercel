@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { calculateFuelGallonsFromWeight, calculateFuelWeight, gallonsToLitres, getFuelPreset, type FuelType } from '@/lib/fuel';
 import type { Aircraft, AircraftModelProfile } from '@/types/aircraft';
-import { MainPageHeader } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 
 const POINT_COLORS = ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'];
@@ -293,7 +293,7 @@ const WBCalculator = () => {
               <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
                 <Button variant="outline" size="sm" onClick={() => setIsLoadTemplateDialogOpen(true)} className="h-9 border-slate-300 text-[10px] font-black uppercase"><Library size={14} className="mr-2" /> Templates</Button>
                 <Button variant="outline" size="sm" onClick={() => setIsLoadAircraftDialogOpen(true)} className="h-9 border-slate-300 text-[10px] font-black uppercase"><Upload size={14} className="mr-2" /> Load AC</Button>
-                <Button variant="default" size="sm" onClick={() => setIsSaveAircraftDialogOpen(true)} className="h-9 bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-black uppercase"><Plane size={14} className="mr-2" /> Commit to AC</Button>
+                <Button variant="default" size="sm" onClick={() => setIsSaveAircraftDialogOpen(true)} className={HEADER_ACTION_BUTTON_CLASS}><Plane size={14} className="mr-2" /> Commit to AC</Button>
               </div>
             }
           />

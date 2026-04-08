@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { cn } from '@/lib/utils';
 
 type VehicleLite = {
@@ -93,7 +94,7 @@ function BookOutDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button disabled={availableVehicles.length === 0}>
+        <Button disabled={availableVehicles.length === 0} className={HEADER_ACTION_BUTTON_CLASS}>
           <LogOut className="mr-2 h-4 w-4" />
           Book Out Vehicle
         </Button>
@@ -152,11 +153,12 @@ function BookOutDialog({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">Cancel</Button>
+            <Button type="button" variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button>
           </DialogClose>
           <Button
             type="button"
             disabled={!vehicleId || purpose.trim().length === 0}
+            className={HEADER_ACTION_BUTTON_CLASS}
             onClick={() => {
               onBookOut({ vehicleId, bookedOutOdometer, purpose: purpose.trim(), destination: destination.trim(), notes: notes.trim() });
               setIsOpen(false);
@@ -196,7 +198,7 @@ function BookInDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant="secondary">
+        <Button variant="secondary" className={HEADER_SECONDARY_BUTTON_CLASS}>
           <LogIn className="mr-2 h-4 w-4" />
           Book In
         </Button>
@@ -219,11 +221,12 @@ function BookInDialog({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">Cancel</Button>
+            <Button type="button" variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button>
           </DialogClose>
           <Button
             type="button"
             disabled={bookedInOdometer < usageRecord.bookedOutOdometer}
+            className={HEADER_ACTION_BUTTON_CLASS}
             onClick={() => {
               onBookIn({ usageId: usageRecord.id, bookedInOdometer, returnNotes: returnNotes.trim() });
               setIsOpen(false);

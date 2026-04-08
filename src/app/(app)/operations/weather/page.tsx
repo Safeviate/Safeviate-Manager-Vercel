@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { MainPageHeader } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Map as MapIcon, Lock } from 'lucide-react';
 
@@ -221,7 +221,7 @@ export default function WeatherPage() {
                   className="w-full sm:w-64 font-mono uppercase font-black bg-background h-11"
                   maxLength={4}
                 />
-                <Button type="submit" disabled={loading} className="w-full sm:w-auto font-black uppercase tracking-wider h-11 px-8 gap-2 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <Button type="submit" disabled={loading} className={HEADER_ACTION_BUTTON_CLASS}>
                   {loading ? <span className="animate-spin text-lg">↻</span> : <Search className="w-4 h-4" />}
                   {loading ? 'Fetching' : 'Search Updates'}
                 </Button>
@@ -230,7 +230,7 @@ export default function WeatherPage() {
               <Button 
                 variant="outline" 
                 onClick={() => setIsSyncDialogOpen(true)}
-                className="w-full sm:w-auto font-black uppercase tracking-widest h-11 px-6 gap-2 border-amber-500/50 hover:bg-amber-500 hover:text-black transition-all bg-amber-500/5 text-amber-500 shadow-sm"
+                className={HEADER_SECONDARY_BUTTON_CLASS}
               >
                 <Lock className="w-4 h-4" />
                 Sync Premium
@@ -601,9 +601,8 @@ export default function WeatherPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                size="sm"
                                 onClick={() => setIsSyncDialogOpen(true)}
-                                className="h-8 font-black uppercase tracking-widest border-amber-500/50 hover:bg-amber-500 hover:text-black transition-all bg-amber-500/5 text-amber-500 shadow-sm"
+                                className={HEADER_SECONDARY_BUTTON_CLASS}
                             >
                                 <Lock className="w-4 h-4 mr-2" />
                                 Sync Premium
@@ -676,13 +675,13 @@ export default function WeatherPage() {
             <Button 
                 variant="ghost" 
                 onClick={() => setIsSyncDialogOpen(false)}
-                className="text-white/50 hover:text-white uppercase font-black text-xs"
+                className={HEADER_SECONDARY_BUTTON_CLASS}
             >
                 Cancel
             </Button>
             <Button 
                 asChild
-                className="bg-amber-500 hover:bg-amber-600 text-black font-black uppercase tracking-widest"
+                className={HEADER_ACTION_BUTTON_CLASS}
                 onClick={() => setIsSyncDialogOpen(false)}
             >
                 <a href="https://www.windy.com/login" target="_blank" rel="noreferrer">

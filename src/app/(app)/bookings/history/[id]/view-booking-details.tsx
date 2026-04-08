@@ -22,6 +22,8 @@ import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
+import { BackNavButton } from '@/components/back-nav-button';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
@@ -135,7 +137,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{title}</p>
                 <div className="flex items-center gap-2">
                     {icao && <Badge variant="outline" className="text-[9px] font-black uppercase">{icao}</Badge>}
-                    <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={onHide}>Hide</Button>
+                    <Button variant="ghost" size="sm" className="h-8 px-3 text-[10px] font-medium uppercase" onClick={onHide}>Hide</Button>
                 </div>
             </div>
             
@@ -147,7 +149,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
             ) : error ? (
                 <div className="space-y-2 py-2">
                     <p className="text-xs text-destructive font-bold">{error}</p>
-                    <Button variant="ghost" className="h-8 p-0 text-[10px] font-black uppercase hover:bg-transparent" onClick={fetchWeather}>Retry</Button>
+                    <Button variant="ghost" className="h-10 px-4 text-sm font-medium uppercase hover:bg-transparent" onClick={fetchWeather}>Retry</Button>
                 </div>
             ) : data ? (
                 <div className="space-y-4">
@@ -191,12 +193,12 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
 
                     {!data.metar && !data.taf && <p className="text-xs italic text-muted-foreground">No reports available for this station.</p>}
                     
-                    <Button variant="ghost" className="h-8 w-full mt-2 text-[9px] font-black uppercase border border-dashed hover:bg-background/50" onClick={fetchWeather}>Refresh Weather</Button>
+                    <Button variant="ghost" className="h-10 w-full mt-2 px-4 text-sm font-medium uppercase border border-dashed hover:bg-background/50" onClick={fetchWeather}>Refresh Weather</Button>
                 </div>
             ) : (
                 <div className="py-4 text-center">
                     <p className="text-xs text-muted-foreground font-bold italic mb-4">No weather briefing loaded yet.</p>
-                    <Button variant="outline" className="h-8 text-[10px] font-black uppercase" onClick={fetchWeather}>Fetch Weather</Button>
+                    <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={fetchWeather}>Fetch Weather</Button>
                 </div>
             )}
         </div>
@@ -517,29 +519,27 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     status={booking.status}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
+                    headerAction={<BackNavButton href="/bookings/history" text="Back to History" />}
                     tabRowAction={
                         activeTab === 'planning' ? (
                             <div className="flex items-center gap-2">
                                 <Button 
-                                    size="sm" 
                                     variant="outline"
                                     onClick={() => setShowRouteSummary(!showRouteSummary)}
-                                    className={cn("h-8 text-[10px] font-black uppercase border-slate-300", showRouteSummary && "bg-muted")}
+                                    className={cn(HEADER_SECONDARY_BUTTON_CLASS, showRouteSummary && "bg-muted")}
                                 >
                                     <ListFilter className="h-3 w-3 mr-1.5" /> {showRouteSummary ? 'Hide Route' : 'Show Route'}
                                 </Button>
                                 <Button 
-                                    size="sm" 
                                     variant="outline"
                                     onClick={() => setPlannedLegs([])}
-                                    className="h-8 text-[10px] font-black uppercase border-slate-300"
+                                    className={HEADER_SECONDARY_BUTTON_CLASS}
                                     disabled={plannedLegs.length === 0}
                                 >
                                     <RotateCcw className="h-3 w-3 mr-1.5" /> Clear
                                 </Button>
                                 <Button 
-                                    size="sm" 
-                                    className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-md font-black uppercase text-[10px] h-8 px-4 gap-2 shrink-0"
+                                    className={HEADER_ACTION_BUTTON_CLASS}
                                     onClick={handleCommitRoute}
                                     disabled={isSaving}
                                 >
@@ -586,7 +586,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Departure ICAO</UILabel>
                                                 <div className="flex gap-2">
                                                     <Input value={depIcao} onChange={(e) => setDepIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
-                                                    <Button variant="outline" className="h-10 px-3 font-black text-[10px] uppercase gap-2 shrink-0" onClick={() => lookupAirport(depIcao, 'dep')} disabled={isLookingUpDep}>
+                                                    <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={() => lookupAirport(depIcao, 'dep')} disabled={isLookingUpDep}>
                                                         {isLookingUpDep ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radio className="h-3 w-3" />} Lookup
                                                     </Button>
                                                 </div>
@@ -596,14 +596,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <Input value={depLon} onChange={(e) => setDepLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
                                             </div>
                                             {showDepWeather && <WeatherCard title="Departure Weather" icao={depIcao} onHide={() => setShowDepWeather(false)} />}
-                                            {!showDepWeather && <Button variant="ghost" size="sm" onClick={() => setShowDepWeather(true)} className="text-[10px] font-black uppercase">Show Departure Weather</Button>}
+                                            {!showDepWeather && <Button variant="ghost" size="sm" onClick={() => setShowDepWeather(true)} className="text-sm font-medium uppercase">Show Departure Weather</Button>}
                                         </div>
                                         <div className="space-y-4">
                                             <div className="space-y-1.5">
                                                 <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Arrival ICAO</UILabel>
                                                 <div className="flex gap-2">
                                                     <Input value={arrIcao} onChange={(e) => setArrIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
-                                                    <Button variant="outline" className="h-10 px-3 font-black text-[10px] uppercase gap-2 shrink-0" onClick={() => lookupAirport(arrIcao, 'arr')} disabled={isLookingUpArr}>
+                                                    <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={() => lookupAirport(arrIcao, 'arr')} disabled={isLookingUpArr}>
                                                         {isLookingUpArr ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radio className="h-3.5 w-3.5" />} Lookup
                                                     </Button>
                                                 </div>
@@ -613,7 +613,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <Input value={arrLon} onChange={(e) => setArrLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
                                             </div>
                                             {showArrWeather && <WeatherCard title="Arrival Weather" icao={arrIcao} onHide={() => setShowArrWeather(false)} />}
-                                            {!showArrWeather && <Button variant="ghost" size="sm" onClick={() => setShowArrWeather(true)} className="text-[10px] font-black uppercase">Show Arrival Weather</Button>}
+                                            {!showArrWeather && <Button variant="ghost" size="sm" onClick={() => setShowArrWeather(true)} className="text-sm font-medium uppercase">Show Arrival Weather</Button>}
                                         </div>
                                     </div>
                                 </div>
@@ -768,7 +768,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Input Stations</h2>
                                                     <p className="mt-1 text-xs text-muted-foreground">Adjust only the live loading inputs for this booking.</p>
                                                 </div>
-                                                <Button size="sm" onClick={handleSaveToBooking} className="h-10 uppercase text-xs font-black bg-emerald-700">Save Loading & Logs</Button>
+                                                <Button onClick={handleSaveToBooking} className={HEADER_ACTION_BUTTON_CLASS}>Save Loading & Logs</Button>
                                             </div>
                                             <div className="space-y-4">
                                                 {stations.map(s => (

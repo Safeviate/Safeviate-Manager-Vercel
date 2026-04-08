@@ -22,6 +22,7 @@ import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
+import { BackNavButton } from '@/components/back-nav-button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
@@ -448,6 +449,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     status={booking.status}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
+                    headerAction={<BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
                     tabRowAction={
                         activeTab === 'planning' ? (
                             <div className="flex items-center gap-2">

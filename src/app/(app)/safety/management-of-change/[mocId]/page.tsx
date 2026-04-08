@@ -130,7 +130,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col min-h-screen overflow-y-auto pt-0 px-1">
       <Tabs
         value={activeTab}
         onValueChange={(nextTab) => {
@@ -138,7 +138,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
             setActiveTab(nextTab);
           }
         }}
-        className="flex-1 flex flex-col overflow-hidden"
+        className="flex flex-1 min-h-0 flex-col"
       >
         
         {/* --- STICKY HEADER SECTION --- */}
@@ -270,8 +270,8 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         </div>
 
         {/* --- SCROLLABLE CONTENT --- */}
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-20 no-print">
-            <TabsContent value="implementation" className="m-0 outline-none h-full">
+        <div className="flex-1 min-h-0 no-print">
+            <TabsContent value="implementation" className="m-0 outline-none flex min-h-0 flex-col">
                 <ImplementationForm
                     ref={implementationFormRef}
                     key={moc.id}
@@ -281,7 +281,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                 />
             </TabsContent>
             
-            <TabsContent value="approval" className="m-0 outline-none">
+            <TabsContent value="approval" className="m-0 outline-none flex min-h-0 flex-col">
                 <ApprovalForm moc={moc} personnel={personnel || []} />
             </TabsContent>
         </div>
