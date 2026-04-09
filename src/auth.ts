@@ -2,6 +2,9 @@ import NextAuth, { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { assertRequiredEnv } from '@/lib/server/env';
+
+assertRequiredEnv(['NEXTAUTH_SECRET'], 'authentication');
 
 const cleanEnvValue = (value: string | undefined) =>
   value?.replace(/\\r\\n|\\n|\\r/g, '').trim() || '';

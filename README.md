@@ -2,7 +2,7 @@
 
 This is a Next.js app configured for deployment on Vercel.
 
-For local development, start from `src/app/page.tsx` and set the required runtime env vars in Vercel:
+For local development, copy `.env.local.example` to `.env.local` and set the required runtime env vars there. For production, set the same values in Vercel Project Settings > Environment Variables:
 
 - `RESEND_API_KEY`
 - `MAIL_FROM`
@@ -11,6 +11,8 @@ For local development, start from `src/app/page.tsx` and set the required runtim
 - `NEXTAUTH_URL`
 - `AUTH_SEED_EMAIL`
 - `AUTH_SEED_PASSWORD` or `AUTH_SEED_PASSWORD_HASH`
+- `OPENAI_API_KEY`
+- `DATABASE_URL`
 
 ## Prisma (Development)
 

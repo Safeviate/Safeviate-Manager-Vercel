@@ -4,6 +4,9 @@
 
 import { z } from 'genkit';
 import { v4 as uuidv4 } from 'uuid';
+import { assertRequiredEnv } from '@/lib/server/env';
+
+assertRequiredEnv(['OPENAI_API_KEY'], 'MOC analysis');
 
 export const AnalyzeMocInputSchema = z.object({
   title: z.string().describe('The title of the proposed change.'),

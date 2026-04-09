@@ -534,62 +534,36 @@ export default function CoherenceMatrixPage() {
     setIsFormOpen(true);
   };
 
-  const collectDescendantIds = (
-      parentCode: string,
-      items: ComplianceRequirement[],
-      visitedCodes = new Set<string>()
-  ): string[] => {
-      const normalizedParentCode = normalizeRegulationCode(parentCode);
-      if (!normalizedParentCode || visitedCodes.has(normalizedParentCode)) return [];
-
-      const nextVisited = new Set(visitedCodes);
-      nextVisited.add(normalizedParentCode);
-
-      const directChildren = items.filter(
-          item => normalizeRegulationCode(item.parentRegulationCode) === normalizedParentCode
-      );
-      return directChildren.flatMap(child => [
-          child.id,
-          ...collectDescendantIds(child.regulationCode, items, nextVisited),
-      ]);
-  };
-
   const handleDeleteItem = async (item: ComplianceRequirement) => {
-    try {
-        const response = await fetch('/api/compliance-matrix', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [] }));
-        const items = Array.isArray(payload.items) ? (payload.items as ComplianceRequirement[]) : [];
-        
-        const idsToDelete = new Set<string>([
-          item.id,
-          ...collectDescendantIds(item.regulationCode, items),
-        ]);
-
-        await Promise.all(Array.from(idsToDelete).map((id) => fetch(`/api/compliance-matrix?id=${encodeURIComponent(id)}`, { method: 'DELETE' })));
-        window.dispatchEvent(new Event('safeviate-compliance-updated'));
-        toast({ title: "Success", description: "Compliance item has been deleted." });
-    } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
-    }
-  };
-  
-  const handleDeleteSection = async (parentItem: ComplianceRequirement) => {
       try {
-          const response = await fetch('/api/compliance-matrix', { cache: 'no-store' });
-          const payload = await response.json().catch(() => ({ items: [] }));
-          const items = Array.isArray(payload.items) ? (payload.items as ComplianceRequirement[]) : [];
-          
-          const idsToDelete = new Set<string>([
-              parentItem.id,
-              ...collectDescendantIds(parentItem.regulationCode, items),
-          ]);
-          
-          await Promise.all(Array.from(idsToDelete).map((id) => fetch(`/api/compliance-matrix?id=${encodeURIComponent(id)}`, { method: 'DELETE' })));
+          const response = await fetch(`/api/compliance-matrix?id=${encodeURIComponent(item.id)}&code=${encodeURIComponent(item.regulationCode)}`, {
+            method: 'DELETE',
+          });
+          if (!response.ok) {
+            const payload = await response.json().catch(() => null);
+            throw new Error(payload?.error || 'Failed to delete compliance item.');
+          }
           window.dispatchEvent(new Event('safeviate-compliance-updated'));
-          toast({ title: "Section Deleted" });
+          toast({ title: "Success", description: "Compliance item has been deleted." });
       } catch (e: any) {
           toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
       }
+    };
+    
+  const handleDeleteSection = async (parentItem: ComplianceRequirement) => {
+        try {
+            const response = await fetch(`/api/compliance-matrix?id=${encodeURIComponent(parentItem.id)}&code=${encodeURIComponent(parentItem.regulationCode)}`, {
+              method: 'DELETE',
+            });
+            if (!response.ok) {
+              const payload = await response.json().catch(() => null);
+              throw new Error(payload?.error || 'Failed to delete compliance section.');
+            }
+            window.dispatchEvent(new Event('safeviate-compliance-updated'));
+            toast({ title: "Section Deleted" });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+        }
   }
 
   const currentOrgItems = (complianceItems || []).filter(item =>

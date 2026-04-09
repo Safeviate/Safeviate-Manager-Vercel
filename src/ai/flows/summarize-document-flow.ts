@@ -3,6 +3,9 @@
  */
 
 import { z } from 'genkit';
+import { assertRequiredEnv } from '@/lib/server/env';
+
+assertRequiredEnv(['OPENAI_API_KEY'], 'document summarization');
 
 const RegulationSchema = z.object({
   regulationCode: z.string().describe('The full code for the extracted item.'),
@@ -45,17 +48,55 @@ function extractJsonPayload(content: string) {
   return JSON.parse(candidate.trim());
 }
 
+function normalizeCodeFragment(value: string) {
+  return value.trim().replace(/\s+/g, ' ').replace(/[.,;:]+$/g, '');
+}
+
+function resolveRegulationCode(rawCode: string, parentCode?: string | null) {
+  const code = normalizeCodeFragment(rawCode);
+  const normalizedParent = parentCode?.trim() || '';
+
+  if (!code) return code;
+  if (!normalizedParent) return code;
+  if (code === normalizedParent || code.startsWith(`${normalizedParent}.`)) return code;
+
+  const compoundMatch = code.match(/^(\d+(?:\.\d+)*)(?:\s*\(([a-z])\))$/i);
+  if (compoundMatch) {
+    return `${normalizedParent}.${compoundMatch[1]}(${compoundMatch[2].toLowerCase()})`;
+  }
+
+  const clauseMatch = code.match(/^(\d+)\s*([a-z])$/i);
+  if (clauseMatch) {
+    return `${normalizedParent}.${clauseMatch[1]}${clauseMatch[2].toLowerCase()}`;
+  }
+
+  const dottedNumericMatch = code.match(/^(\d+(?:\.\d+)*)$/);
+  if (dottedNumericMatch) {
+    return `${normalizedParent}.${dottedNumericMatch[1]}`;
+  }
+
+  return code;
+}
+
 function buildUserContent(input: SummarizeDocumentInput) {
   const textInstructions = [
-    'Extract individual compliance requirements for the coherence matrix.',
+    'Extract the document structure for the coherence matrix.',
     'Return only valid JSON in exactly this shape:',
     '{ "requirements": [ { "regulationCode": string, "regulationStatement": string, "technicalStandardLines": string[], "companyReference": string, "parentRegulationCode": string } ] }',
     'Only extract items that belong under the selected parent section.',
-    'Do not output the higher-level header or sub-regulation row itself.',
-    'Create one card per top-level numbered heading under the selected parent section.',
-    'If a top-level heading contains subordinate numbered or lettered lines, return each subordinate line as a separate string in technicalStandardLines in the same order they appear.',
-    'Do not summarize, rewrite, merge, or omit any subordinate line text.',
-    'Preserve numbering order and preserve wording as closely as possible.',
+    'Use exactly the codes that are printed in the document. Do not invent extra decimal levels such as 2.1, 2.2, or 141.01.18.1.1 unless those codes are explicitly visible in the source.',
+    'Create one requirement per visible heading or subheading, not one requirement per clause or paragraph.',
+    'Keep each heading together with every clause, subclause, note, bullet, or paragraph that belongs to that heading.',
+    'Do not split numbered or lettered clauses into separate requirements.',
+    'If the visible heading code is abbreviated to just a local section number like 2 under the selected parent code 141.01.18, reconstruct the full code as 141.01.18.2.',
+    'If a heading is followed by clauses such as (1), (2), (a), or (b), return those clauses as technicalStandardLines on the same requirement, in reading order.',
+    'If the source has a genuine nested subheading, create a separate requirement for that subheading and link it with parentRegulationCode. Otherwise keep the clauses on the same requirement.',
+    'If a heading line contains both a code and title, use the code for regulationCode and the title for regulationStatement.',
+    'If a line is only a running page header, footer, page number, or repeated document title, ignore it.',
+    'Preserve numbering order and wording as closely as possible. Keep the original paragraph flow, do not condense or paraphrase.',
+    'Example: "2. Quality assurance" followed by clauses (1) to (8) should become one requirement with regulationCode "2", regulationStatement "Quality assurance", and all clauses in technicalStandardLines.',
+    'Example: "141.01.18.1.1 Quality policy and strategy" followed by clauses (1) to (4) should become one requirement with regulationCode "141.01.18.1.1", regulationStatement "Quality policy and strategy", and those clauses in technicalStandardLines.',
+    'Example: if a clause list under a heading contains sub-bullets like (a) through (g), keep them inside technicalStandardLines for that same heading unless the document explicitly prints a deeper heading code.',
     `Selected Parent Code: ${input.targetParentCode || ''}`,
     input.isMultiPage ? 'Treat the supplied images as pages of a single continuous document.' : '',
     input.document.text ? `Document Content:\n${input.document.text}` : '',
@@ -97,7 +138,7 @@ async function runOpenAiSummarizeDocument(input: SummarizeDocumentInput) {
         {
           role: 'system',
           content:
-            'You are an expert aviation regulatory compliance analyst. Return only valid JSON. Extract compliance requirements with careful numbering fidelity. Never summarize subordinate text; preserve every line in order.',
+            'You are an expert aviation regulatory compliance analyst. Return only valid JSON. Extract compliance requirements with careful numbering fidelity. Preserve the printed hierarchy exactly. Never invent new section codes. Never split subordinate clauses into separate requirements unless the source shows a real nested heading.',
         },
         {
           role: 'user',
@@ -127,16 +168,17 @@ async function runOpenAiSummarizeDocument(input: SummarizeDocumentInput) {
 
 export async function summarizeDocument(input: SummarizeDocumentInput): Promise<SummarizeDocumentOutput> {
   const output = await runOpenAiSummarizeDocument(input);
+  const targetParentCode = input.targetParentCode?.trim() || '';
 
   const normalized = output.requirements.map((requirement) => ({
-    regulationCode: requirement.regulationCode.trim(),
+    regulationCode: resolveRegulationCode(requirement.regulationCode, targetParentCode),
     regulationStatement: requirement.regulationStatement.trim(),
     technicalStandard: requirement.technicalStandardLines
       .map((line) => line.trim())
       .filter(Boolean)
       .join('\n'),
     companyReference: requirement.companyReference.trim() || 'Ops Manual, Sec TBD',
-    parentRegulationCode: requirement.parentRegulationCode?.trim() || input.targetParentCode?.trim() || '',
+    parentRegulationCode: requirement.parentRegulationCode?.trim() || targetParentCode || '',
   }));
 
   return SummarizeDocumentOutputSchema.parse({ requirements: normalized });

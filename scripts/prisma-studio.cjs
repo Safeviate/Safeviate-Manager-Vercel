@@ -1,4 +1,5 @@
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 
@@ -6,7 +7,13 @@ const isProd = process.argv.includes('--prod');
 const envFile = isProd ? '.env.production' : '.env.local';
 const envPath = path.join(process.cwd(), envFile);
 
-dotenv.config({ path: envPath });
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else if (isProd) {
+  console.warn(`[prisma-studio] ${envFile} not found. Using existing process environment instead.`);
+} else {
+  dotenv.config({ path: envPath });
+}
 
 if (!process.env.DATABASE_URL && process.env.POSTGRES_URL) {
   process.env.DATABASE_URL = process.env.POSTGRES_URL;
