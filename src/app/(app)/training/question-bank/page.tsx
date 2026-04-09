@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -178,8 +178,16 @@ export default function QuestionBankPage() {
               </DropdownMenu>
             ) : (
               <div className="flex gap-2 w-full sm:w-auto">
-                  <AiExamGenerator onGenerated={handleAiGenerated} />
-                  <Button size="sm" className="h-9 px-6 text-[10px] font-black uppercase tracking-tight shadow-md gap-2" onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
+                  <AiExamGenerator
+                    onGenerated={handleAiGenerated}
+                    trigger={
+                      <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>
+                        <WandSparkles className="h-4 w-4" />
+                        Synthesize with AI
+                      </Button>
+                    }
+                  />
+                  <Button className={HEADER_ACTION_BUTTON_CLASS} onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
                       <PlusCircle className="h-4 w-4" /> Add Question
                   </Button>
               </div>

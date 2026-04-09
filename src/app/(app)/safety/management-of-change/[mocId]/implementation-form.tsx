@@ -1,11 +1,12 @@
 'use client';
 
-import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, FormProvider, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -18,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/components/theme-provider';
-import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useMemo, forwardRef, useImperativeHandle, useCallback, useRef } from 'react';
 import { callAiFlow } from '@/lib/ai-client';
 import type { AnalyzeMocInput, AnalyzeMocOutput } from '@/ai/flows/analyze-moc-flow';
 import type { RiskMatrixSettings } from '@/types/risk';
@@ -190,6 +191,20 @@ const SummaryCard = ({ label, value }: { label: string; value: string }) => (
     </div>
 );
 
+const SummaryChip = ({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'success' | 'warning' }) => {
+    const toneClasses = {
+        neutral: 'bg-slate-100 text-slate-700 border-slate-200',
+        success: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        warning: 'bg-amber-100 text-amber-800 border-amber-200',
+    } as const;
+
+    return (
+        <span className={cn('rounded-full border px-3 py-1 text-[10px] font-semibold', toneClasses[tone])}>
+            {children}
+        </span>
+    );
+};
+
 // ─── Risk Assessment Editor ───────────────────────────────────────────────────
 const RiskAssessmentEditor = ({ path, label, riskMatrixColors, badgeStyles }: { path: string; label: string; riskMatrixColors?: Record<string, string>; badgeStyles?: boolean }) => {
     const { control, setValue, watch } = useFormContext();
@@ -331,7 +346,7 @@ const MitigationsArray = ({ phaseIndex, stepIndex, hazardIndex, riskIndex, perso
                             <FormField control={control} name={`${basePath}.${mi}.description`}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormControl><textarea placeholder="Describe the mitigation action..." {...field} className="w-full min-h-[60px] rounded-md border border-slate-200 bg-white p-2 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary" /></FormControl>
+                                        <FormControl><textarea placeholder="Describe the mitigation action..." {...field} className="w-full min-h-[110px] rounded-md border border-slate-200 bg-white p-3 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary" /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
@@ -396,6 +411,7 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
     const { control } = useFormContext();
     const basePath = `phases.${phaseIndex}.steps.${stepIndex}.hazards.${hazardIndex}.risks`;
     const { fields, append, remove } = useFieldArray({ control, name: basePath });
+    const watchedRisks = useWatch({ control, name: basePath }) as FormValues['phases'][number]['steps'][number]['hazards'][number]['risks'] | undefined;
 
     return (
         <div className="space-y-3">
@@ -419,6 +435,9 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Risk Assessment</span>
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-2">
+                            <SummaryChip tone="neutral">
+                                {(watchedRisks?.[ri]?.mitigations?.length ?? 0)} mitigations
+                            </SummaryChip>
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -451,7 +470,7 @@ const RisksArray = ({ phaseIndex, stepIndex, hazardIndex, personnel, riskMatrixC
                                             <textarea 
                                                 placeholder="Describe the potential data integrity risks and integration impacts..." 
                                                 {...field} 
-                                                className="w-full min-h-[50px] rounded-md border border-slate-200 bg-white p-3 text-sm font-medium leading-relaxed placeholder:italic focus-visible:outline-none focus:ring-1 focus:ring-amber-200" 
+                                                className="w-full min-h-[110px] rounded-md border border-slate-200 bg-white p-3 text-sm font-medium leading-relaxed placeholder:italic focus-visible:outline-none focus:ring-1 focus:ring-amber-200" 
                                             />
                                         </FormControl>
                                     </FormItem>
@@ -479,6 +498,7 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: {
     const { control } = useFormContext();
     const basePath = `phases.${phaseIndex}.steps.${stepIndex}.hazards`;
     const { fields, append, remove } = useFieldArray({ control, name: basePath });
+    const watchedHazards = useWatch({ control, name: basePath }) as FormValues['phases'][number]['steps'][number]['hazards'] | undefined;
 
     return (
         <div className="space-y-2">
@@ -495,46 +515,61 @@ const HazardsArray = ({ phaseIndex, stepIndex, personnel, riskMatrixColors }: {
                 </Button>
             </div>
             {fields.map((field, hi) => (
-                <div key={field.id} className="border border-slate-200 bg-white">
-                    <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                            <AlertTriangle className="h-4 w-4 shrink-0 text-slate-400" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mr-2">Hazard No</span>
-                            <FormField control={control} name={`${basePath}.${hi}.description`}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormControl>
-                                            <Input placeholder="Hazard identification..." {...field}
-                                                className="border-none shadow-none font-black text-sm p-0 h-auto focus-visible:ring-0 bg-transparent uppercase tracking-tight text-foreground" />
-                                        </FormControl>
-                                    </FormItem>
-                                )} />
+                <details key={field.id} open className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 marker:content-none">
+                        <div className="min-w-0 flex-1 text-left">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 shrink-0 text-slate-400" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Hazard {hi + 1}</span>
+                            </div>
+                            <div className="mt-1 text-sm text-slate-500">
+                                Expand to edit the hazard details and linked risks.
+                            </div>
                         </div>
                         <div className="flex items-center gap-1.5">
+                            <SummaryChip tone="neutral">
+                                {(watchedHazards?.[hi]?.risks?.length ?? 0)} risks
+                            </SummaryChip>
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 gap-1 rounded-full border border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-                                onClick={() => append({ id: uuidv4(), description: '', risks: [] })}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    append({ id: uuidv4(), description: '', risks: [] });
+                                }}
                             >
                                 <PlusCircle className="h-3 w-3" />
-                                Add
+                                Add Risk
                             </Button>
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => remove(hi)}>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.preventDefault(); remove(hi); }}>
                                 <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                         </div>
-                    </div>
+                    </summary>
 
                     <div className="space-y-3 px-3 py-3">
+                            <FormField control={control} name={`${basePath}.${hi}.description`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Hazard detail</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Describe the hazard..."
+                                                {...field}
+                                                className="min-h-[110px] resize-y border-slate-200 bg-white text-sm font-semibold text-slate-900"
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )} />
                             <RisksArray
                                 phaseIndex={phaseIndex} stepIndex={stepIndex}
                                 hazardIndex={hi} personnel={personnel}
                                 riskMatrixColors={riskMatrixColors}
                             />
                     </div>
-                </div>
+                </details>
             ))}
         </div>
     );
@@ -548,6 +583,7 @@ const StepsArray = ({ phaseIndex, personnel, riskMatrixColors, matrixTheme }: {
 }) => {
     const { control } = useFormContext<FormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: `phases.${phaseIndex}.steps` });
+    const watchedSteps = useWatch({ control, name: `phases.${phaseIndex}.steps` }) as FormValues['phases'][number]['steps'] | undefined;
 
     return (
         <div className="space-y-2">
@@ -564,28 +600,31 @@ const StepsArray = ({ phaseIndex, personnel, riskMatrixColors, matrixTheme }: {
                 </Button>
             </div>
             {fields.map((step, si) => (
-                <div key={step.id} className="border border-slate-200 bg-white">
-                    <div className="flex items-start justify-between gap-3 px-3 py-3 uppercase">
+                <div key={step.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                    <div className="flex items-start justify-between gap-3 px-4 py-3">
                         <div className="min-w-0 flex-1">
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Phase {phaseIndex + 1} &gt; Step {si + 1}</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Step {si + 1}</p>
                             <FormField control={control} name={`phases.${phaseIndex}.steps.${si}.description`}
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormControl>
                                             <Input placeholder="Describe this step..." {...field}
-                                                className="border-none shadow-none font-bold text-sm p-0 h-auto focus-visible:ring-0 bg-transparent text-foreground uppercase tracking-tight" />
+                                                className="border-none shadow-none p-0 h-auto text-base font-semibold focus-visible:ring-0 bg-transparent text-foreground" />
                                         </FormControl>
                                     </FormItem>
                                 )} />
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <SummaryChip tone="neutral">
+                                {(watchedSteps?.[si]?.hazards?.length ?? 0)} hazards
+                            </SummaryChip>
                             <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => remove(si)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-100 pb-3 pl-3 pr-3 pt-3">
+                    <div className="border-t border-slate-100 px-4 py-4">
                         <HazardsArray phaseIndex={phaseIndex} stepIndex={si} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                     </div>
                 </div>
@@ -614,6 +653,8 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [collapsedPhases, setCollapsedPhases] = useState<Record<string, boolean>>({});
+    const [pendingScrollPhaseId, setPendingScrollPhaseId] = useState<string | null>(null);
+    const phaseCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const formKey = useMemo(() => moc.id || uuidv4(), [moc.id]);
 
     const form = useForm<FormValues>({
@@ -625,6 +666,30 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
         control: form.control,
         name: 'phases',
     });
+    const watchedPhases = useWatch({ control: form.control, name: 'phases' }) as FormValues['phases'] | undefined;
+    const handleAddPhase = useCallback(() => {
+        const newPhaseId = uuidv4();
+        appendPhase({ id: newPhaseId, title: '', steps: [] });
+        setCollapsedPhases((prev) => ({ ...prev, [newPhaseId]: false }));
+        setPendingScrollPhaseId(newPhaseId);
+    }, [appendPhase]);
+
+    React.useEffect(() => {
+        if (!pendingScrollPhaseId) return;
+        const phaseExists = phaseFields.some((phase) => phase.id === pendingScrollPhaseId);
+        if (!phaseExists) return;
+
+        const raf = window.requestAnimationFrame(() => {
+            phaseCardRefs.current[pendingScrollPhaseId]?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+            setCollapsedPhases((prev) => ({ ...prev, [pendingScrollPhaseId]: false }));
+            setPendingScrollPhaseId(null);
+        });
+
+        return () => window.cancelAnimationFrame(raf);
+    }, [pendingScrollPhaseId, phaseFields]);
 
     const onSubmit = async (values: FormValues) => {
         setIsSaving(true);
@@ -670,7 +735,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
     useImperativeHandle(ref, () => ({
         submit: () => form.handleSubmit(onSubmit)(),
         analyze: handleAnalyze,
-        addPhase: () => appendPhase({ id: uuidv4(), title: '', steps: [] }),
+        addPhase: handleAddPhase,
         hasUnsavedChanges: () => form.formState.isDirty,
     }));
 
@@ -718,7 +783,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                             {/* ── Phases ────────────────────────────────────── */}
                             <div className="min-h-0 flex-1 overflow-y-auto">
                             <div className="mx-auto w-full max-w-6xl space-y-5 px-6 pb-24">
-                                <div className="sticky top-0 z-10 -mx-6 -mt-6 border-b border-slate-200 bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                                <div className="sticky top-0 z-10 -mx-6 border-b border-slate-200 bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="min-w-0">
                                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Phase Controls</p>
@@ -738,7 +803,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                             type="button"
                                             variant="outline"
                                             className="h-10 gap-2 rounded-full px-5 text-[10px] font-black uppercase tracking-[0.18em]"
-                                            onClick={() => appendPhase({ id: uuidv4(), title: '', steps: [] })}
+                                            onClick={handleAddPhase}
                                         >
                                             <PlusCircle className="h-3.5 w-3.5" />
                                             Add Phase
@@ -747,8 +812,18 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                 </div>
                                 {phaseFields.length > 0 ? phaseFields.map((field, pi) => {
                                     const isCollapsed = collapsedPhases[field.id] ?? false;
+                                    const phaseData = watchedPhases?.[pi];
+                                    const phaseSteps = phaseData?.steps?.length ?? 0;
+                                    const phaseHazards = phaseData?.steps?.reduce((count, step) => count + (step.hazards?.length ?? 0), 0) ?? 0;
+                                    const phaseRisks = phaseData?.steps?.reduce((count, step) => count + (step.hazards?.reduce((hazardCount, hazard) => hazardCount + (hazard.risks?.length ?? 0), 0) ?? 0), 0) ?? 0;
                                     return (
-                                    <div key={field.id} className="border border-slate-200 bg-white shadow-none">
+                                    <div
+                                        key={field.id}
+                                        ref={(node) => {
+                                            phaseCardRefs.current[field.id] = node;
+                                        }}
+                                        className="border border-slate-200 bg-white shadow-none"
+                                    >
                                         <div
                                             className="flex items-center justify-between border-b px-4 py-3"
                                             style={{
@@ -770,6 +845,11 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                                                 </FormControl>
                                                             </FormItem>
                                                         )} />
+                                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                        <SummaryChip tone="neutral">{phaseSteps} steps</SummaryChip>
+                                                        <SummaryChip tone="warning">{phaseHazards} hazards</SummaryChip>
+                                                        <SummaryChip tone="success">{phaseRisks} risks</SummaryChip>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">

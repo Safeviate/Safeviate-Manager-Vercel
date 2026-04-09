@@ -262,26 +262,20 @@ const WBCalculator = () => {
   };
 
   const envelope = graphConfig.envelope;
-  const allX = [...envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
-  const allY = [...envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-  const fXMin = Math.min(Number(graphConfig.xMin), ...allX) - 2;
-  const fXMax = Math.max(Number(graphConfig.xMax), ...allX) + 2;
-  const fYMin = Math.min(Number(graphConfig.yMin), ...allY) - 100;
-  const fYMax = Math.max(Number(graphConfig.yMax), ...allY) + 100;
   const graphTemplate = useMemo<MassBalanceGraphTemplate>(() => ({
     id: loadedAircraft?.id || graphConfig.modelName.toLowerCase().replace(/\s+/g, '-'),
     name: loadedAircraft ? `${loadedAircraft.make} ${loadedAircraft.model}` : graphConfig.modelName,
     family: loadedAircraft?.tailNumber || loadedAircraft?.make || 'Configurator',
     xLabel: 'CG (inches)',
     yLabel: 'Gross Weight (lbs)',
-    xDomain: [fXMin, fXMax],
-    yDomain: [fYMin, fYMax],
+    xDomain: [graphConfig.xMin, graphConfig.xMax],
+    yDomain: [graphConfig.yMin, graphConfig.yMax],
     envelope: envelope.map((point, index) => ({
       ...point,
       color: ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'][index % 5],
     })) as MassBalanceGraphPoint[],
     currentPoint: { x: results.cg, y: results.weight },
-  }), [loadedAircraft, graphConfig.modelName, fXMin, fXMax, fYMin, fYMax, envelope, results.cg, results.weight]);
+  }), [loadedAircraft, graphConfig.modelName, graphConfig.xMin, graphConfig.xMax, graphConfig.yMin, graphConfig.yMax, envelope, results.cg, results.weight]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden gap-4 px-1">

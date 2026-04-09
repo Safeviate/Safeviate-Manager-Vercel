@@ -55,8 +55,8 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
               <TableBody>
                 {data.map((person) => (
                   <TableRow key={person.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell className="font-mono text-xs font-bold text-primary">{person.userNumber || '-'}</TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-mono text-sm font-medium text-primary">{person.userNumber || '-'}</TableCell>
+                    <TableCell className="text-sm font-medium text-foreground">
                       <div className="flex items-center gap-2">
                         {person.firstName} {person.lastName}
                         <div className="flex gap-1">
@@ -79,9 +79,9 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs">{person.email}</TableCell>
-                    <TableCell className="text-xs">{departmentsMap.get(person.department || '') || 'N/A'}</TableCell>
-                    <TableCell className="text-xs font-semibold">{rolesMap.get(person.role) || person.role}</TableCell>
+                    <TableCell className="text-sm font-medium text-foreground">{person.email}</TableCell>
+                    <TableCell className="text-sm font-medium text-foreground">{departmentsMap.get(person.department || '') || 'N/A'}</TableCell>
+                    <TableCell className="text-sm font-medium text-foreground">{rolesMap.get(person.role) || person.role}</TableCell>
                     <TableCell className="text-right">
                       <PersonnelActions tenantId={tenantId} user={person} />
                     </TableCell>
@@ -106,10 +106,10 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 py-3 space-y-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Mail className="h-3.5 w-3.5" /> {person.email}
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-semibold">
+                  <div className="flex items-center gap-2 text-sm font-medium">
                     <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                     {departmentsMap.get(person.department || '') || 'No Dept'} • {rolesMap.get(person.role) || person.role}
                   </div>

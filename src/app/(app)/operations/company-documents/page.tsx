@@ -239,18 +239,18 @@ export default function CompanyDocumentsPage() {
                     const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
                     return (
                     <TableRow key={doc.id} className="group">
-                      <TableCell className="text-center">
+                      <TableCell className="text-center text-sm font-medium text-foreground">
                         {doc.type === 'image' ? (
                           <ImageIcon className="h-4 w-4 text-primary mx-auto" />
                         ) : (
                           <FileType className="h-4 w-4 text-muted-foreground mx-auto" />
                         )}
                       </TableCell>
-                      <TableCell className="font-semibold">{doc.name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="text-sm font-medium text-foreground">{doc.name}</TableCell>
+                      <TableCell className="text-sm font-medium text-foreground">
                         {format(new Date(doc.uploadDate), 'dd MMM yyyy')}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm font-medium text-foreground">
                         <div className="flex items-center gap-2">
                           <Popover>
                             <PopoverTrigger asChild>
@@ -280,7 +280,7 @@ export default function CompanyDocumentsPage() {
                           </Popover>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right text-sm font-medium text-foreground">
                         <div className="flex justify-end gap-2">
                           <ViewActionButton onClick={() => setViewingDoc(doc)} />
                           {canManage && (

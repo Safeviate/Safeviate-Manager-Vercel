@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { ChevronsUpDown, PlusCircle, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -99,8 +100,8 @@ export function AddToolDialog() {
       <DialogTrigger asChild>
         <Button
           variant={isMobile ? 'outline' : 'default'}
-          size={isMobile ? 'sm' : 'default'}
-          className={isMobile ? 'h-9 w-full justify-between border-input bg-background px-3 text-[10px] font-bold uppercase text-foreground shadow-sm hover:bg-accent/40' : 'w-full sm:w-auto shadow-md gap-2 h-9 px-6 text-xs font-black uppercase'}
+          size="default"
+          className={isMobile ? 'w-full justify-between' : HEADER_ACTION_BUTTON_CLASS}
         >
           <span className="flex items-center gap-2">
             <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} /> Add Equipment

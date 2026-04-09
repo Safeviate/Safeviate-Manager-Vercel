@@ -910,7 +910,7 @@ export default function CoherenceMatrixPage() {
                                 <Button
                                     variant="outline"
                                     aria-label="Open coherence matrix actions"
-                                    className="h-10 w-full justify-between border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+                                    className="h-9 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-[10px] font-black uppercase shadow-sm hover:bg-muted"
                                 >
                                     <span className="flex items-center gap-2">
                                         <MoreHorizontal className="h-3.5 w-3.5" />
@@ -947,7 +947,7 @@ export default function CoherenceMatrixPage() {
                             <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={currentFamilySubheaders} />
                             <Button
                                 variant="outline"
-                                className="h-10 px-4 py-2 text-sm font-medium gap-2"
+                                className="h-10 gap-2 px-4 py-2 text-sm font-medium"
                                 onClick={() => handleOpenForm(null, 'header')}
                             >
                                 <Layers className="h-4 w-4" />
@@ -955,14 +955,14 @@ export default function CoherenceMatrixPage() {
                             </Button>
                             <Button
                                 variant="outline"
-                                className="h-10 px-4 py-2 text-sm font-medium gap-2"
+                                className="h-10 gap-2 px-4 py-2 text-sm font-medium"
                                 onClick={() => handleOpenForm(null, 'subheader')}
                             >
                                 <Layers className="h-4 w-4" />
                                 Add Subheader
                             </Button>
                             <Button 
-                                className="h-10 px-4 py-2 text-sm font-medium gap-2"
+                                className="h-10 gap-2 px-4 py-2 text-sm font-medium"
                                 onClick={() => handleOpenForm()}
                             >
                                 <PlusCircle className="h-4 w-4" /> 

@@ -201,12 +201,12 @@ function WBCalculatorContent() {
     </div>
   );
 
-  const allX = [...graphConfig.envelope.map(p => p.x), results.cg].filter(n => !isNaN(n) && isFinite(n));
-  const allY = [...graphConfig.envelope.map(p => p.y), results.weight].filter(n => !isNaN(n) && isFinite(n));
-  const finalXMin = allX.length > 0 ? Math.min(graphConfig.xMin, ...allX) - 1 : 70;
-  const finalXMax = allX.length > 0 ? Math.max(graphConfig.xMax, ...allX) + 1 : 100;
-  const finalYMin = allY.length > 0 ? Math.min(graphConfig.yMin, ...allY) - 100 : 1000;
-  const finalYMax = allY.length > 0 ? Math.max(graphConfig.yMax, ...allY) + 100 : 3000;
+  // Keep the chart bounds anchored to the aircraft envelope so an out-of-limits
+  // CG does not expand the graph to make the point fit.
+  const finalXMin = graphConfig.xMin;
+  const finalXMax = graphConfig.xMax;
+  const finalYMin = graphConfig.yMin;
+  const finalYMax = graphConfig.yMax;
   return (
     <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-8 pt-4 px-1">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-2">

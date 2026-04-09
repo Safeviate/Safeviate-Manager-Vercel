@@ -66,8 +66,19 @@ const OpenAiAnalyzeMocOutputSchema = z.object({
 
 function extractJsonPayload(content: string) {
   const fencedMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fencedMatch?.[1] ?? content;
-  return JSON.parse(candidate.trim());
+  const fencedCandidate = fencedMatch?.[1]?.trim();
+  if (fencedCandidate) {
+    return JSON.parse(fencedCandidate);
+  }
+
+  const trimmed = content.trim();
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1));
+  }
+
+  return JSON.parse(trimmed);
 }
 
 async function runOpenAiAnalyzeMoc(input: AnalyzeMocInput) {
@@ -85,6 +96,65 @@ async function runOpenAiAnalyzeMoc(input: AnalyzeMocInput) {
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL_ANALYZE_MOC || process.env.OPENAI_MODEL || 'gpt-4.1-mini',
       temperature: 0.2,
+      max_completion_tokens: 6000,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'analyze_moc_output',
+          strict: true,
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['phases'],
+            properties: {
+              phases: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['title', 'steps'],
+                  properties: {
+                    title: { type: 'string' },
+                    steps: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        additionalProperties: false,
+                        required: ['description', 'hazards'],
+                        properties: {
+                          description: { type: 'string' },
+                          hazards: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              additionalProperties: false,
+                              required: ['description', 'risks'],
+                              properties: {
+                                description: { type: 'string' },
+                                risks: {
+                                  type: 'array',
+                                  items: {
+                                    type: 'object',
+                                    additionalProperties: false,
+                                    required: ['description'],
+                                    properties: {
+                                      description: { type: 'string' },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       messages: [
         {
           role: 'system',
@@ -125,8 +195,14 @@ async function runOpenAiAnalyzeMoc(input: AnalyzeMocInput) {
     throw new Error('OpenAI returned an empty response for the MOC analysis.');
   }
 
-  const parsed = extractJsonPayload(content);
-  return OpenAiAnalyzeMocOutputSchema.parse(parsed);
+  try {
+    const parsed = extractJsonPayload(content);
+    return OpenAiAnalyzeMocOutputSchema.parse(parsed);
+  } catch (error) {
+    const excerpt = content.trim().slice(0, 500);
+    const reason = error instanceof Error ? error.message : 'Unknown JSON parsing error.';
+    throw new Error(`Failed to parse MOC analysis JSON: ${reason}. Response excerpt: ${excerpt}`);
+  }
 }
 
 export async function analyzeMoc(input: AnalyzeMocInput): Promise<AnalyzeMocOutput> {

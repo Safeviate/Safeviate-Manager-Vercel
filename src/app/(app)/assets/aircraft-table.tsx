@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,9 +53,7 @@ export function AircraftTable({ data, isLoading, tenantId }: AircraftTableProps)
           <TableRow key={aircraft.id}>
             <TableCell className="font-bold">{aircraft.tailNumber}</TableCell>
             <TableCell>{aircraft.make} {aircraft.model}</TableCell>
-            <TableCell>
-              <Badge variant="outline">{aircraft.type || 'N/A'}</Badge>
-            </TableCell>
+            <TableCell className="font-black uppercase tracking-widest">{aircraft.type || 'N/A'}</TableCell>
             <TableCell>{aircraft.frameHours?.toFixed(1) || '0.0'} hrs</TableCell>
             <TableCell className="text-right">
               <AircraftActions tenantId={tenantId} aircraft={aircraft} />

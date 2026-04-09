@@ -171,13 +171,13 @@ const BookingsTable = ({
 
                         return (
                             <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
-                                <TableCell className="font-bold text-sm text-foreground whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
-                                <TableCell className="font-black text-sm uppercase text-foreground">{b.aircraftTailNumber}</TableCell>
-                                <TableCell className="font-bold text-sm text-foreground">{b.creatorName}</TableCell>
-                                <TableCell className="font-bold text-sm text-foreground">{b.instructorName || 'N/A'}</TableCell>
-                                <TableCell className="font-bold text-sm text-foreground">{b.studentName || 'N/A'}</TableCell>
-                                <TableCell className="font-medium text-sm text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
-                                <TableCell className="text-right font-black text-sm text-foreground whitespace-nowrap">
+                                <TableCell className="font-mono text-sm font-medium text-primary whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
+                                <TableCell className="text-sm font-medium text-foreground uppercase">{b.aircraftTailNumber}</TableCell>
+                                <TableCell className="text-sm font-medium text-foreground">{b.creatorName}</TableCell>
+                                <TableCell className="text-sm font-medium text-foreground">{b.instructorName || 'N/A'}</TableCell>
+                                <TableCell className="text-sm font-medium text-foreground">{b.studentName || 'N/A'}</TableCell>
+                                <TableCell className="text-sm font-medium text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
+                                <TableCell className="text-right text-sm font-medium text-foreground whitespace-nowrap">
                                     {flightHours !== null ? (
                                         <div className="flex items-center justify-end gap-1">
                                             <Clock className="h-3 w-3" />

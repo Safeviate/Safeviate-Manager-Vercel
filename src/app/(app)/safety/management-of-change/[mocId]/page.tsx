@@ -14,6 +14,7 @@ import { ImplementationForm, type ImplementationFormHandle } from './implementat
 import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -130,7 +131,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col min-h-screen overflow-y-auto pt-0 px-1">
+    <div className="max-w-[1400px] mx-auto w-full flex flex-col min-h-screen overflow-y-auto pt-4 px-1">
       <Tabs
         value={activeTab}
         onValueChange={(nextTab) => {
@@ -168,7 +169,8 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="w-full h-11 flex justify-between items-center px-4 border-border bg-background font-black uppercase text-[11px] tracking-tighter shadow-sm hover:bg-muted/40"
+                                    size="default"
+                                    className="w-full justify-between"
                                 >
                                     <div className="flex items-center gap-2">
                                         <MoreHorizontal className="h-4 w-4" />
@@ -216,10 +218,10 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                     ) : (
                         <div className="flex flex-row items-center justify-between gap-4">
                             <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center shrink-0">
-                                <TabsTrigger value="implementation" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">
+                                <TabsTrigger value="implementation" className="h-10 rounded-md px-4 text-sm font-medium border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground transition-all shrink-0">
                                     Implementation & Strategy
                                 </TabsTrigger>
-                                <TabsTrigger value="approval" className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">
+                                <TabsTrigger value="approval" className="h-10 rounded-md px-4 text-sm font-medium border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground transition-all shrink-0">
                                     Approval & Sign-off
                                 </TabsTrigger>
                             </TabsList>
@@ -230,9 +232,9 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                         <Button 
                                             type="button" 
                                             variant="outline" 
-                                            size="sm" 
+                                            size="default" 
                                             onClick={() => implementationFormRef.current?.analyze()} 
-                                            className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
+                                            className="gap-2"
                                         >
                                             <WandSparkles className="h-3.5 w-3.5 text-primary" />
                                             AI Analyze
@@ -240,25 +242,25 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                         <Button 
                                             type="button" 
                                             variant="outline" 
-                                            size="sm" 
+                                            size="default" 
                                             onClick={() => implementationFormRef.current?.addPhase()} 
-                                            className="h-9 px-4 gap-2 rounded-full border-slate-300 text-[10px] font-black uppercase shadow-sm bg-background hover:bg-muted"
+                                            className="gap-2"
                                         >
                                             <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
                                             Add Phase
                                         </Button>
                                         <Button 
                                             type="button" 
-                                            size="sm" 
+                                            size="default" 
                                             onClick={() => implementationFormRef.current?.submit()} 
-                                            className="h-9 px-6 gap-2 rounded-full text-[10px] font-black uppercase shadow-md"
+                                            className={HEADER_ACTION_BUTTON_CLASS}
                                         >
                                             <ShieldCheck className="h-3.5 w-3.5" />
                                             Save Strategy
                                         </Button>
                                     </>
                                 )}
-                                <Button onClick={handlePrint} variant="outline" size="sm" className="h-9 px-4 gap-2 rounded-md border-slate-300 text-xs font-black uppercase shadow-sm">
+                                <Button onClick={handlePrint} variant="outline" size="default" className="gap-2">
                                     <Printer className="h-4 w-4" />
                                     Print
                                 </Button>
