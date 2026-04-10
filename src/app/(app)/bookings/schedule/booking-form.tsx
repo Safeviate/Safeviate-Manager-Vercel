@@ -24,6 +24,7 @@ import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, Chec
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
+import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 
 const bookingFormSchema = z.object({
     type: z.string().min(1, 'Booking type is required.'),
@@ -496,13 +497,10 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                             />
                                         </div>
                                         {preFlightPhotos.length > 0 && (
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {preFlightPhotos.map((photo) => (
-                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border bg-muted/20">
-                                                        <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
-                                                    </a>
-                                                ))}
-                                            </div>
+                                            <PhotoViewerDialog
+                                                title="Pre-flight Photos"
+                                                photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                            />
                                         )}
                                     </div>
                                 </div>
@@ -588,13 +586,10 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                             />
                                         </div>
                                         {postFlightPhotos.length > 0 && (
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {postFlightPhotos.map((photo) => (
-                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border bg-muted/20">
-                                                        <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
-                                                    </a>
-                                                ))}
-                                            </div>
+                                            <PhotoViewerDialog
+                                                title="Post-flight Photos"
+                                                photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                            />
                                         )}
                                     </div>
                                 </div>

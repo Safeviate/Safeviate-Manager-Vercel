@@ -32,6 +32,7 @@ export function ProjectDocumentUploader({
 }) {
   const [section, setSection] = useState<SafetyFileProjectDocumentSection>('core-pack');
   const [requirementId, setRequirementId] = useState<string>('general');
+  const [expirationDate, setExpirationDate] = useState('');
   const [uploadsConfigured, setUploadsConfigured] = useState<boolean | null>(null);
 
   const sectionRequirements = useMemo(
@@ -84,7 +85,7 @@ export function ProjectDocumentUploader({
         </Alert>
       ) : null}
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
         <Select value={section} onValueChange={(value) => setSection(value as SafetyFileProjectDocumentSection)}>
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Section" />
@@ -112,6 +113,19 @@ export function ProjectDocumentUploader({
           </SelectContent>
         </Select>
 
+        <div className="flex w-full flex-col gap-1 md:w-[220px]">
+          <label htmlFor="project-document-expiry" className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+            Expiry Date
+          </label>
+          <input
+            id="project-document-expiry"
+            type="date"
+            value={expirationDate}
+            onChange={(event) => setExpirationDate(event.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm leading-none"
+          />
+        </div>
+
         {uploadsConfigured === false ? (
           <Button
             type="button"
@@ -130,7 +144,7 @@ export function ProjectDocumentUploader({
                 name: document.name,
                 url: document.url,
                 uploadDate: document.uploadDate,
-                expirationDate: document.expirationDate,
+                expirationDate: expirationDate ? new Date(`${expirationDate}T00:00:00`).toISOString() : document.expirationDate,
                 section,
                 requirementId: requirementId === 'general' ? undefined : requirementId,
                 createdAt: now,

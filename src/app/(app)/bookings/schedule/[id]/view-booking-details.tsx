@@ -23,6 +23,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { BackNavButton } from '@/components/back-nav-button';
+import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
@@ -542,24 +543,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </div>
                                 <div className="rounded-xl border bg-background p-4 space-y-3">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {(preFlightPhotos.length || postFlightPhotos.length) ? (
-                                            <>
-                                                {preFlightPhotos.map((photo) => (
-                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
-                                                        <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
-                                                    </a>
-                                                ))}
-                                                {postFlightPhotos.map((photo) => (
-                                                    <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
-                                                        <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
-                                                    </a>
-                                                ))}
-                                            </>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">No checklist photos stored.</p>
-                                        )}
-                                    </div>
+                                    <PhotoViewerDialog
+                                        title="Checklist Photos"
+                                        photos={[
+                                            ...preFlightPhotos.map((photo) => ({ url: photo.url, name: `Pre-flight: ${photo.name}` })),
+                                            ...postFlightPhotos.map((photo) => ({ url: photo.url, name: `Post-flight: ${photo.name}` })),
+                                        ]}
+                                        emptyLabel="No checklist photos stored."
+                                    />
                                 </div>
                             </div>
                             <div className="space-y-4">
@@ -915,25 +906,19 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 {preFlightPhotos.length > 0 && (
                                                     <div className="space-y-2">
                                                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight Photos</p>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {preFlightPhotos.map((photo) => (
-                                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
-                                                                    <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
-                                                                </a>
-                                                            ))}
-                                                        </div>
+                                                        <PhotoViewerDialog
+                                                            title="Pre-flight Photos"
+                                                            photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                                        />
                                                     </div>
                                                 )}
                                                 {postFlightPhotos.length > 0 && (
                                                     <div className="space-y-2">
                                                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Post-flight Photos</p>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {postFlightPhotos.map((photo) => (
-                                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
-                                                                    <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
-                                                                </a>
-                                                            ))}
-                                                        </div>
+                                                        <PhotoViewerDialog
+                                                            title="Post-flight Photos"
+                                                            photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                                        />
                                                     </div>
                                                 )}
                                             </div>

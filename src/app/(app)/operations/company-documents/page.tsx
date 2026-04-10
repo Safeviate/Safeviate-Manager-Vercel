@@ -310,24 +310,24 @@ export default function CompanyDocumentsPage() {
       </Card>
 
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-          <DialogHeader className="shrink-0 border-b pb-4">
-            <DialogTitle>{viewingDoc?.name}</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-2xl max-h-[85vh] p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black uppercase tracking-tight">{viewingDoc?.name}</DialogTitle>
+            <DialogDescription className="text-xs uppercase tracking-widest">
               Preview the selected company document.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden relative mt-4 min-h-[60vh] bg-muted/20 rounded-md">
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border bg-muted/20">
             {viewingDoc?.type === 'image' || viewingDoc?.url.startsWith('default_api:image/') ? (
-              <Image 
-                src={viewingDoc.url} 
-                alt={viewingDoc.name} 
-                fill 
+              <Image
+                src={viewingDoc.url}
+                alt={viewingDoc.name}
+                fill
                 className="object-contain"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-4">
-                <FileText className="h-20 w-20 text-muted-foreground" />
+              <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                <FileText className="h-14 w-14 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Binary file preview is not available in browser. Use the download button below.</p>
                 <Button asChild>
                   <a href={viewingDoc?.url} download={viewingDoc?.name}>Download Document</a>

@@ -23,6 +23,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
 import { BackNavButton } from '@/components/back-nav-button';
+import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
@@ -874,18 +875,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
                                     <div className="rounded-xl border bg-background p-4 space-y-3">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {(booking.preFlightData?.photos || []).map((photo) => (
-                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
-                                                    <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
-                                                </a>
-                                            ))}
-                                            {(booking.postFlightData?.photos || []).map((photo) => (
-                                                <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
-                                                    <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
-                                                </a>
-                                            ))}
-                                        </div>
+                                        <PhotoViewerDialog
+                                            title="Flight Photos"
+                                            photos={[
+                                                ...(booking.preFlightData?.photos || []).map((photo) => ({ url: photo.url, name: `Pre-flight: ${photo.name}` })),
+                                                ...(booking.postFlightData?.photos || []).map((photo) => ({ url: photo.url, name: `Post-flight: ${photo.name}` })),
+                                            ]}
+                                            emptyLabel="No checklist photos stored."
+                                        />
                                     </div>
                                 </div>
 

@@ -570,16 +570,14 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
       </div>
 
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>
-        <DialogContent className="max-w-5xl max-h-[95vh] rounded-3xl p-8">
+        <DialogContent className="max-w-2xl max-h-[85vh] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tight">{viewingDoc?.name}</DialogTitle>
+            <DialogTitle className="text-lg font-black uppercase tracking-tight">{viewingDoc?.name}</DialogTitle>
+            <DialogDescription className="text-xs uppercase tracking-widest">Document Preview</DialogDescription>
           </DialogHeader>
-          <div className="relative aspect-[16/9] w-full bg-muted/20 rounded-2xl overflow-hidden border-2 shadow-inner mt-4">
-            {viewingDoc && <img src={viewingDoc.url} alt={viewingDoc.name} className="object-contain w-full h-full" />}
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border bg-muted/20">
+            {viewingDoc && <img src={viewingDoc.url} alt={viewingDoc.name} className="h-full w-full object-contain" />}
           </div>
-          <DialogFooter className="pt-6">
-            <Button variant="outline" className="h-11 px-10 text-[10px] font-black uppercase border-slate-300 shadow-sm" onClick={() => setViewingDoc(null)}>Close Viewer</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
