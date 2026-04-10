@@ -84,15 +84,16 @@ interface ComplianceItemFormProps {
 export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tenantId, defaultRegulationFamily, availableParentHeaders = [], mode = 'item' }: ComplianceItemFormProps) {
     const { toast } = useToast();
     const topLevelHeaderValue = '__top_level__';
+    const activeSchema = (
+        mode === 'header'
+            ? headerFormSchema
+            : mode === 'subheader'
+            ? subheaderFormSchema
+            : formSchema
+    ) as z.ZodTypeAny;
 
     const form = useForm<any>({
-        resolver: zodResolver(
-            mode === 'header'
-                ? headerFormSchema
-                : mode === 'subheader'
-                ? subheaderFormSchema
-                : formSchema
-        ),
+        resolver: zodResolver(activeSchema) as any,
         defaultValues: {
             regulationFamily: existingItem?.regulationFamily || defaultRegulationFamily || 'sacaa-cars',
             parentRegulationCode: existingItem?.parentRegulationCode || '',

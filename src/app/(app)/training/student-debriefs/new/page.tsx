@@ -6,6 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -60,7 +61,7 @@ function NewDebriefContent() {
                 const students = Array.isArray(payload?.students) ? payload.students : [];
                 const instructors = Array.isArray(payload?.instructors) ? payload.instructors : [];
 
-                const b = bookings.find(x => x.id === bookingId);
+                const b = bookings.find((x: Booking) => x.id === bookingId);
                 if (b && !cancelled) {
                     setBooking(b);
                     setStudent(students.find((s: PilotProfile) => s.id === b.studentId) || null);

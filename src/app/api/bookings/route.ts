@@ -27,6 +27,30 @@ async function getTenantId() {
   return currentUser?.tenantId || 'safeviate';
 }
 
+export async function GET() {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ bookings: [] }, { status: 200 });
+
+    await ensureBookingsSchema();
+    const bookings = await prisma.bookingRecord.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+      select: { data: true },
+    });
+
+    return NextResponse.json(
+      {
+        bookings: bookings.map((row) => row.data),
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('[bookings] failed to load bookings:', error);
+    return NextResponse.json({ bookings: [] }, { status: 200 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const tenantId = await getTenantId();

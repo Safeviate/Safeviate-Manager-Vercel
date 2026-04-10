@@ -31,6 +31,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   const [isOpen, setIsOpen] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>(restrictedMode || 'file');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadsConfigured, setUploadsConfigured] = useState<boolean | null>(null);
 
   // Camera state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -41,6 +42,30 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   const [fileName, setFileName] = useState(defaultFileName);
   const [file, setFile] = useState<File | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadUploadStatus = async () => {
+      try {
+        const response = await fetch('/api/uploads/status', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (active) {
+          setUploadsConfigured(Boolean(payload?.configured));
+        }
+      } catch {
+        if (active) {
+          setUploadsConfigured(false);
+        }
+      }
+    };
+
+    void loadUploadStatus();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const cleanupCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -69,6 +94,14 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   };
 
   const openDialog = (mode: UploadMode = 'file') => {
+    if (uploadsConfigured === false) {
+      toast({
+        variant: 'destructive',
+        title: 'Uploads are not configured',
+        description: 'Add BLOB_READ_WRITE_TOKEN in Vercel to enable file and photo uploads in production.',
+      });
+      return;
+    }
     setUploadMode(restrictedMode || mode);
     setIsOpen(true);
   };
@@ -159,6 +192,9 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({ error: 'Upload failed' }));
+      if (response.status === 503) {
+        throw new Error(payload.error || 'Production file storage is not configured.');
+      }
       throw new Error(payload.error || 'Upload failed');
     }
 
@@ -236,6 +272,14 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
               : 'Upload a file or take a photo of the document.'}
           </DialogDescription>
         </DialogHeader>
+        {uploadsConfigured === false ? (
+          <Alert variant="destructive">
+            <AlertTitle>Uploads are not configured</AlertTitle>
+            <AlertDescription>
+              Add <code>BLOB_READ_WRITE_TOKEN</code> in Vercel to enable uploads in production.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <div className="grid gap-6 py-4">
             <div className="space-y-2">
                 <Label htmlFor="file-name">Document Name</Label>

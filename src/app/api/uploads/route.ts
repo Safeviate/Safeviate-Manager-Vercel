@@ -49,6 +49,16 @@ export async function POST(request: Request) {
     });
   }
 
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      {
+        error:
+          'BLOB_READ_WRITE_TOKEN is missing in Vercel. Add Vercel Blob to this project to enable file uploads in production.',
+      },
+      { status: 503 }
+    );
+  }
+
   const localUrlPath = `/${blobPath}`;
   const uploadsRoot = path.join(process.cwd(), 'public');
   const localFilePath = path.join(uploadsRoot, blobPath);

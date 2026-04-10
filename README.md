@@ -12,7 +12,9 @@ For local development, copy `.env.local.example` to `.env.local` and set the req
 - `AUTH_SEED_EMAIL`
 - `AUTH_SEED_PASSWORD` or `AUTH_SEED_PASSWORD_HASH`
 - `OPENAI_API_KEY`
+- `OPENAIP_API_KEY` for the map tile proxy
 - `DATABASE_URL`
+- `BLOB_READ_WRITE_TOKEN` if you want document/photo uploads to work in production
 
 ## Prisma (Development)
 

@@ -471,7 +471,7 @@ export default function SafetyFileProjectPage({
                                       <div className="flex flex-wrap gap-2">
                                         {getDocumentHealthBadge(document.expirationDate || null)}
                                         <Button asChild variant="outline" size="sm" className="h-8 gap-2">
-                                          <a href={document.url} target="_blank" rel="noreferrer">
+                                          <a href={document.url}>
                                             <Eye className="h-3.5 w-3.5" />
                                             View
                                           </a>
@@ -604,7 +604,7 @@ export default function SafetyFileProjectPage({
                               {getDocumentHealthBadge(document.expirationDate)}
                               <Badge variant="outline">{formatDisplayDate(document.expirationDate, 'No expiry')}</Badge>
                               <Button asChild variant="outline" size="sm" className="h-8 gap-2">
-                                <a href={document.url} target="_blank" rel="noreferrer">
+                                <a href={document.url}>
                                   <Eye className="h-3.5 w-3.5" />
                                   View
                                 </a>
