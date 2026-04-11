@@ -83,47 +83,6 @@ function MapInteractionWatcher({
   return null;
 }
 
-function MapPaneRotation({
-  headingTrue,
-  enabled,
-}: {
-  headingTrue: number | null | undefined;
-  enabled: boolean;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    const mapPane = map.getContainer().querySelector('.leaflet-map-pane') as HTMLElement | null;
-    if (!mapPane) return;
-
-    const applyRotation = () => {
-      const transformWithoutRotation = (mapPane.style.transform || '').replace(/\srotate\([-0-9.]+deg\)/g, '').trim();
-      mapPane.style.transformOrigin = '50% 50%';
-
-      if (!enabled || headingTrue == null || Number.isNaN(headingTrue)) {
-        mapPane.style.transform = transformWithoutRotation;
-        return;
-      }
-
-      mapPane.style.transform = `${transformWithoutRotation} rotate(${-headingTrue}deg)`.trim();
-    };
-
-    const syncRotation = () => {
-      window.requestAnimationFrame(applyRotation);
-    };
-
-    applyRotation();
-    const events: Array<'move' | 'zoom' | 'zoomanim' | 'resize' | 'viewreset'> = ['move', 'zoom', 'zoomanim', 'resize', 'viewreset'];
-    events.forEach((event) => map.on(event, syncRotation));
-
-    return () => {
-      events.forEach((event) => map.off(event, syncRotation));
-    };
-  }, [enabled, headingTrue, map]);
-
-  return null;
-}
-
 function MapRecenterController({
   routePoints,
   position,
@@ -287,7 +246,6 @@ export function ActiveFlightLiveMap({
             attribution="&copy; OpenStreetMap contributors"
           />
           <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
-          <MapPaneRotation headingTrue={position?.headingTrue} enabled={isHeadingUp} />
           <MapRecenterController
             routePoints={routePoints}
             position={position}
