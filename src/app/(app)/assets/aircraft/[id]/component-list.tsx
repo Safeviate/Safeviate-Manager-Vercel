@@ -16,6 +16,14 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { ComponentForm } from './component-form';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 interface ComponentListProps {
   components: AircraftComponent[];
   isLoading: boolean;
@@ -84,7 +92,7 @@ export function ComponentList({ components, isLoading, aircraftId, tenantId }: C
                     <span className="text-[10px] font-mono font-black border-2 border-slate-200 px-3 py-1 rounded-lg bg-white shadow-sm uppercase">{comp.serialNumber}</span>
                 </TableCell>
                 <TableCell className="py-5">
-                    <span className="text-xs font-bold uppercase text-foreground/75">{comp.installDate ? format(new Date(comp.installDate), 'dd MMM y') : 'N/A'}</span>
+                    <span className="text-xs font-bold uppercase text-foreground/75">{comp.installDate ? format(parseLocalDate(comp.installDate), 'dd MMM y') : 'N/A'}</span>
                 </TableCell>
                 <TableCell className="text-right px-8 py-5">
                     <div className="flex flex-col items-end">
@@ -99,7 +107,6 @@ export function ComponentList({ components, isLoading, aircraftId, tenantId }: C
                   <div className="flex justify-end gap-2">
                     <ComponentForm 
                       aircraftId={aircraftId} 
-                      tenantId={tenantId} 
                       existingComponent={comp}
                       trigger={
                         <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2 hover:bg-primary hover:text-white transition-all hover:border-primary">

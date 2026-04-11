@@ -64,11 +64,15 @@ export function ComponentForm({ aircraftId, trigger }: ComponentFormProps) {
     },
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     try {
         const newComponent: AircraftComponent = {
             ...values,
             id: crypto.randomUUID(),
+            partNumber: '',
+            installHours: 0,
+            maxHours: 0,
+            notes: '',
         };
 
         const response = await fetch(`/api/aircraft/${aircraftId}`, {

@@ -11,8 +11,8 @@ export interface Workpack {
   openedAt?: string; // ISO string 
   closedAt?: string; // ISO string
   
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: unknown; // Firestore ServerTimestamp
+  updatedAt?: unknown; // Firestore ServerTimestamp
 }
 
 export type TaskRole = 'MECHANIC' | 'INSPECTOR';
@@ -22,7 +22,7 @@ export interface TaskSignature {
   signatoryUserId: string; // User ID
   role: TaskRole;
   signatureImage: string; // Base64 PNG
-  timestamp: any; // ServerTimestamp
+  timestamp: unknown; // ServerTimestamp
   authMethod: string; // "PIN_VALIDATED"
 }
 
@@ -48,9 +48,9 @@ export interface TaskCard {
   attachments?: MediaAttachment[]; // Media files
   
   // Audit timestamps (written by task-card-item.tsx on sign-off)
-  completedAt?: any; // Firestore ServerTimestamp
-  inspectedAt?: any; // Firestore ServerTimestamp
-  createdAt?: any; // Firestore ServerTimestamp
+  completedAt?: unknown; // Firestore ServerTimestamp
+  inspectedAt?: unknown; // Firestore ServerTimestamp
+  createdAt?: unknown; // Firestore ServerTimestamp
   
   // Signatures will be saved as a sub-collection for security purposes.
 }

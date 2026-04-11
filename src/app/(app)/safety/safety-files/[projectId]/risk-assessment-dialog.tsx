@@ -69,6 +69,16 @@ type RiskAssessmentDialogProps =
       onSave: (value: SafetyFileTaskRiskAssessment) => Promise<void> | void;
     };
 
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return undefined;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    const fallback = new Date(value);
+    return Number.isNaN(fallback.getTime()) ? undefined : fallback;
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 const riskAssessmentSchema = z.object({
   severity: z.number().min(1).max(5),
   likelihood: z.number().min(1).max(5),
@@ -141,7 +151,7 @@ export function RiskAssessmentDialog(props: RiskAssessmentDialogProps) {
         : '',
       controls: isTaskAssessment(initialValue) ? initialValue.controls || '' : '',
       responsiblePersonId: initialValue?.responsiblePersonId || '',
-      reviewDate: initialValue?.reviewDate ? new Date(initialValue.reviewDate) : undefined,
+      reviewDate: parseLocalDate(initialValue?.reviewDate),
       initialAssessment: {
         likelihood: initialValue?.initialAssessment?.likelihood || 1,
         severity: initialValue?.initialAssessment?.severity || 1,
@@ -178,7 +188,7 @@ export function RiskAssessmentDialog(props: RiskAssessmentDialogProps) {
         hazard: values.hazard,
         riskDescription: values.riskDescription,
         responsiblePersonId: values.responsiblePersonId || '',
-        reviewDate: values.reviewDate ? values.reviewDate.toISOString() : '',
+        reviewDate: values.reviewDate ? new Date(Date.UTC(values.reviewDate.getFullYear(), values.reviewDate.getMonth(), values.reviewDate.getDate(), 12)).toISOString() : '',
         initialAssessment: buildAssessment(values.initialAssessment),
         residualAssessment: values.residualAssessment
           ? buildAssessment(values.residualAssessment)

@@ -19,6 +19,14 @@ import { Loader2, WandSparkles, History, FileText, Calendar } from 'lucide-react
 import { callAiFlow } from '@/lib/ai-client';
 import type { SummarizeMaintenanceLogsOutput } from '@/ai/flows/summarize-maintenance-logs';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 function MaintenanceSummaryDialog({ logs }: { logs: MaintenanceLog[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -144,7 +152,7 @@ export function MaintenanceLogList({ aircraftId }: { aircraftId: string, tenantI
             {logs && logs.length > 0 ? (
               logs.map((log) => (
                 <TableRow key={log.id} className="hover:bg-muted/5 transition-colors">
-                  <TableCell className="whitespace-nowrap font-bold text-sm">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
+                  <TableCell className="whitespace-nowrap font-bold text-sm">{format(parseLocalDate(log.date), 'dd MMM yyyy')}</TableCell>
                   <TableCell className="py-4">
                     <p className="text-sm font-medium text-foreground leading-relaxed">{log.details}</p>
                     <p className="text-[10px] font-black text-muted-foreground uppercase mt-2 tracking-widest">Category: {log.maintenanceType}</p>

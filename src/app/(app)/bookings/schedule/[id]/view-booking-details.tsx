@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import type { Booking, NavlogLeg, ChecklistPhoto } from "@/types/booking";
+import type { Booking, BookingWorkflowCompletion, NavlogLeg, ChecklistPhoto } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
@@ -66,7 +66,14 @@ const DEFAULT_STATIONS = [
     { id: 3, name: 'Fuel', weight: 288, arm: 95, type: 'fuel', gallons: 48, maxGallons: 50 },
     { id: 4, name: 'Rear Pax', weight: 0, arm: 118.1, type: 'standard' },
     { id: 5, name: 'Baggage', weight: 0, arm: 142.8, type: 'standard' },
-];
+ ] satisfies NonNullable<NonNullable<Booking['massAndBalance']>['stations']>;
+
+type BookingPerson = { id: string; firstName: string; lastName: string };
+type BookingStation = NonNullable<NonNullable<Booking['massAndBalance']>['stations']>[number];
+type BookingStationState = Omit<BookingStation, 'weight' | 'gallons'> & {
+    weight: number | string;
+    gallons?: number | string;
+};
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -98,7 +105,7 @@ function stripUndefinedDeep<T>(value: T): T {
 
     if (value && typeof value === 'object') {
         return Object.fromEntries(
-            Object.entries(value as Record<string, any>)
+            Object.entries(value as Record<string, unknown>)
                 .filter(([, nested]) => nested !== undefined)
                 .map(([key, nested]) => [key, stripUndefinedDeep(nested)])
         ) as T;
@@ -107,16 +114,24 @@ function stripUndefinedDeep<T>(value: T): T {
     return value;
 }
 
+const CHECK_APPROVAL_KEYS = ['massAndBalance', 'navlog', 'preFlight', 'postFlight', 'photos', 'fuelUplift'] as const;
+type CheckApprovalKey = typeof CHECK_APPROVAL_KEYS[number];
+
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const isMobile = useIsMobile();
     const { toast } = useToast();
-    const { tenantId } = useUserProfile();
+    const { tenantId, userProfile } = useUserProfile();
     const [activeTab, setActiveTab] = useState('navlog');
     const [isSaving, setIsSaving] = useState(false);
+    const [isApproving, setIsApproving] = useState(false);
+    const [approvingSection, setApprovingSection] = useState<CheckApprovalKey | null>(null);
     const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
-    const [personnel, setPersonnel] = useState<any[]>([]);
+    const [personnel, setPersonnel] = useState<BookingPerson[]>([]);
     const [loadingAc, setLoadingAc] = useState(true);
     const [loadingPeople, setLoadingPeople] = useState(true);
+    const [initialDetailsLoaded, setInitialDetailsLoaded] = useState(false);
+    const [checkApprovals, setCheckApprovals] = useState(booking.checkApprovals || {});
+    const [workflowCompletion, setWorkflowCompletion] = useState<BookingWorkflowCompletion>(booking.workflowCompletion || {});
 
     const aircraft = useMemo(() => aircrafts?.find(a => a.id === booking.aircraftId), [aircrafts, booking.aircraftId]);
     const instructorLabel = useMemo(() => {
@@ -130,9 +145,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const student = personnel.find((person) => person.id === booking.studentId);
         return student ? `${student.firstName} ${student.lastName}` : booking.studentId;
     }, [personnel, booking.studentId]);
+    const isAssignedInstructor = !!userProfile && booking.instructorId === userProfile.id;
+    const canManuallyApprove = isAssignedInstructor || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.role?.toLowerCase() === 'dev';
     const [graphConfig, setGraphConfig] = useState(DEFAULT_GRAPH_CONFIG);
     const [basicEmpty, setBasicEmpty] = useState(DEFAULT_BASIC_EMPTY);
-    const [stations, setStations] = useState<any[]>(DEFAULT_STATIONS);
+    const [stations, setStations] = useState<BookingStationState[]>(DEFAULT_STATIONS);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
     const [preFlight, setPreFlight] = useState(booking.preFlightData || {
         hobbs: 0,
@@ -150,8 +167,68 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         oilUplift: 0,
         defects: '',
     });
-    const preFlightPhotos = (booking.preFlightData?.photos || []) as ChecklistPhoto[];
+    const preFlightPhotos = ((booking.preFlightData as (typeof booking.preFlightData & { photos?: ChecklistPhoto[] }) | undefined)?.photos || []) as ChecklistPhoto[];
     const postFlightPhotos = (booking.postFlightData?.photos || []) as ChecklistPhoto[];
+    const checkSections = useMemo(() => ([
+        {
+            key: 'massAndBalance' as const,
+            label: 'Mass & balance reviewed',
+            ok: !!booking.massAndBalance?.isWithinLimits,
+            detail: booking.massAndBalance?.isWithinLimits ? 'Within limits' : 'Needs review',
+        },
+        {
+            key: 'navlog' as const,
+            label: 'Navlog reviewed',
+            ok: !!booking.navlog?.legs?.length,
+            detail: booking.navlog?.legs?.length ? `${booking.navlog.legs.length} legs planned` : 'No navlog found',
+        },
+        {
+            key: 'preFlight' as const,
+            label: 'Pre-flight checks completed',
+            ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight,
+            detail: booking.preFlightData?.documentsChecked ? 'Documents checked' : 'Pre-flight not confirmed',
+        },
+        {
+            key: 'photos' as const,
+            label: 'Photos attached',
+            ok: (preFlightPhotos.length + postFlightPhotos.length) > 0,
+            detail: `${preFlightPhotos.length + postFlightPhotos.length} photo(s)`,
+        },
+        {
+            key: 'fuelUplift' as const,
+            label: 'Fuel uplift recorded',
+            ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0,
+            detail: 'Gallons and litres mirrored',
+        },
+        {
+            key: 'postFlight' as const,
+            label: 'Post-flight checks recorded',
+            ok: !!booking.postFlightData?.hobbs || !!booking.postFlight,
+            detail: (booking.postFlightData?.hobbs || 0) > 0 ? 'Hobbs recorded' : 'Post-flight pending',
+        },
+    ]), [booking.massAndBalance?.isWithinLimits, booking.navlog?.legs?.length, booking.postFlightData?.fuelUpliftGallons, booking.postFlightData?.hobbs, booking.preFlight, booking.preFlightData?.documentsChecked, booking.preFlightData?.fuelUpliftGallons, checkApprovals, preFlightPhotos.length, postFlightPhotos.length]);
+    const approvedSectionCount = checkSections.filter((section) => checkApprovals[section.key]?.approved).length;
+    const workflowReady = {
+        flightDetails: !!workflowCompletion.flightDetails,
+        planning: !!workflowCompletion.planning,
+        weatherPlanningNavlogRequired: !!workflowCompletion.weatherPlanningNavlogRequired,
+        massBalance: !!workflowCompletion.massBalance,
+        navlog: !!workflowCompletion.navlog,
+        checks: !!workflowCompletion.checks,
+    };
+    const allWorkflowComplete = workflowReady.flightDetails && workflowReady.planning && workflowReady.weatherPlanningNavlogRequired && workflowReady.massBalance && workflowReady.navlog && workflowReady.checks;
+    const consecutiveApprovedSectionCount = useMemo(() => {
+        let count = 0;
+        for (const section of checkSections) {
+            if (checkApprovals[section.key]?.approved) {
+                count += 1;
+            } else {
+                break;
+            }
+        }
+        return count;
+    }, [checkApprovals, checkSections]);
+    const allSectionsApproved = checkSections.every((section) => checkApprovals[section.key]?.approved);
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
@@ -199,6 +276,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 if (!cancelled) {
                     setLoadingAc(false);
                     setLoadingPeople(false);
+                    setInitialDetailsLoaded(true);
                 }
             }
         };
@@ -208,6 +286,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             cancelled = true;
         };
     }, [tenantId]);
+
+    useEffect(() => {
+        setCheckApprovals(booking.checkApprovals || {});
+    }, [booking.checkApprovals, booking.id]);
+
+    useEffect(() => {
+        setWorkflowCompletion(booking.workflowCompletion || {});
+    }, [booking.workflowCompletion, booking.id]);
 
     useEffect(() => {
         if (aircraft) {
@@ -310,19 +396,26 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     }, []);
 
-    const handleSaveToBooking = () => {
+    const handleSaveFlightDetails = () => {
         void fetch('/api/bookings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 booking: {
                     ...booking,
-                    massAndBalance: stripUndefinedDeep({
-                        takeoffWeight: results.weight,
-                        takeoffCg: results.cg,
-                        isWithinLimits: results.isSafe,
-                        stations,
-                    }),
+                    navlog: {
+                        ...(booking.navlog || {}),
+                        departureIcao: depIcao,
+                        arrivalIcao: arrIcao,
+                        departureLatitude: depLat ? parseFloat(depLat) : null,
+                        departureLongitude: depLon ? parseFloat(depLon) : null,
+                        arrivalLatitude: arrLat ? parseFloat(arrLat) : null,
+                        arrivalLongitude: arrLon ? parseFloat(arrLon) : null,
+                    },
+                    workflowCompletion: {
+                        ...workflowCompletion,
+                        flightDetails: true,
+                    },
                 },
             }),
         }).then(async (res) => {
@@ -330,9 +423,42 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 const payload = await res.json().catch(() => ({}));
                 throw new Error(payload.error || 'Save failed.');
             }
+            setWorkflowCompletion((current) => ({ ...current, flightDetails: true }));
+            toast({ title: 'Flight Details Saved' });
+        }).catch((error: unknown) => {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Save failed.' });
+        });
+    };
+
+    const handleSaveToBooking = () => {
+        void fetch('/api/bookings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking: {
+                    ...booking,
+                    checkApprovals,
+                    massAndBalance: stripUndefinedDeep({
+                        takeoffWeight: results.weight,
+                        takeoffCg: results.cg,
+                        isWithinLimits: results.isSafe,
+                        stations,
+                    }),
+                    workflowCompletion: {
+                        ...workflowCompletion,
+                        massBalance: true,
+                    },
+                },
+            }),
+        }).then(async (res) => {
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Save failed.');
+            }
+            setWorkflowCompletion((current) => ({ ...current, massBalance: true }));
             toast({ title: 'M&B Saved' });
-        }).catch((error: any) => {
-            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        }).catch((error: unknown) => {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Save failed.' });
         });
     };
 
@@ -343,10 +469,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             body: JSON.stringify({
                 booking: {
                     ...booking,
+                    checkApprovals,
                     preFlightData: stripUndefinedDeep(preFlight),
                     postFlightData: stripUndefinedDeep(postFlight),
                     preFlight: true,
                     postFlight: (postFlight.hobbs || 0) > 0,
+                    workflowCompletion: {
+                        ...workflowCompletion,
+                        checks: true,
+                    },
                 },
             }),
         }).then(async (res) => {
@@ -354,10 +485,136 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 const payload = await res.json().catch(() => ({}));
                 throw new Error(payload.error || 'Save failed.');
             }
+            setWorkflowCompletion((current) => ({ ...current, checks: true }));
             toast({ title: 'Checks Saved' });
-        }).catch((error: any) => {
-            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        }).catch((error: unknown) => {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Save failed.' });
         });
+    };
+
+    const handleManualConfirmFlight = async () => {
+        if (!canManuallyApprove) {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this flight.' });
+            return;
+        }
+
+        const confirmed = window.confirm('Approve this flight and mark it as manually confirmed by the instructor?');
+        if (!confirmed) return;
+
+        setIsApproving(true);
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                        booking: {
+                            ...booking,
+                            checkApprovals,
+                            status: 'Approved',
+                            approvedById: userProfile?.id || booking.approvedById,
+                            approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : booking.approvedByName,
+                            approvedAt: new Date().toISOString(),
+                        },
+                    }),
+                });
+
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Approval failed.');
+            }
+
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
+            toast({ title: 'Flight Approved', description: 'Instructor sign-off recorded.' });
+        } catch (error: unknown) {
+            toast({
+                variant: 'destructive',
+                title: 'Approval Failed',
+                description: error instanceof Error ? error.message : 'Approval failed.',
+            });
+        } finally {
+            setIsApproving(false);
+        }
+    };
+
+    const handleApproveSection = async (sectionKey: CheckApprovalKey) => {
+        if (!canManuallyApprove) {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this section.' });
+            return;
+        }
+
+        if (!checkSections.find((section) => section.key === sectionKey)?.ok) {
+            toast({ variant: 'destructive', title: 'Section Not Ready', description: 'This section is incomplete and cannot be approved yet.' });
+            return;
+        }
+
+        setApprovingSection(sectionKey);
+        const nextApprovals = {
+            ...checkApprovals,
+            [sectionKey]: {
+                approved: true,
+                approvedById: userProfile?.id || checkApprovals[sectionKey]?.approvedById,
+                approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : checkApprovals[sectionKey]?.approvedByName,
+                approvedAt: new Date().toISOString(),
+            },
+        };
+
+        setCheckApprovals(nextApprovals);
+
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        checkApprovals: nextApprovals,
+                    },
+                }),
+            });
+
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Section approval failed.');
+            }
+
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
+            toast({ title: 'Section Approved', description: 'Instructor section sign-off recorded.' });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Approval Failed', description: error instanceof Error ? error.message : 'Section approval failed.' });
+        } finally {
+            setApprovingSection((current) => (current === sectionKey ? null : current));
+        }
+    };
+
+    const renderSectionApprovalButton = (sectionKey: CheckApprovalKey, label = 'Approve') => {
+        const approval = checkApprovals[sectionKey];
+        const approved = !!approval?.approved;
+
+        return (
+            <div className="flex flex-col items-end gap-1">
+                <Button
+                    type="button"
+                    size="sm"
+                    variant={approved ? 'default' : 'outline'}
+                    className={cn(
+                        "h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-widest shadow-sm",
+                        approved
+                            ? "border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800"
+                            : "border-input bg-background text-foreground hover:bg-accent"
+                    )}
+                    disabled={approved || approvingSection === sectionKey || !canManuallyApprove}
+                    onClick={() => handleApproveSection(sectionKey)}
+                >
+                    {approvingSection === sectionKey ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1 h-3 w-3" />}
+                    {approved ? 'Approved' : label}
+                </Button>
+                {approval?.approvedByName ? (
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                        Approved by {approval.approvedByName}
+                    </p>
+                ) : null}
+            </div>
+        );
     };
 
     const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
@@ -408,14 +665,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 throw new Error(payload.error || 'Commit failed.');
             }
             toast({ title: "Route Committed", description: "The navigation log has been updated." });
-        } catch (e: any) {
-            toast({ variant: "destructive", title: "Commit Failed", description: e.message });
+        } catch (error: unknown) {
+            toast({ variant: "destructive", title: "Commit Failed", description: error instanceof Error ? error.message : 'Commit failed.' });
         } finally {
             setIsSaving(false);
         }
     };
 
-    if (loadingAc || loadingPeople) return <Skeleton className="h-64 w-full" />;
+    if (!initialDetailsLoaded && (loadingAc || loadingPeople)) return <Skeleton className="h-64 w-full" />;
 
     const envelope = graphConfig.envelope;
     const envelopeXs = envelope.map((point) => point.x);
@@ -448,6 +705,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     title={booking.type}
                     subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
                     status={booking.status}
+                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${formatDateSafe(booking.approvedAt, 'PPP p')}` : ''}` : `${approvedSectionCount}/${checkSections.length} sections approved`}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     headerAction={<BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
@@ -472,111 +730,35 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                                     Commit Route
                                 </Button>
+                                {renderSectionApprovalButton('navlog', 'APPROVED')}
+                            </div>
+                        ) : activeTab === 'flight-details' ? (
+                            renderSectionApprovalButton('preFlight', 'APPROVED')
+                        ) : activeTab === 'mass-balance' ? (
+                            renderSectionApprovalButton('massAndBalance', 'APPROVED')
+                        ) : activeTab === 'navlog' ? (
+                            renderSectionApprovalButton('navlog', 'APPROVED')
+                        ) : activeTab === 'checks' ? (
+                            <div className="flex flex-col items-end gap-1">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-800"
+                                    onClick={handleManualConfirmFlight}
+                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove}
+                                >
+                                    {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
+                                    {booking.status === 'Approved' ? 'Approved' : 'Flight Approved'}
+                                </Button>
+                                {booking.approvedByName ? (
+                                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                                        Approved by {booking.approvedByName}
+                                    </p>
+                                ) : null}
                             </div>
                         ) : null
                     }
-                    />
-                {activeTab === 'checks' ? (
-                    <div className="border-t bg-background p-4 md:p-6 space-y-4">
-                        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-                            Checks tab active
-                        </div>
-                        <div className="rounded-xl border bg-white p-4 shadow-sm">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Test</p>
-                            <p className="mt-2 text-sm font-semibold">If you can see this card, the checks panel is rendering.</p>
-                        </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-                            <div className="space-y-4">
-                                <div className="rounded-xl border bg-gradient-to-br from-muted/40 to-background p-4 space-y-3">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instructor Checks</p>
-                                            <p className="text-sm text-muted-foreground">DB-backed final sign-off checklist.</p>
-                                        </div>
-                                        <Badge variant={(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                            {(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'Ready' : 'Incomplete'}
-                                        </Badge>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {[
-                                            { label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits },
-                                            { label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length },
-                                            { label: 'Pre-flight complete', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight },
-                                            { label: 'Post-flight recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight },
-                                            { label: 'Photos attached', ok: (preFlightPhotos.length + postFlightPhotos.length) > 0 },
-                                            { label: 'Fuel uplift logged', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0 },
-                                        ].map((item) => (
-                                            <div key={item.label} className="rounded-lg border bg-background px-3 py-3 flex items-center gap-2">
-                                                <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black", item.ok ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground")}>
-                                                    {item.ok ? '✓' : '—'}
-                                                </div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Input value={booking.preFlightData?.hobbs ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.tacho ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.oilUplift ?? 0} readOnly />
-                                            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-                                                <Checkbox checked={!!booking.preFlightData?.documentsChecked} disabled />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Docs checked</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Post-flight</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Input value={booking.postFlightData?.hobbs ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.tacho ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.fuelUpliftGallons ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.fuelUpliftLitres ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.oilUplift ?? 0} readOnly />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="rounded-xl border bg-background p-4 space-y-3">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
-                                    <PhotoViewerDialog
-                                        title="Checklist Photos"
-                                        photos={[
-                                            ...preFlightPhotos.map((photo) => ({ url: photo.url, name: `Pre-flight: ${photo.name}` })),
-                                            ...postFlightPhotos.map((photo) => ({ url: photo.url, name: `Post-flight: ${photo.name}` })),
-                                        ]}
-                                        emptyLabel="No checklist photos stored."
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="rounded-xl border bg-background p-4 space-y-3">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Summary</p>
-                                    <div className="grid gap-3">
-                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mass & Balance</p>
-                                            <p className="text-sm font-black">{booking.massAndBalance?.takeoffWeight ?? 'N/A'} lbs</p>
-                                            <p className="text-xs text-muted-foreground">CG {booking.massAndBalance?.takeoffCg ?? 'N/A'} in</p>
-                                        </div>
-                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Navlog</p>
-                                            <p className="text-sm font-black">{booking.navlog?.legs?.length || 0} leg(s)</p>
-                                            <p className="text-xs text-muted-foreground">{booking.navlog?.departureIcao || '---'} to {booking.navlog?.arrivalIcao || '---'}</p>
-                                        </div>
-                                        <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
-                                            <p className="text-sm font-black">{booking.status || 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ) : null}
+                />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <ScrollArea className="min-h-0 flex-1">
@@ -615,10 +797,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="absolute top-4 right-4 z-[1000] w-[300px] hidden lg:block max-h-[calc(100%-2rem)] flex flex-col pointer-events-none">
                                     <Card className="shadow-2xl border bg-background/95 backdrop-blur flex flex-col min-h-0 max-h-full pointer-events-auto">
                                         <CardHeader className="p-4 border-b shrink-0">
-                                            <div className="flex items-center justify-between">
-                                                <CardTitle className="text-xs font-black uppercase tracking-widest">Route Summary</CardTitle>
-                                                <Badge variant="secondary" className="text-[9px] font-black">{plannedLegs.length} WP</Badge>
-                                            </div>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <CardTitle className="text-xs font-black uppercase tracking-widest">Route Summary</CardTitle>
+                                                    <Badge variant="secondary" className="text-[9px] font-black">{plannedLegs.length} WP</Badge>
+                                                </div>
                                         </CardHeader>
                                         <ScrollArea className="flex-1">
                                             <div className="p-2 space-y-2">
@@ -694,17 +876,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         </div>
                                         <div className="space-y-6">
                                             <div className="rounded-xl border bg-background p-4 space-y-4">
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
-                                                    <div className="flex flex-wrap items-baseline gap-2">
-                                                        <span className="text-sm font-black uppercase tracking-[0.18em] text-primary">
-                                                            {aircraft?.tailNumber || booking.aircraftId}
-                                                        </span>
-                                                        <span className="text-lg font-black uppercase tracking-tight">
-                                                            {aircraft ? `${aircraft.make} ${aircraft.model}` : booking.type}
-                                                        </span>
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
+                                                        <div className="flex flex-wrap items-baseline gap-2">
+                                                            <span className="text-sm font-black uppercase tracking-[0.18em] text-primary">
+                                                                {aircraft?.tailNumber || booking.aircraftId}
+                                                            </span>
+                                                            <span className="text-lg font-black uppercase tracking-tight">
+                                                                {aircraft ? `${aircraft.make} ${aircraft.model}` : booking.type}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                </div>
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/70 pt-3">
                                                     <div>
                                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CG</p>
@@ -735,8 +917,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Input Stations</p>
                                                         <p className="text-xs text-muted-foreground">Adjust only the live loading inputs for this booking.</p>
                                                     </div>
-                                                    <Button size="sm" onClick={handleSaveToBooking} className="h-10 uppercase text-xs font-black bg-emerald-700">
-                                                        Save Load Config
+                                                    <Button size="sm" onClick={handleSaveToBooking} className="h-10 min-w-[150px] justify-center uppercase text-xs font-black bg-emerald-700" disabled={isSaving}>
+                                                        {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                                        {isSaving ? 'Saving...' : 'Save Load Config'}
                                                     </Button>
                                                 </div>
                                                 <div className="space-y-4">
@@ -779,64 +962,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
                     {activeTab === 'checks' ? (
                         <div className="m-0 flex h-full min-h-0 flex-1 flex-col overflow-auto">
-                            <CardHeader className="pb-4">
-                                <CardTitle className="text-xl flex items-center gap-2">
-                                    <ClipboardCheck className="h-5 w-5 text-primary" /> Instructor Checks
-                                </CardTitle>
-                            </CardHeader>
                             <CardContent className="pb-20">
-                                <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-                                    Checks tab active
-                                </div>
                                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
                                     <div className="space-y-6">
-                                        <div className="rounded-xl border bg-gradient-to-br from-muted/40 to-background p-4 space-y-4">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Approval Gate</p>
-                                                    <p className="text-sm font-semibold text-muted-foreground">
-                                                        Final instructor review of the full flight plan before sign-off.
-                                                    </p>
-                                                </div>
-                                                <Badge variant={(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && !!booking.preFlightData?.documentsChecked && !!booking.postFlightData?.hobbs) ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                                    {(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && !!booking.preFlightData?.documentsChecked && !!booking.postFlightData?.hobbs) ? 'Ready' : 'Incomplete'}
-                                                </Badge>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                {[
-                                                    { label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits, detail: booking.massAndBalance?.isWithinLimits ? 'Within limits' : 'Needs review' },
-                                                    { label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length, detail: booking.navlog?.legs?.length ? `${booking.navlog.legs.length} legs planned` : 'No navlog found' },
-                                                    { label: 'Pre-flight checks completed', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight, detail: booking.preFlightData?.documentsChecked ? 'Documents checked' : 'Pre-flight not confirmed' },
-                                                    { label: 'Post-flight checks recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight, detail: (booking.postFlightData?.hobbs || 0) > 0 ? 'Hobbs recorded' : 'Post-flight pending' },
-                                                    { label: 'Photos attached', ok: (preFlightPhotos.length + postFlightPhotos.length) > 0, detail: `${preFlightPhotos.length + postFlightPhotos.length} photo(s)` },
-                                                    { label: 'Fuel uplift recorded', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0, detail: 'Gallons and litres mirrored' },
-                                                ].map((item) => (
-                                                    <div key={item.label} className="rounded-lg border bg-background px-3 py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black", item.ok ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground")}>
-                                                                {item.ok ? '✓' : '—'}
-                                                            </div>
-                                                            <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
-                                                        </div>
-                                                        <p className="mt-1.5 pl-7 text-[10px] text-muted-foreground">{item.detail}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900">
-                                                The instructor confirms the flight planning, mass and balance, navlog, and the student&apos;s pre/post-flight checks before the booking is closed.
+                                        <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight</p>
                                             </div>
                                         </div>
-
-                                        <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight</p>
-                                                    <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
-                                                </div>
-                                                <Badge variant={booking.preFlightData?.documentsChecked ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                                    {booking.preFlightData?.documentsChecked ? 'Ready' : 'Incomplete'}
-                                                </Badge>
-                                            </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">
                                                     <UILabel className="text-[9px] font-bold uppercase">Hobbs Start</UILabel>
@@ -866,15 +1000,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         </div>
 
                                         <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Post-flight</p>
-                                                    <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
-                                                </div>
-                                                <Badge variant={(booking.postFlightData?.hobbs || 0) > 0 ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                                    {(booking.postFlightData?.hobbs || 0) > 0 ? 'Recorded' : 'Pending'}
-                                                </Badge>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Post-flight</p>
                                             </div>
+                                        </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">
                                                     <UILabel className="text-[9px] font-bold uppercase">Hobbs End</UILabel>
@@ -908,7 +1038,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight Photos</p>
                                                         <PhotoViewerDialog
                                                             title="Pre-flight Photos"
-                                                            photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                                            photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
                                                         />
                                                     </div>
                                                 )}
@@ -917,7 +1047,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Post-flight Photos</p>
                                                         <PhotoViewerDialog
                                                             title="Post-flight Photos"
-                                                            photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                                            photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
                                                         />
                                                     </div>
                                                 )}
@@ -943,7 +1073,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <div className="rounded-lg border bg-muted/20 px-3 py-2">
                                                     <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
                                                     <p className="text-sm font-black">{booking.status || 'N/A'}</p>
-                                                    <p className="text-xs text-muted-foreground">Instructor final sign-off goes here.</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {booking.approvedByName ? `Approved by ${booking.approvedByName}` : `${approvedSectionCount}/${checkSections.length} sections approved`}
+                                                    </p>
+                                                    {booking.approvedAt ? (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {formatDateSafe(booking.approvedAt, 'PPP p')}
+                                                        </p>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
@@ -963,3 +1100,4 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         </Card>
     );
 }
+

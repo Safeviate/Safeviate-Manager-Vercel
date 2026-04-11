@@ -24,6 +24,14 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 interface MocDetailPageProps {
   params: Promise<{ mocId: string }>;
 }
@@ -156,7 +164,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                         <Separator orientation="vertical" className="h-8 hidden md:block" />
                         <DetailItem label="Responsible" value={personnelMap.get(moc.responsiblePersonId)} />
                         <Separator orientation="vertical" className="h-8 hidden md:block" />
-                        <DetailItem label="Proposed" value={format(new Date(moc.proposalDate), 'dd MMM yyyy')} />
+                        <DetailItem label="Proposed" value={format(parseLocalDate(moc.proposalDate), 'dd MMM yyyy')} />
                     </div>
                 </div>
             </CardHeader>

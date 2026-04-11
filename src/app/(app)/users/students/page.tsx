@@ -25,7 +25,7 @@ export default function StudentsPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,8 +48,8 @@ export default function StudentsPage() {
           setDepartments(Array.isArray(departmentsPayload.departments) ? departmentsPayload.departments : []);
           setError(null);
         }
-      } catch (err: any) {
-        if (!cancelled) setError(err);
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err : new Error('Failed to load students.'));
       } finally {
         if (!cancelled) setIsLoadingData(false);
       }

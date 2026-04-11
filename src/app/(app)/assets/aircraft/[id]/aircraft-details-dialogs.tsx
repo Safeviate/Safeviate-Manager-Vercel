@@ -21,6 +21,17 @@ import { Input } from '@/components/ui/input';
 
 type Document = NonNullable<Aircraft['documents']>[0];
 
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 
 // Edit Details Dialog
 export function EditAircraftDetailsDialog({ aircraft, tenantId, isOpen, onOpenChange }: { aircraft: Aircraft; tenantId: string; isOpen: boolean; onOpenChange: (isOpen: boolean) => void }) {
@@ -45,16 +56,16 @@ export function ManageComponentsDialog({ aircraft, isOpen, onOpenChange }: { air
   const handleAddComponent = async () => {
     const nextComponents = [
       ...components,
-      {
-        id: crypto.randomUUID(),
-        manufacturer: '',
-        name: 'New Component',
-        partNumber: '',
-        serialNumber: '',
-        installDate: new Date().toISOString(),
-        installHours: 0,
-        maxHours: 0,
-        notes: '',
+        {
+          id: crypto.randomUUID(),
+          manufacturer: '',
+          name: 'New Component',
+          partNumber: '',
+          serialNumber: '',
+          installDate: toNoonUtcIso(new Date()),
+          installHours: 0,
+          maxHours: 0,
+          notes: '',
         tsn: 0,
         tso: 0,
         totalTime: 0,
@@ -128,7 +139,7 @@ export function ManageComponentsDialog({ aircraft, isOpen, onOpenChange }: { air
                 <TableRow key={comp.id}>
                   <TableCell className="font-bold">{comp.name}</TableCell>
                   <TableCell className="font-mono text-xs">{comp.serialNumber || 'N/A'}</TableCell>
-                  <TableCell className="text-xs">{comp.installHours}h</TableCell>
+                  <TableCell className="text-xs">{comp.installDate ? format(parseLocalDate(comp.installDate), 'dd MMM yyyy') : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleRemoveComponent(comp.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />

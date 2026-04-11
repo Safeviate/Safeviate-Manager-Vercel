@@ -47,8 +47,8 @@ export async function POST(request: Request) {
   }
   const id = body.id || crypto.randomUUID();
   const name = String(body.name || '').trim();
-  const permissions = Array.isArray(body.permissions) ? body.permissions.filter((permission) => typeof permission === 'string') : [];
-  const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments.filter((document) => typeof document === 'string') : [];
+  const permissions = Array.isArray(body.permissions) ? body.permissions.filter((permission: unknown) => typeof permission === 'string') : [];
+  const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments.filter((document: unknown) => typeof document === 'string') : [];
 
   if (!name) {
     return NextResponse.json({ error: 'Role name is required.' }, { status: 400 });

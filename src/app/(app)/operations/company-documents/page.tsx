@@ -24,6 +24,16 @@ import { DeleteActionButton, ViewActionButton } from '@/components/record-action
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import { getContrastingTextColor, getDocumentExpiryBadgeStyle } from '@/lib/document-expiry';
 
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 interface CompanyDocument {
   id: string;
   name: string;
@@ -127,7 +137,7 @@ export default function CompanyDocumentsPage() {
   };
 
   const handleUpdateExpiry = async (docId: string, date: Date | undefined) => {
-    const expirationDate = date ? date.toISOString() : null;
+    const expirationDate = date ? new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString() : null;
     const previous = documents;
     setDocuments((prev) => prev.map((d) => (d.id === docId ? { ...d, expirationDate } : d)));
     try {
@@ -268,12 +278,12 @@ export default function CompanyDocumentsPage() {
                                 } : undefined}
                               >
                                 <CalendarIcon className="h-3.5 w-3.5" />
-                                {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry'}
+                                {doc.expirationDate ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry'}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                               <CustomCalendar 
-                                selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                                selectedDate={parseLocalDate(doc.expirationDate || undefined) || undefined}
                                 onDateSelect={(date) => handleUpdateExpiry(doc.id, date)}
                               />
                             </PopoverContent>

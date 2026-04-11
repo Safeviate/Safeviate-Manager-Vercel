@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUserProfile } from './use-user-profile';
 import type { TabVisibilitySettings } from '@/types/quality';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 /**
  * A custom hook to determine if specific UI tabs should be visible.
@@ -22,7 +23,7 @@ export function useTabVisibility(pageId: string, canViewAll: boolean): boolean {
 
       try {
         const response = await fetch('/api/me', { cache: 'no-store' });
-        const payload = await response.json();
+        const payload = await parseJsonResponse<{ tenant?: { tabVisibilitySettings?: TabVisibilitySettings | null } }>(response);
         if (!cancelled) {
           setSettings(payload?.tenant?.tabVisibilitySettings ?? null);
         }

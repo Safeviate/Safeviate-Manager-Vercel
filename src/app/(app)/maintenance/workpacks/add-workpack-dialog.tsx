@@ -72,8 +72,12 @@ export function AddWorkpackDialog({ tenantId }: { tenantId: string }) {
       toast({ title: 'Workpack Initiated', description: `Workpack ${trackingNumber} opened. You can now add task cards.` });
       setIsOpen(false);
       form.reset();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create workpack.',
+        variant: 'destructive',
+      });
     }
   };
 

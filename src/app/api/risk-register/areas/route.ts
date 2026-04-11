@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json().catch(() => null);
-  const areas = Array.isArray(body?.areas) ? body.areas.filter((area) => typeof area === 'string' && area.trim()) : [];
+  const areas = Array.isArray(body?.areas) ? body.areas.filter((area: unknown) => typeof area === 'string' && area.trim()) : [];
   const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
     `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
     tenantId

@@ -129,8 +129,12 @@ export default function AccountingPage() {
       window.dispatchEvent(new Event('safeviate-bookings-updated'));
       toast({ title: 'Export Successful', description: `${selectedIds.size} records prepared for Sage.` });
       setSelectedIds(new Set());
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Export Failed', description: e.message });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Export Failed',
+        description: error instanceof Error ? error.message : 'Failed to export accounting records.',
+      });
     }
   };
 

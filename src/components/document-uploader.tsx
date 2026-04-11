@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type UploadMode = 'file' | 'camera';
 
@@ -198,7 +199,20 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
       throw new Error(payload.error || 'Upload failed');
     }
 
-    return response.json();
+    const payload = await parseJsonResponse<{
+      name: string;
+      url: string;
+      uploadDate: string;
+      expirationDate: string | null;
+      size?: number;
+      contentType?: string | null;
+    }>(response);
+
+    if (!payload) {
+      throw new Error('Upload succeeded but no response payload was returned.');
+    }
+
+    return payload;
   };
 
   const handleUpload = async () => {

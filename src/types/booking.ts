@@ -54,6 +54,40 @@ export interface OverrideLog {
     timestamp: string;
 }
 
+export interface SectionApproval {
+    approved: boolean;
+    approvedById?: string;
+    approvedByName?: string;
+    approvedAt?: string;
+}
+
+export interface BookingCheckApprovals {
+    massAndBalance?: SectionApproval;
+    navlog?: SectionApproval;
+    preFlight?: SectionApproval;
+    postFlight?: SectionApproval;
+    photos?: SectionApproval;
+    fuelUplift?: SectionApproval;
+}
+
+export interface BookingWorkflowCompletion {
+    flightDetails?: boolean;
+    planning?: boolean;
+    weatherPlanningNavlogRequired?: boolean;
+    massBalance?: boolean;
+    navlog?: boolean;
+    checks?: boolean;
+}
+
+export interface BookingWorkflowApprovals {
+    flightDetails?: SectionApproval;
+    planning?: SectionApproval;
+    weatherPlanningNavlogRequired?: SectionApproval;
+    massBalance?: SectionApproval;
+    navlog?: SectionApproval;
+    checks?: SectionApproval;
+}
+
 export interface NavlogLeg {
     id: string;
     waypoint: string;
@@ -114,6 +148,10 @@ export interface Booking {
   createdById?: string;
   approvedById?: string;
   approvedByName?: string;
+  approvedAt?: string;
+  checkApprovals?: BookingCheckApprovals;
+  workflowCompletion?: BookingWorkflowCompletion;
+  workflowApprovals?: BookingWorkflowApprovals;
   cancellationReason?: string;
   status: BookingStatus;
   notes?: string;

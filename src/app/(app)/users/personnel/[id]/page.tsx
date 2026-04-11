@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -41,7 +42,7 @@ function UserProfileContent() {
             setIsLoadingUser(true);
             try {
                 const response = await fetch('/api/users', { cache: 'no-store' });
-                const payload = await response.json().catch(() => ({}));
+                const payload = await parseJsonResponse<{ users?: UserProfile[]; personnel?: UserProfile[]; roles?: Role[]; departments?: Department[] }>(response);
 
                 const apiPersonnel = Array.isArray(payload?.users) ? payload.users : Array.isArray(payload?.personnel) ? payload.personnel : [];
                 const apiRoles = Array.isArray(payload?.roles) ? payload.roles : [];
@@ -64,7 +65,7 @@ function UserProfileContent() {
             void load();
             window.addEventListener('safeviate-profile-updated', handleProfileUpdated);
             fetch('/api/logbook-templates', { cache: 'no-store' })
-              .then((response) => response.json())
+              .then((response) => parseJsonResponse<{ templates?: LogbookTemplate[] }>(response))
               .then((payload) => {
                   if (!cancelled && Array.isArray(payload?.templates)) {
                       setLogbookTemplates(payload.templates);

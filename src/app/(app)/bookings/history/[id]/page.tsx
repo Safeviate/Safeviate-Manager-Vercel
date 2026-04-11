@@ -20,13 +20,15 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
     useEffect(() => {
         let cancelled = false;
 
-        const loadBooking = async () => {
+        const loadBooking = async (options?: { silent?: boolean }) => {
             if (!tenantId) {
                 setIsLoading(false);
                 return;
             }
 
-            setIsLoading(true);
+            if (!options?.silent) {
+                setIsLoading(true);
+            }
             setError(null);
 
             try {
@@ -44,7 +46,7 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
 
         loadBooking();
         const handleBookingUpdate = () => {
-            loadBooking();
+            loadBooking({ silent: true });
         };
         window.addEventListener('safeviate-bookings-updated', handleBookingUpdate);
         return () => {

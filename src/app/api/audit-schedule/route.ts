@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json().catch(() => null);
-  const areas = Array.isArray(body?.areas) ? body.areas.filter((area) => typeof area === 'string' && area.trim()) : DEFAULT_AUDIT_AREAS;
+  const areas = Array.isArray(body?.areas) ? body.areas.filter((area: unknown) => typeof area === 'string' && area.trim()) : DEFAULT_AUDIT_AREAS;
   const items = Array.isArray(body?.items) ? body.items : [];
   const config = await getConfig(tenantId);
   const next = {

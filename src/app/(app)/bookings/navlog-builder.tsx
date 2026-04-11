@@ -15,6 +15,7 @@ import type { FlightParams } from '@/lib/flight-planner';
 import type { TrainingRoute } from '@/types/booking';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Library, Search } from 'lucide-react';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 /** Weight of AVGAS per gallon in lbs */
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -80,7 +81,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
         const loadRoutes = async () => {
             try {
                 const response = await fetch('/api/training-routes', { cache: 'no-store' });
-                const payload = await response.json();
+                const payload = await parseJsonResponse<{ routes?: TrainingRoute[] }>(response);
                 if (!cancelled) setTrainingRoutes(payload?.routes ?? []);
             } catch {
                 if (!cancelled) setTrainingRoutes([]);
@@ -100,13 +101,13 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                 body: JSON.stringify({ booking: { ...booking, navlog: { ...(booking.navlog || {}), legs: route.legs, hazards: route.hazards } } }),
             });
             if (!response.ok) {
-                throw new Error((await response.json())?.error || 'Failed to import route.');
+                throw new Error((await parseJsonResponse<{ error?: string }>(response))?.error || 'Failed to import route.');
             }
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
             setIsImportOpen(false);
             toast({ title: 'Route Imported', description: route.name });
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Import Failed', description: e.message });
+        } catch (e: unknown) {
+            toast({ variant: 'destructive', title: 'Import Failed', description: e instanceof Error ? e.message : 'Failed to import route.' });
         }
     };
 
@@ -162,11 +163,11 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ booking: { ...booking, navlog: { ...(booking.navlog || {}), legs: updatedLegs } } }),
             });
-            if (!response.ok) throw new Error((await response.json())?.error || 'Update failed');
+            if (!response.ok) throw new Error((await parseJsonResponse<{ error?: string }>(response))?.error || 'Update failed');
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
             toast({ title: 'Leg Removed' });
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
+        } catch (e: unknown) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: e instanceof Error ? e.message : 'Update failed.' });
         }
     };
 
@@ -178,9 +179,9 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ booking: { ...booking, navlog: { ...(booking.navlog || {}), legs: updatedLegs } } }),
             });
-            if (!response.ok) throw new Error((await response.json())?.error || 'Update failed');
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
+            if (!response.ok) throw new Error((await parseJsonResponse<{ error?: string }>(response))?.error || 'Update failed');
+        } catch (e: unknown) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: e instanceof Error ? e.message : 'Update failed.' });
         }
     }, [legs, booking, toast]);
 
@@ -204,11 +205,11 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                     },
                 }),
             });
-            if (!response.ok) throw new Error((await response.json())?.error || 'Save failed');
+            if (!response.ok) throw new Error((await parseJsonResponse<{ error?: string }>(response))?.error || 'Save failed');
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
             toast({ title: 'Flight Parameters Saved' });
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
+        } catch (e: unknown) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: e instanceof Error ? e.message : 'Save failed.' });
         }
     };
 

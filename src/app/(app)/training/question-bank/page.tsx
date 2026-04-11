@@ -65,9 +65,9 @@ export default function QuestionBankPage() {
 
             if (!cancelled) {
                 const topics = Array.isArray(payload?.topics) ? payload.topics : [];
-                const pool = Array.isArray(payload?.poolItems) ? payload.poolItems : [];
+                const pool: QuestionBankItem[] = Array.isArray(payload?.poolItems) ? payload.poolItems : [];
                 setTopicsData(topics.length ? { id: 'exam-topics', topics } : null);
-                setPoolItems(pool.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+                setPoolItems(pool.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
             }
         } catch (e) {
             console.error('Failed to load question bank', e);
@@ -105,7 +105,7 @@ export default function QuestionBankPage() {
     });
   }, [poolItems, searchQuery, selectedTopic]);
 
-  const handleAiGenerated = async (questions: any[]) => {
+  const handleAiGenerated = async (questions: Array<Pick<QuestionBankItem, 'text' | 'options' | 'correctOptionId'>>) => {
     const targetTopic = selectedTopic;
     try {
         const newItems = questions.map(q => ({
@@ -261,7 +261,7 @@ export default function QuestionBankPage() {
                                         <Button variant="outline" size="sm" className="h-8 w-8 text-primary border-slate-300" onClick={() => setEditingItem(item)}>
                                             <Pencil className="h-3.5 w-3.5" />
                                         </Button>
-                                        <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
+                                        <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} poolItems={poolItems} topicsData={topicsData} />
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -285,7 +285,7 @@ export default function QuestionBankPage() {
                                 <Button variant="outline" size="compact" className="flex-1 border-slate-300" onClick={() => setEditingItem(item)}>
                                     <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
                                 </Button>
-                                <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} />
+                                <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} poolItems={poolItems} topicsData={topicsData} />
                             </CardFooter>
                         </Card>
                     ))}
@@ -316,19 +316,21 @@ export default function QuestionBankPage() {
         tenantId={tenantId!} 
         topic={selectedTopic}
         editingItem={editingItem}
+        poolItems={poolItems}
+        topicsData={topicsData}
       />
     </div>
   );
 }
 
-function DeleteQuestionButton({ item, tenantId, selectedTopic }: { item: QuestionBankItem, tenantId: string, selectedTopic: string }) {
+function DeleteQuestionButton({ item, tenantId, selectedTopic, poolItems, topicsData }: { item: QuestionBankItem, tenantId: string, selectedTopic: string, poolItems: QuestionBankItem[], topicsData: ExamTopicsSettings | null }) {
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
-            const nextPool = poolItems.filter((p: any) => p.id !== item.id);
+            const nextPool = poolItems.filter((p) => p.id !== item.id);
             await fetch('/api/exams', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -337,8 +339,8 @@ function DeleteQuestionButton({ item, tenantId, selectedTopic }: { item: Questio
             
             window.dispatchEvent(new Event('safeviate-question-bank-updated'));
             toast({ title: 'Question Deleted', description: `Removed from ${selectedTopic} bank.` });
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete question.' });
         } finally {
             setIsDeleting(false);
         }
@@ -379,9 +381,11 @@ interface UpsertQuestionDialogProps {
     tenantId: string;
     topic: string;
     editingItem?: QuestionBankItem | null;
+    poolItems: QuestionBankItem[];
+    topicsData: ExamTopicsSettings | null;
 }
 
-function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingItem }: UpsertQuestionDialogProps) {
+function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingItem, poolItems, topicsData }: UpsertQuestionDialogProps) {
     const { toast } = useToast();
     const isMobile = useIsMobile();
     
@@ -435,7 +439,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
 
             let nextPool;
             if (editingItem) {
-                nextPool = poolItems.map((p: any) => p.id === editingItem.id ? data : p);
+                nextPool = poolItems.map((p) => p.id === editingItem.id ? data : p);
                 toast({ title: 'Question Updated' });
             } else {
                 nextPool = [data, ...poolItems];
@@ -449,8 +453,8 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             });
             window.dispatchEvent(new Event('safeviate-question-bank-updated'));
             onOpenChange(false);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Failed to save question.' });
         } finally {
             setIsSaving(false);
         }

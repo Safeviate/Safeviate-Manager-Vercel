@@ -20,12 +20,21 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { useCallback, useEffect, useState } from 'react';
+import { parseJsonResponse } from '@/lib/safe-json';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return new Date(value);
+    }
+    return new Date(year, month - 1, day, 12);
+};
 
 export default function ManagementOfChangePage() {
     const { hasPermission } = usePermissions();
@@ -54,10 +63,10 @@ export default function ManagementOfChangePage() {
             setIsLoadingOrgs(true);
             setError(null);
             const response = await fetch('/api/management-of-change', { cache: 'no-store' });
-            const payload = await response.json();
+            const payload = await parseJsonResponse<{ mocs?: ManagementOfChange[]; organizations?: ExternalOrganization[] }>(response);
             if (cancelled) return;
-            setMocs(payload.mocs ?? []);
-            setOrganizations(payload.organizations ?? []);
+            setMocs(payload?.mocs ?? []);
+            setOrganizations(payload?.organizations ?? []);
         } catch (err) {
             if (!cancelled) setError(err instanceof Error ? err : new Error('Unable to load MOC records.'));
         } finally {
@@ -153,7 +162,7 @@ export default function ManagementOfChangePage() {
                                         <TableCell className="font-bold text-sm text-primary">{moc.mocNumber}</TableCell>
                                         <TableCell className="text-sm font-medium">{moc.title}</TableCell>
                                         <TableCell><Badge variant="outline" className="text-[10px] font-bold uppercase border-primary/20 bg-primary/5 text-primary">{moc.status}</Badge></TableCell>
-                                        <TableCell className={cn("text-sm font-medium whitespace-nowrap", isMobile && "hidden")}>{format(new Date(moc.proposalDate), 'dd MMM yy')}</TableCell>
+                                        <TableCell className={cn("text-sm font-medium whitespace-nowrap", isMobile && "hidden")}>{format(parseLocalDate(moc.proposalDate), 'dd MMM yy')}</TableCell>
                                         <TableCell className="text-right text-foreground">
                                             <MocActions moc={moc} tenantId={tenantId || ''} />
                                         </TableCell>

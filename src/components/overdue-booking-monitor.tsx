@@ -8,6 +8,7 @@ import { format, subDays, startOfToday } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import { useToast } from '@/hooks/use-toast';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type SchedulePayload = {
   aircraft?: Aircraft[];
@@ -26,7 +27,7 @@ export function OverdueBookingMonitor() {
     const load = async () => {
       try {
         const response = await fetch('/api/schedule-data', { cache: 'no-store' });
-        const payload = (await response.json()) as SchedulePayload;
+        const payload = (await parseJsonResponse<SchedulePayload>(response)) ?? {};
         if (!cancelled) {
           setBookings(payload.bookings ?? []);
           setAircrafts(payload.aircraft ?? []);

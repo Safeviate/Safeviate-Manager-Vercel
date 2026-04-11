@@ -20,6 +20,16 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DocumentUploader } from '@/components/document-uploader';
 
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return undefined;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    const fallback = new Date(value);
+    return Number.isNaN(fallback.getTime()) ? undefined : fallback;
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 const cleanData = (obj: any): any => {
     if (Array.isArray(obj)) {
         return obj.map(v => cleanData(v));
@@ -158,7 +168,7 @@ function EditComponentsDialog({ aircraft, children }: { aircraft: Aircraft; chil
     defaultValues: {
       components: aircraft.components?.map(c => ({
           ...c,
-          installDate: c.installDate ? new Date(c.installDate) : undefined,
+          installDate: parseLocalDate(c.installDate),
       })) || [],
     },
   });

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useForm, useFieldArray, useFormContext, Controller, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray, useFormContext, Controller, FormProvider, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -33,6 +33,17 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
 // --- Form Schemas ---
 const investigationMemberSchema = z.object({
     userId: z.string().min(1, "Member is required."),
@@ -57,7 +68,7 @@ const investigationSchema = z.object({
 type FormValues = z.infer<typeof investigationSchema>;
 
 // --- Helper Components ---
-const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
+const SectionHeader = ({ title, icon: Icon }: { title: string, icon: React.ElementType }) => (
     <div className="flex items-center gap-2 mb-4">
         <div className="p-1.5 rounded-md bg-primary/10 text-primary">
             <Icon className="h-4 w-4" />
@@ -91,7 +102,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     defaultValues: {
       investigationTeam: report.investigationTeam || [],
       investigationNotes: report.investigationNotes || '',
-      investigationTasks: report.investigationTasks?.map(task => ({ ...task, dueDate: new Date(task.dueDate) })) || [],
+      investigationTasks: report.investigationTasks?.map(task => ({ ...task, dueDate: parseLocalDate(task.dueDate) })) || [],
     },
   });
 
@@ -109,7 +120,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
         ...values,
         investigationTasks: values.investigationTasks.map(task => ({
             ...task,
-            dueDate: task.dueDate.toISOString(),
+            dueDate: toNoonUtcIso(task.dueDate),
         }))
     };
 
@@ -177,7 +188,27 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
   );
 }
 
-function InvestigationFields({ form, teamFields, taskFields, personnel, removeTeamMember, removeTask, appendTeamMember, appendTask, handleUserSelection }: any) {
+function InvestigationFields({
+  form,
+  teamFields,
+  taskFields,
+  personnel,
+  removeTeamMember,
+  removeTask,
+  appendTeamMember,
+  appendTask,
+  handleUserSelection,
+}: {
+  form: UseFormReturn<FormValues>;
+  teamFields: Array<{ id: string }>;
+  taskFields: Array<{ id: string }>;
+  personnel: Personnel[];
+  removeTeamMember: (index: number) => void;
+  removeTask: (index: number) => void;
+  appendTeamMember: (value: FormValues['investigationTeam'][number]) => void;
+  appendTask: (value: FormValues['investigationTasks'][number]) => void;
+  handleUserSelection: (index: number, userId: string) => void;
+}) {
   return (
     <>
       {/* 1. Team Section */}
@@ -189,7 +220,7 @@ function InvestigationFields({ form, teamFields, taskFields, personnel, removeTe
             </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {teamFields.map((field: any, index: number) => (
+          {teamFields.map((field, index) => (
             <div key={field.id} className="flex items-end gap-2 p-3 border rounded-lg bg-muted/10">
               <FormField control={form.control} name={`investigationTeam.${index}.userId`} render={({ field }) => ( 
                   <FormItem className='flex-1'>
@@ -200,7 +231,7 @@ function InvestigationFields({ form, teamFields, taskFields, personnel, removeTe
                                   <SelectValue placeholder="Select..." />
                               </SelectTrigger>
                           </FormControl>
-                          <SelectContent>{personnel.map((p: any) => (<SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>))}</SelectContent>
+                          <SelectContent>{personnel.map((p) => (<SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>))}</SelectContent>
                       </Select>
                   </FormItem> 
               )} />
@@ -234,13 +265,13 @@ function InvestigationFields({ form, teamFields, taskFields, personnel, removeTe
             </Button>
         </div>
         <div className="space-y-2">
-          {taskFields.map((field: any, index: number) => (
+          {taskFields.map((field, index) => (
               <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 border rounded-lg bg-muted/10 items-end">
                   <FormField control={form.control} name={`investigationTasks.${index}.description`} render={({ field }) => (
                       <FormItem className='md:col-span-5'><Label>Task Detail</Label><FormControl><Input placeholder="..." {...field} className="h-9 text-xs bg-background font-bold border-slate-300" /></FormControl></FormItem>
                   )} />
                   <FormField control={form.control} name={`investigationTasks.${index}.assigneeId`} render={({ field }) => ( 
-                      <FormItem className='md:col-span-2'><Label>Assignee</Label><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-9 text-xs bg-background font-bold border-slate-300"><SelectValue placeholder="..." /></SelectTrigger></FormControl><SelectContent>{personnel.map((p: any) => (<SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select></FormItem> 
+                      <FormItem className='md:col-span-2'><Label>Assignee</Label><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-9 text-xs bg-background font-bold border-slate-300"><SelectValue placeholder="..." /></SelectTrigger></FormControl><SelectContent>{personnel.map((p) => (<SelectItem key={p.id} value={p.id} className="text-xs">{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select></FormItem> 
                   )} />
                   <FormField control={form.control} name={`investigationTasks.${index}.dueDate`} render={({ field }) => (
                       <FormItem className='md:col-span-2 flex flex-col'><Label>Due Date</Label><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("h-9 pl-3 text-left font-bold bg-background text-xs border-slate-300", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "dd MMM") : <span>Date</span>}<CalendarIcon className="ml-auto h-3 w-3 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} /></PopoverContent></Popover></FormItem>

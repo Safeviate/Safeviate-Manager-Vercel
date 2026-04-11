@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,19 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Personnel } from '../../users/personnel/page';
 import type { ComplianceRequirement } from '@/types/quality';
+
+const parseLocalDate = (value?: string | null) => {
+    if (!value) return undefined;
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        const fallback = new Date(value);
+        return Number.isNaN(fallback.getTime()) ? undefined : fallback;
+    }
+    return new Date(year, month - 1, day, 12);
+};
+
+const toNoonUtcIso = (date: Date) =>
+    new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
 
 function formatParentOptionLabel(option: { code: string; label: string }) {
     const code = option.code.trim();
@@ -81,6 +94,18 @@ interface ComplianceItemFormProps {
     mode?: 'item' | 'header' | 'subheader';
 }
 
+type ComplianceItemFormValues = {
+    regulationFamily?: 'sacaa-cars' | 'sacaa-cats' | 'ohs';
+    parentRegulationCode?: string;
+    regulationCode: string;
+    regulationStatement: string;
+    technicalStandard?: string;
+    companyReference?: string;
+    responsibleManagerId?: string;
+    nextAuditDate?: Date;
+    organizationId?: string | null;
+};
+
 export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tenantId, defaultRegulationFamily, availableParentHeaders = [], mode = 'item' }: ComplianceItemFormProps) {
     const { toast } = useToast();
     const topLevelHeaderValue = '__top_level__';
@@ -92,8 +117,8 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
             : formSchema
     ) as z.ZodTypeAny;
 
-    const form = useForm<any>({
-        resolver: zodResolver(activeSchema) as any,
+    const form = useForm<ComplianceItemFormValues>({
+        resolver: zodResolver(activeSchema) as Resolver<ComplianceItemFormValues>,
         defaultValues: {
             regulationFamily: existingItem?.regulationFamily || defaultRegulationFamily || 'sacaa-cars',
             parentRegulationCode: existingItem?.parentRegulationCode || '',
@@ -102,12 +127,12 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
             technicalStandard: existingItem?.technicalStandard || '',
             companyReference: existingItem?.companyReference || '',
             responsibleManagerId: existingItem?.responsibleManagerId || '',
-            nextAuditDate: existingItem?.nextAuditDate ? new Date(existingItem.nextAuditDate) : undefined,
+            nextAuditDate: parseLocalDate(existingItem?.nextAuditDate),
             organizationId: existingItem?.organizationId || null,
         },
     });
 
-    const onSubmit = async (values: any) => {
+    const onSubmit = async (values: ComplianceItemFormValues) => {
         const normalizedCode = normalizeRegulationCode(values.regulationCode);
         const splitInput = splitCompositeRegulationInput(values.regulationCode);
         
@@ -140,7 +165,7 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
                 regulationCode: normalizeRegulationCode(values.regulationCode),
                 parentRegulationCode: normalizeRegulationCode(values.parentRegulationCode),
                 regulationStatement: values.regulationStatement.trim(),
-                nextAuditDate: values.nextAuditDate ? values.nextAuditDate.toISOString() : null,
+                nextAuditDate: values.nextAuditDate ? toNoonUtcIso(values.nextAuditDate) : null,
             };
 
         try {
@@ -155,8 +180,12 @@ export function ComplianceItemForm({ personnel, existingItem, onFormSubmit, tena
             toast({ title: "Success", description: existingItem ? "Compliance item updated." : "New compliance item added." });
             window.dispatchEvent(new Event('safeviate-compliance-updated'));
             onFormSubmit();
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Save Failed', description: e.message });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: error instanceof Error ? error.message : 'Failed to save compliance item',
+            });
         }
     };
 

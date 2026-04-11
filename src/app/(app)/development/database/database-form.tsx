@@ -38,6 +38,11 @@ import { cn } from '@/lib/utils';
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
 const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
+type MainTheme = typeof DEFAULT_MAIN;
+type MenuNode = {
+  href: string;
+  subItems?: MenuNode[];
+};
 
 const INDUSTRY_TYPES: IndustryType[] = [
   'Aviation: Flight Training (ATO)',
@@ -59,8 +64,15 @@ export function DatabaseForm() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [localIndustryOverride, setLocalIndustryOverride] = useState<string>('');
   
-  const [mainTheme, setMainTheme] = useState(DEFAULT_MAIN);
+  const [mainTheme, setMainTheme] = useState<MainTheme>(DEFAULT_MAIN);
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
+
+  const normalizeMainTheme = (main?: Record<string, string> | null): MainTheme => ({
+    background: main?.background || DEFAULT_MAIN.background,
+    primary: main?.primary || DEFAULT_MAIN.primary,
+    'primary-foreground': main?.['primary-foreground'] || DEFAULT_MAIN['primary-foreground'],
+    accent: main?.accent || DEFAULT_MAIN.accent,
+  });
 
   // Load Tenants from LocalStorage
   useEffect(() => {
@@ -114,12 +126,12 @@ export function DatabaseForm() {
     setTenantName(t.name);
     setIndustry(t.industry || 'Aviation: Flight Training (ATO)');
     setLogoPreview(t.logoUrl || null);
-    setMainTheme(t.theme?.main || { 
-        ...DEFAULT_MAIN, 
-        primary: t.theme?.primaryColour || DEFAULT_MAIN.primary, 
+    setMainTheme(normalizeMainTheme(t.theme?.main || {
+        ...DEFAULT_MAIN,
+        primary: t.theme?.primaryColour || DEFAULT_MAIN.primary,
         background: t.theme?.backgroundColour || DEFAULT_MAIN.background,
-        accent: t.theme?.accentColour || DEFAULT_MAIN.accent 
-    });
+        accent: t.theme?.accentColour || DEFAULT_MAIN.accent
+    }));
     setEnabledHrefs(new Set(t.enabledMenus || []));
 
     toast({ title: 'System Context Loaded', description: `Configuration for "${t.name}" inherited.` });
@@ -129,7 +141,7 @@ export function DatabaseForm() {
     setIndustry(newIndustry);
     
     const newEnabled = new Set<string>();
-    const walk = (items: any[]) => {
+    const walk = (items: MenuNode[]) => {
         items.forEach(i => {
             const isAviationOnly = i.href.includes('/bookings') || i.href.includes('/assets/aircraft') || i.href.includes('/admin/mb-config');
             const isATOOnly = i.href.includes('/training/student-progress');
@@ -144,7 +156,7 @@ export function DatabaseForm() {
             }
         });
     };
-    walk(menuConfig);
+    walk(menuConfig as MenuNode[]);
     setEnabledHrefs(newEnabled);
     toast({ title: 'Logic Presets Calibrated', description: `Module permissions synthesized for ${newIndustry}.` });
   };
@@ -237,11 +249,12 @@ export function DatabaseForm() {
           nextTenants.push(tenantData);
       }
 
-      await Promise.all(nextTenants.map((tenant) => fetch('/api/tenants', {
+      await fetch('/api/tenants', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant }),
-      })));
+        body: JSON.stringify({ tenant: tenantData }),
+      });
+      setTenants(nextTenants);
       window.dispatchEvent(new Event('safeviate-tenants-updated'));
       
       toast({
@@ -251,8 +264,8 @@ export function DatabaseForm() {
 
       if (!selectedTenantId) handleClearForm();
 
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Commit Failure', description: e.message || 'System fault during persistence.' });
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Commit Failure', description: e instanceof Error ? e.message : 'System fault during persistence.' });
     }
   };
 

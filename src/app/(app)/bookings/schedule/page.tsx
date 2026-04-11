@@ -18,6 +18,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 const HOUR_HEIGHT_PX = 60;
@@ -25,6 +26,7 @@ const TOTAL_HOURS = 24;
 const TIME_COL_WIDTH_CLASS = "w-20";
 const LANE_WIDTH_CLASS = "w-[150px]";
 const LANE_FLEX_CLASS = "flex-[0_0_150px]";
+const REQUIRED_CHECK_APPROVAL_KEYS = ['massAndBalance', 'navlog', 'preFlight', 'postFlight', 'photos', 'fuelUplift'] as const;
 
 const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     if (!dateStr || !timeStr) {
@@ -33,7 +35,23 @@ const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
 };
 
-const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { booking: Booking, onBookingClick: (booking: Booking) => void, selectedDate: Date, peopleMap: Map<string, string> }) => {
+const BookingItem = ({
+    booking,
+    onBookingClick,
+    onManualApprove,
+    canManualApprove,
+    isApproving,
+    selectedDate,
+    peopleMap,
+}: {
+    booking: Booking;
+    onBookingClick: (booking: Booking) => void;
+    onManualApprove: (booking: Booking) => void;
+    canManualApprove: (booking: Booking) => boolean;
+    isApproving: boolean;
+    selectedDate: Date;
+    peopleMap: Map<string, string>;
+}) => {
     const segments = [];
 
     segments.push({
@@ -51,7 +69,6 @@ const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { boo
     }
 
     const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
-    
     return (
       <>
         {segments.map((segment, index) => {
@@ -74,7 +91,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { boo
                 <div
                     key={`${booking.id}-${index}`}
                     className={cn(
-                        'absolute left-1 right-1 px-2 py-1.5 text-[11px] leading-tight shadow-md flex flex-col justify-start z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded overflow-hidden',
+                        'absolute left-1 right-1 px-1 py-0.5 text-[9px] leading-none shadow-md flex flex-col justify-between items-stretch z-10 border border-gray-400/50 cursor-pointer hover:opacity-90 transition-opacity rounded overflow-hidden',
                         isCancelled && 'bg-muted text-muted-foreground opacity-60',
                         booking.status === 'Completed' && 'bg-muted text-muted-foreground border-slate-300',
                         booking.status === 'Approved' && 'bg-green-600 text-white border-green-700',
@@ -87,18 +104,44 @@ const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { boo
                         onBookingClick(booking);
                     }}
                 >
-                    <p className="font-black truncate text-[11px]">
-                        #{booking.bookingNumber} - {booking.type}
-                    </p>
-                    <p className="truncate text-[10px] font-semibold opacity-95">
-                        Inst: {booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : 'N/A'}
-                    </p>
-                    <p className="truncate text-[10px] font-semibold opacity-95">
-                        Stud: {booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}
-                    </p>
-                    {isCancelled && <p className="font-black uppercase text-[9px] mt-1 tracking-wide">Cancelled</p>}
-                    {booking.status === 'Completed' && <p className="font-black uppercase text-[9px] mt-1 tracking-wide">Completed</p>}
-                    {booking.status === 'Approved' && <p className="font-black uppercase text-[9px] mt-1 tracking-wide">Approved</p>}
+                    <div className="flex w-full flex-1 flex-col justify-evenly text-center">
+                        <p className="w-full truncate text-[8px] font-medium leading-tight">
+                            #{booking.bookingNumber} - {booking.type}
+                        </p>
+                        <p className="w-full truncate text-[8px] font-normal leading-tight opacity-90">
+                            Inst: {booking.instructorId ? (peopleMap.get(booking.instructorId) || booking.instructorId) : 'N/A'}
+                        </p>
+                        <p className="w-full truncate text-[8px] font-normal leading-tight opacity-90">
+                            Stud: {booking.studentId ? (peopleMap.get(booking.studentId) || booking.studentId) : 'N/A'}
+                        </p>
+                    </div>
+                    <div className="mt-0.5 flex w-full items-center justify-center">
+                        {booking.status !== 'Approved' && booking.status !== 'Completed' && !isCancelled && canManualApprove(booking) ? (
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-5 w-full rounded-md border-input bg-background px-1.5 text-[7px] font-medium uppercase tracking-[0.18em] text-foreground shadow-sm hover:bg-accent justify-center"
+                                disabled={isApproving}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onManualApprove(booking);
+                                }}
+                            >
+                                {isApproving ? <Loader2 className="mr-1 h-2 w-2 animate-spin" /> : <CheckCircle2 className="mr-1 h-2 w-2" />}
+                                Approve
+                            </Button>
+                        ) : (
+                            <div className="flex w-full flex-col items-center justify-center gap-0.5 text-center">
+                                {isCancelled && <p className="text-[7px] font-medium uppercase tracking-wide">Cancelled</p>}
+                                {booking.status === 'Completed' && <p className="text-[7px] font-medium uppercase tracking-wide">Completed</p>}
+                                {booking.status === 'Approved' && <p className="text-[7px] font-medium uppercase tracking-wide">Approved</p>}
+                                {booking.status === 'Approved' && booking.approvedAt ? (
+                                    <p className="text-[7px] font-normal leading-none opacity-80">{format(new Date(booking.approvedAt), 'PPP p')}</p>
+                                ) : null}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )
         })}
@@ -108,7 +151,7 @@ const BookingItem = ({ booking, onBookingClick, selectedDate, peopleMap }: { boo
 
 export default function SchedulePage() {
   const { toast } = useToast();
-  const { tenantId } = useUserProfile();
+  const { tenantId, userProfile } = useUserProfile();
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const [selectedDate, setSelectedDate] = useState(startOfToday());
 
@@ -131,6 +174,7 @@ export default function SchedulePage() {
   const [students, setStudents] = useState<PilotProfile[]>([]);
   const [privatePilots, setPrivatePilots] = useState<PilotProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [approvingBookingId, setApprovingBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +247,52 @@ export default function SchedulePage() {
   const refreshBookings = useCallback(() => {
     setDataVersion(v => v + 1);
   }, []);
+
+  const canManualApprove = useCallback((booking: Booking) => {
+    const userId = userProfile?.id;
+    const userRole = userProfile?.role?.toLowerCase();
+    return ((!!userId && booking.instructorId === userId) || userRole === 'developer' || userRole === 'dev');
+  }, [userProfile?.id, userProfile?.role]);
+
+  const handleManualApproveBooking = useCallback(async (booking: Booking) => {
+    if (!canManualApprove(booking)) {
+      toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this flight.' });
+      return;
+    }
+
+    const confirmed = window.confirm(`Approve booking #${booking.bookingNumber} now?`);
+    if (!confirmed) return;
+
+    setApprovingBookingId(booking.id);
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking: {
+            ...booking,
+            status: 'Approved',
+            approvedById: userProfile?.id || booking.approvedById,
+            approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : booking.approvedByName,
+            approvedAt: new Date().toISOString(),
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || 'Approval failed.');
+      }
+
+      window.dispatchEvent(new Event('safeviate-bookings-updated'));
+      refreshBookings();
+      toast({ title: 'Flight Approved', description: `Booking #${booking.bookingNumber} was manually approved.` });
+    } catch (error: unknown) {
+      toast({ variant: 'destructive', title: 'Approval Failed', description: error instanceof Error ? error.message : 'Approval failed.' });
+    } finally {
+      setApprovingBookingId((current) => (current === booking.id ? null : current));
+    }
+  }, [canManualApprove, refreshBookings, toast, userProfile]);
 
   useEffect(() => {
     const calculateNowLine = () => {
@@ -389,13 +479,16 @@ export default function SchedulePage() {
                                             )
                                         })}
                                         {relevantBookings.map((booking) => (
-                                            <BookingItem 
-                                                key={booking.id} 
-                                                booking={booking}
-                                                onBookingClick={handleBookingClick}
-                                                selectedDate={selectedDate}
-                                                peopleMap={peopleMap}
-                                            />
+                                        <BookingItem 
+                                            key={booking.id} 
+                                            booking={booking}
+                                            onBookingClick={handleBookingClick}
+                                            onManualApprove={handleManualApproveBooking}
+                                            canManualApprove={canManualApprove}
+                                            isApproving={approvingBookingId === booking.id}
+                                            selectedDate={selectedDate}
+                                            peopleMap={peopleMap}
+                                        />
                                         ))}
                                     </div>
                                 );

@@ -76,8 +76,8 @@ export function TaskCardDialog({ workpackId, tenantId }: { workpackId: string; t
       toast({ title: 'Task Card Appended', description: `Card ${values.taskNumber} added.` });
       setIsOpen(false);
       form.reset();
-    } catch (e: any) {
-      toast({ title: 'Error', description: 'Failed to create task card.', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to create task card.', variant: 'destructive' });
     }
   };
 

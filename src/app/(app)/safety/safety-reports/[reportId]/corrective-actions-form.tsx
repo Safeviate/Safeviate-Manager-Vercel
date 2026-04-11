@@ -31,6 +31,17 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
 // --- Form Schemas ---
 const correctiveActionSchema = z.object({
     id: z.string(),
@@ -59,7 +70,7 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
   const form = useForm<CapFormValues>({
     resolver: zodResolver(capSchema),
     defaultValues: {
-      correctiveActions: report.correctiveActions?.map(action => ({ ...action, deadline: new Date(action.deadline) })) || [],
+      correctiveActions: report.correctiveActions?.map(action => ({ ...action, deadline: parseLocalDate(action.deadline) })) || [],
     },
   });
 
@@ -72,7 +83,7 @@ export function CorrectiveActionsForm({ report, tenantId, personnel, isStacked =
     const dataToSave = {
         correctiveActions: values.correctiveActions.map(action => ({
             ...action,
-            deadline: action.deadline.toISOString(),
+            deadline: toNoonUtcIso(action.deadline),
         }))
     };
     

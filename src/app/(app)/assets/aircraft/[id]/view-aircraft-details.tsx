@@ -16,6 +16,16 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getDocumentExpiryColor } from '@/lib/document-expiry';
 
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const DetailItem = ({ label, value, icon: Icon, children }: { label: string; value?: string | number | null, icon?: any, children?: React.ReactNode }) => (
     <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-muted/5 border-2 border-transparent hover:border-primary/10 transition-all">
       <div className="flex items-center gap-2 opacity-50">
@@ -116,7 +126,7 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
                                         <TableCell className="px-8 py-4">
                                             <div className="flex flex-col gap-1">
                                                 <span className="text-sm font-black uppercase tracking-tight">{comp.name}</span>
-                                                <span className="text-[10px] font-bold uppercase text-muted-foreground">{comp.installDate ? format(new Date(comp.installDate), 'dd MMM yyyy') : 'N/A'}</span>
+                                                <span className="text-[10px] font-bold uppercase text-muted-foreground">{comp.installDate ? format(parseLocalDate(comp.installDate) || new Date(comp.installDate), 'dd MMM yyyy') : 'N/A'}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-center">
@@ -163,7 +173,7 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
                                             <span className="text-xs font-black uppercase tracking-tight truncate max-w-[120px]">{doc.name}</span>
                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                 {statusColor && <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />}
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase">{doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM y') : 'PERM'}</span>
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase">{doc.expirationDate ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'dd MMM y') : 'PERM'}</span>
                                             </div>
                                         </div>
                                     </div>

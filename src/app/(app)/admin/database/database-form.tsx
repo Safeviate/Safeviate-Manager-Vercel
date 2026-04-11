@@ -21,11 +21,12 @@ export function DatabaseForm() {
   // Menu visibility state for Safeviate (default all enabled)
   const allHrefs = useMemo(() => {
     const hrefs: string[] = [];
-    const walk = (items: any[]) => {
-        items.forEach(i => {
-            hrefs.push(i.href);
-            if (i.subItems) walk(i.subItems);
-        });
+    type MenuNode = { href: string; subItems?: MenuNode[] };
+    const walk = (items: MenuNode[]) => {
+      items.forEach((i) => {
+        hrefs.push(i.href);
+        if (i.subItems) walk(i.subItems);
+      });
     };
     walk(menuConfig);
     return new Set(hrefs);
@@ -40,8 +41,8 @@ export function DatabaseForm() {
         const response = await fetch('/api/tenant-config', { cache: 'no-store' });
         const payload = await response.json().catch(() => ({}));
         const config = payload?.config && typeof payload.config === 'object' ? payload.config : {};
-        if (!cancelled && Array.isArray((config as any).enabledMenus)) {
-          setEnabledHrefs(new Set((config as any).enabledMenus));
+        if (!cancelled && Array.isArray((config as { enabledMenus?: unknown }).enabledMenus)) {
+          setEnabledHrefs(new Set((config as { enabledMenus?: string[] }).enabledMenus));
         }
       } catch (e) {
         console.error("Failed to parse tenant config", e);
@@ -96,12 +97,12 @@ export function DatabaseForm() {
         title: 'Setup Updated',
         description: 'Organization branding and menu configurations have been saved.',
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
       toast({
         variant: 'destructive',
         title: 'Uh oh! Something went wrong.',
-        description: e.message || 'There was a problem saving the configuration.',
+        description: e instanceof Error ? e.message : 'There was a problem saving the configuration.',
       });
     }
   };

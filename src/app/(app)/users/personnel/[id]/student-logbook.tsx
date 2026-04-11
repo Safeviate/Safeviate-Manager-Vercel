@@ -4,6 +4,14 @@ import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
+
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return new Date(value);
+    }
+    return new Date(year, month - 1, day, 12);
+};
 import type { Booking } from '@/types/booking';
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -90,7 +98,7 @@ export function StudentLogbook({ studentId, tenantId }: StudentLogbookProps) {
                                 return (
                                     <TableRow key={booking.id}>
                                         <TableCell className="whitespace-nowrap">
-                                            {booking.date ? format(new Date(booking.date), 'dd MMM yyyy') : 'N/A'}
+                                            {booking.date ? format(parseLocalDate(booking.date), 'dd MMM yyyy') : 'N/A'}
                                         </TableCell>
                                         <TableCell className="font-mono font-bold">
                                             {aircraftMap.get(booking.aircraftId) || booking.aircraftId}

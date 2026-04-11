@@ -307,30 +307,30 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     
     const themeToApply: SavedTheme = {
         name: tenant.name,
-        colors: (effectiveTheme.main as any) || {
+        colors: (effectiveTheme.main as SavedTheme['colors']) || {
             primary: effectiveTheme.primaryColour || theme.primary,
             'primary-foreground': theme['primary-foreground'],
             background: effectiveTheme.backgroundColour || theme.background,
             accent: effectiveTheme.accentColour || theme.accent,
         },
-        buttonColors: (effectiveTheme.button as any) || {
+        buttonColors: (effectiveTheme.button as SavedTheme['buttonColors']) || {
             'button-primary-background': effectiveTheme.primaryColour || buttonTheme['button-primary-background'],
             'button-primary-foreground': buttonTheme['button-primary-foreground'],
             'button-primary-accent': effectiveTheme.accentColour || buttonTheme['button-primary-accent'],
             'button-primary-accent-foreground': buttonTheme['button-primary-accent-foreground'],
         },
-        cardColors: (effectiveTheme.card as any) || { 
+        cardColors: (effectiveTheme.card as SavedTheme['cardColors']) || { 
             card: effectiveTheme.backgroundColour || cardTheme.card, 
             'card-foreground': cardTheme['card-foreground'],
             'card-border': cardTheme['card-border']
         },
-        popoverColors: (effectiveTheme.popover as any) || { 
+        popoverColors: (effectiveTheme.popover as SavedTheme['popoverColors']) || { 
             popover: effectiveTheme.backgroundColour || popoverTheme.popover, 
             'popover-foreground': popoverTheme['popover-foreground'],
             'popover-accent': popoverTheme['popover-accent'],
             'popover-accent-foreground': popoverTheme['popover-accent-foreground'],
         },
-        sidebarColors: (effectiveTheme.sidebar as any) || {
+        sidebarColors: (effectiveTheme.sidebar as SavedTheme['sidebarColors']) || {
             'sidebar-background': effectiveTheme.backgroundColour || sidebarTheme['sidebar-background'],
             'sidebar-foreground': sidebarTheme['sidebar-foreground'],
             'sidebar-button-background': sidebarTheme['sidebar-button-background'],
@@ -346,7 +346,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
           typeof effectiveTheme.sidebarBackgroundOpacity === 'number'
             ? effectiveTheme.sidebarBackgroundOpacity
             : sidebarBackgroundOpacity,
-        headerColors: (effectiveTheme.header as any) || { 
+        headerColors: (effectiveTheme.header as SavedTheme['headerColors']) || { 
             'header-background': effectiveTheme.backgroundColour || headerTheme['header-background'], 
             'header-foreground': headerTheme['header-foreground'], 
             'header-border': headerTheme['header-border'] 
@@ -359,8 +359,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
           typeof effectiveTheme.headerBackgroundOpacity === 'number'
             ? effectiveTheme.headerBackgroundOpacity
             : headerBackgroundOpacity,
-        swimlaneColors: (effectiveTheme.swimlane as any) || swimlaneTheme,
-        matrixColors: (effectiveTheme.matrix as any) || matrixTheme,
+        swimlaneColors: (effectiveTheme.swimlane as SavedTheme['swimlaneColors']) || swimlaneTheme,
+        matrixColors: (effectiveTheme.matrix as SavedTheme['matrixColors']) || matrixTheme,
         scale: typeof effectiveTheme.scale === 'number' ? effectiveTheme.scale : scale,
     };
 

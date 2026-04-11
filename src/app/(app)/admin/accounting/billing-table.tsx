@@ -20,6 +20,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, User, Plane } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 interface BillingTableProps {
   bookings: Booking[];
   aircrafts: Aircraft[];
@@ -90,7 +98,7 @@ export function BillingTable({
                     />
                   </TableCell>
                   <TableCell className="font-mono text-xs">{booking.bookingNumber}</TableCell>
-                  <TableCell className="text-xs whitespace-nowrap">{format(new Date(booking.date), 'dd MMM yyyy')}</TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">{format(parseLocalDate(booking.date), 'dd MMM yyyy')}</TableCell>
                   <TableCell className="font-bold">{ac?.tailNumber || 'Unknown'}</TableCell>
                   <TableCell className="text-xs">{userMap.get(booking.studentId || '') || 'Private / External'}</TableCell>
                   <TableCell className="text-right font-mono font-bold">{duration.toFixed(1)}h</TableCell>
@@ -145,7 +153,7 @@ export function BillingTable({
                 <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
-                    {format(new Date(booking.date), 'dd MMM yyyy')}
+                    {format(parseLocalDate(booking.date), 'dd MMM yyyy')}
                   </div>
                   <div className="font-mono font-bold">{duration.toFixed(1)}h</div>
                 </div>

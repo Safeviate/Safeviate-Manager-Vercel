@@ -89,8 +89,12 @@ export function AddVehicleDialog({ tenantId }: { tenantId: string }) {
       });
       setIsOpen(false);
       form.reset();
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Error', description: e?.message || 'Failed to register vehicle.' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to register vehicle.',
+      });
     }
   };
 

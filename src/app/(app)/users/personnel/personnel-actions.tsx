@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Personnel, PilotProfile } from './personnel-directory-page';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/use-permissions';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -57,11 +58,11 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
         title: 'User Removed',
         description: `The user profile for ${user.firstName} ${user.lastName} was deleted.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: 'Delete Failed',
-        description: error.message || 'The user profile could not be deleted.',
+        description: error instanceof Error ? error.message : 'The user profile could not be deleted.',
       });
     } finally {
       setIsDeleteDialogOpen(false);
@@ -86,7 +87,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = (await parseJsonResponse<{ error?: string }>(response)) ?? {};
         throw new Error(error.error || 'Failed to send email');
       }
 
@@ -94,11 +95,11 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
         title: 'Welcome Email Sent',
         description: `A setup link has been dispatched to ${user.email}.`
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: 'Email Failed',
-        description: error.message
+        description: error instanceof Error ? error.message : 'Failed to send email.'
       });
     } finally {
       setIsSendingEmail(false);

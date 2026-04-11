@@ -16,6 +16,14 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Badge } from '@/components/ui/badge';
 import { BackNavButton } from '@/components/back-nav-button';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 interface AuditDetailPageProps {
   params: Promise<{ auditId: string }>;
 }
@@ -113,7 +121,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
               <CardTitle className="text-2xl font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
             </div>
             <CardDescription className="text-sm font-medium">
-              Performed on {format(new Date(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge>
+              Performed on {format(parseLocalDate(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge>
             </CardDescription>
           </div>
 

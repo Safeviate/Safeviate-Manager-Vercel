@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, FormProvider, useFormContext, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
+
+const parseLocalDate = (value?: string | null) => {
+    if (!value) return undefined;
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return new Date(value);
+    return new Date(year, month - 1, day, 12);
+};
 
 // --- Zod Schemas ---
 const riskAssessmentSchema = z.object({
@@ -73,7 +80,7 @@ const mapDatesToObjects = (risk?: Risk | null): RiskFormValues => {
             ...r,
             mitigations: (r.mitigations || []).map(m => ({
                 ...m,
-                reviewDate: m.reviewDate ? new Date(m.reviewDate) : new Date(),
+                reviewDate: parseLocalDate(m.reviewDate) || new Date(),
             }))
         }))
     };
@@ -111,13 +118,22 @@ const getRiskScoreColor = (
     return { backgroundColor: '#10b981', color: 'white' };
 };
 
+const buildRiskAssessmentPath = (
+    basePath: `initialHazards.${number}.risks.${number}.riskAssessment`,
+    field: 'likelihood' | 'severity' | 'riskScore' | 'riskLevel',
+): FieldPath<RiskFormValues> => `${basePath}.${field}` as FieldPath<RiskFormValues>;
+
 // --- Risk Assessment Component ---
 const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixColors?: Record<string, string> }> = ({ path, label, riskMatrixColors }) => {
     const { control, setValue, watch } = useFormContext<RiskFormValues>();
-    const likelihood = watch(`${path}.likelihood` as any, 1);
-    const severity = watch(`${path}.severity` as any, 1);
+    const likelihoodPath = buildRiskAssessmentPath(path as `initialHazards.${number}.risks.${number}.riskAssessment`, 'likelihood');
+    const severityPath = buildRiskAssessmentPath(path as `initialHazards.${number}.risks.${number}.riskAssessment`, 'severity');
+    const riskScorePath = buildRiskAssessmentPath(path as `initialHazards.${number}.risks.${number}.riskAssessment`, 'riskScore');
+    const riskLevelPath = buildRiskAssessmentPath(path as `initialHazards.${number}.risks.${number}.riskAssessment`, 'riskLevel');
+    const likelihood = Number(watch(likelihoodPath)) || 1;
+    const severity = Number(watch(severityPath)) || 1;
     
-    const riskScore = (likelihood || 1) * (severity || 1);
+    const riskScore = likelihood * severity;
     const riskLevel = getRiskLevel(riskScore);
     const riskColors = getRiskScoreColor(likelihood, severity, riskMatrixColors);
 
@@ -134,9 +150,9 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
     };
 
     React.useEffect(() => {
-        setValue(`${path}.riskScore` as any, riskScore);
-        setValue(`${path}.riskLevel` as any, riskLevel);
-    }, [riskScore, riskLevel, path, setValue]);
+        setValue(riskScorePath, riskScore);
+        setValue(riskLevelPath, riskLevel);
+    }, [riskScore, riskLevel, riskScorePath, riskLevelPath, setValue]);
 
     return (
         <div 
@@ -155,23 +171,25 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                 <Controller 
                     control={control} 
-                    name={`${path}.likelihood` as any} 
-                    render={({ field: { onChange, value } }) => ( 
+                    name={likelihoodPath} 
+                    render={({ field: { onChange, value } }) => {
+                        const selectedLikelihood = Number(value) || 1;
+                        return (
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Likelihood:</Label>
-                                <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[value]}</span>
+                                <span className="text-[10px] font-black uppercase truncate">{likelihoodLabels[selectedLikelihood]}</span>
                             </div>
                             <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[1, 2, 3, 4, 5].map((num) => (
                                     <Button
                                         key={num}
                                         type="button"
-                                        variant={value === num ? "default" : "outline"}
+                                        variant={selectedLikelihood === num ? "default" : "outline"}
                                         size="icon"
                                         className={cn(
                                             "h-8 w-8 text-xs font-bold transition-all shrink-0",
-                                            value === num 
+                                            selectedLikelihood === num 
                                                 ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
                                         )}
@@ -181,28 +199,30 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                                     </Button>
                                 ))}
                             </div>
-                        </div> 
-                    )} 
+                        </div>
+                    );}} 
                 />
                 <Controller 
                     control={control} 
-                    name={`${path}.severity` as any} 
-                    render={({ field: { onChange, value } }) => ( 
+                    name={severityPath} 
+                    render={({ field: { onChange, value } }) => {
+                        const selectedSeverity = Number(value) || 1;
+                        return (
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex items-baseline gap-1.5 min-w-0 sm:min-w-[180px]">
                                 <Label className="text-[10px] uppercase font-black opacity-70 whitespace-nowrap">Severity:</Label>
-                                <span className="text-[10px] font-black uppercase truncate">{severityLabels[value]?.name}</span>
+                                <span className="text-[10px] font-black uppercase truncate">{severityLabels[selectedSeverity]?.name}</span>
                             </div>
                             <div className="flex gap-1 overflow-x-auto no-scrollbar">
                                 {[5, 4, 3, 2, 1].map((num) => (
                                     <Button
                                         key={num}
                                         type="button"
-                                        variant={value === num ? "default" : "outline"}
+                                        variant={selectedSeverity === num ? "default" : "outline"}
                                         size="icon"
                                         className={cn(
                                             "h-8 w-8 text-xs font-bold transition-all shrink-0",
-                                            value === num 
+                                            selectedSeverity === num 
                                                 ? "bg-white text-black shadow-md border-white" 
                                                 : "bg-transparent hover:bg-white/10 border-current opacity-70"
                                         )}
@@ -212,8 +232,8 @@ const RiskAssessmentEditor: React.FC<{ path: string; label: string; riskMatrixCo
                                     </Button>
                                 ))}
                             </div>
-                        </div> 
-                    )}
+                        </div>
+                    );}}
                 />
             </div>
         </div>
@@ -351,7 +371,7 @@ export function RiskForm({ existingRisk, personnel, onCancel, hideHeader = false
             ...risk,
             mitigations: risk.mitigations.map(mitigation => ({
                 ...mitigation,
-                reviewDate: mitigation.reviewDate.toISOString()
+                reviewDate: new Date(Date.UTC(mitigation.reviewDate.getFullYear(), mitigation.reviewDate.getMonth(), mitigation.reviewDate.getDate(), 12)).toISOString()
             }))
         }))
     };

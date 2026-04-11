@@ -31,6 +31,9 @@ import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
 const componentFormSchema = z.object({
   name: z.string().min(1, 'Component name is required.'),
   manufacturer: z.string().min(1, 'Manufacturer is required.'),
@@ -71,7 +74,11 @@ export function AddComponentDialog({ aircraftId, isOpen, setIsOpen }: AddCompone
         const newComponent: AircraftComponent = {
             ...values,
             id: crypto.randomUUID(),
-            installDate: values.installDate.toISOString(),
+            installDate: toNoonUtcIso(values.installDate),
+            partNumber: '',
+            installHours: 0,
+            maxHours: 0,
+            notes: '',
         };
 
         const response = await fetch(`/api/aircraft/${aircraftId}`, {

@@ -17,6 +17,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import Image from 'next/image';
 import { getDocumentExpiryColor } from '@/lib/document-expiry';
 
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 interface AircraftDocumentsProps {
   aircraft: Aircraft;
 }
@@ -63,7 +73,7 @@ export function AircraftDocuments({ aircraft }: AircraftDocumentsProps) {
   const handleExpirationDateChange = (docName: string, date: Date | undefined) => {
     const currentDocs = aircraft.documents || [];
     const updatedDocs = currentDocs.map(d => 
-      d.name === docName ? { ...d, expirationDate: date ? date.toISOString() : null } : d
+      d.name === docName ? { ...d, expirationDate: date ? new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString() : null } : d
     );
     handleDocumentUpdate(updatedDocs);
   };
@@ -120,13 +130,13 @@ export function AircraftDocuments({ aircraft }: AircraftDocumentsProps) {
                             {statusColor && <div className="h-2 w-2 rounded-full animate-pulse shrink-0" style={{ backgroundColor: statusColor }} />}
                             <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                             <span className="truncate text-xs">
-                              {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry Date'}
+                              {doc.expirationDate ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry Date'}
                             </span>
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0 rounded-2xl border-2 shadow-2xl overflow-hidden" align="center">
                           <CustomCalendar
-                            selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                            selectedDate={parseLocalDate(doc.expirationDate || undefined) || undefined}
                             onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
                           />
                         </PopoverContent>

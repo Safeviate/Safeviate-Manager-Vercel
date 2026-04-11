@@ -11,7 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, FileText, Calendar, PenTool } from 'lucide-react';
+import { format } from 'date-fns';
 import type { MaintenanceLog } from '@/types/aircraft';
+
+const toNoonUtcIsoFromDateString = (date: string) => new Date(`${date}T12:00:00`).toISOString();
 
 const formSchema = z.object({
   maintenanceType: z.string().min(1, 'Type is required.'),
@@ -30,7 +33,7 @@ export function AddMaintenanceLogDialog({ aircraftId }: { tenantId: string, airc
     resolver: zodResolver(formSchema),
     defaultValues: {
       maintenanceType: '',
-      date: new Date().toISOString().substring(0, 10),
+      date: format(new Date(), 'yyyy-MM-dd'),
       details: '',
       reference: '',
       ameNo: '',
@@ -48,6 +51,7 @@ export function AddMaintenanceLogDialog({ aircraftId }: { tenantId: string, airc
           id: crypto.randomUUID(),
           aircraftId,
           ...values,
+          date: toNoonUtcIsoFromDateString(values.date),
         };
 
         const nextLogs = [newLog, ...logs];

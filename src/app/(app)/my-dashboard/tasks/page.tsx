@@ -11,6 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Eye } from 'lucide-react';
 
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return new Date(value);
+    }
+    return new Date(year, month - 1, day, 12);
+};
+
 export default function TasksPage() {
     const { myTasks, isLoading } = useDashboardData();
 
@@ -47,7 +55,7 @@ export default function TasksPage() {
                                                 {task.sourceIdentifier}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="text-sm font-medium text-foreground">{format(new Date(task.dueDate), 'PPP')}</TableCell>
+                                        <TableCell className="text-sm font-medium text-foreground">{format(parseLocalDate(task.dueDate), 'PPP')}</TableCell>
                                         <TableCell>
                                             <Badge variant="secondary" className="text-[10px] font-black uppercase py-1 px-3">
                                                 {task.status}

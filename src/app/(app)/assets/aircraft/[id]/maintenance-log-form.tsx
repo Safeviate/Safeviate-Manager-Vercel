@@ -18,7 +18,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 import type { MaintenanceLog } from '@/types/aircraft';
+
+const toNoonUtcIsoFromDateString = (date: string) => new Date(`${date}T12:00:00`).toISOString();
 
 const logSchema = z.object({
   maintenanceType: z.string().min(1, "Maintenance type is required"),
@@ -45,7 +48,7 @@ export function MaintenanceLogForm({ aircraftId, isOpen, setIsOpen, trigger }: M
     resolver: zodResolver(logSchema),
     defaultValues: {
       maintenanceType: 'Routine Inspection',
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
       details: '',
       reference: '',
       ameNo: '',
@@ -69,6 +72,7 @@ export function MaintenanceLogForm({ aircraftId, isOpen, setIsOpen, trigger }: M
               {
                 id: crypto.randomUUID(),
                 ...values,
+                date: toNoonUtcIsoFromDateString(values.date),
                 aircraftId,
               },
               ...logs,

@@ -16,6 +16,23 @@ interface TaskCardItemProps {
   taskCard: TaskCard;
 }
 
+type TaskCardSignature = {
+  id: string;
+  taskCardId: string;
+  signatureImage: string;
+  signatoryUserId: string;
+  role: 'MECHANIC' | 'INSPECTOR';
+  timestamp: string;
+  authMethod: 'PIN_VALIDATED';
+};
+
+type TaskCardAttachment = {
+  id: string;
+  url: string;
+  name: string;
+  type: 'PDF' | 'IMAGE';
+};
+
 export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
@@ -40,7 +57,7 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
 
   const handleSignOff = async (signatureBase64: string) => {
     try {
-      const newSignature = {
+      const newSignature: TaskCardSignature = {
         id: crypto.randomUUID(),
         taskCardId: taskCard.id,
         signatureImage: signatureBase64,
@@ -49,9 +66,10 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
         timestamp: new Date().toISOString(),
         authMethod: 'PIN_VALIDATED',
       };
-      const nextTaskCard: TaskCard & { signatures?: any[] } = {
+      const existingSignatures = (taskCard as { signatures?: TaskCardSignature[] }).signatures ?? [];
+      const nextTaskCard: TaskCard & { signatures?: TaskCardSignature[] } = {
         ...taskCard,
-        signatures: [...((taskCard as any).signatures || []), newSignature],
+        signatures: [...existingSignatures, newSignature],
       };
       if (signMode === 'MECHANIC') {
         nextTaskCard.isCompleted = true;
@@ -63,8 +81,8 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
       await persistTaskCard(nextTaskCard);
       toast({ title: 'Task Certified', description: `Your ${signMode.toLowerCase()} signature was secured.` });
       setIsSigning(false);
-    } catch (e: any) {
-      toast({ title: 'Sign-Off Failed', description: e.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Sign-Off Failed', description: e instanceof Error ? e.message : 'Sign-off failed.', variant: 'destructive' });
     }
   };
 
@@ -76,18 +94,19 @@ export function TaskCardItem({ workpackId, taskCard }: TaskCardItemProps) {
     }
 
     try {
-      const nextTaskCard: TaskCard & { attachments?: any[] } = {
+      const existingAttachments = (taskCard as { attachments?: TaskCardAttachment[] }).attachments ?? [];
+      const nextTaskCard: TaskCard & { attachments?: TaskCardAttachment[] } = {
         ...taskCard,
         attachments: [
-          ...((taskCard as any).attachments || []),
-          { id: Date.now().toString(), url, name: 'Evidence link', type: 'LINK' as const },
+          ...existingAttachments,
+          { id: Date.now().toString(), url, name: 'Evidence link', type: 'IMAGE' as const },
         ],
       };
       await persistTaskCard(nextTaskCard);
       toast({ title: 'Attachment Added', description: 'The evidence link was attached.' });
       setAttachmentUrl('');
-    } catch (e: any) {
-      toast({ title: 'Attachment Failed', description: e.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Attachment Failed', description: e instanceof Error ? e.message : 'Attachment failed.', variant: 'destructive' });
     }
   };
 

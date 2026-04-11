@@ -10,6 +10,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { format } from 'date-fns';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 export default function NewBookingPage() {
   const router = useRouter();
@@ -39,8 +40,11 @@ export default function NewBookingPage() {
           fetch('/api/schedule-data', { cache: 'no-store' }),
           fetch('/api/dashboard-summary', { cache: 'no-store' }),
         ]);
-        const schedulePayload = await scheduleResponse.json();
-        const summaryPayload = await summaryResponse.json();
+        const schedulePayload = (await parseJsonResponse<{ aircraft?: Aircraft[] }>(scheduleResponse)) ?? {};
+        const summaryPayload = (await parseJsonResponse<{
+          instructors?: PilotProfile[];
+          students?: PilotProfile[];
+        }>(summaryResponse)) ?? {};
         if (!cancelled) {
           setAircrafts((schedulePayload?.aircraft ?? []) as Aircraft[]);
           setInstructors(Array.isArray(summaryPayload?.instructors) ? summaryPayload.instructors : []);
@@ -96,7 +100,8 @@ export default function NewBookingPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ booking: bookingData }),
         });
-        if (!response.ok) throw new Error((await response.json())?.error || 'Failed to create booking.');
+        const payload = (await parseJsonResponse<{ error?: string }>(response)) ?? {};
+        if (!response.ok) throw new Error(payload?.error || 'Failed to create booking.');
         
         toast({
             title: 'Booking Created',
@@ -105,12 +110,12 @@ export default function NewBookingPage() {
         
         router.push('/bookings/schedule');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Create Booking Error:", error);
         toast({
             variant: 'destructive',
             title: 'Submission Failed',
-            description: error.message || 'An unknown error occurred.',
+            description: error instanceof Error ? error.message : 'An unknown error occurred.',
         });
     } finally {
         setIsSubmitting(false);

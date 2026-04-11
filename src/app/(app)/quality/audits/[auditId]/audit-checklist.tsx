@@ -184,8 +184,12 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                 { findings: filledFindings },
                 { title: 'Findings Saved', description: 'Your audit progress has been recorded.' }
             );
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Error', description: e.message });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: error instanceof Error ? error.message : 'Failed to save audit.',
+            });
         }
     };
 
@@ -226,11 +230,11 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                 description: `Score: ${complianceScore}%. ${nonCompliantFindings.length} CAPs created.`
             });
 
-        } catch(error: any) {
+        } catch (error) {
              toast({
                 variant: "destructive",
                 title: "Finalization Failed",
-                description: error.message
+                description: error instanceof Error ? error.message : 'Failed to finalize audit.',
             });
         }
     };
@@ -253,8 +257,12 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
         ));
 
         form.setValue(`findings.${itemIndex}.evidence`, nextEvidence);
-        void persistAudit({ findings: nextFindings }).catch((error: any) => {
-            toast({ variant: 'destructive', title: 'Evidence Save Failed', description: error.message });
+        void persistAudit({ findings: nextFindings }).catch((error) => {
+            toast({
+                variant: 'destructive',
+                title: 'Evidence Save Failed',
+                description: error instanceof Error ? error.message : 'Failed to save evidence.',
+            });
         });
     };
 

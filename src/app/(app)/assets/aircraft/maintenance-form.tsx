@@ -30,6 +30,8 @@ import { format } from 'date-fns';
 import { History, ClipboardCheck } from 'lucide-react';
 import type { MaintenanceLog } from '@/types/maintenance';
 
+const toNoonUtcIsoFromDateString = (date: string) => new Date(`${date}T12:00:00`).toISOString();
+
 const logSchema = z.object({
   maintenanceType: z.string().min(1, 'Maintenance type is required.'),
   date: z.string().min(1, 'Date is required.'),
@@ -70,6 +72,7 @@ export function MaintenanceForm({ aircraftId, trigger }: MaintenanceFormProps) {
       const logs = ((payload.aircraft?.maintenanceLogs as MaintenanceLog[]) || []).slice();
       const newLog: MaintenanceLog = {
         ...values,
+        date: toNoonUtcIsoFromDateString(values.date),
         id: crypto.randomUUID(),
         aircraftId,
       };

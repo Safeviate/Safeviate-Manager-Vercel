@@ -28,6 +28,16 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Vehicle } from '@/types/vehicle';
 
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 export function VehicleList({ data }: { data: Vehicle[] }) {
   const { toast } = useToast();
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
@@ -91,7 +101,7 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
                 <TableCell className="text-right text-sm font-medium text-foreground/85">{vehicle.currentOdometer?.toFixed(0) || '0'}</TableCell>
                 <TableCell>
                   <div className="text-sm text-foreground/75 font-medium">
-                    {vehicle.nextServiceDueDate ? <div>{format(new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy')}</div> : null}
+                    {vehicle.nextServiceDueDate ? <div>{format(parseLocalDate(vehicle.nextServiceDueDate) || new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy')}</div> : null}
                     {vehicle.nextServiceDueOdometer != null ? <div>{vehicle.nextServiceDueOdometer.toFixed(0)} km</div> : null}
                     {!vehicle.nextServiceDueDate && vehicle.nextServiceDueOdometer == null ? 'Not scheduled' : null}
                   </div>
@@ -143,7 +153,7 @@ export function VehicleList({ data }: { data: Vehicle[] }) {
                 <div className="col-span-2 space-y-1">
                   <p className="text-[10px] font-medium uppercase tracking-wider text-foreground/75">Next Service</p>
                   <p className="text-sm font-medium text-foreground/75">
-                    {vehicle.nextServiceDueDate ? format(new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy') : 'No date set'}
+                    {vehicle.nextServiceDueDate ? format(parseLocalDate(vehicle.nextServiceDueDate) || new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy') : 'No date set'}
                     {vehicle.nextServiceDueOdometer != null ? ` | ${vehicle.nextServiceDueOdometer.toFixed(0)} km` : ''}
                   </p>
                 </div>

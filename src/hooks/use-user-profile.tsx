@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type UserProfile = PilotProfile | Personnel;
 type DbUserProfile = {
@@ -59,9 +60,9 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             setDbLoading(true);
             try {
                 const response = await fetch('/api/me', { cache: 'no-store' });
-                const payload = await response.json();
+                const payload = await parseJsonResponse<{ profile: DbUserProfile | null }>(response);
                 if (!cancelled) {
-                    setDbProfile(payload.profile ?? null);
+                    setDbProfile(payload?.profile ?? null);
                     setDbError(null);
                 }
             } catch (error) {

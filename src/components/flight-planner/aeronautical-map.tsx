@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Search, X, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -135,6 +136,33 @@ const getSearchZoom = (sourceLayer: OpenAipFeature['sourceLayer']) => {
   if (sourceLayer === 'navaids') return 14;
   return 13; // reporting-points
 };
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchOpenAipJson<T>(url: string, retries = 1): Promise<T | null> {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        if (response.status >= 500 && attempt < retries) {
+          await delay(250 * (attempt + 1));
+          continue;
+        }
+        return null;
+      }
+
+      return (await parseJsonResponse<T>(response)) ?? null;
+    } catch (error) {
+      if (attempt < retries) {
+        await delay(250 * (attempt + 1));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return null;
+}
 
 type OpenAipAirspace = {
   _id: string;
@@ -365,8 +393,8 @@ function VisiblePointLoader({
     try {
       const responses = await Promise.all(
         activeResources.map(async (resource) => {
-          const response = await fetch(`/api/openaip?resource=${resource}&bbox=${bbox}`);
-          const data = await response.json();
+          const data =
+            (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=${resource}&bbox=${bbox}`)) ?? { items: [] };
           return { resource, data };
         })
       );
@@ -433,8 +461,8 @@ function VisibleAirspaceLoader({
     const nextSeq = ++requestSeq.current;
 
     try {
-      const response = await fetch(`/api/openaip?resource=airspaces&bbox=${bbox}`);
-      const data = await response.json();
+      const data =
+        (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=airspaces&bbox=${bbox}`)) ?? { items: [] };
       if (nextSeq !== requestSeq.current) return;
       onFeaturesLoaded((data.items || []) as OpenAipAirspace[]);
     } catch (error) {
@@ -477,8 +505,8 @@ function VisibleObstacleLoader({
     const nextSeq = ++requestSeq.current;
 
     try {
-      const response = await fetch(`/api/openaip?resource=obstacles&bbox=${bbox}`);
-      const data = await response.json();
+      const data =
+        (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=obstacles&bbox=${bbox}`)) ?? { items: [] };
       if (nextSeq !== requestSeq.current) return;
       onFeaturesLoaded((data.items || []) as OpenAipObstacle[]);
     } catch (error) {
@@ -763,15 +791,16 @@ const SearchControl = ({
     try {
       const searchPromises = resources.map(resource =>
         // Use basic search parameter directly as used previously successfully by the component.
-        fetch(`/api/openaip?resource=${resource}&search=${encodeURIComponent(searchQuery)}`)
-          .then(res => res.ok ? res.json() : [])
+        fetchOpenAipJson(`/api/openaip?resource=${resource}&search=${encodeURIComponent(searchQuery)}`)
+          .then((data) => data ?? [])
           .catch(() => [])
       );
       
       const searchResults = await Promise.all(searchPromises);
       const combinedResults = searchResults.flatMap((result, index) => {
         const sourceLayer = resources[index];
-        const items = Array.isArray(result) ? result : (result.items || result.data || []);
+        const payload = result as { items?: unknown[]; data?: unknown[] } | unknown[];
+        const items = Array.isArray(payload) ? payload : (payload.items || payload.data || []);
         return items.map((item: any) => ({ ...item, sourceLayer }));
       });
       

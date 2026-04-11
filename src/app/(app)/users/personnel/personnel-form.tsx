@@ -14,13 +14,15 @@ import type { Role } from '@/app/(app)/admin/roles/page';
 import type { Department } from '@/app/(app)/admin/department/page';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import type { Personnel, PilotProfile } from './personnel-directory-page';
+import type { ExternalOrganization } from '@/types/quality';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 interface PersonnelFormProps {
   tenantId: string;
   existingPersonnel?: Personnel | PilotProfile;
   roles: Role[];
   departments: Department[];
-  externalOrganizations?: any[];
+  externalOrganizations?: ExternalOrganization[];
   defaultDepartmentId?: string | null;
   defaultRoleId?: string | null;
   defaultUserType?: string | null;
@@ -131,8 +133,8 @@ export function PersonnelForm({
             },
           }),
         });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || 'Failed to update user.');
+        const result = await parseJsonResponse<{ error?: string }>(response);
+        if (!response.ok) throw new Error(result?.error || 'Failed to update user.');
         toast({ title: 'User Updated' });
       } else {
         const response = await fetch('/api/admin/create-personnel', {
@@ -157,9 +159,9 @@ export function PersonnelForm({
           })
         });
 
-        const result = await response.json();
+        const result = await parseJsonResponse<{ error?: string }>(response);
         if (!response.ok) {
-          throw new Error(result.error || 'Server error during user creation.');
+          throw new Error(result?.error || 'Server error during user creation.');
         }
 
         toast({ title: 'User Created', description: 'The new account and profile have been established.' });
@@ -169,12 +171,12 @@ export function PersonnelForm({
       window.dispatchEvent(new Event('safeviate-users-updated'));
       setIsOpen(false);
       onClose?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding/updating user:', error);
       toast({
         variant: 'destructive',
         title: 'Operation Failed',
-        description: error.message || 'An unknown error occurred.',
+        description: error instanceof Error ? error.message : 'An unknown error occurred.',
       });
     } finally {
       setIsSubmitting(false);

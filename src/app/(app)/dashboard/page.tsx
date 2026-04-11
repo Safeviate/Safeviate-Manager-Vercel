@@ -38,6 +38,15 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { parseJsonResponse } from '@/lib/safe-json';
+
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
 import { cn } from '@/lib/utils';
 
 type AttentionItemTone = 'danger' | 'warning' | 'neutral';
@@ -156,7 +165,14 @@ export default function DashboardPage() {
       setIsLoading(true);
       try {
         const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
-        const payload = await response.json();
+        const payload = (await parseJsonResponse<{
+          bookings?: Booking[];
+          aircrafts?: Aircraft[];
+          audits?: QualityAudit[];
+          caps?: CorrectiveActionPlan[];
+          reports?: SafetyReport[];
+          risks?: Risk[];
+        }>(response)) ?? {};
         if (cancelled) return;
         setBookings(payload.bookings ?? []);
         setAircrafts(payload.aircrafts ?? []);
@@ -244,9 +260,9 @@ export default function DashboardPage() {
         : 0;
 
     const auditTrendData = finalizedAudits
-      .sort((a, b) => new Date(a.auditDate).getTime() - new Date(b.auditDate).getTime())
+      .sort((a, b) => parseLocalDate(a.auditDate).getTime() - parseLocalDate(b.auditDate).getTime())
       .map((audit) => ({
-        date: format(new Date(audit.auditDate), 'MMM'),
+        date: format(parseLocalDate(audit.auditDate), 'MMM'),
         score: audit.complianceScore || 0,
       }))
       .slice(-6);
@@ -445,7 +461,7 @@ export default function DashboardPage() {
           <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <div className={cn('rounded-lg border border-card-border/70 bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/80')}>
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assets</p>
-              <p className="mt-2 text-2xl font-black">{isAviation ? stats.activeFleet : aircrafts.length}</p>
+              <p className="mt-2 text-2xl font-black">{isAviation ? stats.activeFleet : (aircrafts?.length ?? 0)}</p>
               <p className="text-[10px] text-muted-foreground font-medium uppercase mt-1">{isAviation ? 'Active Fleet Count' : 'Registered Equipment'}</p>
             </div>
             <div className={cn('rounded-lg border border-card-border/70 bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/80')}>
@@ -615,7 +631,7 @@ export default function DashboardPage() {
           items={stats.upcomingAudits.map((audit) => ({
             id: audit.id,
             title: `${audit.auditNumber} • ${audit.title}`,
-            detail: `${format(new Date(audit.auditDate), 'dd MMM yyyy')} • ${audit.status}`,
+            detail: `${format(parseLocalDate(audit.auditDate), 'dd MMM yyyy')} • ${audit.status}`,
             tone: 'warning',
           }))}
           modern={isModern}

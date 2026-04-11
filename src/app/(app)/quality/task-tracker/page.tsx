@@ -20,6 +20,14 @@ import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 type UnifiedTask = {
   id: string;
   description: string;
@@ -158,7 +166,7 @@ export default function TaskTrackerPage() {
       });
     });
 
-    return tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    return tasks.sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
   }, [mocs, safetyReports, caps, audits, personnel, isLoading]);
 
   const getStatusBadgeVariant = (status: UnifiedTask['status']): 'default' | 'secondary' | 'destructive' | 'outline' => {
@@ -196,7 +204,7 @@ export default function TaskTrackerPage() {
                 <span className="text-sm font-black uppercase text-foreground tracking-tight">{task.sourceIdentifier}</span>
               </TableCell>
               <TableCell className="text-sm font-bold text-foreground">{task.assigneeName}</TableCell>
-              <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{format(new Date(task.dueDate), 'dd MMM yy')}</TableCell>
+              <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{format(parseLocalDate(task.dueDate), 'dd MMM yy')}</TableCell>
               <TableCell>
                 <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">{task.status}</Badge>
               </TableCell>

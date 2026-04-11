@@ -29,6 +29,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 function ManageAreasDialog({ settings, trigger, onAreasChange }: { settings: string[]; trigger?: ReactNode; onAreasChange?: (areas: string[]) => void }) {
   const { toast } = useToast();
   const [newArea, setNewArea] = useState('');
@@ -408,7 +416,7 @@ function RiskGroup({ hazard, personnelMap, onEditClick, isMobile }: { hazard: Ri
             ) : <Badge variant="outline" className="text-[10px] h-5 opacity-50 font-black">N/A</Badge>}
           </TableCell>
           <TableCell className={cn('text-xs font-bold whitespace-nowrap py-4', isMobile && 'hidden')}>{personnelMap.get(mitigation.responsiblePersonId) || 'N/A'}</TableCell>
-          <TableCell className={cn('text-xs font-bold whitespace-nowrap py-4', isMobile && 'hidden')}>{mitigation.reviewDate ? format(new Date(mitigation.reviewDate), 'dd MMM yy') : 'N/A'}</TableCell>
+          <TableCell className={cn('text-xs font-bold whitespace-nowrap py-4', isMobile && 'hidden')}>{mitigation.reviewDate ? format(parseLocalDate(mitigation.reviewDate), 'dd MMM yy') : 'N/A'}</TableCell>
           {showHazardCell && (
             <TableCell rowSpan={totalRowsForHazard} className="text-right align-top pt-4">
               <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => onEditClick(hazard)}>

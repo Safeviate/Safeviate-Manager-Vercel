@@ -368,7 +368,6 @@ export default function ExamsPage() {
                                             description={`This will permanently delete the template "${template.title}".`}
                                             onDelete={() => handleDelete(template.id)}
                                             srLabel="Delete template"
-                                            className="h-10 w-10 rounded-lg border-slate-300 hover:bg-destructive hover:text-destructive-foreground shadow-sm"
                                           />
                                         </div>
                                       )}

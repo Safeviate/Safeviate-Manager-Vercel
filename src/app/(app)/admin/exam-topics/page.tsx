@@ -124,7 +124,7 @@ export default function ExamTopicsPage() {
         const bankResponse = await fetch('/api/exams', { cache: 'no-store' });
         const bankPayload = await bankResponse.json().catch(() => ({}));
         const questions = Array.isArray(bankPayload?.poolItems) ? bankPayload.poolItems : [];
-        const updatedQuestions = questions.map(q => q.topic === oldName ? { ...q, topic: newName } : q);
+        const updatedQuestions = questions.map((q: { topic?: string } & Record<string, unknown>) => q.topic === oldName ? { ...q, topic: newName } : q);
         await fetch('/api/exams', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -134,8 +134,8 @@ export default function ExamTopicsPage() {
         
         setEditingIndex(null);
         toast({ title: 'Topic Updated' });
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
+    } catch (error: unknown) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: error instanceof Error ? error.message : 'Update failed.' });
     } finally {
         setIsSyncing(false);
     }

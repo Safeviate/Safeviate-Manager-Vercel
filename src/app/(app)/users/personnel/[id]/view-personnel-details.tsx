@@ -35,6 +35,17 @@ import { getDocumentExpiryColor } from '@/lib/document-expiry';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 import { MainPageHeader } from '@/components/page-header';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
+import { parseJsonResponse } from '@/lib/safe-json';
+
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -54,7 +65,7 @@ const DetailItem = ({ label, value, children }: { label: string; value?: string 
     </div>
 );
 
-const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
+const SectionHeader = ({ title, icon: Icon }: { title: string, icon: React.ElementType }) => (
     <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-primary/10 text-primary">
             <Icon className="h-5 w-5" />
@@ -101,7 +112,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   useEffect(() => {
       try {
           void fetch('/api/tenant-config', { cache: 'no-store' })
-            .then((response) => response.json())
+            .then((response) => parseJsonResponse<{ config?: Record<string, any> | null }>(response))
             .then((payload) => {
               const config = payload?.config || {};
               if (config['document-expiry']) {
@@ -129,10 +140,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
       body: JSON.stringify({ personnel: { ...user, documents: updatedDocuments } }),
     });
 
-    const payload = await response.json().catch(() => ({}));
+    const payload = await parseJsonResponse<{ error?: string }>(response);
     if (!response.ok) {
       setDocuments(previousDocuments);
-      throw new Error(payload.error || 'Failed to update personnel documents.');
+      throw new Error(payload?.error || 'Failed to update personnel documents.');
     }
 
     window.dispatchEvent(new Event('safeviate-personnel-updated'));
@@ -154,11 +165,11 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     try {
       await handleDocumentUpdate(updatedDocs);
       toast({ title: 'Document Saved', description: `"${docDetails.name}" now appears in the document section.` });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: error.message || 'Could not save the uploaded document.',
+        description: error instanceof Error ? error.message : 'Could not save the uploaded document.',
       });
     }
   };
@@ -169,15 +180,17 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     
     if (docIndex > -1) {
         const updatedDocs = [...currentDocs];
-        updatedDocs[docIndex].expirationDate = date ? date.toISOString() : null;
+        updatedDocs[docIndex].expirationDate = date
+          ? new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString()
+          : null;
         try {
           await handleDocumentUpdate(updatedDocs);
           toast({ title: 'Document Updated' });
-        } catch (error: any) {
+        } catch (error: unknown) {
           toast({
             variant: 'destructive',
             title: 'Update Failed',
-            description: error.message || 'Could not update the document expiry date.',
+            description: error instanceof Error ? error.message : 'Could not update the document expiry date.',
           });
         }
     }
@@ -189,11 +202,11 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     try {
       await handleDocumentUpdate(updatedDocs);
       toast({ title: "Document Deleted" });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: 'Delete Failed',
-        description: error.message || 'Could not delete the document.',
+        description: error instanceof Error ? error.message : 'Could not delete the document.',
       });
     }
   };
@@ -214,19 +227,19 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send email');
+        const error = await parseJsonResponse<{ error?: string }>(response);
+        throw new Error(error?.error || 'Failed to send email');
       }
 
       toast({
         title: 'Welcome Email Sent',
         description: `A setup link has been dispatched to ${user.email}.`
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: 'Email Failed',
-        description: error.message
+        description: error instanceof Error ? error.message : 'Failed to send email.'
       });
     } finally {
       setIsSendingEmail(false);
@@ -467,13 +480,13 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                                         {statusColor && (
                                                                             <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusColor }} />
                                                                         )}
-                                                                        {doc.expirationDate ? format(new Date(doc.expirationDate), 'PPP') : 'N/A'}
+                                                                        {doc.expirationDate ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'PPP') : 'N/A'}
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell className='text-center'>
                                                                     <Popover>
                                                                         <PopoverTrigger asChild><Button variant="outline" size="icon" className='h-8 w-8'><CalendarIcon className="h-4 w-4" /></Button></PopoverTrigger>
-                                                                        <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined} onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)} /></PopoverContent>
+                                                                        <PopoverContent className="w-auto p-0"><CustomCalendar selectedDate={parseLocalDate(doc.expirationDate || undefined) || undefined} onDateSelect={(date) => date && handleExpirationDateChange(doc.name, date)} /></PopoverContent>
                                                                     </Popover>
                                                                 </TableCell>
                                                                 <TableCell className="text-right">

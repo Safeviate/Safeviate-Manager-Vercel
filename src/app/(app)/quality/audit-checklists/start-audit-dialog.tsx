@@ -37,6 +37,9 @@ import type { QualityAudit, QualityAuditChecklistTemplate, ExternalOrganization 
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
 
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
 const formSchema = z.object({
   auditeeId: z.string().min(1, 'Auditee is required.'),
   scope: z.string().min(1, 'Scope is required.'),
@@ -121,7 +124,7 @@ export function StartAuditDialog({
             auditeeId: values.auditeeId,
             organizationId: isExternalOrg ? values.auditeeId : null,
             scope: values.scope,
-            auditDate: values.auditDate.toISOString(),
+            auditDate: toNoonUtcIso(values.auditDate),
             status: 'Scheduled',
             findings: [],
         };

@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
+const FLIGHT_SESSION_OUTBOX_PREFIX = 'safeviate:active-flight-session-outbox:';
 
 const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/active-flight-live-map').then((module) => module.ActiveFlightLiveMap), {
   ssr: false,
@@ -36,6 +37,32 @@ const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/act
     </div>
   ),
 });
+
+const getFlightSessionOutboxKey = (deviceId: string) => `${FLIGHT_SESSION_OUTBOX_PREFIX}${deviceId}`;
+
+const readQueuedFlightSession = (deviceId: string) => {
+  if (typeof window === 'undefined') return null;
+
+  const raw = window.localStorage.getItem(getFlightSessionOutboxKey(deviceId));
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as FlightSession;
+  } catch {
+    window.localStorage.removeItem(getFlightSessionOutboxKey(deviceId));
+    return null;
+  }
+};
+
+const queueFlightSessionSave = (session: FlightSession) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(getFlightSessionOutboxKey(session.deviceId), JSON.stringify(session));
+};
+
+const clearQueuedFlightSession = (deviceId: string) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(getFlightSessionOutboxKey(deviceId));
+};
 
 export default function ActiveFlightPage() {
   const { toast } = useToast();
@@ -51,6 +78,8 @@ export default function ActiveFlightPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [flightSessions, setFlightSessions] = useState<FlightSession[]>([]);
   const [isFullscreenMapOpen, setIsFullscreenMapOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [hasQueuedSession, setHasQueuedSession] = useState(false);
   const lastWriteRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
   const isModern = uiMode === 'modern';
@@ -78,15 +107,60 @@ export default function ActiveFlightPage() {
     void load();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const syncConnectivityState = () => {
+      setIsOnline(window.navigator.onLine);
+    };
+
+    const syncQueuedSessionState = () => {
+      const binding = getOrCreateDeviceBinding();
+      if (!binding?.deviceId) {
+        setHasQueuedSession(false);
+        return;
+      }
+
+      setHasQueuedSession(Boolean(readQueuedFlightSession(binding.deviceId)));
+    };
+
+    syncConnectivityState();
+    syncQueuedSessionState();
+
+    window.addEventListener('online', syncConnectivityState);
+    window.addEventListener('offline', syncConnectivityState);
+    window.addEventListener('storage', syncQueuedSessionState);
+
+    return () => {
+      window.removeEventListener('online', syncConnectivityState);
+      window.removeEventListener('offline', syncConnectivityState);
+      window.removeEventListener('storage', syncQueuedSessionState);
+    };
+  }, []);
+
   const persistSessions = async (next: FlightSession[]) => {
     setFlightSessions(next);
     const current = next[next.length - 1];
     if (!current) return;
-    await fetch('/api/flight-sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session: current }),
-    });
+    try {
+      const response = await fetch('/api/flight-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: current }),
+      });
+
+      if (!response.ok) {
+        queueFlightSessionSave(current);
+        setHasQueuedSession(true);
+        return;
+      }
+
+      clearQueuedFlightSession(current.deviceId);
+      setHasQueuedSession(false);
+    } catch {
+      queueFlightSessionSave(current);
+      setHasQueuedSession(true);
+    }
   };
 
   const sortedAircraft = useMemo(() => [...aircrafts].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber)), [aircrafts]);
@@ -95,7 +169,7 @@ export default function ActiveFlightPage() {
   const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
   const selectedLegs = selectedBooking?.navlog?.legs || [];
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position, manualLegIndex), [selectedLegs, position, manualLegIndex]);
-  const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), [savedDeviceLabel]);
+  const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
     speed: activeLegState?.groundSpeedKt ?? position?.speedKt ?? null,
@@ -125,6 +199,47 @@ export default function ActiveFlightPage() {
   useEffect(() => setManualLegIndex(0), [selectedBookingId]);
   useEffect(() => { if (activeLegState && activeLegState.activeLegIndex !== manualLegIndex) setManualLegIndex(activeLegState.activeLegIndex); }, [activeLegState, manualLegIndex]);
 
+  useEffect(() => {
+    if (!deviceBinding?.deviceId || typeof window === 'undefined') return;
+
+    const flushQueuedSession = async () => {
+      if (!navigator.onLine) return;
+
+      const queuedSession = readQueuedFlightSession(deviceBinding.deviceId);
+      if (!queuedSession) return;
+
+      try {
+        const response = await fetch('/api/flight-sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: queuedSession }),
+        });
+
+        if (response.ok) {
+          clearQueuedFlightSession(deviceBinding.deviceId);
+        }
+      } catch {
+        // Keep the queued session until the browser regains connectivity.
+      }
+    };
+
+    void flushQueuedSession();
+
+    const handleOnline = () => {
+      void flushQueuedSession();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [deviceBinding?.deviceId]);
+
+  const syncStatusLabel = hasQueuedSession ? 'Queued for Sync' : isOnline ? 'Online' : 'Offline';
+  const syncStatusClassName = hasQueuedSession
+    ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50'
+    : isOnline
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50'
+      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50';
+
   const conflictingAircraftSession = useMemo(() => {
     if (!selectedAircraft || !deviceBinding?.deviceId) return null;
     return flightSessions.find((session) => session.status === 'active' && session.aircraftId === selectedAircraft.id && session.deviceId !== deviceBinding.deviceId) || null;
@@ -136,7 +251,8 @@ export default function ActiveFlightPage() {
     if (now - lastWriteRef.current < 5000) return;
     lastWriteRef.current = now;
     const existingSession = flightSessions.find((session) => session.deviceId === deviceBinding.deviceId);
-    const next = flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId).concat({
+    const startedAt = existingSession?.startedAt || new Date().toISOString();
+    const nextSession: FlightSession = {
       id: deviceBinding.deviceId,
       pilotId: userProfile?.id || 'unknown',
       pilotName,
@@ -147,7 +263,7 @@ export default function ActiveFlightPage() {
       deviceId: deviceBinding.deviceId,
       deviceLabel: savedDeviceLabel || deviceBinding.deviceLabel || '',
       activeLegIndex: activeLegState?.activeLegIndex ?? 0,
-      startedAt: flightSessions.find((session) => session.deviceId === deviceBinding.deviceId)?.startedAt || new Date().toISOString(),
+      startedAt,
       updatedAt: new Date().toISOString(),
       lastPosition: position,
       breadcrumb: buildBreadcrumb(existingSession?.breadcrumb, position),
@@ -156,8 +272,9 @@ export default function ActiveFlightPage() {
       etaToNextMinutes: activeLegState?.etaToNextMinutes,
       crossTrackErrorNm: activeLegState?.crossTrackErrorNm,
       onCourse: activeLegState?.onCourse,
-      groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? null,
-    });
+      groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? undefined,
+    };
+    const next = [...flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId), nextSession];
     void persistSessions(next);
   }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraft, selectedBooking?.id, userProfile?.id]);
 
@@ -214,6 +331,9 @@ export default function ActiveFlightPage() {
                 </Badge>
                 <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
                   {isTrackingActive ? 'tracking active' : 'tracking idle'}
+                </Badge>
+                <Badge className={cn('px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]', syncStatusClassName)}>
+                  {syncStatusLabel}
                 </Badge>
               </div>
             </div>
@@ -302,6 +422,12 @@ export default function ActiveFlightPage() {
                 <Button className={cn('w-full font-black uppercase', isModern && 'bg-slate-900 text-white shadow-sm hover:bg-slate-800')} disabled={!selectedAircraft || !!conflictingAircraftSession} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
                 <Button variant="outline" className={cn('w-full font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')} disabled={!isTrackingActive} onClick={stopTrackingSession}>Stop Tracking</Button>
               </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/10 px-4 py-3 text-xs">
+                <span className="font-black uppercase tracking-widest text-muted-foreground">Sync Status</span>
+                <Badge className={cn('px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]', syncStatusClassName)}>
+                  {syncStatusLabel}
+                </Badge>
+              </div>
             </CardContent>
           </Card>
           <div className="space-y-6">
@@ -363,7 +489,19 @@ export default function ActiveFlightPage() {
                   <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Altitude</p><p className="mt-1 text-sm font-black">{liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}</p></div>
                   <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Trail</p><p className="mt-1 text-sm font-black">{liveTelemetry.trailPoints} pts</p></div>
                 </div>
-                <ActiveFlightLiveMap booking={selectedBooking} legs={selectedLegs} position={position} aircraftRegistration={selectedAircraft?.tailNumber} activeLegIndex={activeLegState?.activeLegIndex} />
+                {!isFullscreenMapOpen ? (
+                  <ActiveFlightLiveMap
+                    booking={selectedBooking}
+                    legs={selectedLegs}
+                    position={position}
+                    aircraftRegistration={selectedAircraft?.tailNumber}
+                    activeLegIndex={activeLegState?.activeLegIndex}
+                  />
+                ) : (
+                  <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground">
+                    Full screen map is open. Close it to restore the compact pilot map.
+                  </div>
+                )}
               </CardContent>
             </Card>
             <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>

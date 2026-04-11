@@ -13,6 +13,9 @@ import { PlusCircle, Box, PenTool, Hash, Timer } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { AircraftComponent } from '@/types/aircraft';
 
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
 const formSchema = z.object({
   name: z.string().min(1, 'Component name is required.'),
   manufacturer: z.string().min(1),
@@ -43,7 +46,7 @@ export function AddComponentDialog({ aircraftId }: { tenantId: string, aircraftI
         const newComp: AircraftComponent = { 
             ...values, 
             id: uuidv4(), 
-            installDate: new Date().toISOString(),
+            installDate: toNoonUtcIso(new Date()),
             tso: 0,
             totalTime: values.tsn,
             installHours: 0,

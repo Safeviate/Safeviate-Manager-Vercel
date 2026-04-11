@@ -3,14 +3,15 @@
 import type { ComponentType, ReactNode } from 'react';
 import { Clock, FileText, Map as NavIcon, Scale, Settings2, ClipboardCheck } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 
 type BookingDetailHeaderProps = {
   title: string;
   subtitle: string;
+  subtitleSecondary?: string;
   status?: string | null;
+  approvalMeta?: string | null;
   flightHours?: string | null;
   activeTab: string;
   onTabChange: (value: string) => void;
@@ -21,7 +22,9 @@ type BookingDetailHeaderProps = {
 export function BookingDetailHeader({
   title,
   subtitle,
+  subtitleSecondary,
   status,
+  approvalMeta,
   flightHours,
   activeTab,
   onTabChange,
@@ -29,6 +32,11 @@ export function BookingDetailHeader({
   tabRowAction,
 }: BookingDetailHeaderProps) {
   const isMobile = useIsMobile();
+  const subtitleParts = subtitleSecondary
+    ? [subtitle, subtitleSecondary]
+    : subtitle.includes('â€¢')
+      ? subtitle.split('â€¢').map((part) => part.trim()).filter(Boolean)
+      : [subtitle];
 
   return (
     <>
@@ -37,23 +45,35 @@ export function BookingDetailHeader({
         <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 space-y-1">
             <div className="flex min-w-0 items-start justify-between gap-3">
-              <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground uppercase break-words">
+              <h1 className="min-w-0 text-lg font-medium tracking-tight text-foreground uppercase break-words md:text-xl">
                 {title}
               </h1>
               {status ? (
-                <Badge variant={status === 'Approved' ? 'default' : 'secondary'} className="shrink-0 text-[10px] font-black uppercase">
-                  {status}
-                </Badge>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-[10px] font-medium uppercase tracking-widest text-foreground shadow-sm">
+                    {status}
+                  </div>
+                  {approvalMeta ? (
+                    <p className="max-w-[240px] text-right text-[8px] font-medium uppercase leading-tight tracking-widest text-muted-foreground md:text-[9px]">
+                      {approvalMeta}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
-            <span className="block break-words text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {subtitle}
-            </span>
+            {subtitleParts.map((part, index) => (
+              <span
+                key={`${part}-${index}`}
+                className="block max-w-[72ch] break-words text-[9px] font-medium uppercase leading-4 tracking-[0.12em] text-muted-foreground md:text-[10px]"
+              >
+                {part}
+              </span>
+            ))}
           </div>
           {flightHours ? (
             <div className="flex items-center gap-2 self-start md:self-auto">
-              <p className="text-[10px] font-black uppercase text-muted-foreground">Flight Time</p>
-              <p className="flex items-center gap-2 text-sm md:text-base font-black text-primary">
+              <p className="text-[10px] font-medium uppercase text-muted-foreground">Flight Time</p>
+              <p className="flex items-center gap-2 text-sm md:text-base font-medium text-primary">
                 <Clock className="h-4 w-4 md:h-5 md:w-5" />
                 {flightHours}h
               </p>

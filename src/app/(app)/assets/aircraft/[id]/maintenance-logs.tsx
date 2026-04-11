@@ -14,6 +14,14 @@ import type { MaintenanceLog } from '@/types/maintenance';
 import { Skeleton } from '@/components/ui/skeleton';
 import { History, FileText } from 'lucide-react';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 interface MaintenanceLogsProps {
   aircraftId: string;
   tenantId: string;
@@ -64,7 +72,7 @@ export function MaintenanceLogs({ aircraftId }: MaintenanceLogsProps) {
             logs.map((log) => (
               <TableRow key={log.id} className="hover:bg-muted/5 transition-colors group">
                 <TableCell className="whitespace-nowrap font-bold text-xs px-6">
-                  {format(new Date(log.date), 'dd MMM yyyy')}
+                  {format(parseLocalDate(log.date), 'dd MMM yyyy')}
                 </TableCell>
                 <TableCell className="text-center font-black uppercase text-[10px] text-primary tracking-tight">
                   <span className="bg-primary/5 px-3 py-1 rounded-full border border-primary/10">{log.maintenanceType}</span>

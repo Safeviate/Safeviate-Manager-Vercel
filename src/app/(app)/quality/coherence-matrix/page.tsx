@@ -203,9 +203,13 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                 description: `${requirements.length} compliance requirements have been added to the matrix.`,
             });
 
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error processing document:', error);
-            toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
+            toast({
+                variant: 'destructive',
+                title: 'Processing Failed',
+                description: error instanceof Error ? error.message : 'An unknown error occurred.',
+            });
         } finally {
             setIsSaving(false);
             setIsProcessing(false);
@@ -258,10 +262,14 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                 setPreviewRequirements(preview.requirements || []);
                 setIsProcessing(false);
             }
-        } catch (error: any) {
+        } catch (error) {
             setIsProcessing(false);
             console.error('Error processing document:', error);
-            toast({ variant: 'destructive', title: 'Processing Failed', description: error.message || 'An unknown error occurred.' });
+            toast({
+                variant: 'destructive',
+                title: 'Processing Failed',
+                description: error instanceof Error ? error.message : 'An unknown error occurred.',
+            });
         }
     };
 
@@ -545,8 +553,12 @@ export default function CoherenceMatrixPage() {
           }
           window.dispatchEvent(new Event('safeviate-compliance-updated'));
           toast({ title: "Success", description: "Compliance item has been deleted." });
-      } catch (e: any) {
-          toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+      } catch (error) {
+          toast({
+              variant: 'destructive',
+              title: 'Delete Failed',
+              description: error instanceof Error ? error.message : 'Failed to delete compliance item.',
+          });
       }
     };
     
@@ -561,8 +573,12 @@ export default function CoherenceMatrixPage() {
             }
             window.dispatchEvent(new Event('safeviate-compliance-updated'));
             toast({ title: "Section Deleted" });
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Delete Failed',
+                description: error instanceof Error ? error.message : 'Failed to delete compliance section.',
+            });
         }
   }
 

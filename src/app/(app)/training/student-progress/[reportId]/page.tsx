@@ -30,7 +30,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
         const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
         const payload = await response.json().catch(() => ({}));
         const students = Array.isArray(payload?.students) ? payload.students : [];
-        const found = students.find((s: any) => s.id === studentId);
+        const found = students.find((s: { id?: string }) => s.id === studentId);
         if (!cancelled) setStudent(found || null);
       } catch (e) {
         console.error('Failed to load student', e);

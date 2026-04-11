@@ -20,6 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/page';
 import { Switch } from '@/components/ui/switch';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type UserProfile = Personnel | PilotProfile;
 
@@ -97,8 +98,8 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   useEffect(() => {
       try {
           void fetch('/api/external-organizations', { cache: 'no-store' })
-            .then((response) => response.json())
-            .then((payload) => setOrganizations(Array.isArray(payload.organizations) ? payload.organizations : []))
+            .then((response) => parseJsonResponse<{ organizations?: ExternalOrganization[] }>(response))
+            .then((payload) => setOrganizations(Array.isArray(payload?.organizations) ? payload.organizations : []))
             .catch(() => setOrganizations([]));
       } catch {
           // ignore
@@ -154,9 +155,9 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ personnel: dataToUpdate }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Update failed');
+        });
+      const payload = await parseJsonResponse<{ error?: string }>(response);
+      if (!response.ok) throw new Error(payload?.error || 'Update failed');
 
       window.dispatchEvent(new Event('safeviate-profile-updated'));
       window.dispatchEvent(new Event('safeviate-personnel-updated'));

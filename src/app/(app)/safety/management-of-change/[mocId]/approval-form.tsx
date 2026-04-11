@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 import { Label } from '@/components/ui/label';
 import { useSession } from 'next-auth/react';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 const signatureSchema = z.object({
   userId: z.string(),
@@ -88,7 +89,7 @@ export function ApprovalForm({ moc, personnel }: ApprovalFormProps) {
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error((await response.json())?.error || 'Failed to save signature.');
+          throw new Error((await parseJsonResponse<{ error?: string }>(response))?.error || 'Failed to save signature.');
         }
         append(newSignature);
         toast({ title: 'MOC Signed', description: 'Your signature has been recorded.' });

@@ -5,6 +5,7 @@ import { useUserProfile } from './use-user-profile';
 import { menuConfig } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type MePayload = {
   rolePermissions?: string[];
@@ -28,7 +29,7 @@ export const usePermissions = () => {
       setIsPermissionsLoading(true);
       try {
         const response = await fetch('/api/me', { cache: 'no-store' });
-        const data = (await response.json()) as MePayload;
+        const data = (await parseJsonResponse<MePayload>(response)) ?? {};
         if (!cancelled) {
           setPayload(data);
           permissionsCache = data;

@@ -15,6 +15,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { cn } from '@/lib/utils';
 
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return new Date(value);
+    }
+    return new Date(year, month - 1, day, 12);
+};
+
 export default function MyDashboardPage() {
     const { myTasks, myMessages, isLoading, userProfile, tenant } = useDashboardData();
     const isMobile = useIsMobile();
@@ -93,7 +101,7 @@ export default function MyDashboardPage() {
                                             <TableRow key={task.id}>
                                                 <TableCell className="font-medium text-xs">{task.description}</TableCell>
                                                 <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase">{task.sourceIdentifier}</Badge></TableCell>
-                                                <TableCell className={cn("text-xs whitespace-nowrap", isMobile && "hidden")}>{format(new Date(task.dueDate), 'dd MMM yy')}</TableCell>
+                                                <TableCell className={cn("text-xs whitespace-nowrap", isMobile && "hidden")}>{format(parseLocalDate(task.dueDate), 'dd MMM yy')}</TableCell>
                                                 <TableCell><Badge variant="secondary" className="text-[9px] font-bold uppercase py-0">{task.status}</Badge></TableCell>
                                                 <TableCell className="text-right">
                                                     <Button asChild variant="outline" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3 sm:gap-2 border-slate-300">

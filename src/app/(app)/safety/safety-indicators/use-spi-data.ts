@@ -6,6 +6,14 @@ import type { SpiConfig } from '@/types/spi';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return new Date(value);
+    }
+    return new Date(year, month - 1, day, 12);
+};
+
 export type SpiDataPoint = {
     label: string; // e.g., "Jan", "Feb"
     value: number;
@@ -75,7 +83,7 @@ export const useSpiData = (spi: SpiConfig, reports: SafetyReport[] | null, booki
         });
 
         // Aggregating flight hours
-        bookings.filter(b => b.status === 'Completed' && new Date(b.date).getFullYear() === currentYear).forEach(booking => {
+        bookings.filter(b => b.status === 'Completed' && parseLocalDate(b.date).getFullYear() === currentYear).forEach(booking => {
             const start = parse(`${booking.date} ${booking.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
             const end = parse(`${booking.date} ${booking.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
             if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {

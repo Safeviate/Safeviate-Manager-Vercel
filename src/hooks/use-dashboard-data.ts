@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
+import type { Personnel } from '@/app/(app)/users/personnel/personnel-directory-page';
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { ManagementOfChange } from '@/types/moc';
@@ -28,14 +29,24 @@ export type UnifiedMessage = {
     source: string;
 };
 
+type SummaryPerson = Pick<Personnel, 'id' | 'firstName' | 'lastName'>;
+
+const isSummaryPerson = (value: unknown): value is SummaryPerson => {
+    if (!value || typeof value !== 'object') return false;
+    const candidate = value as Record<string, unknown>;
+    return typeof candidate.id === 'string' && typeof candidate.firstName === 'string' && typeof candidate.lastName === 'string';
+};
+
+const toSummaryPeople = (value: unknown): SummaryPerson[] => Array.isArray(value) ? value.filter(isSummaryPerson) : [];
+
 export function useDashboardData() {
     const { userProfile, tenantId, isLoading: isProfileLoading } = useUserProfile();
     const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
 
-    const [personnel, setPersonnel] = useState<any[]>([]);
-    const [instructors, setInstructors] = useState<any[]>([]);
-    const [students, setStudents] = useState<any[]>([]);
-    const [privatePilots, setPrivatePilots] = useState<any[]>([]);
+    const [personnel, setPersonnel] = useState<SummaryPerson[]>([]);
+    const [instructors, setInstructors] = useState<SummaryPerson[]>([]);
+    const [students, setStudents] = useState<SummaryPerson[]>([]);
+    const [privatePilots, setPrivatePilots] = useState<SummaryPerson[]>([]);
     const [mocs, setMocs] = useState<ManagementOfChange[]>([]);
     const [audits, setAudits] = useState<QualityAudit[]>([]);
     const [reports, setReports] = useState<SafetyReport[]>([]);
@@ -56,10 +67,10 @@ export function useDashboardData() {
                 const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
                 const payload = response.ok ? await response.json().catch(() => ({})) : {};
                 if (!cancelled) {
-                    setPersonnel(payload.personnel ?? []);
-                    setInstructors(payload.instructors ?? []);
-                    setStudents(payload.students ?? []);
-                    setPrivatePilots(payload.privatePilots ?? []);
+                    setPersonnel(toSummaryPeople(payload.personnel));
+                    setInstructors(toSummaryPeople(payload.instructors));
+                    setStudents(toSummaryPeople(payload.students));
+                    setPrivatePilots(toSummaryPeople(payload.privatePilots));
                     setMocs(payload.mocs ?? []);
                     setAudits(payload.audits ?? []);
                     setReports(payload.reports ?? []);
@@ -97,7 +108,7 @@ export function useDashboardData() {
     const allTasks = useMemo((): UnifiedTask[] => {
         if (isLoadingData || !allUsers) return [];
     
-        const userMap = new Map(allUsers.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
+        const userMap = new Map(allUsers.map((p) => [p.id, `${p.firstName} ${p.lastName}`]));
         const tasks: UnifiedTask[] = [];
     
         (mocs || []).forEach(moc => {
@@ -176,8 +187,8 @@ export function useDashboardData() {
 
         const messages: UnifiedMessage[] = [];
 
-        reports.forEach(report => {
-            (report.discussion || []).forEach(item => {
+        reports.forEach((report) => {
+            (report.discussion || []).forEach((item) => {
                 if (item.assignedToId === userProfile.id) {
                     messages.push({
                         id: item.id,

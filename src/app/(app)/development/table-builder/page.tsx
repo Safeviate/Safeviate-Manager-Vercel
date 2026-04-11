@@ -201,8 +201,9 @@ export default function TableBuilderPage() {
             ]);
 
             const config = tablePayload?.config && typeof tablePayload.config === 'object' ? tablePayload.config : {};
-            if (!cancelled && Array.isArray((config as any)['table-templates'])) {
-                setSavedTemplates((config as any)['table-templates']);
+            const tableTemplates = (config as { 'table-templates'?: TableTemplate[] })['table-templates'];
+            if (!cancelled && Array.isArray(tableTemplates)) {
+                setSavedTemplates(tableTemplates);
             }
             if (!cancelled && Array.isArray(logbookPayload?.templates)) {
                 setSavedLogbookTemplates(logbookPayload.templates);

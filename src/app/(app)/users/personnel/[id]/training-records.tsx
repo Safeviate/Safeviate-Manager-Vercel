@@ -4,6 +4,14 @@ import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { format } from 'date-fns';
+
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
 import { Badge } from '@/components/ui/badge';
 import type { StudentProgressReport, StudentMilestoneSettings } from '@/types/training';
 import type { PilotProfile } from '../personnel-directory-page';
@@ -151,7 +159,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
 
     const sortedReports = useMemo(() => {
         if (!reports) return [];
-        return [...reports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return [...reports].sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
     }, [reports]);
 
     if (isLoading) {
@@ -198,7 +206,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                                 <div className="flex justify-between items-center w-full pr-4">
                                                     <div className="text-left">
                                                         <p className="font-bold text-sm">Debrief {report.bookingNumber ? `#${report.bookingNumber}` : ''}</p>
-                                                        <p className="text-xs text-muted-foreground">{format(new Date(report.date), 'PPP')} with {instructorsMap.get(report.instructorId!) || 'Unknown'}</p>
+                                                        <p className="text-xs text-muted-foreground">{format(parseLocalDate(report.date), 'PPP')} with {instructorsMap.get(report.instructorId!) || 'Unknown'}</p>
                                                     </div>
                                                 </div>
                                             </AccordionTrigger>

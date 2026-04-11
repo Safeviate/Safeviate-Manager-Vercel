@@ -74,6 +74,16 @@ function formatDisplayDate(value?: string | null, fallback = 'Not set') {
   return format(date, 'dd MMM yyyy');
 }
 
+function parseLocalDate(value?: string | null) {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function getProjectStatusBadge(status: SafetyFileProject['status']) {
   switch (status) {
     case 'ACTIVE':
@@ -87,7 +97,8 @@ function getProjectStatusBadge(status: SafetyFileProject['status']) {
 
 function getDocumentHealth(expirationDate?: string | null) {
   if (!expirationDate) return 'no-expiry';
-  const expires = new Date(expirationDate).getTime();
+  const parsed = parseLocalDate(expirationDate);
+  const expires = parsed ? parsed.getTime() : Number.NaN;
   if (Number.isNaN(expires)) return 'no-expiry';
   if (expires < Date.now()) return 'expired';
   return 'current';

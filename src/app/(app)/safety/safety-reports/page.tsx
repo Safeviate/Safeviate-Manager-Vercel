@@ -34,6 +34,12 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return new Date(value);
+    return new Date(year, month - 1, day, 12);
+};
+
 const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
         case 'Closed': return 'default';
@@ -104,7 +110,7 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
                             <TableRow key={report.id}>
                                 <TableCell className="font-bold text-sm text-primary">{report.reportNumber}</TableCell>
                                 <TableCell className="text-sm font-medium">{report.reportType}</TableCell>
-                                <TableCell className="text-sm whitespace-nowrap">{format(new Date(report.eventDate), 'dd MMM yy')}</TableCell>
+                                <TableCell className="text-sm whitespace-nowrap">{format(parseLocalDate(report.eventDate), 'dd MMM yy')}</TableCell>
                                 <TableCell className="text-sm">{report.submittedByName}</TableCell>
                                 <TableCell><Badge variant={getStatusBadgeVariant(report.status)} className="text-[10px] font-bold uppercase">{report.status}</Badge></TableCell>
                                 <TableCell className="text-right">
@@ -136,7 +142,7 @@ function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                                     <Clock className="h-3.5 w-3.5" />
-                                    {format(new Date(report.eventDate), 'dd MMM yyyy')}
+                                    {format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                                     <MapPin className="h-3.5 w-3.5" />

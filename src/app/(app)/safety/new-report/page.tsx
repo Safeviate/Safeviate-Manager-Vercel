@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Aircraft } from '@/types/aircraft';
 import { useEffect, useState as useReactState } from 'react';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 const getReportTypePrefix = (type: NewSafetyReportValues['reportType']): string => {
     switch (type) {
@@ -29,9 +30,9 @@ export default function NewSafetyReportPage() {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      try {
+        try {
         const response = await fetch('/api/schedule-data', { cache: 'no-store' });
-        const payload = await response.json();
+        const payload = await response.json().catch(() => ({ aircraft: [] }));
         if (!cancelled) setAircrafts(payload?.aircraft ?? []);
       } catch {
         if (!cancelled) setAircrafts([]);
@@ -75,7 +76,10 @@ export default function NewSafetyReportPage() {
           }),
         });
 
-        const payload = await response.json().catch(() => null);
+        const payload = await parseJsonResponse<{
+          error?: string;
+          report?: { id?: string };
+        }>(response);
 
         if (!response.ok) {
           throw new Error(payload?.error || 'Failed to submit report.');
@@ -93,12 +97,12 @@ export default function NewSafetyReportPage() {
 
       router.push(`/safety/safety-reports/${newReportId}`);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
-        description: error.message || 'An unknown error occurred while submitting the report.',
+        description: error instanceof Error ? error.message : 'An unknown error occurred while submitting the report.',
       });
     } finally {
         setIsSubmitting(false);

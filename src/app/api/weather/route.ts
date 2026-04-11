@@ -76,10 +76,10 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!metar && !taf) {
-        return NextResponse.json({ error: `No weather data found for station ${icao}` }, { status: 404 });
+      return NextResponse.json({ metar: null, taf: null, found: false, station: icao });
     }
 
-    return NextResponse.json({ metar, taf });
+    return NextResponse.json({ metar, taf, found: true, station: icao });
   } catch (error: any) {
     console.error('[Weather API] Proxy Error:', error);
     return NextResponse.json({ error: 'Aviation Weather service error', details: error.message }, { status: 500 });

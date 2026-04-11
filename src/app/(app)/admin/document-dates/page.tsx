@@ -86,7 +86,10 @@ export default function DocumentDatesPage() {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error((payload as any)?.error || 'Failed to save tenant configuration.');
+      const errorMessage = typeof payload === 'object' && payload && 'error' in payload && typeof (payload as { error?: unknown }).error === 'string'
+        ? (payload as { error: string }).error
+        : 'Failed to save tenant configuration.';
+      throw new Error(errorMessage);
     }
     return payload;
   }, []);
@@ -96,16 +99,24 @@ export default function DocumentDatesPage() {
     try {
         const response = await fetch('/api/tenant-config', { cache: 'no-store' });
         const payload = await response.json().catch(() => ({}));
-        const config = payload?.config && typeof payload.config === 'object' ? payload.config : {};
+        const config = payload?.config && typeof payload.config === 'object' ? (payload.config as Record<string, unknown>) : {};
 
-        const exp = (config as any)['document-expiry-settings'] || { id: 'document-expiry', defaultColor: defaultSafeColor, expiredColor: defaultExpiredColor, warningPeriods: [] };
-        const mile = (config as any)['student-milestone-settings'] || { id: 'student-milestones', milestones: defaultMilestones };
-        const insp = (config as any)['inspection-warning-settings'] || { id: 'inspection-warnings', fiftyHourWarnings: defaultFiftyHourWarnings, oneHundredHourWarnings: defaultHundredHourWarnings };
+        const readSection = <T,>(key: string, fallback: T): T => {
+          const section = config[key];
+          return section && typeof section === 'object' ? (section as T) : fallback;
+        };
+
+        const exp = readSection<DocumentExpirySettings>('document-expiry-settings', { id: 'document-expiry', defaultColor: defaultSafeColor, expiredColor: defaultExpiredColor, warningPeriods: [] });
+        const mile = readSection<StudentMilestoneSettings>('student-milestone-settings', { id: 'student-milestones', milestones: defaultMilestones });
+        const insp = readSection<AircraftInspectionWarningSettings>('inspection-warning-settings', { id: 'inspection-warnings', fiftyHourWarnings: defaultFiftyHourWarnings, oneHundredHourWarnings: defaultHundredHourWarnings });
 
         setExpirySettings(exp);
         setDefaultColorState(exp.defaultColor || defaultSafeColor);
         setExpiredColorState(exp.expiredColor || defaultExpiredColor);
-        setPeriodColors((exp.warningPeriods || []).reduce((acc: any, p: any) => ({ ...acc, [p.period]: p.color }), {}));
+        setPeriodColors((exp.warningPeriods || []).reduce<Record<number, string>>((acc, p) => {
+          acc[p.period] = p.color;
+          return acc;
+        }, {}));
 
         setMilestoneSettings(mile);
         setMilestoneState(mile.milestones || defaultMilestones);
@@ -163,7 +174,7 @@ export default function DocumentDatesPage() {
 
  useEffect(() => {
     if (isLoading || !expirySettings || Object.keys(debouncedPeriodColors).length === 0) return;
-    const newPeriods = (expirySettings.warningPeriods || []).map((p: any) => ({ ...p, color: debouncedPeriodColors[p.period] || p.color }));
+    const newPeriods = (expirySettings.warningPeriods || []).map((p) => ({ ...p, color: debouncedPeriodColors[p.period] || p.color }));
     if (JSON.stringify(expirySettings.warningPeriods) !== JSON.stringify(newPeriods)) {
         fetch('/api/tenant-config', {
           method: 'PUT',
@@ -192,13 +203,17 @@ export default function DocumentDatesPage() {
       toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter a positive number of days.' });
       return;
     }
+    if (!expirySettings) {
+      toast({ variant: 'destructive', title: 'Save Failed', description: 'Expiry settings are not loaded yet.' });
+      return;
+    }
     const currentPeriods = expirySettings?.warningPeriods || [];
-    if (currentPeriods.some((p: any) => p.period === period)) {
+    if (currentPeriods.some((p) => p.period === period)) {
       toast({ variant: 'destructive', title: 'Duplicate Period', description: `The warning period for ${period} days already exists.` });
       return;
     }
     const updatedWarningPeriods = [...currentPeriods, { period, color: newPeriodColor }].sort((a, b) => a.period - b.period);
-    const updatedExpirySettings = { ...expirySettings, warningPeriods: updatedWarningPeriods };
+    const updatedExpirySettings: DocumentExpirySettings = { ...expirySettings, warningPeriods: updatedWarningPeriods };
     try {
       await persistTenantConfig({
         'document-expiry-settings': updatedExpirySettings,
@@ -217,8 +232,12 @@ export default function DocumentDatesPage() {
   };
 
   const handleRemovePeriod = async (periodToRemove: number) => {
-    const newPeriods = (expirySettings?.warningPeriods || []).filter((p: any) => p.period !== periodToRemove);
-    const updatedExpirySettings = { ...expirySettings, warningPeriods: newPeriods };
+    if (!expirySettings) {
+      toast({ variant: 'destructive', title: 'Save Failed', description: 'Expiry settings are not loaded yet.' });
+      return;
+    }
+    const newPeriods = (expirySettings?.warningPeriods || []).filter((p) => p.period !== periodToRemove);
+    const updatedExpirySettings: DocumentExpirySettings = { ...expirySettings, warningPeriods: newPeriods };
     try {
       await persistTenantConfig({
         'document-expiry-settings': updatedExpirySettings,
@@ -258,8 +277,8 @@ export default function DocumentDatesPage() {
     }
 
     const fieldKey = is50hr ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const currentWarnings = (inspectionSettings as any)?.[fieldKey] || [];
-    if (currentWarnings.some((w: any) => w.hours === hours)) {
+    const currentWarnings = inspectionSettings?.[fieldKey] || [];
+    if (currentWarnings.some((w) => w.hours === hours)) {
         toast({ variant: 'destructive', title: 'Duplicate Warning', description: `A warning for ${hours} hours already exists.` });
         return;
     }
@@ -287,7 +306,7 @@ export default function DocumentDatesPage() {
 
   const handleRemoveInspectionWarning = (type: '50hr' | '100hr', hoursToRemove: number) => {
     const fieldKey = type === '50hr' ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const newWarnings = ((inspectionSettings as any)?.[fieldKey] || []).filter((w: any) => w.hours !== hoursToRemove);
+    const newWarnings = (inspectionSettings?.[fieldKey] || []).filter((w) => w.hours !== hoursToRemove);
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -299,7 +318,7 @@ export default function DocumentDatesPage() {
 
   const updateInspectionWarningColor = (type: '50hr' | '100hr', hours: number, field: 'color' | 'foregroundColor', value: string) => {
     const fieldKey = type === '50hr' ? 'fiftyHourWarnings' : 'oneHundredHourWarnings';
-    const updated = ((inspectionSettings as any)?.[fieldKey] || []).map((w: any) => w.hours === hours ? { ...w, [field]: value } : w);
+    const updated = (inspectionSettings?.[fieldKey] || []).map((w) => w.hours === hours ? { ...w, [field]: value } : w);
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

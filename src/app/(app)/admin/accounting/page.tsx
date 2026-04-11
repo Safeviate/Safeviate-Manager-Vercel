@@ -135,6 +135,7 @@ export default function AccountingPage() {
     if (selectedIds.size === 0) return;
 
     try {
+      const selectedBookings = enrichedData.unbilled.filter((booking) => selectedIds.has(booking.id));
       const headers = ["Reference", "Date", "Customer ID", "Customer Name", "Description", "Duration", "Rate", "Total", "Nominal Code"];
       const rows = previewData.map(d => [
         d.reference,

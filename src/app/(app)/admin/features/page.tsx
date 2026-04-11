@@ -64,12 +64,12 @@ export default function FeaturesPage() {
         const defFeatures = { id: 'features', preFlightChecklistRequired: true, enableExternalCompanyTabs: true };
         const defLevels = { id: 'finding-levels', levels: defaultFindingLevels };
 
-        const featureConfig = (config as any)['feature-settings'] || defFeatures;
-        const levelsConfig = (config as any)['finding-levels-settings'] || defLevels;
+        const featureConfig = (config['feature-settings'] && typeof config['feature-settings'] === 'object' ? config['feature-settings'] : defFeatures) as typeof defFeatures;
+        const levelsConfig = (config['finding-levels-settings'] && typeof config['finding-levels-settings'] === 'object' ? config['finding-levels-settings'] : defLevels) as typeof defLevels;
 
         setFeatureSettings(featureConfig);
         setFindingLevelsSettings(levelsConfig);
-        const initialColors = (levelsConfig.levels || []).reduce((acc, l) => {
+        const initialColors = (levelsConfig.levels || []).reduce((acc: Record<string, { bg: string, fg: string }>, l: { id: string; color: string; foregroundColor?: string }) => {
             acc[l.id] = { bg: l.color, fg: l.foregroundColor || '#ffffff' };
             return acc;
         }, {} as Record<string, { bg: string, fg: string }>);

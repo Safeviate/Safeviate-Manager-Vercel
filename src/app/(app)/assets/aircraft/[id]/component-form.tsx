@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 import type { AircraftComponent } from '@/types/aircraft';
 
 const componentSchema = z.object({
@@ -59,7 +60,7 @@ export function ComponentForm({ aircraftId, isOpen, setIsOpen, existingComponent
       manufacturer: existingComponent?.manufacturer || '',
       serialNumber: existingComponent?.serialNumber || '',
       partNumber: existingComponent?.partNumber || '',
-      installDate: existingComponent?.installDate?.split('T')[0] || new Date().toISOString().split('T')[0],
+      installDate: existingComponent?.installDate?.split('T')[0] || format(new Date(), 'yyyy-MM-dd'),
       tsn: existingComponent?.tsn || 0,
       tso: existingComponent?.tso || 0,
       totalTime: existingComponent?.totalTime || 0,

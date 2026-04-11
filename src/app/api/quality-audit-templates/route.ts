@@ -17,7 +17,7 @@ async function getConfig(tenantId: string) {
     `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
     tenantId
   );
-  return (rows[0]?.data as any) || {};
+  return (rows[0]?.data as Record<string, unknown>) || {};
 }
 
 export async function GET() {
@@ -38,11 +38,11 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const template = body?.template;
   if (!template || typeof template !== 'object') return NextResponse.json({ error: 'Invalid template payload' }, { status: 400 });
-  const incoming = { ...template, id: template.id || randomUUID() };
+  const incoming = { ...template, id: (template as { id?: string }).id || randomUUID() };
   const config = await getConfig(tenantId);
-  const templates = Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [];
-  const nextTemplates = templates.some((t: any) => t.id === incoming.id)
-    ? templates.map((t: any) => (t.id === incoming.id ? incoming : t))
+  const templates = Array.isArray(config['quality-audit-templates']) ? (config['quality-audit-templates'] as Array<{ id: string } & Record<string, unknown>>) : [];
+  const nextTemplates = templates.some((t) => t.id === incoming.id)
+    ? templates.map((t) => (t.id === incoming.id ? incoming : t))
     : [incoming, ...templates];
   const nextConfig = { ...config, 'quality-audit-templates': nextTemplates };
   await prisma.$executeRawUnsafe(
@@ -60,8 +60,8 @@ export async function DELETE(request: Request) {
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
   const config = await getConfig(tenantId);
-  const templates = Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [];
-  const nextTemplates = templates.filter((t: any) => t.id !== id);
+  const templates = Array.isArray(config['quality-audit-templates']) ? (config['quality-audit-templates'] as Array<{ id: string } & Record<string, unknown>>) : [];
+  const nextTemplates = templates.filter((t) => t.id !== id);
   const nextConfig = { ...config, 'quality-audit-templates': nextTemplates };
   await prisma.$executeRawUnsafe(
     `INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at) VALUES ($1, $2::jsonb, NOW(), NOW()) ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,

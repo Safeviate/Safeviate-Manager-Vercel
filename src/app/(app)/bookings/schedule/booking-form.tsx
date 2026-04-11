@@ -25,6 +25,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
 import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
+import { parseJsonResponse } from '@/lib/safe-json';
+
+const parseLocalDate = (value?: string | null) => {
+    if (!value) return undefined;
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return undefined;
+    return new Date(year, month - 1, day, 12);
+};
 
 const bookingFormSchema = z.object({
     type: z.string().min(1, 'Booking type is required.'),
@@ -62,6 +70,23 @@ interface BookingFormProps {
     refreshBookings: () => void;
 }
 
+type BookingDraft = Omit<Booking, 'id' | 'bookingNumber' | 'instructorId' | 'studentId' | 'notes' | 'overnightBookingDate' | 'overnightEndTime' | 'preFlightData' | 'postFlightData' | 'preFlight' | 'postFlight' | 'overrides'> & {
+    id?: string;
+    bookingNumber?: string;
+    navlog?: Booking['navlog'];
+    workflowCompletion?: Booking['workflowCompletion'];
+    instructorId?: string | null;
+    studentId?: string | null;
+    notes?: string | null;
+    overnightBookingDate?: string | null;
+    overnightEndTime?: string | null;
+    preFlightData?: (NonNullable<Booking['preFlightData']> & { photos?: ChecklistPhoto[] }) | null;
+    postFlightData?: (NonNullable<Booking['postFlightData']> & { photos?: ChecklistPhoto[]; defects: string }) | null;
+    preFlight?: boolean;
+    postFlight?: boolean;
+    overrides?: OverrideLog[];
+};
+
 export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, pilots, allBookingsForAircraft, existingBooking, refreshBookings }: BookingFormProps) {
     const { toast } = useToast();
     const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
@@ -82,9 +107,11 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         fuelUpliftGallons: 0,
         fuelUpliftLitres: 0,
         oilUplift: 0,
+        defects: existingBooking?.postFlightData?.defects || '',
     });
-    const [preFlightPhotos, setPreFlightPhotos] = useState<ChecklistPhoto[]>(existingBooking?.preFlightData?.photos || []);
+    const [preFlightPhotos, setPreFlightPhotos] = useState<ChecklistPhoto[]>(((existingBooking?.preFlightData as { photos?: ChecklistPhoto[] } | undefined)?.photos || []) as ChecklistPhoto[]);
     const [postFlightPhotos, setPostFlightPhotos] = useState<ChecklistPhoto[]>(existingBooking?.postFlightData?.photos || []);
+    const [requireWeatherPlanningNavlog, setRequireWeatherPlanningNavlog] = useState(!!existingBooking?.workflowCompletion?.weatherPlanningNavlogRequired);
 
     // Fetch Training Routes
     const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
@@ -93,7 +120,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         const loadRoutes = async () => {
             if (!tenantId) return;
             const response = await fetch('/api/training-routes', { cache: 'no-store' });
-            const payload = await response.json();
+            const payload = await response.json().catch(() => ({ routes: [] }));
             if (!cancelled) {
                 setTrainingRoutes(payload.routes ?? []);
             }
@@ -119,13 +146,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
     const defaultValues = useMemo(() => ({
         type: existingBooking?.type || 'Training Flight',
-        date: existingBooking ? new Date(existingBooking.date) : startTime,
+        date: existingBooking?.date ? parseLocalDate(existingBooking.date) : startTime,
         startTime: existingBooking ? existingBooking.startTime : format(startTime, 'HH:mm'),
         endTime: existingBooking ? existingBooking.endTime : format(addMinutes(startTime, 60), 'HH:mm'),
         instructorId: existingBooking?.instructorId || '',
         studentId: existingBooking?.studentId || '',
         isOvernight: existingBooking?.isOvernight || false,
-        overnightBookingDate: existingBooking?.overnightBookingDate ? new Date(existingBooking.overnightBookingDate) : undefined,
+        overnightBookingDate: parseLocalDate(existingBooking?.overnightBookingDate),
         overnightEndTime: existingBooking?.overnightEndTime || '08:00',
         notes: existingBooking?.notes || '',
         status: existingBooking?.status || 'Confirmed',
@@ -140,8 +167,9 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     useEffect(() => {
         if (isOpen) {
             form.reset(defaultValues);
+            setRequireWeatherPlanningNavlog(!!existingBooking?.workflowCompletion?.weatherPlanningNavlogRequired);
         }
-    }, [isOpen, defaultValues, form]);
+    }, [isOpen, defaultValues, form, existingBooking?.workflowCompletion?.weatherPlanningNavlogRequired]);
 
     const isOvernight = form.watch('isOvernight');
     const watchStatus = form.watch('status');
@@ -191,7 +219,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             return;
         }
         
-        const bookingData: any = {
+        const bookingData: BookingDraft = {
             aircraftId: aircraft.id,
             type: data.type,
             date: format(data.date, 'yyyy-MM-dd'),
@@ -237,11 +265,16 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         };
         bookingData.postFlightData = {
             ...postFlight,
+            defects: postFlight.defects || '',
             fuelUpliftLitres: postFlight.fuelUpliftLitres || 0,
             photos: postFlightPhotos,
         };
         bookingData.preFlight = !!preFlight.documentsChecked || (preFlight.hobbs > 0 || preFlight.tacho > 0);
         bookingData.postFlight = (postFlight.hobbs || 0) > 0;
+        bookingData.workflowCompletion = {
+            ...(existingBooking?.workflowCompletion || {}),
+            weatherPlanningNavlogRequired: requireWeatherPlanningNavlog,
+        };
 
         // Audit Admin/Locked Record Override
         if (existingBooking && isUnderway && canEditUnderway && userProfile) {
@@ -277,13 +310,16 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ booking: { ...bookingData, preFlight: false, postFlight: false, createdById: userProfile?.id || null } }),
                 });
-                await response.json();
+                const payload = await parseJsonResponse<{ error?: string }>(response);
+                if (!response.ok) {
+                    throw new Error(payload?.error || 'Failed to create booking.');
+                }
                 toast({ title: 'Booking Created' });
             }
             refreshBookings();
             setIsOpen(false);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Save failed.' });
         } finally {
             setIsSubmitting(false);
         }
@@ -301,8 +337,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             toast({ title: 'Booking Deleted' });
             refreshBookings();
             setIsOpen(false);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: error instanceof Error ? error.message : 'Delete failed.' });
         } finally {
             setIsSubmitting(false);
         }
@@ -412,6 +448,29 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
                         <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} /></FormControl><FormMessage /></FormItem> )}/>
 
+                        <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planning Requirement</p>
+                                    <p className="text-xs font-semibold text-muted-foreground">Mark whether weather, planning map, and navlog are required for this flight.</p>
+                                </div>
+                                <Badge variant={requireWeatherPlanningNavlog ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                    {requireWeatherPlanningNavlog ? 'Required' : 'Optional'}
+                                </Badge>
+                            </div>
+                            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-3">
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Require Weather / Map / Navlog</p>
+                                    <p className="text-[10px] text-muted-foreground">Instructor can only approve after these are completed when enabled.</p>
+                                </div>
+                                <Switch
+                                    checked={requireWeatherPlanningNavlog}
+                                    onCheckedChange={setRequireWeatherPlanningNavlog}
+                                    disabled={!canEditBooking}
+                                />
+                            </div>
+                        </div>
+
                         <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
@@ -481,7 +540,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                             <DocumentUploader
                                                 defaultFileName="Pre-flight photo"
                                                 restrictedMode="camera"
-                                                onDocumentUploaded={(photo) => setPreFlightPhotos((current) => [...current, photo])}
+                                                onDocumentUploaded={(photo) => setPreFlightPhotos((current) => [...current, { url: photo.url, description: photo.name }])}
                                                 trigger={(open) => (
                                                     <Button
                                                         type="button"
@@ -499,7 +558,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         {preFlightPhotos.length > 0 && (
                                             <PhotoViewerDialog
                                                 title="Pre-flight Photos"
-                                                photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                                photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
                                             />
                                         )}
                                     </div>
@@ -570,7 +629,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                             <DocumentUploader
                                                 defaultFileName="Post-flight photo"
                                                 restrictedMode="camera"
-                                                onDocumentUploaded={(photo) => setPostFlightPhotos((current) => [...current, photo])}
+                                                onDocumentUploaded={(photo) => setPostFlightPhotos((current) => [...current, { url: photo.url, description: photo.name }])}
                                                 trigger={(open) => (
                                                     <Button
                                                         type="button"
@@ -588,7 +647,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         {postFlightPhotos.length > 0 && (
                                             <PhotoViewerDialog
                                                 title="Post-flight Photos"
-                                                photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.name }))}
+                                                photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
                                             />
                                         )}
                                     </div>
@@ -602,7 +661,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
                         {isOvernight && (
                             <div className="grid grid-cols-2 gap-4 p-4 border rounded-md">
-                                <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(new Date(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(parseLocalDate(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         )}
@@ -621,7 +680,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             )}
                             
                             {existingBooking && (
-                                <Button variant="outline" size="sm" asChild className="h-8 gap-2 ml-auto sm:ml-0">
+                                <Button variant="outline" size="sm" asChild className="h-10 gap-2 ml-auto sm:ml-0">
                                     <Link href={`/bookings/history/${existingBooking.id}`}>
                                         <Eye className="h-4 w-4" /> View
                                     </Link>

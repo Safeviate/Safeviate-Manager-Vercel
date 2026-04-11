@@ -19,6 +19,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Clock, User, Plane } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
 interface BillingTableProps {
   bookings: Booking[];
   aircrafts: Aircraft[];
@@ -90,7 +98,7 @@ export function BillingTable({
                       />
                     </TableCell>
                     <TableCell className="font-mono text-[11px] font-black text-primary uppercase">{booking.bookingNumber}</TableCell>
-                    <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{format(new Date(booking.date), 'dd MMM yyyy')}</TableCell>
+                    <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{format(parseLocalDate(booking.date), 'dd MMM yyyy')}</TableCell>
                     <TableCell className="font-black text-sm text-foreground uppercase">{ac?.tailNumber || 'Unknown'}</TableCell>
                     <TableCell className="text-sm font-bold text-foreground">{userMap.get(booking.studentId || '') || 'Private / External'}</TableCell>
                     <TableCell className="text-right font-black text-sm text-foreground">{duration.toFixed(1)}h</TableCell>
@@ -146,7 +154,7 @@ export function BillingTable({
                 <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2 text-muted-foreground font-bold uppercase">
                     <Clock className="h-3.5 w-3.5" />
-                    {format(new Date(booking.date), 'dd MMM yyyy')}
+                    {format(parseLocalDate(booking.date), 'dd MMM yyyy')}
                   </div>
                   <div className="font-black text-sm">{duration.toFixed(1)}h</div>
                 </div>

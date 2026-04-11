@@ -4,12 +4,13 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import type { Booking, NavlogLeg, Navlog, PreFlightData, PostFlightData } from "@/types/booking";
+import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingWorkflowCompletion, NavlogLeg, Navlog, PreFlightData, PostFlightData, ChecklistPhoto } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -67,7 +68,30 @@ const DEFAULT_STATIONS = [
     { id: 3, name: 'Fuel', weight: 288, arm: 95, type: 'fuel', gallons: 48, maxGallons: 50 },
     { id: 4, name: 'Rear Pax', weight: 0, arm: 118.1, type: 'standard' },
     { id: 5, name: 'Baggage', weight: 0, arm: 142.8, type: 'standard' },
-];
+ ] satisfies NonNullable<NonNullable<Booking['massAndBalance']>['stations']>;
+
+type BookingPerson = { id: string; firstName: string; lastName: string };
+type BookingStation = NonNullable<NonNullable<Booking['massAndBalance']>['stations']>[number];
+type BookingStationState = Omit<BookingStation, 'weight' | 'gallons'> & {
+    weight: number | string;
+    gallons?: number | string;
+};
+
+type WeatherCardData = {
+    metar?: {
+        rawOb?: string;
+        raw?: string;
+        wspd?: string | number;
+        wdir?: string | number;
+        visib?: string | number;
+        temp?: string | number;
+        dewp?: string | number;
+    };
+    taf?: {
+        rawTAF?: string;
+        raw?: string;
+    };
+};
 
 interface ViewBookingDetailsProps {
     booking: Booking;
@@ -98,7 +122,7 @@ function stripUndefinedDeep<T>(value: T): T {
 
     if (value && typeof value === 'object') {
         return Object.fromEntries(
-            Object.entries(value as Record<string, any>)
+            Object.entries(value as Record<string, unknown>)
                 .filter(([, nested]) => nested !== undefined)
                 .map(([key, nested]) => [key, stripUndefinedDeep(nested)])
         ) as T;
@@ -107,8 +131,11 @@ function stripUndefinedDeep<T>(value: T): T {
     return value;
 }
 
+const CHECK_APPROVAL_KEYS = ['massAndBalance', 'navlog', 'preFlight', 'photos', 'fuelUplift', 'postFlight'] as const;
+type CheckApprovalKey = typeof CHECK_APPROVAL_KEYS[number];
+
 const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, onHide: () => void }) => {
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<WeatherCardData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -118,11 +145,17 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
         setError(null);
         try {
             const res = await fetch(`/api/weather?ids=${icao}`);
+            const weather = await res.json().catch(() => null);
+
+            if (res.status === 404) {
+                setData({});
+                return;
+            }
+
             if (!res.ok) throw new Error('Fetch failed');
-            const weather = await res.json();
             setData(weather);
-        } catch (e: any) {
-            setError(e.message);
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to load booking.');
         } finally {
             setLoading(false);
         }
@@ -166,7 +199,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
                                 <div className="flex items-center gap-2">
                                     <Wind className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'}°</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'}Â°</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Eye className="h-3 w-3 text-sky-500" />
@@ -174,7 +207,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Thermometer className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.temp}°C / {data.metar.dewp}°C</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.temp}Â°C / {data.metar.dewp}Â°C</span>
                                 </div>
                             </div>
                         </div>
@@ -209,14 +242,20 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const isMobile = useIsMobile();
     const { toast } = useToast();
-    const { tenantId } = useUserProfile();
+    const { tenantId, userProfile } = useUserProfile();
     const [activeTab, setActiveTab] = useState('flight-details');
     const [isSaving, setIsSaving] = useState(false);
+    const [isApproving, setIsApproving] = useState(false);
+    const [approvingSection, setApprovingSection] = useState<CheckApprovalKey | null>(null);
     const [showRouteSummary, setShowRouteSummary] = useState(!isMobile);
     const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
-    const [personnel, setPersonnel] = useState<any[]>([]);
+    const [personnel, setPersonnel] = useState<BookingPerson[]>([]);
     const [loadingAc, setLoadingAc] = useState(true);
     const [loadingPeople, setLoadingPeople] = useState(true);
+    const [initialDetailsLoaded, setInitialDetailsLoaded] = useState(false);
+    const [checkApprovals, setCheckApprovals] = useState<BookingCheckApprovals>(booking.checkApprovals || {});
+    const [workflowCompletion, setWorkflowCompletion] = useState<BookingWorkflowCompletion>(booking.workflowCompletion || {});
+    const [workflowApprovals, setWorkflowApprovals] = useState<BookingWorkflowApprovals>(booking.workflowApprovals || {});
 
     const aircraft = useMemo(() => aircrafts?.find(a => a.id === booking.aircraftId), [aircrafts, booking.aircraftId]);
     const instructorLabel = useMemo(() => {
@@ -230,10 +269,39 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const student = personnel.find((person) => person.id === booking.studentId);
         return student ? `${student.firstName} ${student.lastName}` : booking.studentId;
     }, [personnel, booking.studentId]);
+    const isAssignedInstructor = !!userProfile && booking.instructorId === userProfile.id;
+    const canManuallyApprove = isAssignedInstructor || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.role?.toLowerCase() === 'dev';
+    const preFlightPhotos = ((booking.preFlightData as (typeof booking.preFlightData & { photos?: ChecklistPhoto[] }) | undefined)?.photos || []) as ChecklistPhoto[];
+    const postFlightPhotos = (booking.postFlightData?.photos || []) as ChecklistPhoto[];
+    const checkSections = useMemo(() => ([
+        { key: 'massAndBalance' as const, label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits, detail: booking.massAndBalance?.isWithinLimits ? 'Within limits' : 'Needs review' },
+        { key: 'navlog' as const, label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length, detail: booking.navlog?.legs?.length ? `${booking.navlog.legs.length} legs planned` : 'No navlog found' },
+        { key: 'preFlight' as const, label: 'Pre-flight checks completed', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight, detail: booking.preFlightData?.documentsChecked ? 'Documents checked' : 'Pre-flight not confirmed' },
+        { key: 'photos' as const, label: 'Photos attached', ok: (((booking.preFlightData as { photos?: ChecklistPhoto[] } | undefined)?.photos?.length || 0) + (booking.postFlightData?.photos?.length || 0)) > 0, detail: `${(((booking.preFlightData as { photos?: ChecklistPhoto[] } | undefined)?.photos?.length || 0) + (booking.postFlightData?.photos?.length || 0))} photo(s)` },
+        { key: 'fuelUplift' as const, label: 'Fuel uplift recorded', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0, detail: 'Gallons and litres mirrored' },
+        { key: 'postFlight' as const, label: 'Post-flight checks recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight, detail: (booking.postFlightData?.hobbs || 0) > 0 ? 'Hobbs recorded' : 'Post-flight pending' },
+    ]), [booking.massAndBalance?.isWithinLimits, booking.navlog?.legs?.length, booking.postFlightData?.fuelUpliftGallons, booking.postFlightData?.hobbs, booking.preFlight, booking.preFlightData?.documentsChecked, booking.preFlightData?.fuelUpliftGallons, booking.preFlightData, booking.postFlightData]);
+    const approvedSectionCount = checkSections.filter((section) => checkApprovals[section.key]?.approved).length;
     const [graphConfig, setGraphConfig] = useState(DEFAULT_GRAPH_CONFIG);
     const [basicEmpty, setBasicEmpty] = useState(DEFAULT_BASIC_EMPTY);
-    const [stations, setStations] = useState<any[]>(DEFAULT_STATIONS);
+    const [stations, setStations] = useState<BookingStationState[]>(DEFAULT_STATIONS);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
+    const [preFlight, setPreFlight] = useState(booking.preFlightData || {
+        hobbs: 0,
+        tacho: 0,
+        fuelUpliftGallons: 0,
+        fuelUpliftLitres: 0,
+        oilUplift: 0,
+        documentsChecked: false,
+    });
+    const [postFlight, setPostFlight] = useState(booking.postFlightData || {
+        hobbs: 0,
+        tacho: 0,
+        fuelUpliftGallons: 0,
+        fuelUpliftLitres: 0,
+        oilUplift: 0,
+        defects: '',
+    });
 
     useEffect(() => {
         let cancelled = false;
@@ -270,6 +338,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 if (!cancelled) {
                     setLoadingAc(false);
                     setLoadingPeople(false);
+                    setInitialDetailsLoaded(true);
                 }
             }
         };
@@ -279,6 +348,18 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             cancelled = true;
         };
     }, [tenantId]);
+
+    useEffect(() => {
+        setCheckApprovals(booking.checkApprovals || {});
+    }, [booking.checkApprovals, booking.id]);
+
+    useEffect(() => {
+        setWorkflowCompletion(booking.workflowCompletion || {});
+    }, [booking.workflowCompletion, booking.id]);
+
+    useEffect(() => {
+        setWorkflowApprovals(booking.workflowApprovals || {});
+    }, [booking.workflowApprovals, booking.id]);
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
@@ -383,7 +464,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
-    // ── Fuel sync between M&B and NavLog ──
+    // â”€â”€ Fuel sync between M&B and NavLog â”€â”€
     const fuelStation = useMemo(() => stations.find(s => s.type === 'fuel'), [stations]);
     const fuelWeightLbs = fuelStation ? (parseFloat(String(fuelStation.weight)) || 0) : undefined;
 
@@ -393,6 +474,44 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             return { ...s, weight: weightLbs, gallons: parseFloat((weightLbs / FUEL_WEIGHT_PER_GALLON).toFixed(1)) };
         }));
     }, []);
+
+    const handleSaveFlightDetails = async () => {
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        navlog: {
+                            ...(booking.navlog || {}),
+                            departureIcao: depIcao,
+                            arrivalIcao: arrIcao,
+                            departureLatitude: depLat ? parseFloat(depLat) : null,
+                            departureLongitude: depLon ? parseFloat(depLon) : null,
+                            arrivalLatitude: arrLat ? parseFloat(arrLat) : null,
+                            arrivalLongitude: arrLon ? parseFloat(arrLon) : null,
+                        },
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            flightDetails: true,
+                        },
+                    },
+                }),
+            });
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Save failed.');
+            }
+            setWorkflowCompletion((current) => ({ ...current, flightDetails: true }));
+            toast({ title: 'Flight Details Saved' });
+        } catch (error: unknown) {
+            toast({ variant: "destructive", title: "Save Failed", description: error instanceof Error ? error.message : 'Save failed.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleSaveToBooking = async () => {
         setIsSaving(true);
@@ -410,6 +529,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     booking: {
                         ...booking,
                         massAndBalance: sanitizedMassAndBalance,
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            massBalance: true,
+                        },
                     },
                 }),
             });
@@ -417,11 +540,249 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 const payload = await res.json().catch(() => ({}));
                 throw new Error(payload.error || 'Save failed.');
             }
+            setWorkflowCompletion((current) => ({ ...current, massBalance: true }));
             toast({ title: 'M&B and Ops Data Saved' });
-        } catch (e: any) {
-            toast({ variant: "destructive", title: "Save Failed", description: e.message });
+        } catch (error: unknown) {
+            toast({ variant: "destructive", title: "Save Failed", description: error instanceof Error ? error.message : 'Save failed.' });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleSaveChecks = async () => {
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        checkApprovals,
+                        preFlightData: stripUndefinedDeep(preFlight),
+                        postFlightData: stripUndefinedDeep(postFlight),
+                        preFlight: true,
+                        postFlight: (postFlight.hobbs || 0) > 0,
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            checks: true,
+                        },
+                    },
+                }),
+            });
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Save failed.');
+            }
+            setWorkflowCompletion((current) => ({ ...current, checks: true }));
+            toast({ title: 'Checks Saved' });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Save failed.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleApproveSection = async (sectionKey: CheckApprovalKey) => {
+        if (!canManuallyApprove) {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this section.' });
+            return;
+        }
+
+        const section = checkSections.find((item) => item.key === sectionKey);
+        if (!section?.ok) {
+            toast({ variant: 'destructive', title: 'Section Not Ready', description: 'This section is incomplete and cannot be approved yet.' });
+            return;
+        }
+
+        setApprovingSection(sectionKey);
+        const nextApprovals = {
+            ...checkApprovals,
+            [sectionKey]: {
+                approved: true,
+                approvedById: userProfile?.id || checkApprovals[sectionKey]?.approvedById,
+                approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : checkApprovals[sectionKey]?.approvedByName,
+                approvedAt: new Date().toISOString(),
+            },
+        };
+        setCheckApprovals(nextApprovals);
+
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        checkApprovals: nextApprovals,
+                        workflowCompletion,
+                    },
+                }),
+            });
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Section approval failed.');
+            }
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
+            toast({ title: 'Section Approved', description: 'Instructor section sign-off recorded.' });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Approval Failed', description: error instanceof Error ? error.message : 'Section approval failed.' });
+        } finally {
+            setApprovingSection((current) => (current === sectionKey ? null : current));
+        }
+    };
+
+    const renderSectionApprovalButton = (sectionKey: CheckApprovalKey, label = 'Approve') => {
+        const section = checkSections.find((item) => item.key === sectionKey);
+        const approval = checkApprovals[sectionKey];
+        const approved = !!approval?.approved;
+
+        return (
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 rounded-md border-input bg-background px-3 text-[9px] font-black uppercase tracking-widest text-foreground shadow-sm hover:bg-accent"
+                disabled={!section?.ok || approved || approvingSection === sectionKey || !canManuallyApprove}
+                onClick={() => handleApproveSection(sectionKey)}
+            >
+                {approvingSection === sectionKey ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1 h-3 w-3" />}
+                {approved ? 'Approved' : label}
+            </Button>
+        );
+    };
+
+    const handleMarkWorkflowComplete = async (sectionKey: keyof BookingWorkflowCompletion) => {
+        if (!canManuallyApprove) {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this section.' });
+            return;
+        }
+
+        setIsSaving(true);
+        const nextApproval = {
+            approved: true,
+            approvedById: userProfile?.id || workflowApprovals[sectionKey]?.approvedById,
+            approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : workflowApprovals[sectionKey]?.approvedByName,
+            approvedAt: new Date().toISOString(),
+        };
+        const nextWorkflowApprovals = {
+            ...workflowApprovals,
+            [sectionKey]: nextApproval,
+        };
+        setWorkflowApprovals(nextWorkflowApprovals);
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            [sectionKey]: true,
+                        },
+                        workflowApprovals: nextWorkflowApprovals,
+                    },
+                }),
+            });
+
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Approval failed.');
+            }
+
+            setWorkflowCompletion((current) => ({
+                ...current,
+                [sectionKey]: true,
+            }));
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
+            toast({ title: 'Approved', description: 'Section approval recorded.' });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Approval Failed', description: error instanceof Error ? error.message : 'Approval failed.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const renderWorkflowStatusButton = (sectionKey: keyof BookingWorkflowCompletion, label = 'APPROVED') => (
+        <div className="flex flex-col items-end gap-1">
+            {(() => {
+                const approval = workflowApprovals[sectionKey];
+                const approved = !!approval?.approved;
+                return (
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant={approved ? 'default' : 'outline'}
+                        className={cn(
+                            "h-9 rounded-md px-4 text-[10px] font-black uppercase tracking-widest shadow-sm",
+                            approved
+                                ? "border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800"
+                                : "border-input bg-background text-foreground hover:bg-accent"
+                        )}
+                        onClick={() => handleMarkWorkflowComplete(sectionKey)}
+                        disabled={isSaving}
+                        title={`Mark ${label.toLowerCase()}`}
+                    >
+                        <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+                        {label}
+                    </Button>
+                );
+            })()}
+            {workflowApprovals[sectionKey]?.approvedByName ? (
+                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                    Approved by {workflowApprovals[sectionKey]?.approvedByName}
+                </p>
+            ) : null}
+        </div>
+    );
+
+    const handleManualConfirmFlight = async () => {
+        if (!booking.studentId) {
+            toast({ variant: 'destructive', title: 'Approval Blocked', description: 'This booking does not have a student assigned yet.' });
+            return;
+        }
+
+        if (!canManuallyApprove) {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this flight.' });
+            return;
+        }
+
+        const confirmed = window.confirm('Approve this flight and mark it as manually confirmed by the instructor?');
+        if (!confirmed) return;
+
+        setIsApproving(true);
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        checkApprovals,
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            checks: true,
+                        },
+                        status: 'Approved',
+                        approvedById: userProfile?.id || booking.approvedById,
+                        approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : booking.approvedByName,
+                        approvedAt: new Date().toISOString(),
+                    },
+                }),
+            });
+
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Approval failed.');
+            }
+
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
+            toast({ title: 'Flight Approved', description: 'Instructor sign-off recorded.' });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Approval Failed', description: error instanceof Error ? error.message : 'Approval failed.' });
+        } finally {
+            setIsApproving(false);
         }
     };
 
@@ -449,6 +810,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             arrivalLatitude: arrLat ? parseFloat(arrLat) : null,
                             arrivalLongitude: arrLon ? parseFloat(arrLon) : null,
                         },
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            flightDetails: true,
+                            planning: true,
+                            navlog: true,
+                        },
                     },
                 }),
             });
@@ -456,9 +823,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 const payload = await res.json().catch(() => ({}));
                 throw new Error(payload.error || 'Commit failed.');
             }
+            setWorkflowCompletion((current) => ({
+                ...current,
+                flightDetails: true,
+                planning: true,
+                navlog: true,
+            }));
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
             toast({ title: "Route Committed", description: "The navigation log and airport details have been updated." });
-        } catch (e: any) {
-            toast({ variant: "destructive", title: "Commit Failed", description: e.message });
+        } catch (error: unknown) {
+            toast({ variant: "destructive", title: "Commit Failed", description: error instanceof Error ? error.message : 'Commit failed.' });
         } finally {
             setIsSaving(false);
         }
@@ -485,7 +859,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    if (loadingAc || loadingPeople) return <Skeleton className="h-64 w-full" />;
+    if (!initialDetailsLoaded && (loadingAc || loadingPeople)) return <Skeleton className="h-64 w-full" />;
 
     const envelope = graphConfig.envelope;
     const envelopeXs = envelope.map((point) => point.x);
@@ -516,8 +890,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
-                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} â€¢ Inst: ${instructorLabel} â€¢ Stud: ${studentLabel}`}
                     status={booking.status}
+                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` â€¢ ${format(new Date(booking.approvedAt), 'PPP p')}` : ''}` : null}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     headerAction={<BackNavButton href="/bookings/history" text="Back to History" />}
@@ -547,7 +922,45 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                                     Commit Route
                                 </Button>
+                                {renderWorkflowStatusButton('planning')}
                             </div>
+                        ) : activeTab === 'flight-details' ? (
+                            renderWorkflowStatusButton('flightDetails')
+                        ) : activeTab === 'mass-balance' ? (
+                            renderWorkflowStatusButton('massBalance')
+                        ) : activeTab === 'navlog' ? (
+                            renderWorkflowStatusButton('navlog')
+                        ) : activeTab === 'checks' ? (
+                                <div className="flex flex-col items-end gap-1">
+                                    <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 rounded-md border-input bg-background px-4 text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm hover:bg-accent"
+                                    onClick={handleSaveChecks}
+                                    disabled={isSaving}
+                                    >
+                                        {isSaving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+                                        Save Checks
+                                    </Button>
+                                    <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-800"
+                                    onClick={handleManualConfirmFlight}
+                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove}
+                                    >
+                                        {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
+                                        {booking.status === 'Approved' ? 'Approved' : 'Flight Approved'}
+                                    </Button>
+                                    </div>
+                                    {booking.approvedByName ? (
+                                        <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                                            Approved by {booking.approvedByName}
+                                        </p>
+                                    ) : null}
+                                </div>
                         ) : null
                     }
                 />
@@ -561,7 +974,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Overview</p>
                                             <p className="text-sm font-black uppercase">Quick Reference</p>
                                         </div>
-                                        <Badge variant="outline" className="text-[9px] font-black uppercase">Visible in Scroll</Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 rounded-md border-input bg-background px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm hover:bg-accent"
+                                                onClick={handleSaveFlightDetails}
+                                                disabled={isSaving}
+                                            >
+                                                {isSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                                                Save Flight Details
+                                            </Button>
+                                            <Badge variant="outline" className="text-[9px] font-black uppercase">Visible in Scroll</Badge>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-4">
                                         <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
@@ -665,7 +1091,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                     </div>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                        <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0)}°</span>
+                                                                        <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0)}Â°</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -729,7 +1155,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <div className="p-6 space-y-8 pb-24 min-w-0">
                                         <section className="rounded-xl border bg-background p-4 space-y-4">
                                             <div className="space-y-1">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p>
                                                 <div className="flex flex-wrap items-baseline gap-2">
                                                     <span className="text-sm font-black uppercase tracking-[0.18em] text-primary">
                                                         {aircraft?.tailNumber || booking.aircraftId}
@@ -764,13 +1190,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         </section>
 
                                         <section className="space-y-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Input Stations</h2>
-                                                    <p className="mt-1 text-xs text-muted-foreground">Adjust only the live loading inputs for this booking.</p>
-                                                </div>
-                                                <Button onClick={handleSaveToBooking} className={HEADER_ACTION_BUTTON_CLASS}>Save Loading & Logs</Button>
-                                            </div>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-primary" /> Input Stations</h2>
+                                        <p className="mt-1 text-xs text-muted-foreground">Adjust only the live loading inputs for this booking.</p>
+                                    </div>
+                                            <Button onClick={handleSaveToBooking} className={`${HEADER_ACTION_BUTTON_CLASS} min-w-[168px] justify-center`} disabled={isSaving}>
+                                                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                                {isSaving ? 'Saving...' : 'Save Loading & Logs'}
+                                            </Button>
+                                </div>
                                             <div className="space-y-4">
                                                 {stations.map(s => (
                                                     <div key={s.id} className="space-y-2 p-3 border rounded-lg bg-background">
@@ -782,7 +1211,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         {s.type === 'fuel' && (
                                                             <div className="space-y-2 pt-2">
                                                                 <div className="flex justify-between items-center text-[9px] font-black uppercase text-foreground/75">
-                                                                    <span>{s.gallons} GAL / {formatLitres(s.gallons)} L</span>
+                                                                    <span>{s.gallons} GAL / {formatLitres(typeof s.gallons === 'number' ? s.gallons : Number(s.gallons) || undefined)} L</span>
                                                                     <span>Max: {s.maxGallons}</span>
                                                                 </div>
                                                                 <input aria-label={`${s.name} fuel gallons`} type="range" min="0" max={s.maxGallons || 50} step="0.1" value={s.gallons || 0} onChange={(e) => handleGallonsChange(s.id, e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500" />
@@ -796,96 +1225,101 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </ScrollArea>
                             </div>
                         </CardContent>
-                    </TabsContent>
-
+                                        </TabsContent>
                     <TabsContent value="checks" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <div className="flex h-full min-h-0 flex-1 flex-col overflow-auto p-4 md:p-6 space-y-4">
-                            <div className="rounded-xl border bg-background p-4 space-y-3">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instructor Checks</p>
-                                        <p className="text-sm font-semibold text-muted-foreground">Final instructor review of the full flight plan.</p>
-                                    </div>
-                                    <Badge variant={(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                        {(!!booking.massAndBalance?.isWithinLimits && !!booking.navlog?.legs?.length && (!!booking.preFlightData?.documentsChecked || !!booking.preFlight) && (!!booking.postFlightData?.hobbs || !!booking.postFlight)) ? 'Ready' : 'Incomplete'}
-                                    </Badge>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {[
-                                        { label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits },
-                                        { label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length },
-                                        { label: 'Pre-flight complete', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight },
-                                        { label: 'Post-flight recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight },
-                                        { label: 'Photos attached', ok: ((booking.preFlightData?.photos?.length || 0) + (booking.postFlightData?.photos?.length || 0)) > 0 },
-                                        { label: 'Fuel uplift logged', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0 },
-                                    ].map((item) => (
-                                        <div key={item.label} className="rounded-lg border bg-muted/20 px-3 py-3 flex items-center gap-2">
-                                            <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black", item.ok ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground")}>
-                                                {item.ok ? '✓' : '—'}
-                                            </div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-                                <div className="space-y-4">
-                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+                                <div className="space-y-6">
+                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight</p>
-                                                <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
                                             </div>
-                                            <Badge variant={booking.preFlightData?.documentsChecked ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                                {booking.preFlightData?.documentsChecked ? 'Ready' : 'Incomplete'}
-                                            </Badge>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Input value={booking.preFlightData?.hobbs ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.tacho ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly />
-                                            <Input value={booking.preFlightData?.oilUplift ?? 0} readOnly />
-                                            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-                                                <Badge variant="outline" className="text-[9px] font-black uppercase">Docs</Badge>
-                                                <span className="text-[10px] font-black uppercase tracking-widest">{booking.preFlightData?.documentsChecked ? 'Checked' : 'Pending'}</span>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Hobbs Start</UILabel>
+                                                <Input type="number" step="0.1" value={booking.preFlightData?.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                             </div>
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Tacho Start</UILabel>
+                                                <Input type="number" step="0.1" value={booking.preFlightData?.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</UILabel>
+                                                <Input type="number" value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</UILabel>
+                                                <Input type="number" value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</UILabel>
+                                                <Input type="number" value={booking.preFlightData?.oilUplift ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center space-x-3 p-3 bg-background border rounded-lg">
+                                            <Checkbox id="docs-checks" checked={!!booking.preFlightData?.documentsChecked} disabled />
+                                            <label htmlFor="docs-checks" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Post-flight</p>
-                                                <p className="text-sm font-semibold text-muted-foreground">Read-only summary for instructor review.</p>
                                             </div>
-                                            <Badge variant={(booking.postFlightData?.hobbs || 0) > 0 ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                                {(booking.postFlightData?.hobbs || 0) > 0 ? 'Recorded' : 'Pending'}
-                                            </Badge>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Input value={booking.postFlightData?.hobbs ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.tacho ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.fuelUpliftGallons ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.fuelUpliftLitres ?? 0} readOnly />
-                                            <Input value={booking.postFlightData?.oilUplift ?? 0} readOnly />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Hobbs End</UILabel>
+                                                <Input type="number" step="0.1" value={booking.postFlightData?.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Tacho End</UILabel>
+                                                <Input type="number" step="0.1" value={booking.postFlightData?.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</UILabel>
+                                                <Input type="number" value={booking.postFlightData?.fuelUpliftGallons ?? 0} readOnly className="font-bold h-9 bg-muted/30" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</UILabel>
+                                                <Input type="number" value={booking.postFlightData?.fuelUpliftLitres ?? 0} readOnly className="font-bold h-9 bg-muted/30" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <UILabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</UILabel>
+                                                <Input type="number" value={booking.postFlightData?.oilUplift ?? 0} readOnly className="font-bold h-9 bg-muted/30" />
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div className="rounded-xl border bg-background p-4 space-y-3">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
-                                        <PhotoViewerDialog
-                                            title="Flight Photos"
-                                            photos={[
-                                                ...(booking.preFlightData?.photos || []).map((photo) => ({ url: photo.url, name: `Pre-flight: ${photo.name}` })),
-                                                ...(booking.postFlightData?.photos || []).map((photo) => ({ url: photo.url, name: `Post-flight: ${photo.name}` })),
-                                            ]}
-                                            emptyLabel="No checklist photos stored."
-                                        />
+                                        <div className="space-y-4">
+                                            {preFlightPhotos.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Pre-flight Photos</p>
+                                                    <PhotoViewerDialog
+                                                        title="Pre-flight Photos"
+                                                        photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
+                                                    />
+                                                </div>
+                                            )}
+                                            {postFlightPhotos.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Post-flight Photos</p>
+                                                    <PhotoViewerDialog
+                                                        title="Post-flight Photos"
+                                                        photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-
                                 <div className="space-y-4">
                                     <div className="rounded-xl border bg-background p-4 space-y-3">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Summary</p>
@@ -898,20 +1332,28 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             <div className="rounded-lg border bg-muted/20 px-3 py-2">
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Navlog</p>
                                                 <p className="text-sm font-black">{booking.navlog?.legs?.length || 0} leg(s)</p>
-                                                <p className="text-xs text-muted-foreground">{booking.navlog?.departureIcao || '---'} to {booking.navlog?.arrivalIcao || '---'}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {booking.navlog?.departureIcao || '---'} to {booking.navlog?.arrivalIcao || '---'}
+                                                </p>
                                             </div>
                                             <div className="rounded-lg border bg-muted/20 px-3 py-2">
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
                                                 <p className="text-sm font-black">{booking.status || 'N/A'}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {booking.approvedByName ? `Approved by ${booking.approvedByName}` : `${approvedSectionCount}/${checkSections.length} sections approved`}
+                                                </p>
+                                                {booking.approvedAt ? (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatDateSafe(booking.approvedAt, 'PPP p')}
+                                                    </p>
+                                                ) : null}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
+                    </TabsContent><TabsContent value="navlog" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <div className="min-h-0 flex-1 overflow-hidden">
                             <NavlogBuilder booking={booking} tenantId={tenantId!} fuelWeightLbs={fuelWeightLbs} onFuelWeightChange={handleNavlogFuelSync} />
                         </div>
@@ -921,3 +1363,5 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         </Card>
     );
 }
+
+

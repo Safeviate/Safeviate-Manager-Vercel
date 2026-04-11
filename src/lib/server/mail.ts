@@ -187,11 +187,11 @@ export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }:
       success: true,
       diagnostics: { fromEmail, hasApiKey: true, provider: 'resend', status: response.status, statusText: response.statusText },
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error(`[MAIL] Error sending welcome email to ${email}:`, error);
     return {
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Failed to send welcome email.',
       diagnostics: { fromEmail, hasApiKey: true, provider: 'resend' },
     };
   }

@@ -57,9 +57,9 @@ export default function LoginPage() {
         description: `Welcome back to Safeviate.`,
       });
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login failed:', error);
-      const message = getLoginErrorMessage(error?.message);
+      const message = getLoginErrorMessage(error instanceof Error ? error.message : undefined);
       setErrorMessage(message);
       toast({
         variant: 'destructive',

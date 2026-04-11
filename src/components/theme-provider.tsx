@@ -238,13 +238,13 @@ function getInitialState<T>(key: string, defaultValue: T): T {
 
         // Strict picking: only allow keys that exist in the default definition
         if (typeof defaultValue === 'object' && defaultValue !== null && !Array.isArray(defaultValue)) {
-             const result: any = { ...defaultValue };
-             Object.keys(defaultValue).forEach(k => {
+             const result: Record<string, unknown> = { ...(defaultValue as Record<string, unknown>) };
+             Object.keys(defaultValue).forEach((k) => {
                  if (stored[k] !== undefined) {
                      result[k] = stored[k];
                  }
              });
-             return result;
+             return result as T;
         }
         
         return stored as T;
@@ -464,14 +464,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const newCardTheme = { ...defaultCardColors, ...themeToApply.cardColors };
     
     // Strict picking for sidebar and popover to avoid redundant keys
-    const newPopoverTheme = { ...defaultPopoverColors };
-    Object.keys(defaultPopoverColors).forEach(k => {
-        if ((themeToApply.popoverColors as any)[k]) (newPopoverTheme as any)[k] = (themeToApply.popoverColors as any)[k];
+    const newPopoverTheme: PopoverThemeColors = { ...defaultPopoverColors };
+    (Object.keys(defaultPopoverColors) as Array<keyof PopoverThemeColors>).forEach((k) => {
+        if (themeToApply.popoverColors[k]) newPopoverTheme[k] = themeToApply.popoverColors[k];
     });
 
-    const newSidebarTheme = { ...defaultSidebarColors };
-    Object.keys(defaultSidebarColors).forEach(k => {
-        if ((themeToApply.sidebarColors as any)[k]) (newSidebarTheme as any)[k] = (themeToApply.sidebarColors as any)[k];
+    const newSidebarTheme: SidebarThemeColors = { ...defaultSidebarColors };
+    (Object.keys(defaultSidebarColors) as Array<keyof SidebarThemeColors>).forEach((k) => {
+        if (themeToApply.sidebarColors[k]) newSidebarTheme[k] = themeToApply.sidebarColors[k];
     });
     const newSidebarBackgroundImage = resolveSidebarBackgroundImage(
       themeToApply.sidebarBackgroundImage
@@ -490,7 +490,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
     const newHeaderTheme = { ...defaultHeaderColors, ...themeToApply.headerColors };
     const newSwimlaneTheme = { ...defaultSwimlaneColors, ...themeToApply.swimlaneColors };
-    const newMatrixTheme = normalizeMatrixTheme(themeToApply.matrixColors as Record<string, string>);
+    const newMatrixTheme = normalizeMatrixTheme(themeToApply.matrixColors);
     const newScale = themeToApply.scale || defaultScale;
 
     setTheme(newTheme);

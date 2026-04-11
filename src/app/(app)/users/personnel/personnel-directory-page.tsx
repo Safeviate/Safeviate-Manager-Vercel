@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS, MainPageHeader } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import type { ExternalOrganization } from '@/types/quality';
 
 export type UserAccessOverrides = {
   hiddenMenus?: string[];
@@ -131,7 +132,7 @@ export function PersonnelDirectoryPage({
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [externalOrgs, setExternalOrgs] = useState<any[]>([]);
+  const [externalOrgs, setExternalOrgs] = useState<ExternalOrganization[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataError, setDataError] = useState<Error | null>(null);
 

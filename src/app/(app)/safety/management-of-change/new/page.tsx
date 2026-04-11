@@ -8,6 +8,10 @@ import { NewMocForm, type NewMocFormValues } from './new-moc-form';
 import type { Department } from '@/app/(app)/admin/department/page';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { parseJsonResponse } from '@/lib/safe-json';
+
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
 
 const getMocPrefix = (): string => 'MOC';
 
@@ -35,10 +39,10 @@ function NewMocContent() {
       }
       try {
         const personnelRes = await fetch('/api/personnel', { cache: 'no-store' });
-        const personnelPayload = await personnelRes.json();
+        const personnelPayload = await parseJsonResponse<{ departments?: Department[]; personnel?: Personnel[] }>(personnelRes);
         if (cancelled) return;
-        setDepartments(personnelPayload.departments ?? []);
-        setPersonnel(personnelPayload.personnel ?? []);
+        setDepartments(personnelPayload?.departments ?? []);
+        setPersonnel(personnelPayload?.personnel ?? []);
       } finally {
         if (!cancelled) {
           setIsLoadingDepts(false);
@@ -73,7 +77,7 @@ function NewMocContent() {
             responsiblePersonId: values.responsiblePersonId,
             status: 'Proposed',
             proposedBy: userProfile.id,
-            proposalDate: new Date().toISOString(),
+            proposalDate: toNoonUtcIso(new Date()),
             phases: [],
             organizationId: orgId === 'internal' ? null : orgId,
           },
@@ -81,10 +85,10 @@ function NewMocContent() {
       });
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => null);
+        const payload = await parseJsonResponse<{ error?: string }>(response);
         throw new Error(payload?.error || 'Unable to submit MOC proposal.');
       }
-      const payload = await response.json();
+      const payload = await parseJsonResponse<{ moc?: { id?: string } }>(response);
       const newMocId = payload?.moc?.id;
 
       toast({

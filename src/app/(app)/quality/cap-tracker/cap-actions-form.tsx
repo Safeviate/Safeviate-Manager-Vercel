@@ -17,6 +17,17 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return new Date(value);
+    }
+    return new Date(year, month - 1, day, 12);
+};
+
+const toNoonUtcIso = (date: Date) =>
+    new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
 const correctiveActionSchema = z.object({
     id: z.string(),
     description: z.string().min(1, "Action description is required."),
@@ -46,7 +57,7 @@ export function CapActionsForm({ cap, tenantId, personnel, onFormSubmit }: CapAc
         resolver: zodResolver(capSchema),
         defaultValues: {
             rootCauseAnalysis: cap.rootCauseAnalysis || '',
-            actions: cap.actions?.map(action => ({ ...action, deadline: new Date(action.deadline) })) || [],
+            actions: cap.actions?.map(action => ({ ...action, deadline: parseLocalDate(action.deadline) })) || [],
         },
     });
 
@@ -61,7 +72,7 @@ export function CapActionsForm({ cap, tenantId, personnel, onFormSubmit }: CapAc
                 ...values,
                 actions: values.actions.map(action => ({
                     ...action,
-                    deadline: action.deadline.toISOString(),
+                    deadline: toNoonUtcIso(action.deadline),
                 }))
             };
 

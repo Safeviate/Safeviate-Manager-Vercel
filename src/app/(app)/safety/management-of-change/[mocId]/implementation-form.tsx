@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk } from '@/types/moc';
+import type { ManagementOfChange, MocPhase, MocStep, MocHazard, MocRisk, MocMitigation } from '@/types/moc';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { PlusCircle, Trash2, CalendarIcon, AlertTriangle, Zap, ShieldAlert, ShieldCheck, Save, ChevronDown, ChevronRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,6 +26,20 @@ import type { RiskMatrixSettings } from '@/types/risk';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { MainPageHeader } from '@/components/page-header';
+import { parseJsonResponse } from '@/lib/safe-json';
+
+const parseLocalDate = (value?: string | Date | null) => {
+    if (!value) return undefined;
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? undefined : value;
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        const fallback = new Date(value);
+        return Number.isNaN(fallback.getTime()) ? undefined : fallback;
+    }
+    return new Date(year, month - 1, day, 12);
+};
 
 // ─── Zod Schemas ─────────────────────────────────────────────────────────────
 const riskAssessmentSchema = z.object({
@@ -73,26 +87,32 @@ const formSchema = z.object({ phases: z.array(phaseSchema) });
 type FormValues = z.infer<typeof formSchema>;
 
 // ─── Data Mapping Helpers ─────────────────────────────────────────────────────
-const mapDatesToObjects = (phases: any[]): FormValues['phases'] => {
+type MocPhaseInput = Partial<Omit<MocPhase, 'steps'>> & { steps?: MocStepInput[] };
+type MocStepInput = Partial<Omit<MocStep, 'hazards'>> & { hazards?: MocHazardInput[] };
+type MocHazardInput = Partial<Omit<MocHazard, 'risks'>> & { risks?: MocRiskInput[] };
+type MocRiskInput = Partial<Omit<MocRisk, 'mitigations'>> & { mitigations?: MocMitigationInput[] };
+type MocMitigationInput = Partial<Omit<MocMitigation, 'completionDate'>> & { completionDate?: string | Date | null };
+
+const mapDatesToObjects = (phases: MocPhaseInput[]): FormValues['phases'] => {
     const def = { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' as const };
     return (phases || []).map(phase => ({
         id: phase.id || uuidv4(),
         title: phase.title || '',
-        steps: (phase.steps || []).map((step: any) => ({
+        steps: (phase.steps || []).map((step) => ({
             id: step.id || uuidv4(),
             description: step.description || '',
-            hazards: (step.hazards || []).map((hazard: any) => ({
+            hazards: (step.hazards || []).map((hazard) => ({
                 id: hazard.id || uuidv4(),
                 description: hazard.description || '',
-                risks: (hazard.risks || []).map((risk: any) => ({
+                risks: (hazard.risks || []).map((risk) => ({
                     id: risk.id || uuidv4(),
                     description: risk.description || '',
                     initialRiskAssessment: risk.initialRiskAssessment || { ...def },
-                    mitigations: (risk.mitigations || []).map((m: any) => ({
+                    mitigations: (risk.mitigations || []).map((m) => ({
                         id: m.id || uuidv4(),
                         description: m.description || '',
                         responsiblePersonId: m.responsiblePersonId || '',
-                        completionDate: m.completionDate ? new Date(m.completionDate) : new Date(),
+                        completionDate: parseLocalDate(m.completionDate) || new Date(),
                         status: m.status || 'Open',
                         residualRiskAssessment: m.residualRiskAssessment || { ...def },
                     })),
@@ -124,7 +144,7 @@ const mapDatesToStrings = (phases: FormValues['phases']): MocPhase[] =>
                         ...m,
                         description: m.description || '',
                         responsiblePersonId: m.responsiblePersonId || '',
-                        completionDate: m.completionDate.toISOString(),
+                        completionDate: new Date(Date.UTC(m.completionDate.getFullYear(), m.completionDate.getMonth(), m.completionDate.getDate(), 12)).toISOString(),
                         residualRiskAssessment: m.residualRiskAssessment,
                     })),
                 })),
@@ -700,7 +720,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
         })
             .then(async (response) => {
                 if (!response.ok) {
-                    throw new Error((await response.json())?.error || 'Failed to save strategy.');
+                    throw new Error((await parseJsonResponse<{ error?: string }>(response))?.error || 'Failed to save strategy.');
                 }
                 form.reset(values);
                 toast({ title: 'Strategy Saved', description: 'The implementation plan has been synchronised.' });
@@ -725,8 +745,8 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
             });
             form.reset({ phases: mapDatesToObjects(result.phases) });
             toast({ title: 'AI Insights Applied' });
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'AI Analysis Failed', description: e.message });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'AI Analysis Failed', description: error instanceof Error ? error.message : 'AI analysis failed.' });
         } finally {
             setIsAnalyzing(false);
         }

@@ -17,11 +17,22 @@ const normalizeNextAuthUrl = () => {
   return current;
 };
 
+const resolveNextAuthSecret = () => {
+  const configuredSecret = cleanEnvValue(process.env.NEXTAUTH_SECRET);
+  if (configuredSecret) return configuredSecret;
+
+  if (process.env.NODE_ENV === 'development') {
+    return 'safeviate-development-nextauth-secret';
+  }
+
+  throw new Error('[auth] NEXTAUTH_SECRET is required.');
+};
+
 process.env.NEXTAUTH_URL = normalizeNextAuthUrl();
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
-  secret: cleanEnvValue(process.env.NEXTAUTH_SECRET),
+  secret: resolveNextAuthSecret(),
   providers: [
     CredentialsProvider({
       name: 'Credentials',

@@ -94,10 +94,10 @@ export function AddToolDialog() {
       });
       setIsOpen(false);
       form.reset();
-    } catch (e: any) {
+    } catch (error) {
        toast({
         title: 'Error',
-        description: e.message,
+        description: error instanceof Error ? error.message : 'Failed to add tool.',
         variant: 'destructive',
       });
     }

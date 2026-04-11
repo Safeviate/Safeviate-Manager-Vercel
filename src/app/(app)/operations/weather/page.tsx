@@ -12,17 +12,143 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Map as MapIcon, Lock } from 'lucide-react';
+import { parseJsonResponse } from '@/lib/safe-json';
+
+type WeatherCloudLayer = {
+  cover?: string;
+  base?: number | null;
+};
+
+type WeatherMetarData = {
+  lat?: number;
+  lon?: number;
+  latitude?: number;
+  longitude?: number;
+  altim?: number | string;
+  obsTime?: number | string;
+  icaoId?: string;
+  name?: string;
+  rawOb?: string;
+  raw?: string;
+  wspd?: number | string;
+  wdir?: number | string | 'VRB';
+  wgst?: number | string;
+  visib?: number | string;
+  temp?: number | string;
+  dewp?: number | string;
+  fltcat?: string;
+  clouds?: WeatherCloudLayer[];
+};
+
+type WeatherTafForecast = {
+  type?: string;
+  timeFrom?: number | string;
+  wdir?: number | string | 'VRB';
+  wspd?: number | string;
+  visib?: number | string;
+  clouds?: WeatherCloudLayer[];
+  wx?: string;
+};
+
+type WeatherTafData = {
+  lat?: number;
+  lon?: number;
+  icaoId?: string;
+  issueTime?: number | string;
+  validTimeFrom?: number | string;
+  validTimeTo?: number | string;
+  rawTAF?: string;
+  raw?: string;
+  fcsts?: WeatherTafForecast[];
+};
+
+type CheckWxData = {
+  latitude?: number;
+  longitude?: number;
+  barometer?: { hg?: number | string; hpa?: number | string };
+  wind?: { degrees?: string | number; speed_kts?: number | string; gust_kts?: number | string };
+  visibility?: { miles?: string | number };
+  humidity?: { percent?: number | string };
+  ceiling?: { feet?: number | string };
+  temperature?: { celsius?: number | string };
+  dewpoint?: { celsius?: number | string };
+  icao?: string;
+  timestamp?: number | string;
+  raw_text?: string;
+  flight_category?: string;
+  station?: { name?: string };
+};
+
+type CheckWxResponse = CheckWxData & {
+  data?: CheckWxData[];
+};
+
+type OpenMeteoData = {
+  latitude?: number;
+  longitude?: number;
+  current?: {
+    surface_pressure?: number | string;
+    temperature_2m?: number | string;
+    relative_humidity_2m?: number | string;
+    visibility?: number | string;
+    wind_direction_10m?: number | string;
+    wind_speed_10m?: number | string;
+    time?: string;
+  };
+};
+
+type MetNorwayData = {
+  properties?: {
+    timeseries?: Array<{
+      data?: {
+        next_1_hours?: { details?: { precipitation_amount?: number } };
+        instant?: { details?: { cloud_area_fraction?: number } };
+      };
+    }>;
+  };
+};
+
+type WeatherObservation = {
+  wdir: string | number | null;
+  wspd: string | number | null;
+  wgst: string | number | null;
+  visib: string | number | null;
+  temp: string | number | null;
+  dewp: string | number | null;
+  altim: string | number | null;
+  altimHpa: string | number | null;
+  icaoId: string;
+  name: string | null;
+  obsTime: number | string | null;
+  rawOb: string | null;
+  fltcat: string | null;
+  clouds?: WeatherCloudLayer[];
+};
+
+type FlightCategoryData = {
+  fltcat?: string | null;
+  visib?: string | number | null;
+  clouds?: WeatherCloudLayer[];
+};
+
+const formatTimestamp = (value?: number | string | null) => {
+  if (value == null) return 'N/A';
+  if (typeof value === 'number') {
+    return new Date(value > 10_000_000_000 ? value : value * 1000).toLocaleString();
+  }
+  return new Date(value).toLocaleString();
+};
 
 export default function WeatherPage() {
   const [icao, setIcao] = useState('');
   const [loading, setLoading] = useState(false);
-  const [weatherData, setWeatherData] = useState<any | null>(null);
-  const [tafData, setTafData] = useState<any | null>(null);
-  const [avwxData, setAvwxData] = useState<any | null>(null);
-  const [checkWxData, setCheckWxData] = useState<any | null>(null);
-  const [vatsimData, setVatsimData] = useState<any | null>(null);
-  const [openMeteoData, setOpenMeteoData] = useState<any | null>(null);
-  const [metNorwayData, setMetNorwayData] = useState<any | null>(null);
+  const [weatherData, setWeatherData] = useState<WeatherMetarData | null>(null);
+  const [tafData, setTafData] = useState<WeatherTafData | null>(null);
+  const [avwxData, setAvwxData] = useState<{ summary?: string } | null>(null);
+  const [checkWxData, setCheckWxData] = useState<CheckWxData | null>(null);
+  const [vatsimData, setVatsimData] = useState<{ raw?: string; timestamp?: number | string } | null>(null);
+  const [openMeteoData, setOpenMeteoData] = useState<OpenMeteoData | null>(null);
+  const [metNorwayData, setMetNorwayData] = useState<MetNorwayData | null>(null);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   const { toast } = useToast();
@@ -72,10 +198,13 @@ export default function WeatherPage() {
         fetch(`/api/weather/vatsim?icao=${station}`).catch(() => null)
       ]);
 
-      const mainJson = mainRes?.ok ? await mainRes.json() : null;
-      const avwxJson = avwxRes?.ok ? await avwxRes.json() : null;
-      const checkWxJson = checkWxRes?.ok ? await checkWxRes.json() : null;
-      const vatsimJson = vatsimRes?.ok ? await vatsimRes.json() : null;
+      const mainJson = mainRes?.ok ? await parseJsonResponse<{
+        metar?: WeatherMetarData;
+        taf?: WeatherTafData;
+      }>(mainRes) : null;
+      const avwxJson = avwxRes?.ok ? await parseJsonResponse<{ summary?: string }>(avwxRes) : null;
+      const checkWxJson = checkWxRes?.ok ? await parseJsonResponse<CheckWxResponse>(checkWxRes) : null;
+      const vatsimJson = vatsimRes?.ok ? await parseJsonResponse<{ raw?: string; timestamp?: number | string }>(vatsimRes) : null;
 
       setWeatherData(mainJson?.metar || null);
       setTafData(mainJson?.taf || null);
@@ -92,8 +221,8 @@ export default function WeatherPage() {
           fetch(`/api/weather/open-meteo?lat=${lat}&lon=${lon}`).catch(() => null),
           fetch(`/api/weather/met-norway?lat=${lat}&lon=${lon}`).catch(() => null)
         ]);
-        if (omRes?.ok) setOpenMeteoData(await omRes.json());
-        if (mnRes?.ok) setMetNorwayData(await mnRes.json());
+        if (omRes?.ok) setOpenMeteoData((await parseJsonResponse<OpenMeteoData>(omRes)) ?? null);
+        if (mnRes?.ok) setMetNorwayData((await parseJsonResponse<MetNorwayData>(mnRes)) ?? null);
       } else {
         setOpenMeteoData(null);
         setMetNorwayData(null);
@@ -112,8 +241,8 @@ export default function WeatherPage() {
           description: `Multi-source data synchronized for ${station}.` 
         });
       }
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error Fetching Data', description: error.message });
+    } catch (error: unknown) {
+      toast({ variant: 'destructive', title: 'Error Fetching Data', description: error instanceof Error ? error.message : 'Error fetching data.' });
     } finally {
       setLoading(false);
     }
@@ -127,28 +256,31 @@ export default function WeatherPage() {
     const officialAlt = weatherData?.altim ?? checkWxData?.barometer?.hg;
     const officialHpa = checkWxData?.barometer?.hpa;
     const groundHpa = omCurrent?.surface_pressure;
+    const officialAltValue = officialAlt == null ? null : Number(officialAlt);
+    const officialHpaValue = officialHpa == null ? null : Number(officialHpa);
+    const groundHpaValue = groundHpa == null ? null : Number(groundHpa);
 
     // 2. Select best source (Official > Ground)
-    let altVal = officialAlt ?? (groundHpa ? (groundHpa * 0.02953).toFixed(2) : null);
-    let hpaVal = officialHpa ?? groundHpa ?? (officialAlt ? (officialAlt * 33.8639) : null);
+    let altVal = officialAltValue ?? (groundHpaValue != null ? Number((groundHpaValue * 0.02953).toFixed(2)) : null);
+    let hpaVal = officialHpaValue ?? groundHpaValue ?? (officialAltValue != null ? officialAltValue * 33.8639 : null);
 
     // 3. Normalize: If altimeter > 50, it was provided as hPa.
-    if (altVal && Number(altVal) > 50) {
-      altVal = (Number(altVal) * 0.02953).toFixed(2);
+    if (altVal != null && Number(altVal) > 50) {
+      altVal = Number((Number(altVal) * 0.02953).toFixed(2));
     }
 
     // 4. Normalize: If hPa < 50, it was provided as inHg.
-    if (hpaVal && Number(hpaVal) < 50) {
+    if (hpaVal != null && Number(hpaVal) < 50) {
       hpaVal = Math.round(Number(hpaVal) * 33.8639);
-    } else if (hpaVal) {
+    } else if (hpaVal != null) {
       hpaVal = Math.round(Number(hpaVal));
     }
 
-    const obs: any = {
+    const obs: WeatherObservation = {
       wdir: weatherData?.wdir ?? checkWxData?.wind?.degrees ?? omCurrent?.wind_direction_10m ?? null,
       wspd: weatherData?.wspd ?? checkWxData?.wind?.speed_kts ?? omCurrent?.wind_speed_10m ?? null,
       wgst: weatherData?.wgst ?? checkWxData?.wind?.gust_kts ?? null,
-      visib: weatherData?.visib ?? checkWxData?.visibility?.miles ?? (omCurrent?.visibility ? (omCurrent.visibility / 1609.34).toFixed(1) : null), // m to sm
+      visib: weatherData?.visib ?? checkWxData?.visibility?.miles ?? (omCurrent?.visibility != null ? Number((Number(omCurrent.visibility) / 1609.34).toFixed(1)) : null), // m to sm
       temp: weatherData?.temp ?? checkWxData?.temperature?.celsius ?? omCurrent?.temperature_2m ?? null,
       dewp: weatherData?.dewp ?? checkWxData?.dewpoint?.celsius ?? null,
       altim: altVal,
@@ -163,27 +295,27 @@ export default function WeatherPage() {
     // If METAR fields are missing, try to fill from the current TAF period
     if (tafData?.fcsts?.[0]) {
       const f = tafData.fcsts[0];
-      if (obs.wdir === null) obs.wdir = f.wdir;
-      if (obs.wspd === null) obs.wspd = f.wspd;
-      if (obs.visib === null) obs.visib = f.visib;
+      if (obs.wdir === null) obs.wdir = f.wdir ?? null;
+      if (obs.wspd === null) obs.wspd = f.wspd ?? null;
+      if (obs.visib === null) obs.visib = f.visib ?? null;
     }
 
     return obs;
   }, [weatherData, checkWxData, vatsimData, openMeteoData, tafData, icao]);
 
   // Helper to calculate Flight Category if API doesn't provide it
-  const calculateFlightCategory = (data: any) => {
+  const calculateFlightCategory = (data: FlightCategoryData | null) => {
     if (!data) return 'UNKNOWN';
     if (data.fltcat && data.fltcat !== 'UNKNOWN') return data.fltcat;
 
-    const vis = parseFloat(data.visib);
+    const vis = parseFloat(String(data.visib ?? 0));
     
     // Find ceiling (lowest BKN or OVC layer)
     let ceiling = 10000; // Default high
     if (data.clouds && data.clouds.length > 0) {
-      const layers = data.clouds.filter((c: any) => c.cover === 'BKN' || c.cover === 'OVC');
+      const layers = data.clouds.filter((c) => c.cover === 'BKN' || c.cover === 'OVC');
       if (layers.length > 0) {
-        ceiling = Math.min(...layers.map((l: any) => l.base || 10000));
+        ceiling = Math.min(...layers.map((l) => l.base || 10000));
       }
     }
 
@@ -400,20 +532,20 @@ export default function WeatherPage() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2 text-right">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">ISSUED: {new Date(tafData.issueTime).toLocaleString()}</span>
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">VALID: {typeof tafData.validTimeFrom === 'number' ? new Date(tafData.validTimeFrom * 1000).toLocaleString() : new Date(tafData.validTimeFrom).toLocaleString()} - {typeof tafData.validTimeTo === 'number' ? new Date(tafData.validTimeTo * 1000).toLocaleString() : new Date(tafData.validTimeTo).toLocaleString()}</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">ISSUED: {formatTimestamp(tafData.issueTime)}</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-foreground">VALID: {formatTimestamp(tafData.validTimeFrom)} - {formatTimestamp(tafData.validTimeTo)}</span>
                       </div>
                     </div>
 
                     <CardContent className="p-6 space-y-6 bg-muted/10">
-                      {tafData.fcsts && tafData.fcsts.map((fcst: any, index: number) => (
+                      {tafData.fcsts && tafData.fcsts.map((fcst, index: number) => (
                         <div key={index} className="bg-background border rounded-lg p-4 shadow-sm space-y-3">
                           <div className="flex justify-between items-center border-b pb-2">
                             <Badge variant="outline" className="font-black uppercase tracking-tighter text-[10px]">
                               {fcst.type || 'PERIOD'}
                             </Badge>
                             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                              FROM: {typeof fcst.timeFrom === 'number' ? new Date(fcst.timeFrom * 1000).toLocaleString() : new Date(fcst.timeFrom).toLocaleString()}
+                              FROM: {formatTimestamp(fcst.timeFrom)}
                             </span>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -428,7 +560,7 @@ export default function WeatherPage() {
                             <div className="col-span-2">
                               <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest block">Clouds</span>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {fcst.clouds && fcst.clouds.map((cloud: any, i: number) => (
+                                {fcst.clouds && fcst.clouds.map((cloud, i: number) => (
                                   <Badge key={i} variant="secondary" className="text-[9px] font-bold uppercase">
                                     {cloud.cover} @ {cloud.base}FT
                                   </Badge>

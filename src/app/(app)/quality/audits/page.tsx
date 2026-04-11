@@ -25,6 +25,14 @@ import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
 
+const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return new Date(value);
+    }
+    return new Date(year, month - 1, day, 12);
+};
+
 type EnrichedAudit = QualityAudit & {
     auditeeName?: string;
 };
@@ -101,7 +109,7 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                                 <TableCell className="font-bold text-xs text-primary">
                                     <Link href={`/quality/audits/${audit.id}`} className="hover:underline">{audit.auditNumber}</Link>
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap text-xs font-medium">{format(new Date(audit.auditDate), 'dd MMM yy')}</TableCell>
+                                <TableCell className="whitespace-nowrap text-xs font-medium">{format(parseLocalDate(audit.auditDate), 'dd MMM yy')}</TableCell>
                                 <TableCell className="text-xs font-bold max-w-[150px] truncate">{audit.title}</TableCell>
                                 <TableCell className="text-xs font-medium hidden sm:table-cell">{audit.auditeeName || audit.auditeeId}</TableCell>
                                 <TableCell className="text-center">

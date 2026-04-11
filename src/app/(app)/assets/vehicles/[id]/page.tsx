@@ -37,6 +37,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 interface VehicleDetailPageProps {
   params: Promise<{ id: string }>;
 }
@@ -167,7 +177,7 @@ export default function VehicleDetailPage({ params }: VehicleDetailPageProps) {
                       </h3>
                       <div className="grid grid-cols-1 gap-6">
                         <DetailItem label="Current Odometer" value={`${(vehicle.currentOdometer || 0).toLocaleString()} km`} />
-                        <DetailItem label="Next Service Date" value={vehicle.nextServiceDueDate ? format(new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy') : 'NOT SCHEDULED'} />
+                        <DetailItem label="Next Service Date" value={vehicle.nextServiceDueDate ? format(parseLocalDate(vehicle.nextServiceDueDate) || new Date(vehicle.nextServiceDueDate), 'dd MMM yyyy') : 'NOT SCHEDULED'} />
                         <DetailItem label="Service Odometer" value={vehicle.nextServiceDueOdometer != null ? `${vehicle.nextServiceDueOdometer.toLocaleString()} km` : 'NOT SET'} />
                       </div>
                     </div>
@@ -188,7 +198,7 @@ export default function VehicleDetailPage({ params }: VehicleDetailPageProps) {
                         <div className="flex flex-col items-center gap-2 bg-background p-4 rounded-2xl border-2 shadow-sm min-w-[140px]">
                             <p className="text-[9px] font-black uppercase tracking-tighter opacity-50">Days Pending</p>
                             <p className="text-2xl font-mono font-black text-primary">
-                                {vehicle.nextServiceDueDate ? Math.max(0, Math.ceil((new Date(vehicle.nextServiceDueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '---'}
+                                {vehicle.nextServiceDueDate ? Math.max(0, Math.ceil(((parseLocalDate(vehicle.nextServiceDueDate) || new Date(vehicle.nextServiceDueDate)).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '---'}
                             </p>
                         </div>
                     </div>
@@ -303,7 +313,7 @@ function VehicleDocumentsTab({ vehicle, tenantId, expirySettings }: { vehicle: V
                     <TableCell className="text-xs">
                       {docItem.expirationDate ? (
                         <Badge variant="outline" className="font-black h-8 px-4 border-2 shadow-sm uppercase text-[10px]" style={expiryStyle || undefined}>
-                          {format(new Date(docItem.expirationDate), 'dd MMM yyyy')}
+                          {format(parseLocalDate(docItem.expirationDate) || new Date(docItem.expirationDate), 'dd MMM yyyy')}
                         </Badge>
                       ) : (
                         <span className="text-[10px] font-black uppercase text-muted-foreground opacity-30 italic">No Expiry Date</span>

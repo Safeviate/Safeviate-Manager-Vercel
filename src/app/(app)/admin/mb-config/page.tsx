@@ -20,18 +20,33 @@ import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGra
 const POINT_COLORS = ['#f97316', '#3b82f6', '#eab308', '#8b5cf6', '#ec4899'];
 const formatLitres = (gallons: number) => gallonsToLitres(gallons).toFixed(1);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-const normalizeFuelStation = (station: any) => {
-  if (station?.type !== 'fuel') return station;
+type FuelStation = {
+  id: number;
+  name: string;
+  weight: number;
+  arm: number;
+  type: 'standard' | 'fuel';
+  gallons?: number;
+  maxGallons?: number;
+  fuelType?: FuelType;
+  densityLbPerGallon?: number;
+};
+
+type FuelStationInput = Omit<FuelStation, 'type'> & { type?: string };
+
+const normalizeFuelStation = (station: FuelStationInput): FuelStation => {
+  if (station?.type !== 'fuel') return { ...station, type: 'standard' };
   const preset = getFuelPreset(station.fuelType);
   return {
     ...station,
+    type: 'fuel',
     fuelType: station.fuelType || 'AVGAS',
     densityLbPerGallon: Number(station.densityLbPerGallon) || preset.densityLbPerGallon,
     maxGallons: Number(station.maxGallons) || 50,
   };
 };
 
-const serializeStation = (station: any) => {
+const serializeStation = (station: FuelStation) => {
   const baseStation = {
     id: Number(station.id) || 0,
     name: station.name || '',
@@ -64,7 +79,7 @@ const WBCalculator = () => {
   });
 
   const [basicEmpty, setBasicEmpty] = useState({ weight: 1416, moment: 120360, arm: 85.0 });
-  const [stations, setStations] = useState<any[]>([
+  const [stations, setStations] = useState<FuelStation[]>([
     { id: 2, name: "Pilot & Front Pax", weight: 340, arm: 85.5, type: 'standard' },
     { id: 3, name: "Fuel", weight: 288, arm: 95.0, type: 'fuel', gallons: 48, maxGallons: 50, fuelType: 'AVGAS', densityLbPerGallon: 6.0 },
     { id: 4, name: "Rear Pax", weight: 0, arm: 118.1, type: 'standard' },
@@ -90,8 +105,8 @@ const WBCalculator = () => {
           configResponse.json().catch(() => ({})),
         ]);
         setAircrafts(Array.isArray(aircraftPayload?.aircrafts) ? aircraftPayload.aircrafts : []);
-        const config = configPayload?.config && typeof configPayload.config === 'object' ? configPayload.config : {};
-        setSavedTemplates(Array.isArray((config as any)['mass-and-balance-templates']) ? (config as any)['mass-and-balance-templates'] : []);
+        const config = configPayload?.config && typeof configPayload.config === 'object' ? configPayload.config as { 'mass-and-balance-templates'?: AircraftModelProfile[] } : {};
+        setSavedTemplates(Array.isArray(config['mass-and-balance-templates']) ? config['mass-and-balance-templates'] || [] : []);
     } catch (e) {
         console.error("Failed to load M&B data", e);
     }
@@ -340,7 +355,7 @@ const WBCalculator = () => {
                         {s.type === 'fuel' && (
                           <div className="space-y-2 pt-1 border-t mt-1">
                             <div className="flex justify-between items-center text-[9px] font-black uppercase text-foreground/75">
-                              <span>{s.gallons} GAL / {formatLitres(s.gallons)} L</span>
+                      <span>{s.gallons || 0} GAL / {formatLitres(s.gallons || 0)} L</span>
                               <span>Max: {s.maxGallons}</span>
                             </div>
                             <input aria-label={`${s.name} fuel gallons`} type="range" min="0" max={s.maxGallons || 50} step="0.1" value={s.gallons || 0} onChange={(e) => handleFuelChange(s.id, 'gallons', e.target.value)} className="w-full h-1 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-yellow-500" />

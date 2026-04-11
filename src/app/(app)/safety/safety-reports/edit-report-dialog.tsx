@@ -17,6 +17,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { cn } from '@/lib/utils';
 
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return new Date(value);
+  return new Date(year, month - 1, day, 12);
+};
+
 const formSchema = z.object({
   reportType: z.string().min(1, "Report type is required."),
   eventDate: z.date({ required_error: "Event date is required." }),
@@ -41,7 +47,7 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
     resolver: zodResolver(formSchema),
     defaultValues: {
       reportType: report.reportType,
-      eventDate: new Date(report.eventDate),
+      eventDate: parseLocalDate(report.eventDate),
       eventTime: report.eventTime,
       location: report.location,
       description: report.description,
@@ -52,7 +58,7 @@ export function EditReportDialog({ report, tenantId, trigger }: EditReportDialog
     if (isOpen) {
       form.reset({
         reportType: report.reportType,
-        eventDate: new Date(report.eventDate),
+        eventDate: parseLocalDate(report.eventDate),
         eventTime: report.eventTime,
         location: report.location,
         description: report.description,

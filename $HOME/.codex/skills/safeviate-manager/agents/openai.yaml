@@ -1,0 +1,4 @@
+interface:
+  display_name: "Safeviate Manager"
+  short_description: "Repo workflows for Safeviate Manager"
+  default_prompt: "Use $safeviate-manager for Safeviate Manager booking, weather, map, API, and approval changes."

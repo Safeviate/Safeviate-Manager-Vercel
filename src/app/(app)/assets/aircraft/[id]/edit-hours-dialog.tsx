@@ -49,7 +49,7 @@ export function EditHoursDialog({ aircraft }: EditHoursDialogProps) {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
         const response = await fetch(`/api/aircraft/${aircraft.id}`, {
           method: 'PATCH',

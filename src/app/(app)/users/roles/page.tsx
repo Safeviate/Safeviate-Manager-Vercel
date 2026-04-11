@@ -24,7 +24,7 @@ export default function RolesPage() {
   const tenantId = resolvedTenantId || 'safeviate';
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,8 +37,8 @@ export default function RolesPage() {
           setError(null);
         }
       })
-      .catch((e: any) => {
-        if (!cancelled) setError(e);
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e : new Error('Failed to load roles.'));
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -50,8 +50,8 @@ export default function RolesPage() {
           const payload = response.ok ? await response.json().catch(() => ({ roles: [] })) : { roles: [] };
           if (!cancelled) setRoles((payload.roles || []) as AdminRole[]);
         })
-        .catch((e) => {
-          if (!cancelled) setError(e);
+        .catch((e: unknown) => {
+          if (!cancelled) setError(e instanceof Error ? e : new Error('Failed to load roles.'));
         });
     };
 

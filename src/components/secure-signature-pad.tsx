@@ -142,8 +142,12 @@ export function SecureSignaturePad({
       clearSignature();
       setPin('');
       setIntentConfirmed(false);
-    } catch (e: any) {
-      toast({ title: "Signature Failed", description: e.message || "Could not process signature", variant: "destructive" });
+    } catch (error) {
+      toast({
+        title: "Signature Failed",
+        description: error instanceof Error ? error.message : "Could not process signature",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

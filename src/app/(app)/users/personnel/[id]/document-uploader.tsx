@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type UploadMode = 'file' | 'camera';
 
@@ -149,7 +150,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     });
   };
 
-  const uploadToServer = async (selectedFile: File, displayName: string) => {
+  const uploadToServer = async (selectedFile: File, displayName: string): Promise<{ url: string; uploadDate: string }> => {
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('displayName', displayName);
@@ -164,7 +165,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
       throw new Error(payload.error || 'Upload failed');
     }
 
-    return response.json();
+    return (await parseJsonResponse<{ url: string; uploadDate: string }>(response)) ?? { url: '', uploadDate: '' };
   };
 
   const handleUpload = async () => {

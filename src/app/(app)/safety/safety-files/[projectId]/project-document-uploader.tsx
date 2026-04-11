@@ -144,12 +144,13 @@ export function ProjectDocumentUploader({
                 name: document.name,
                 url: document.url,
                 uploadDate: document.uploadDate,
-                expirationDate: expirationDate ? new Date(`${expirationDate}T00:00:00`).toISOString() : document.expirationDate,
+                expirationDate: expirationDate ? new Date(`${expirationDate}T12:00:00`).toISOString() : document.expirationDate,
                 section,
                 requirementId: requirementId === 'general' ? undefined : requirementId,
                 createdAt: now,
                 updatedAt: now,
               });
+              setExpirationDate('');
             }}
             trigger={(open) => (
               <Button

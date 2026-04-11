@@ -1,6 +1,7 @@
 'use client';
 
 import { useForm, useFieldArray, useFormContext, Controller, FormProvider } from 'react-hook-form';
+import type { FieldArrayWithId, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -56,17 +57,25 @@ const getRiskScoreColor = (
 
 // --- Form Schemas ---
 const hazardReviewSchema = z.object({
-    id: z.string(),
-    description: z.string(),
+  id: z.string(),
+  description: z.string(),
     residualRiskLikelihood: z.number(),
     residualRiskSeverity: z.number(),
-    residualRiskScore: z.number(),
-    residualRiskLevel: z.enum(["Low", "Medium", "High", "Critical"]),
+  residualRiskScore: z.number(),
+  residualRiskLevel: z.enum(["Low", "Medium", "High", "Critical"]),
+});
+
+const signatureSchema = z.object({
+  userId: z.string(),
+  userName: z.string(),
+  role: z.string(),
+  signatureUrl: z.string(),
+  signedAt: z.string(),
 });
 
 const reportReviewSchema = z.object({
   hazards: z.array(hazardReviewSchema),
-  signatures: z.array(z.any()).optional(),
+  signatures: z.array(signatureSchema).optional(),
 });
 
 type FormValues = z.infer<typeof reportReviewSchema>;
@@ -195,7 +204,16 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
   );
 }
 
-function ReviewFields({ form, hazardFields, riskMatrixColors, handleSignReport }: any) {
+type ReviewFieldsProps = {
+  form: UseFormReturn<FormValues>;
+  hazardFields: FieldArrayWithId<FormValues, 'hazards', 'id'>[];
+  riskMatrixColors?: Record<string, string>;
+  handleSignReport: () => void | Promise<void>;
+};
+
+function ReviewFields({ form, hazardFields, riskMatrixColors, handleSignReport }: ReviewFieldsProps) {
+  const signatures = form.watch('signatures') ?? [];
+
   return (
     <>
       <section>
@@ -204,7 +222,7 @@ function ReviewFields({ form, hazardFields, riskMatrixColors, handleSignReport }
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Hazard Residual Risk Review</h3>
         </div>
         <div className="space-y-4">
-          {hazardFields.map((field: any, index: number) => (
+          {hazardFields.map((field, index) => (
             <div key={field.id} className="p-4 border rounded-xl bg-muted/5">
               <div className="flex justify-between items-start gap-4 mb-4">
                 <div className="flex-1">
@@ -235,7 +253,7 @@ function ReviewFields({ form, hazardFields, riskMatrixColors, handleSignReport }
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {form.watch('signatures')?.map((sig: any, idx: number) => (
+          {signatures.map((sig, idx) => (
             <div key={idx} className="p-4 border rounded-xl bg-background shadow-sm flex flex-col gap-4">
               <div className="flex justify-between items-start border-b pb-3">
                 <div>
@@ -249,7 +267,7 @@ function ReviewFields({ form, hazardFields, riskMatrixColors, handleSignReport }
               </div>
             </div>
           ))}
-          {(!form.watch('signatures') || form.watch('signatures').length === 0) && (
+          {signatures.length === 0 && (
               <div className="md:col-span-2 py-10 flex flex-col items-center justify-center border-2 border-dashed rounded-xl opacity-40">
                   <Signature className="h-10 w-10 mb-2" />
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Awaiting Sign-off</p>

@@ -59,6 +59,62 @@ import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/pa
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import { getContrastingTextColor, getDocumentExpiryBadgeStyle, getInspectionWarningStyle } from '@/lib/document-expiry';
 
+const toNoonUtcIso = (date: Date) =>
+  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
+const parseLocalDate = (value?: string | null) => {
+  if (!value) return undefined;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    const fallback = new Date(value);
+    return Number.isNaN(fallback.getTime()) ? undefined : fallback;
+  }
+  return new Date(year, month - 1, day, 12);
+};
+
+type AircraftDocumentUpload = {
+  name: string;
+  url: string;
+  uploadDate: string;
+  expirationDate: string | null;
+};
+
+const editAircraftSchema = z.object({
+  make: z.string().min(1),
+  model: z.string().min(1),
+  type: z.string().min(1),
+  initialHobbs: z.coerce.number(),
+  currentHobbs: z.coerce.number(),
+  initialTacho: z.coerce.number(),
+  currentTacho: z.coerce.number(),
+  tachoAtNext50Inspection: z.coerce.number(),
+  tachoAtNext100Inspection: z.coerce.number(),
+});
+
+type EditAircraftValues = z.infer<typeof editAircraftSchema>;
+
+const maintenanceLogSchema = z.object({
+  date: z.string(),
+  maintenanceType: z.string().min(1),
+  details: z.string().min(1),
+  reference: z.string().optional(),
+  ameNo: z.string().optional(),
+  amoNo: z.string().optional(),
+});
+
+type MaintenanceLogValues = z.infer<typeof maintenanceLogSchema>;
+
+const componentSchema = z.object({
+  name: z.string().min(1),
+  serialNumber: z.string().min(1),
+  tsn: z.coerce.number(),
+  tso: z.coerce.number(),
+  totalTime: z.coerce.number(),
+  maxHours: z.coerce.number(),
+});
+
+type ComponentValues = z.infer<typeof componentSchema>;
+
 interface AircraftDetailPageProps {
   params: Promise<{ id: string }>;
 }
@@ -300,7 +356,7 @@ function MaintenanceTab({ aircraftId, tenantId, logs, isLoading }: { aircraftId:
             {logs.length > 0 ? (
               logs.map((log) => (
                 <TableRow key={log.id} className="hover:bg-muted/5 transition-colors group">
-                  <TableCell className="whitespace-nowrap font-black text-[11px] uppercase tracking-tighter px-8">{format(new Date(log.date), 'dd MMM yyyy')}</TableCell>
+                  <TableCell className="whitespace-nowrap font-black text-[11px] uppercase tracking-tighter px-8">{format(parseLocalDate(log.date) || new Date(log.date), 'dd MMM yyyy')}</TableCell>
                   <TableCell><Badge variant="outline" className="text-[10px] font-black uppercase border-slate-300 bg-background">{log.maintenanceType}</Badge></TableCell>
                   <TableCell className="font-mono text-xs font-black text-muted-foreground">{log.reference || 'N/A'}</TableCell>
                   <TableCell className="max-w-md truncate text-sm font-medium italic text-foreground opacity-80 opacity-100 transition-opacity">"{log.details}"</TableCell>
@@ -424,7 +480,7 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
     return () => events.forEach((eventName) => window.removeEventListener(eventName, loadExpirySettings));
   }, [loadExpirySettings]);
 
-  const handleDocUpload = async (newDoc: any) => {
+  const handleDocUpload = async (newDoc: AircraftDocumentUpload) => {
     try {
         const response = await fetch(`/api/aircraft/${aircraft.id}`, {
           method: 'PATCH',
@@ -460,7 +516,7 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
     try {
         const updatedDocuments = (aircraft.documents || []).map((doc) =>
           doc.name === docName
-            ? { ...doc, expirationDate: date ? date.toISOString() : null }
+            ? { ...doc, expirationDate: date ? new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString() : null }
             : doc
         );
         const response = await fetch(`/api/aircraft/${aircraft.id}`, {
@@ -531,13 +587,13 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
                         >
                           <CalendarIcon className="h-4 w-4 shrink-0" />
                           <span className="truncate">
-                            {doc.expirationDate ? format(new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry Date'}
+                            {doc.expirationDate ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry Date'}
                           </span>
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 rounded-2xl border-2 shadow-2xl overflow-hidden" align="start">
                         <CustomCalendar
-                          selectedDate={doc.expirationDate ? new Date(doc.expirationDate) : undefined}
+                          selectedDate={doc.expirationDate ? parseLocalDate(doc.expirationDate) : undefined}
                           onDateSelect={(date) => handleExpirationDateChange(doc.name, date)}
                         />
                       </PopoverContent>
@@ -590,18 +646,8 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm({
-    resolver: zodResolver(z.object({
-      make: z.string().min(1),
-      model: z.string().min(1),
-      type: z.string().min(1),
-      initialHobbs: z.coerce.number(),
-      currentHobbs: z.coerce.number(),
-      initialTacho: z.coerce.number(),
-      currentTacho: z.coerce.number(),
-      tachoAtNext50Inspection: z.coerce.number(),
-      tachoAtNext100Inspection: z.coerce.number(),
-    })),
+  const form = useForm<EditAircraftValues>({
+    resolver: zodResolver(editAircraftSchema),
     defaultValues: {
       make: aircraft.make || '',
       model: aircraft.model || '',
@@ -615,7 +661,7 @@ function EditAircraftDialog({ aircraft, tenantId }: { aircraft: Aircraft; tenant
     }
   });
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: EditAircraftValues) => {
     try {
         const response = await fetch(`/api/aircraft/${aircraft.id}`, {
           method: 'PATCH',
@@ -695,17 +741,10 @@ function AddMaintenanceLogDialog({ aircraftId, tenantId }: { aircraftId: string;
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm({
-    resolver: zodResolver(z.object({
-      date: z.string(),
-      maintenanceType: z.string().min(1),
-      details: z.string().min(1),
-      reference: z.string().optional(),
-      ameNo: z.string().optional(),
-      amoNo: z.string().optional(),
-    })),
+  const form = useForm<MaintenanceLogValues>({
+    resolver: zodResolver(maintenanceLogSchema),
     defaultValues: {
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
       maintenanceType: 'Scheduled Inspection',
       details: '',
       reference: '',
@@ -714,7 +753,7 @@ function AddMaintenanceLogDialog({ aircraftId, tenantId }: { aircraftId: string;
     }
   });
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: MaintenanceLogValues) => {
     try {
         const currentResponse = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
         const currentPayload = await currentResponse.json().catch(() => ({ aircraft: null }));
@@ -783,15 +822,8 @@ function AddComponentDialog({ aircraftId, tenantId }: { aircraftId: string; tena
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm({
-    resolver: zodResolver(z.object({
-      name: z.string().min(1),
-      serialNumber: z.string().min(1),
-      tsn: z.coerce.number(),
-      tso: z.coerce.number(),
-      totalTime: z.coerce.number(),
-      maxHours: z.coerce.number(),
-    })),
+  const form = useForm<ComponentValues>({
+    resolver: zodResolver(componentSchema),
     defaultValues: {
       name: '',
       serialNumber: '',
@@ -802,12 +834,12 @@ function AddComponentDialog({ aircraftId, tenantId }: { aircraftId: string; tena
     }
   });
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: ComponentValues) => {
     try {
         const currentResponse = await fetch(`/api/aircraft/${aircraftId}`, { cache: 'no-store' });
         const currentPayload = await currentResponse.json().catch(() => ({ aircraft: null }));
         const currentAircraft = currentPayload.aircraft as Aircraft | null;
-        const newComponent = { ...values, id: crypto.randomUUID(), installDate: new Date().toISOString() };
+        const newComponent = { ...values, id: crypto.randomUUID(), installDate: toNoonUtcIso(new Date()) };
         const response = await fetch(`/api/aircraft/${aircraftId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
