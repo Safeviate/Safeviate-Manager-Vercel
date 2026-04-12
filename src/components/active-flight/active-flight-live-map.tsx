@@ -62,9 +62,10 @@ function FitFlightBounds({
 
     if (!position || !followOwnship) return;
 
-    if (lastFrameSignatureRef.current === 'ownship') return;
-    lastFrameSignatureRef.current = 'ownship';
-    map.setView([position.latitude, position.longitude], 11, { animate: false });
+    const nextSignature = `${position.latitude.toFixed(6)},${position.longitude.toFixed(6)}`;
+    if (lastFrameSignatureRef.current === nextSignature) return;
+    lastFrameSignatureRef.current = nextSignature;
+    map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
   }, [followOwnship, map, position, routePoints]);
 
   return null;
