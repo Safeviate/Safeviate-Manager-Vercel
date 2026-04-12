@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ import { getOrCreateDeviceBinding, setDeviceLabel } from '@/lib/flight-session';
 import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
 import { getActiveLegState } from '@/lib/active-flight';
 import { cn } from '@/lib/utils';
+import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -123,6 +124,12 @@ const saveActiveTrackingSelection = (deviceId: string, selection: ActiveTracking
   window.localStorage.setItem(getActiveTrackingSelectionKey(deviceId), JSON.stringify(selection));
 };
 
+const getResumeTimestamp = (session: ActiveTrackingState | FlightSession) =>
+  ('updatedAt' in session && session.updatedAt) ||
+  ('savedAt' in session && session.savedAt) ||
+  ('startedAt' in session && session.startedAt) ||
+  'resume';
+
 export default function ActiveFlightPage() {
   const { toast } = useToast();
   const { tenantId, userProfile, isLoading: isUserLoading } = useUserProfile();
@@ -139,6 +146,8 @@ export default function ActiveFlightPage() {
   const [isFullscreenMapOpen, setIsFullscreenMapOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [hasQueuedSession, setHasQueuedSession] = useState(false);
+  const selectionHydratedRef = useRef<string | null>(null);
+  const resumeHydratedRef = useRef<string | null>(null);
   const lastWriteRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
   const isModern = uiMode === 'modern';
@@ -254,30 +263,39 @@ export default function ActiveFlightPage() {
     heading: position?.headingTrue ?? null,
     trailPoints: flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId)?.breadcrumb?.length ?? (position ? 1 : 0),
   };
+  const handleAircraftSelectionChange = (aircraftId: string) => {
+    setSelectedAircraftId(aircraftId);
+    if (!deviceBinding?.deviceId) return;
+    const nextBooking = bookings.find((booking) => booking.aircraftId === aircraftId && (booking.navlog?.legs?.length || 0) > 0) || null;
+    const bookingId = nextBooking?.id || '';
+    setSelectedBookingId(bookingId);
+    saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId });
+  };
+  const handleBookingSelectionChange = (bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    if (!deviceBinding?.deviceId) return;
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId: selectedAircraftId,
+      bookingId,
+    });
+  };
 
   useEffect(() => {
     if (!deviceBinding?.deviceId) return;
+    if (selectionHydratedRef.current === deviceBinding.deviceId) return;
+    selectionHydratedRef.current = deviceBinding.deviceId;
 
     const savedSelection = readActiveTrackingSelection(deviceBinding.deviceId);
     if (!savedSelection) return;
 
-    if (savedSelection.aircraftId && savedSelection.aircraftId !== selectedAircraftId) {
+    if (savedSelection.aircraftId) {
       setSelectedAircraftId(savedSelection.aircraftId);
     }
 
-    if (savedSelection.bookingId && savedSelection.bookingId !== selectedBookingId) {
+    if (savedSelection.bookingId) {
       setSelectedBookingId(savedSelection.bookingId);
     }
-  }, [deviceBinding?.deviceId, selectedAircraftId, selectedBookingId]);
-
-  useEffect(() => {
-    if (!deviceBinding?.deviceId) return;
-    if (!selectedAircraftId && !selectedBookingId) return;
-    saveActiveTrackingSelection(deviceBinding.deviceId, {
-      aircraftId: selectedAircraftId,
-      bookingId: selectedBookingId,
-    });
-  }, [deviceBinding?.deviceId, selectedAircraftId, selectedBookingId]);
+  }, [deviceBinding?.deviceId]);
 
   useEffect(() => {
     if (!deviceBinding?.deviceId) return;
@@ -286,6 +304,10 @@ export default function ActiveFlightPage() {
     const persistedState = readActiveTrackingState(deviceBinding.deviceId);
     const resumeSource = serverSession || persistedState;
     if (!resumeSource) return;
+
+    const resumeKey = `${deviceBinding.deviceId}:${getResumeTimestamp(resumeSource)}`;
+    if (resumeHydratedRef.current === resumeKey) return;
+    resumeHydratedRef.current = resumeKey;
 
     if (resumeSource.aircraftId && resumeSource.aircraftId !== selectedAircraftId) {
       setSelectedAircraftId(resumeSource.aircraftId);
@@ -414,6 +436,10 @@ export default function ActiveFlightPage() {
       bookingId: selectedBooking?.id,
       savedAt: new Date().toISOString(),
     });
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId: selectedAircraft.id,
+      bookingId: selectedBooking?.id || '',
+    });
     setIsTrackingActive(true);
     lastWriteRef.current = 0;
     void persistSessions(flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId).concat({
@@ -442,7 +468,7 @@ export default function ActiveFlightPage() {
     void persistSessions(flightSessions.map((session) => session.deviceId === deviceBinding.deviceId ? { ...session, status: 'completed', endedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : session));
   };
 
-  function FullScreenFlightLayout({ children: _children }: { children?: ReactNode }) {
+  function LegacyFullscreenFlightLayout({ children: _children }: { children?: unknown }) {
     /*
       <div className="grid h-full min-h-0 grid-rows-[1fr] gap-3 md:grid-rows-[auto,minmax(44vh,1fr),auto]">
         <div className="hidden rounded-2xl border border-slate-800 bg-slate-900/95 px-4 py-3 shadow-[0_20px_40px_rgba(15,23,42,0.28)] md:block">
@@ -692,14 +718,14 @@ export default function ActiveFlightPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="active-flight-aircraft-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft Registration</Label>
-                <Select value={selectedAircraftId} onValueChange={setSelectedAircraftId}>
+                <Select value={selectedAircraftId} onValueChange={handleAircraftSelectionChange}>
                   <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="font-semibold"><SelectValue placeholder="Select an aircraft" /></SelectTrigger>
                   <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="active-flight-booking-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking / Navlog Route</Label>
-                <Select value={selectedBookingId} onValueChange={setSelectedBookingId}>
+                <Select value={selectedBookingId} onValueChange={handleBookingSelectionChange}>
                   <SelectTrigger id="active-flight-booking-select" aria-label="Booking or navlog route" className="font-semibold"><SelectValue placeholder="Select a booking with a navlog" /></SelectTrigger>
                   <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} • {booking.date} • {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
                 </Select>
@@ -731,7 +757,14 @@ export default function ActiveFlightPage() {
                     <DialogHeader className="sr-only">
                       <DialogTitle>Full Flight Tracking View</DialogTitle>
                     </DialogHeader>
-                    <FullScreenFlightLayout />
+                    <FullScreenFlightLayout
+                      booking={selectedBooking}
+                      legs={selectedLegs}
+                      position={position}
+                      aircraftRegistration={selectedAircraft?.tailNumber}
+                      activeLegIndex={activeLegState?.activeLegIndex}
+                      activeLegState={activeLegState}
+                    />
                   </DialogContent>
                 </Dialog>
               </CardHeader>
