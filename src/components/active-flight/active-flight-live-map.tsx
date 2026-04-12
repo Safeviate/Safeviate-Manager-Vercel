@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DialogClose } from '@/components/ui/dialog';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -108,13 +109,13 @@ function MapRecenterController({
     }
 
     if (routePoints.length === 1) {
-      map.setView(routePoints[0], 11, { animate: false });
+      map.setView(routePoints[0], map.getZoom(), { animate: false });
       onDone();
       return;
     }
 
     if (position) {
-      map.setView([position.latitude, position.longitude], 11, { animate: false });
+      map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
       onDone();
     }
   }, [map, onDone, position, recenterNonce, routePoints]);
@@ -222,6 +223,21 @@ function CompassDial({
   );
 }
 
+function MenuCloseButton({ onClose }: { onClose?: () => void }) {
+  return (
+    <DialogClose asChild>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onClose}
+        className="h-9 rounded-full border-slate-200 bg-white px-4 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+      >
+        Menu
+      </Button>
+    </DialogClose>
+  );
+}
+
 export function ActiveFlightLiveMap({
   booking,
   legs,
@@ -246,9 +262,16 @@ export function ActiveFlightLiveMap({
         .map((leg) => [leg.latitude!, leg.longitude!] as [number, number]),
     [legs]
   );
+  const validRouteLegs = useMemo(
+    () => legs.filter((leg) => leg.latitude !== undefined && leg.longitude !== undefined),
+    [legs]
+  );
+  const routeSignature = useMemo(
+    () => routePoints.map(([latitude, longitude]) => `${latitude.toFixed(6)},${longitude.toFixed(6)}`).join('|'),
+    [routePoints]
+  );
   const [trackHistory, setTrackHistory] = useState<[number, number][]>([]);
   const [followOwnship, setFollowOwnship] = useState(true);
-  const [isHeadingUp, setIsHeadingUp] = useState(false);
   const [recenterNonce, setRecenterNonce] = useState(0);
   const [cacheNonce, setCacheNonce] = useState(0);
   const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
@@ -257,7 +280,11 @@ export function ActiveFlightLiveMap({
 
   useEffect(() => {
     setFollowOwnship(true);
-  }, [routePoints]);
+  }, [routeSignature]);
+
+  useEffect(() => {
+    setTrackHistory(position ? [[position.latitude, position.longitude]] : []);
+  }, [aircraftRegistration, booking?.id, routeSignature]);
 
   useEffect(() => {
     if (!position) return;
@@ -278,21 +305,19 @@ export function ActiveFlightLiveMap({
   const center = position
     ? ([position.latitude, position.longitude] as [number, number])
     : routePoints[0] || ([-25.9, 27.9] as [number, number]);
-  const currentLeg = activeLegIndex != null ? legs[activeLegIndex] || null : null;
-  const nextLeg = activeLegIndex != null ? legs[activeLegIndex + 1] || null : null;
+  const currentLeg = activeLegIndex != null ? validRouteLegs[activeLegIndex] || null : null;
+  const nextLeg = activeLegIndex != null ? validRouteLegs[activeLegIndex + 1] || null : null;
   const currentLegLabel =
     activeLegState?.fromWaypoint && activeLegState?.toWaypoint
       ? `${activeLegState.fromWaypoint} → ${activeLegState.toWaypoint}`
       : currentLeg?.waypoint || 'N/A';
   const currentFrequency = currentLeg?.frequencies || currentLeg?.layerInfo || 'N/A';
   const nextFrequency = nextLeg?.frequencies || nextLeg?.layerInfo || 'N/A';
-  const handleTrackUp = () => {
-    setIsHeadingUp(true);
+  const handleFollowOwnship = () => {
     setFollowOwnship(true);
     setRecenterNonce((current) => current + 1);
   };
   const handleNorthUp = () => {
-    setIsHeadingUp(false);
     setFollowOwnship(false);
     setRecenterNonce((current) => current + 1);
   };
@@ -301,6 +326,10 @@ export function ActiveFlightLiveMap({
     return (
       <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black">
         <div className="absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Full Flight Tracking View</p>
+            <MenuCloseButton />
+          </div>
           <table className="w-full table-fixed border-collapse text-left">
             <tbody>
               <tr className="border-b border-slate-200">
@@ -326,7 +355,7 @@ export function ActiveFlightLiveMap({
             </tbody>
           </table>
           <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-            Mode: {isHeadingUp ? 'Track Up' : 'North Up'} • {followOwnship ? 'Follow on' : 'Follow off'}
+            Mode: {followOwnship ? 'Nose Up' : 'North Up'}
           </div>
           <div className="flex min-h-14 items-center justify-between gap-2 border-t border-slate-200 px-3 py-2">
             <div className="min-w-0 flex-1">
@@ -415,14 +444,14 @@ export function ActiveFlightLiveMap({
             )}
 
             {activeLegIndex !== undefined &&
-              legs[activeLegIndex]?.latitude !== undefined &&
-              legs[activeLegIndex]?.longitude !== undefined &&
-              legs[activeLegIndex + 1]?.latitude !== undefined &&
-              legs[activeLegIndex + 1]?.longitude !== undefined && (
+              validRouteLegs[activeLegIndex]?.latitude !== undefined &&
+              validRouteLegs[activeLegIndex]?.longitude !== undefined &&
+              validRouteLegs[activeLegIndex + 1]?.latitude !== undefined &&
+              validRouteLegs[activeLegIndex + 1]?.longitude !== undefined && (
                 <Polyline
                   positions={[
-                    [legs[activeLegIndex]!.latitude!, legs[activeLegIndex]!.longitude!],
-                    [legs[activeLegIndex + 1]!.latitude!, legs[activeLegIndex + 1]!.longitude!],
+                    [validRouteLegs[activeLegIndex]!.latitude!, validRouteLegs[activeLegIndex]!.longitude!],
+                    [validRouteLegs[activeLegIndex + 1]!.latitude!, validRouteLegs[activeLegIndex + 1]!.longitude!],
                   ]}
                   color="#0ea5e9"
                   weight={6}
@@ -474,9 +503,9 @@ export function ActiveFlightLiveMap({
             size="sm"
             variant="outline"
             className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
-            onClick={handleTrackUp}
+            onClick={handleFollowOwnship}
           >
-            Track Up
+            Nose Up
           </Button>
           <Button
             type="button"
@@ -493,7 +522,6 @@ export function ActiveFlightLiveMap({
             variant="outline"
             className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
             onClick={() => {
-              setFollowOwnship(true);
               setRecenterNonce((current) => current + 1);
             }}
           >
@@ -525,7 +553,7 @@ export function ActiveFlightLiveMap({
           <div className="space-y-0.5">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Map Mode</p>
             <p className="text-sm font-semibold text-slate-900">
-              {isHeadingUp ? 'Heading-up' : 'North-up'} {followOwnship ? '• follow on' : '• follow off'}
+              {followOwnship ? 'Nose-up' : 'North-up'}
             </p>
           </div>
         </div>
@@ -534,13 +562,10 @@ export function ActiveFlightLiveMap({
             type="button"
             size="sm"
             variant="outline"
-            className={cn(
-              'h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50',
-              isHeadingUp && 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
-            )}
-            onClick={() => setIsHeadingUp((current) => !current)}
+            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={() => setFollowOwnship((current) => !current)}
           >
-            {isHeadingUp ? 'Heading Up' : 'North Up'}
+            {followOwnship ? 'Nose Up' : 'North Up'}
           </Button>
           <Button
             type="button"
@@ -581,14 +606,14 @@ export function ActiveFlightLiveMap({
           )}
 
           {activeLegIndex !== undefined &&
-            legs[activeLegIndex]?.latitude !== undefined &&
-            legs[activeLegIndex]?.longitude !== undefined &&
-            legs[activeLegIndex + 1]?.latitude !== undefined &&
-            legs[activeLegIndex + 1]?.longitude !== undefined && (
+            validRouteLegs[activeLegIndex]?.latitude !== undefined &&
+            validRouteLegs[activeLegIndex]?.longitude !== undefined &&
+            validRouteLegs[activeLegIndex + 1]?.latitude !== undefined &&
+            validRouteLegs[activeLegIndex + 1]?.longitude !== undefined && (
               <Polyline
                 positions={[
-                  [legs[activeLegIndex]!.latitude!, legs[activeLegIndex]!.longitude!],
-                  [legs[activeLegIndex + 1]!.latitude!, legs[activeLegIndex + 1]!.longitude!],
+                  [validRouteLegs[activeLegIndex]!.latitude!, validRouteLegs[activeLegIndex]!.longitude!],
+                  [validRouteLegs[activeLegIndex + 1]!.latitude!, validRouteLegs[activeLegIndex + 1]!.longitude!],
                 ]}
                 color="#0ea5e9"
                 weight={6}

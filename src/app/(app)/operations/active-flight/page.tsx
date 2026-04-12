@@ -252,6 +252,8 @@ export default function ActiveFlightPage() {
   const selectedAircraft = useMemo(() => sortedAircraft.find((aircraft) => aircraft.id === selectedAircraftId) || null, [selectedAircraftId, sortedAircraft]);
   const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
   const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
+  const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
+  const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
   const selectedLegs = selectedBooking?.navlog?.legs || [];
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position), [selectedLegs, position]);
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
@@ -295,6 +297,18 @@ export default function ActiveFlightPage() {
       setSelectedBookingId(savedSelection.bookingId);
     }
   }, [deviceBinding?.deviceId]);
+
+  useEffect(() => {
+    if (!selectedAircraftId) return;
+    if (selectedAircraft) return;
+    setSelectedAircraftId('');
+  }, [selectedAircraft, selectedAircraftId]);
+
+  useEffect(() => {
+    if (!selectedBookingId) return;
+    if (selectedBooking) return;
+    setSelectedBookingId('');
+  }, [selectedBooking, selectedBookingId]);
 
   useEffect(() => {
     if (!deviceBinding?.deviceId) return;
@@ -714,14 +728,14 @@ export default function ActiveFlightPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="active-flight-aircraft-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft Registration</Label>
-                <Select value={selectedAircraftId} onValueChange={handleAircraftSelectionChange}>
+                <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
                   <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="font-semibold"><SelectValue placeholder="Select an aircraft" /></SelectTrigger>
                   <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="active-flight-booking-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking / Navlog Route</Label>
-                <Select value={selectedBookingId} onValueChange={handleBookingSelectionChange}>
+                <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
                   <SelectTrigger id="active-flight-booking-select" aria-label="Booking or navlog route" className="font-semibold"><SelectValue placeholder="Select a booking with a navlog" /></SelectTrigger>
                   <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} • {booking.date} • {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
                 </Select>

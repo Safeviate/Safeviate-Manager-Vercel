@@ -74,7 +74,7 @@ export function useGeolocationTrack(): GeolocationState {
 
     if (geolocationStore.watchId !== null) return;
 
-    setGeolocationSnapshot({ error: null });
+    setGeolocationSnapshot({ error: null, isWatching: true });
     geolocationStore.watchId = navigator.geolocation.watchPosition(
       (geoPosition) => {
         setGeolocationSnapshot({
