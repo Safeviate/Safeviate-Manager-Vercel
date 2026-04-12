@@ -114,9 +114,6 @@ function stripUndefinedDeep<T>(value: T): T {
     return value;
 }
 
-const CHECK_APPROVAL_KEYS = ['massAndBalance', 'navlog', 'preFlight', 'postFlight', 'photos', 'fuelUplift'] as const;
-type CheckApprovalKey = typeof CHECK_APPROVAL_KEYS[number];
-
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const isMobile = useIsMobile();
     const { toast } = useToast();
@@ -124,7 +121,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [activeTab, setActiveTab] = useState('navlog');
     const [isSaving, setIsSaving] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
-    const [approvingSection, setApprovingSection] = useState<CheckApprovalKey | null>(null);
     const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
     const [personnel, setPersonnel] = useState<BookingPerson[]>([]);
     const [loadingAc, setLoadingAc] = useState(true);
@@ -169,45 +165,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     });
     const preFlightPhotos = ((booking.preFlightData as (typeof booking.preFlightData & { photos?: ChecklistPhoto[] }) | undefined)?.photos || []) as ChecklistPhoto[];
     const postFlightPhotos = (booking.postFlightData?.photos || []) as ChecklistPhoto[];
-    const checkSections = useMemo(() => ([
-        {
-            key: 'massAndBalance' as const,
-            label: 'Mass & balance reviewed',
-            ok: !!booking.massAndBalance?.isWithinLimits,
-            detail: booking.massAndBalance?.isWithinLimits ? 'Within limits' : 'Needs review',
-        },
-        {
-            key: 'navlog' as const,
-            label: 'Navlog reviewed',
-            ok: !!booking.navlog?.legs?.length,
-            detail: booking.navlog?.legs?.length ? `${booking.navlog.legs.length} legs planned` : 'No navlog found',
-        },
-        {
-            key: 'preFlight' as const,
-            label: 'Pre-flight checks completed',
-            ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight,
-            detail: booking.preFlightData?.documentsChecked ? 'Documents checked' : 'Pre-flight not confirmed',
-        },
-        {
-            key: 'photos' as const,
-            label: 'Photos attached',
-            ok: (preFlightPhotos.length + postFlightPhotos.length) > 0,
-            detail: `${preFlightPhotos.length + postFlightPhotos.length} photo(s)`,
-        },
-        {
-            key: 'fuelUplift' as const,
-            label: 'Fuel uplift recorded',
-            ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0,
-            detail: 'Gallons and litres mirrored',
-        },
-        {
-            key: 'postFlight' as const,
-            label: 'Post-flight checks recorded',
-            ok: !!booking.postFlightData?.hobbs || !!booking.postFlight,
-            detail: (booking.postFlightData?.hobbs || 0) > 0 ? 'Hobbs recorded' : 'Post-flight pending',
-        },
-    ]), [booking.massAndBalance?.isWithinLimits, booking.navlog?.legs?.length, booking.postFlightData?.fuelUpliftGallons, booking.postFlightData?.hobbs, booking.preFlight, booking.preFlightData?.documentsChecked, booking.preFlightData?.fuelUpliftGallons, checkApprovals, preFlightPhotos.length, postFlightPhotos.length]);
-    const approvedSectionCount = checkSections.filter((section) => checkApprovals[section.key]?.approved).length;
     const workflowReady = {
         flightDetails: !!workflowCompletion.flightDetails,
         planning: !!workflowCompletion.planning,
@@ -217,19 +174,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         checks: !!workflowCompletion.checks,
     };
     const allWorkflowComplete = workflowReady.flightDetails && workflowReady.planning && workflowReady.weatherPlanningNavlogRequired && workflowReady.massBalance && workflowReady.navlog && workflowReady.checks;
-    const consecutiveApprovedSectionCount = useMemo(() => {
-        let count = 0;
-        for (const section of checkSections) {
-            if (checkApprovals[section.key]?.approved) {
-                count += 1;
-            } else {
-                break;
-            }
-        }
-        return count;
-    }, [checkApprovals, checkSections]);
-    const allSectionsApproved = checkSections.every((section) => checkApprovals[section.key]?.approved);
-
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
     const [departureLegId, setDepartureLegId] = useState<string | null>(booking.navlog?.legs?.[0]?.id || null);
@@ -498,7 +442,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             return;
         }
 
-        const confirmed = window.confirm('Approve this flight and mark it as manually confirmed by the instructor?');
+        const confirmed = window.confirm(`Approve booking #${booking.bookingNumber} now?`);
         if (!confirmed) return;
 
         setIsApproving(true);
@@ -524,7 +468,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             }
 
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
-            toast({ title: 'Flight Approved', description: 'Instructor sign-off recorded.' });
+            toast({ title: 'Booking Approved', description: 'Instructor approval recorded.' });
         } catch (error: unknown) {
             toast({
                 variant: 'destructive',
@@ -534,87 +478,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         } finally {
             setIsApproving(false);
         }
-    };
-
-    const handleApproveSection = async (sectionKey: CheckApprovalKey) => {
-        if (!canManuallyApprove) {
-            toast({ variant: 'destructive', title: 'Permission Denied', description: 'Only the assigned instructor can approve this section.' });
-            return;
-        }
-
-        if (!checkSections.find((section) => section.key === sectionKey)?.ok) {
-            toast({ variant: 'destructive', title: 'Section Not Ready', description: 'This section is incomplete and cannot be approved yet.' });
-            return;
-        }
-
-        setApprovingSection(sectionKey);
-        const nextApprovals = {
-            ...checkApprovals,
-            [sectionKey]: {
-                approved: true,
-                approvedById: userProfile?.id || checkApprovals[sectionKey]?.approvedById,
-                approvedByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : checkApprovals[sectionKey]?.approvedByName,
-                approvedAt: new Date().toISOString(),
-            },
-        };
-
-        setCheckApprovals(nextApprovals);
-
-        try {
-            const res = await fetch('/api/bookings', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    booking: {
-                        ...booking,
-                        checkApprovals: nextApprovals,
-                    },
-                }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json().catch(() => ({}));
-                throw new Error(payload.error || 'Section approval failed.');
-            }
-
-            window.dispatchEvent(new Event('safeviate-bookings-updated'));
-            toast({ title: 'Section Approved', description: 'Instructor section sign-off recorded.' });
-        } catch (error: unknown) {
-            toast({ variant: 'destructive', title: 'Approval Failed', description: error instanceof Error ? error.message : 'Section approval failed.' });
-        } finally {
-            setApprovingSection((current) => (current === sectionKey ? null : current));
-        }
-    };
-
-    const renderSectionApprovalButton = (sectionKey: CheckApprovalKey, label = 'Approve') => {
-        const approval = checkApprovals[sectionKey];
-        const approved = !!approval?.approved;
-
-        return (
-            <div className="flex flex-col items-end gap-1">
-                <Button
-                    type="button"
-                    size="sm"
-                    variant={approved ? 'default' : 'outline'}
-                    className={cn(
-                        "h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-widest shadow-sm",
-                        approved
-                            ? "border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800"
-                            : "border-input bg-background text-foreground hover:bg-accent"
-                    )}
-                    disabled={approved || approvingSection === sectionKey || !canManuallyApprove}
-                    onClick={() => handleApproveSection(sectionKey)}
-                >
-                    {approvingSection === sectionKey ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1 h-3 w-3" />}
-                    {approved ? 'Approved' : label}
-                </Button>
-                {approval?.approvedByName ? (
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                        Approved by {approval.approvedByName}
-                    </p>
-                ) : null}
-            </div>
-        );
     };
 
     const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
@@ -705,58 +568,45 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     title={booking.type}
                     subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
                     status={booking.status}
-                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${formatDateSafe(booking.approvedAt, 'PPP p')}` : ''}` : `${approvedSectionCount}/${checkSections.length} sections approved`}
+                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${formatDateSafe(booking.approvedAt, 'PPP p')}` : ''}` : 'Awaiting instructor approval'}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     headerAction={<BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
                     tabRowAction={
-                        activeTab === 'planning' ? (
-                            <div className="flex items-center gap-2">
-                                <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => setPlannedLegs([])}
-                                    className="h-8 text-[10px] font-black uppercase border-slate-300"
-                                    disabled={plannedLegs.length === 0}
-                                >
-                                    <RotateCcw className="h-3 w-3 mr-1.5" /> Clear
-                                </Button>
-                                <Button 
-                                    size="sm" 
-                                    className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-md font-black uppercase text-[10px] h-8 px-4 gap-2 shrink-0"
-                                    onClick={handleCommitRoute}
-                                    disabled={isSaving || plannedLegs.length === 0}
-                                >
-                                    {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                                    Commit Route
-                                </Button>
-                                {renderSectionApprovalButton('navlog', 'APPROVED')}
-                            </div>
-                        ) : activeTab === 'flight-details' ? (
-                            renderSectionApprovalButton('preFlight', 'APPROVED')
-                        ) : activeTab === 'mass-balance' ? (
-                            renderSectionApprovalButton('massAndBalance', 'APPROVED')
-                        ) : activeTab === 'navlog' ? (
-                            renderSectionApprovalButton('navlog', 'APPROVED')
-                        ) : activeTab === 'checks' ? (
-                            <div className="flex flex-col items-end gap-1">
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    className="h-8 bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-800"
-                                    onClick={handleManualConfirmFlight}
-                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove}
-                                >
-                                    {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
-                                    {booking.status === 'Approved' ? 'Approved' : 'Flight Approved'}
-                                </Button>
-                                {booking.approvedByName ? (
-                                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                                        Approved by {booking.approvedByName}
-                                    </p>
-                                ) : null}
-                            </div>
-                        ) : null
+                        <div className="flex items-center gap-2">
+                            {activeTab === 'planning' && (
+                                <>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setPlannedLegs([])}
+                                        className="h-8 border-slate-300 text-[10px] font-black uppercase"
+                                        disabled={plannedLegs.length === 0}
+                                    >
+                                        <RotateCcw className="mr-1.5 h-3 w-3" /> Clear
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        className="h-8 shrink-0 gap-2 bg-emerald-700 px-4 text-[10px] font-black uppercase text-white shadow-md hover:bg-emerald-800"
+                                        onClick={handleCommitRoute}
+                                        disabled={isSaving || plannedLegs.length === 0}
+                                    >
+                                        {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                        Commit Route
+                                    </Button>
+                                </>
+                            )}
+                            <Button
+                                type="button"
+                                size="sm"
+                                className="h-8 bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-800"
+                                onClick={handleManualConfirmFlight}
+                                disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove}
+                            >
+                                {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
+                                {booking.status === 'Approved' ? 'Approved' : 'Approve Booking'}
+                            </Button>
+                        </div>
                     }
                 />
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -1074,7 +924,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Approval</p>
                                                     <p className="text-sm font-black">{booking.status || 'N/A'}</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {booking.approvedByName ? `Approved by ${booking.approvedByName}` : `${approvedSectionCount}/${checkSections.length} sections approved`}
+                                                        {booking.approvedByName ? `Approved by ${booking.approvedByName}` : 'Awaiting instructor approval'}
                                                     </p>
                                                     {booking.approvedAt ? (
                                                         <p className="text-xs text-muted-foreground">

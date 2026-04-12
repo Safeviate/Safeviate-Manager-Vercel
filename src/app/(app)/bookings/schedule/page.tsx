@@ -129,15 +129,22 @@ const BookingItem = ({
                                 }}
                             >
                                 {isApproving ? <Loader2 className="mr-1 h-2 w-2 animate-spin" /> : <CheckCircle2 className="mr-1 h-2 w-2" />}
-                                Approve
+                                Approve Booking
                             </Button>
                         ) : (
                             <div className="flex w-full flex-col items-center justify-center gap-0.5 text-center">
                                 {isCancelled && <p className="text-[7px] font-medium uppercase tracking-wide">Cancelled</p>}
                                 {booking.status === 'Completed' && <p className="text-[7px] font-medium uppercase tracking-wide">Completed</p>}
-                                {booking.status === 'Approved' && <p className="text-[7px] font-medium uppercase tracking-wide">Approved</p>}
+                                {booking.status === 'Approved' && (
+                                    <p className="text-[7px] font-medium uppercase tracking-wide">
+                                        {booking.approvedByName ? `Approved by ${booking.approvedByName}` : 'Approved'}
+                                    </p>
+                                )}
                                 {booking.status === 'Approved' && booking.approvedAt ? (
                                     <p className="text-[7px] font-normal leading-none opacity-80">{format(new Date(booking.approvedAt), 'PPP p')}</p>
+                                ) : null}
+                                {booking.status !== 'Approved' && booking.status !== 'Completed' && !isCancelled && !canManualApprove(booking) ? (
+                                    <p className="text-[7px] font-medium uppercase tracking-wide opacity-80">Awaiting instructor approval</p>
                                 ) : null}
                             </div>
                         )}
