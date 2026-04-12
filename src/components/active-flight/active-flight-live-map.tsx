@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
 import type { Booking, NavlogLeg } from '@/types/booking';
-import type { FlightPosition } from '@/types/flight-session';
+import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
 
 const WaypointIcon = L.divIcon({
@@ -52,11 +52,11 @@ function FitFlightBounds({
       lastFrameSignatureRef.current = routeSignature;
 
       if (routePoints.length === 1) {
-        map.setView(routePoints[0], 11);
+        map.setView(routePoints[0], 11, { animate: false });
         return;
       }
 
-      map.fitBounds(L.latLngBounds(routePoints).pad(0.25));
+      map.fitBounds(L.latLngBounds(routePoints).pad(0.25), { animate: false });
       return;
     }
 
@@ -64,7 +64,7 @@ function FitFlightBounds({
 
     if (lastFrameSignatureRef.current === 'ownship') return;
     lastFrameSignatureRef.current = 'ownship';
-    map.setView([position.latitude, position.longitude], 11);
+    map.setView([position.latitude, position.longitude], 11, { animate: false });
   }, [followOwnship, map, position, routePoints]);
 
   return null;
@@ -100,22 +100,93 @@ function MapRecenterController({
     if (recenterNonce === 0) return;
 
     if (routePoints.length > 1) {
-      map.fitBounds(L.latLngBounds(routePoints).pad(0.25));
+      map.fitBounds(L.latLngBounds(routePoints).pad(0.25), { animate: false });
       onDone();
       return;
     }
 
     if (routePoints.length === 1) {
-      map.setView(routePoints[0], 11);
+      map.setView(routePoints[0], 11, { animate: false });
       onDone();
       return;
     }
 
     if (position) {
-      map.setView([position.latitude, position.longitude], 11);
+      map.setView([position.latitude, position.longitude], 11, { animate: false });
       onDone();
     }
   }, [map, onDone, position, recenterNonce, routePoints]);
+
+  return null;
+}
+
+function MapAreaCacheController({
+  cacheNonce,
+  onDone,
+  onStatus,
+  onComplete,
+}: {
+  cacheNonce: number;
+  onDone: () => void;
+  onStatus: (status: string) => void;
+  onComplete: (tileCount: number) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (cacheNonce === 0) return;
+
+    const run = async () => {
+      try {
+        const zoom = map.getZoom();
+        const bounds = map.getBounds().pad(0.15);
+        const worldSize = 2 ** zoom;
+        const northWest = map.project(bounds.getNorthWest(), zoom).divideBy(256);
+        const southEast = map.project(bounds.getSouthEast(), zoom).divideBy(256);
+
+        const minX = Math.max(0, Math.floor(Math.min(northWest.x, southEast.x)));
+        const maxX = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.x, southEast.x)));
+        const minY = Math.max(0, Math.floor(Math.min(northWest.y, southEast.y)));
+        const maxY = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.y, southEast.y)));
+
+        const tileUrls: string[] = [];
+        for (let x = minX; x <= maxX; x += 1) {
+          for (let y = minY; y <= maxY; y += 1) {
+            tileUrls.push(`https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`);
+          }
+        }
+
+        if (!tileUrls.length) {
+          onStatus('No tiles to cache.');
+          onComplete(0);
+          onDone();
+          return;
+        }
+
+        onStatus(`Caching ${tileUrls.length} tiles...`);
+
+        await Promise.allSettled(
+          tileUrls.map(
+            (url) =>
+              new Promise<void>((resolve) => {
+                const image = new Image();
+                image.decoding = 'async';
+                image.onload = () => resolve();
+                image.onerror = () => resolve();
+                image.src = url;
+              })
+          )
+        );
+
+        onStatus('Cached current view for offline use.');
+        onComplete(tileUrls.length);
+      } finally {
+        onDone();
+      }
+    };
+
+    void run();
+  }, [cacheNonce, map, onDone, onStatus]);
 
   return null;
 }
@@ -155,12 +226,16 @@ export function ActiveFlightLiveMap({
   position,
   aircraftRegistration,
   activeLegIndex,
+  activeLegState,
+  fullscreen = false,
 }: {
   booking: Booking | null;
   legs: NavlogLeg[];
   position: FlightPosition | null;
   aircraftRegistration?: string;
   activeLegIndex?: number;
+  activeLegState?: ActiveLegState | null;
+  fullscreen?: boolean;
 }) {
   const routePoints = useMemo(
     () =>
@@ -173,6 +248,9 @@ export function ActiveFlightLiveMap({
   const [followOwnship, setFollowOwnship] = useState(true);
   const [isHeadingUp, setIsHeadingUp] = useState(false);
   const [recenterNonce, setRecenterNonce] = useState(0);
+  const [cacheNonce, setCacheNonce] = useState(0);
+  const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
+  const [isCachingArea, setIsCachingArea] = useState(false);
 
   useEffect(() => {
     setFollowOwnship(true);
@@ -197,6 +275,211 @@ export function ActiveFlightLiveMap({
   const center = position
     ? ([position.latitude, position.longitude] as [number, number])
     : routePoints[0] || ([-25.9, 27.9] as [number, number]);
+  const currentLeg = activeLegIndex != null ? legs[activeLegIndex] || null : null;
+  const nextLeg = activeLegIndex != null ? legs[activeLegIndex + 1] || null : null;
+  const currentLegLabel =
+    activeLegState?.fromWaypoint && activeLegState?.toWaypoint
+      ? `${activeLegState.fromWaypoint} → ${activeLegState.toWaypoint}`
+      : currentLeg?.waypoint || 'N/A';
+  const currentFrequency = currentLeg?.frequencies || currentLeg?.layerInfo || 'N/A';
+  const nextFrequency = nextLeg?.frequencies || nextLeg?.layerInfo || 'N/A';
+  const handleTrackUp = () => {
+    setIsHeadingUp(true);
+    setFollowOwnship(true);
+    setRecenterNonce((current) => current + 1);
+  };
+  const handleNorthUp = () => {
+    setIsHeadingUp(false);
+    setFollowOwnship(false);
+    setRecenterNonce((current) => current + 1);
+  };
+
+  if (fullscreen) {
+    return (
+      <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black">
+        <div className="absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
+          <table className="w-full table-fixed border-collapse text-left">
+            <tbody>
+              <tr className="border-b border-slate-200">
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">HDG</th>
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">ALT</th>
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">GS</th>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="px-3 py-1.5 text-sm font-black text-slate-900">{position?.headingTrue != null ? `${Math.round(((position.headingTrue % 360) + 360) % 360)}°` : 'N/A'}</td>
+                <td className="px-3 py-1.5 text-sm font-black text-slate-900">{position?.altitude != null ? `${Math.round(position.altitude)} m` : 'N/A'}</td>
+                <td className="px-3 py-1.5 text-sm font-black text-slate-900">{position?.speedKt != null ? `${position.speedKt.toFixed(0)} kt` : 'N/A'}</td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">LEG</th>
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">CUR FREQ</th>
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">NX FREQ</th>
+              </tr>
+              <tr>
+                <td className="px-3 py-1.5 text-sm font-black text-slate-900">{currentLegLabel}</td>
+                <td className="px-3 py-1.5 text-sm font-black text-slate-900">{currentFrequency}</td>
+                <td className="px-3 py-1.5 text-sm font-black text-slate-900">{nextFrequency}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+            Mode: {isHeadingUp ? 'Track Up' : 'North Up'} • {followOwnship ? 'Follow on' : 'Follow off'}
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t border-slate-200 px-3 py-2">
+            <p className="min-w-0 flex-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{cacheStatus}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
+              disabled={isCachingArea}
+              onClick={() => {
+                setIsCachingArea(true);
+                setCacheStatus('Starting cache...');
+                setCacheNonce((current) => current + 1);
+              }}
+            >
+              {isCachingArea ? 'Caching...' : 'Cache View'}
+            </Button>
+          </div>
+        </div>
+
+        <div className="absolute inset-0">
+          <MapContainer
+            center={center}
+            zoom={8}
+            zoomAnimation={false}
+            className="h-full w-full rounded-none"
+            style={{ background: '#000000' }}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+            <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
+            <MapRecenterController
+              routePoints={routePoints}
+              position={position}
+              recenterNonce={recenterNonce}
+              onDone={() => setRecenterNonce(0)}
+            />
+            <MapAreaCacheController
+              cacheNonce={cacheNonce}
+              onDone={() => setIsCachingArea(false)}
+              onStatus={setCacheStatus}
+              onComplete={() => undefined}
+            />
+            <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
+
+            {routePoints.length > 1 && (
+              <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
+            )}
+
+            {trackHistory.length > 1 && (
+              <Polyline positions={trackHistory} color="#38bdf8" weight={3} opacity={0.7} />
+            )}
+
+            {activeLegIndex !== undefined &&
+              legs[activeLegIndex]?.latitude !== undefined &&
+              legs[activeLegIndex]?.longitude !== undefined &&
+              legs[activeLegIndex + 1]?.latitude !== undefined &&
+              legs[activeLegIndex + 1]?.longitude !== undefined && (
+                <Polyline
+                  positions={[
+                    [legs[activeLegIndex]!.latitude!, legs[activeLegIndex]!.longitude!],
+                    [legs[activeLegIndex + 1]!.latitude!, legs[activeLegIndex + 1]!.longitude!],
+                  ]}
+                  color="#0ea5e9"
+                  weight={6}
+                  opacity={0.95}
+                />
+              )}
+
+            {legs.map((leg, index) => {
+              if (leg.latitude === undefined || leg.longitude === undefined) return null;
+
+              return (
+                <Marker key={leg.id} position={[leg.latitude, leg.longitude]} icon={WaypointIcon}>
+                  <Popup>
+                    <div className="space-y-1 text-xs">
+                      <p className="font-black uppercase">{leg.waypoint}</p>
+                      <p className="text-muted-foreground">Waypoint {index + 1}</p>
+                      {leg.frequencies && <p>{leg.frequencies}</p>}
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+
+            {position && (
+              <Marker
+                position={[position.latitude, position.longitude]}
+                icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', position.headingTrue)}
+              >
+                <Popup>
+                  <div className="space-y-1 text-xs">
+                    <p className="font-black uppercase">{aircraftRegistration || 'Ownship'}</p>
+                    {booking && <p>Booking #{booking.bookingNumber}</p>}
+                    <p>
+                      {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
+                    </p>
+                    <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
+                    <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
+                    <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+          </MapContainer>
+        </div>
+
+        <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-3 gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+            onClick={handleTrackUp}
+          >
+            Track Up
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+            onClick={handleNorthUp}
+          >
+            North Up
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+            onClick={() => {
+              setFollowOwnship(true);
+              setRecenterNonce((current) => current + 1);
+            }}
+          >
+            Center View
+          </Button>
+        </div>
+        <style jsx global>{`
+          .fullscreen-map-shell .leaflet-top.leaflet-left {
+            top: calc(10.5rem + env(safe-area-inset-top)) !important;
+            left: 0.75rem !important;
+          }
+
+          @media (min-width: 640px) {
+            .fullscreen-map-shell .leaflet-top.leaflet-left {
+              top: 11.75rem !important;
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

@@ -422,9 +422,9 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'development-view',
       },
       {
-        href: '/development/cost-predictor',
-        label: 'Cost Predictor',
-        description: 'Model cloud operational costs based on company size and activity.',
+        href: '/development/usage-estimator',
+        label: 'Usage Estimator',
+        description: 'Estimate Vercel traffic, database usage, and Prisma cost from user activity.',
         permissionId: 'development-view',
       },
       {

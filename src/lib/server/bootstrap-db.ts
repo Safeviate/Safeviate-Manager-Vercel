@@ -17,6 +17,7 @@ type TableName =
   | 'bookings'
   | 'aircrafts'
   | 'active_flight_sessions'
+  | 'active_flight_session_blocks'
   | 'safety_reports'
   | 'quality_audits'
   | 'corrective_action_plans'
@@ -294,6 +295,22 @@ export async function ensureFlightSessionsSchema() {
     )
   `);
   tableCache.set('active_flight_sessions', true);
+}
+
+export async function ensureFlightSessionBlocksSchema() {
+  if (await hasTable('active_flight_session_blocks')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS active_flight_session_blocks (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('active_flight_session_blocks', true);
 }
 
 export async function ensureSafetyReportsSchema() {

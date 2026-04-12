@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import type { FlightPosition } from '@/types/flight-session';
 
 type PermissionState = 'idle' | 'granted' | 'denied' | 'unsupported';
@@ -19,50 +19,87 @@ const metersPerSecondToKnots = (value: number | null) => {
   return value * 1.943844;
 };
 
+type GeolocationSnapshot = Pick<GeolocationState, 'position' | 'error' | 'permissionState' | 'isWatching'>;
+
+const geolocationStore = {
+  snapshot: {
+    position: null,
+    error: null,
+    permissionState: 'idle' as PermissionState,
+    isWatching: false,
+  } as GeolocationSnapshot,
+  watchId: null as number | null,
+  listeners: new Set<() => void>(),
+};
+
+const emitGeolocationChange = () => {
+  for (const listener of geolocationStore.listeners) {
+    listener();
+  }
+};
+
+const setGeolocationSnapshot = (patch: Partial<GeolocationSnapshot>) => {
+  geolocationStore.snapshot = { ...geolocationStore.snapshot, ...patch };
+  emitGeolocationChange();
+};
+
+const subscribeGeolocationStore = (listener: () => void) => {
+  geolocationStore.listeners.add(listener);
+  return () => {
+    geolocationStore.listeners.delete(listener);
+  };
+};
+
+const getGeolocationSnapshot = () => geolocationStore.snapshot;
+
 export function useGeolocationTrack(): GeolocationState {
-  const watchIdRef = useRef<number | null>(null);
-  const [position, setPosition] = useState<FlightPosition | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [permissionState, setPermissionState] = useState<PermissionState>('idle');
-  const [isWatching, setIsWatching] = useState(false);
+  const snapshot = useSyncExternalStore(subscribeGeolocationStore, getGeolocationSnapshot, getGeolocationSnapshot);
 
   const stopWatching = useCallback(() => {
-    if (watchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
+    if (geolocationStore.watchId !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(geolocationStore.watchId);
     }
-    watchIdRef.current = null;
-    setIsWatching(false);
+    geolocationStore.watchId = null;
+    setGeolocationSnapshot({ isWatching: false });
   }, []);
 
   const startWatching = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setPermissionState('unsupported');
-      setError('Geolocation is not available in this browser.');
+      setGeolocationSnapshot({
+        permissionState: 'unsupported',
+        error: 'Geolocation is not available in this browser.',
+      });
       return;
     }
 
-    if (watchIdRef.current !== null) return;
+    if (geolocationStore.watchId !== null) return;
 
-    setError(null);
-    watchIdRef.current = navigator.geolocation.watchPosition(
+    setGeolocationSnapshot({ error: null });
+    geolocationStore.watchId = navigator.geolocation.watchPosition(
       (geoPosition) => {
-        setPermissionState('granted');
-        setIsWatching(true);
-        setPosition({
-          latitude: geoPosition.coords.latitude,
-          longitude: geoPosition.coords.longitude,
-          accuracy: geoPosition.coords.accuracy,
-          altitude: geoPosition.coords.altitude,
-          speedKt: metersPerSecondToKnots(geoPosition.coords.speed),
-          headingTrue: geoPosition.coords.heading,
-          timestamp: new Date(geoPosition.timestamp).toISOString(),
+        setGeolocationSnapshot({
+          permissionState: 'granted',
+          isWatching: true,
+          position: {
+            latitude: geoPosition.coords.latitude,
+            longitude: geoPosition.coords.longitude,
+            accuracy: geoPosition.coords.accuracy,
+            altitude: geoPosition.coords.altitude,
+            speedKt: metersPerSecondToKnots(geoPosition.coords.speed),
+            headingTrue: geoPosition.coords.heading,
+            timestamp: new Date(geoPosition.timestamp).toISOString(),
+          },
         });
       },
       (geoError) => {
+        const nextState: Partial<GeolocationSnapshot> = {
+          error: geoError.message,
+          isWatching: false,
+        };
         if (geoError.code === geoError.PERMISSION_DENIED) {
-          setPermissionState('denied');
+          nextState.permissionState = 'denied';
         }
-        setError(geoError.message);
+        setGeolocationSnapshot(nextState);
         stopWatching();
       },
       {
@@ -73,13 +110,11 @@ export function useGeolocationTrack(): GeolocationState {
     );
   }, [stopWatching]);
 
-  useEffect(() => stopWatching, [stopWatching]);
-
   return {
-    position,
-    error,
-    permissionState,
-    isWatching,
+    position: snapshot.position,
+    error: snapshot.error,
+    permissionState: snapshot.permissionState,
+    isWatching: snapshot.isWatching,
     startWatching,
     stopWatching,
   };

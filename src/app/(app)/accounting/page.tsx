@@ -207,7 +207,7 @@ export default function AccountingPage() {
             options={[
               { value: 'unbilled', label: `Unbilled Flights (${enrichedData.unbilled.length})`, icon: ListFilter },
               { value: 'exported', label: `Export History (${enrichedData.exported.length})`, icon: ListFilter },
-              { value: 'predictor', label: `Cost Predictor`, icon: TrendingUp },
+              { value: 'predictor', label: `Usage Estimator`, icon: TrendingUp },
             ]}
           />
 

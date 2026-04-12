@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,20 @@ import { cn } from '@/lib/utils';
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
 const FLIGHT_SESSION_OUTBOX_PREFIX = 'safeviate:active-flight-session-outbox:';
+const ACTIVE_TRACKING_STATE_PREFIX = 'safeviate:active-flight-tracking-state:';
+const ACTIVE_TRACKING_SELECTION_PREFIX = 'safeviate:active-flight-selection:';
+
+interface ActiveTrackingState {
+  active: true;
+  aircraftId: string;
+  bookingId?: string;
+  savedAt: string;
+}
+
+interface ActiveTrackingSelection {
+  aircraftId: string;
+  bookingId: string;
+}
 
 const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/active-flight-live-map').then((module) => module.ActiveFlightLiveMap), {
   ssr: false,
@@ -39,6 +53,8 @@ const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/act
 });
 
 const getFlightSessionOutboxKey = (deviceId: string) => `${FLIGHT_SESSION_OUTBOX_PREFIX}${deviceId}`;
+const getActiveTrackingStateKey = (deviceId: string) => `${ACTIVE_TRACKING_STATE_PREFIX}${deviceId}`;
+const getActiveTrackingSelectionKey = (deviceId: string) => `${ACTIVE_TRACKING_SELECTION_PREFIX}${deviceId}`;
 
 const readQueuedFlightSession = (deviceId: string) => {
   if (typeof window === 'undefined') return null;
@@ -62,6 +78,49 @@ const queueFlightSessionSave = (session: FlightSession) => {
 const clearQueuedFlightSession = (deviceId: string) => {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(getFlightSessionOutboxKey(deviceId));
+};
+
+const readActiveTrackingState = (deviceId: string) => {
+  if (typeof window === 'undefined') return null;
+
+  const raw = window.localStorage.getItem(getActiveTrackingStateKey(deviceId));
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as ActiveTrackingState;
+  } catch {
+    window.localStorage.removeItem(getActiveTrackingStateKey(deviceId));
+    return null;
+  }
+};
+
+const saveActiveTrackingState = (deviceId: string, state: ActiveTrackingState) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(getActiveTrackingStateKey(deviceId), JSON.stringify(state));
+};
+
+const clearActiveTrackingState = (deviceId: string) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(getActiveTrackingStateKey(deviceId));
+};
+
+const readActiveTrackingSelection = (deviceId: string) => {
+  if (typeof window === 'undefined') return null;
+
+  const raw = window.localStorage.getItem(getActiveTrackingSelectionKey(deviceId));
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as ActiveTrackingSelection;
+  } catch {
+    window.localStorage.removeItem(getActiveTrackingSelectionKey(deviceId));
+    return null;
+  }
+};
+
+const saveActiveTrackingSelection = (deviceId: string, selection: ActiveTrackingSelection) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(getActiveTrackingSelectionKey(deviceId), JSON.stringify(selection));
 };
 
 export default function ActiveFlightPage() {
@@ -107,6 +166,13 @@ export default function ActiveFlightPage() {
     void load();
   }, []);
 
+  const reloadFlightSessions = async () => {
+    const response = await fetch('/api/flight-sessions', { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json();
+    setFlightSessions(Array.isArray(data.sessions) ? data.sessions : []);
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -149,6 +215,17 @@ export default function ActiveFlightPage() {
         body: JSON.stringify({ session: current }),
       });
 
+      if (response.status === 423) {
+        setIsTrackingActive(false);
+        stopWatching();
+        if (deviceBinding?.deviceId) {
+          clearActiveTrackingState(deviceBinding.deviceId);
+        }
+        toast({ variant: 'destructive', title: 'Tracking Ended By Ops', description: 'This device was cleared from fleet operations. Start tracking again to rejoin.' });
+        await reloadFlightSessions();
+        return;
+      }
+
       if (!response.ok) {
         queueFlightSessionSave(current);
         setHasQueuedSession(true);
@@ -177,6 +254,52 @@ export default function ActiveFlightPage() {
     heading: position?.headingTrue ?? null,
     trailPoints: flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId)?.breadcrumb?.length ?? (position ? 1 : 0),
   };
+
+  useEffect(() => {
+    if (!deviceBinding?.deviceId) return;
+
+    const savedSelection = readActiveTrackingSelection(deviceBinding.deviceId);
+    if (!savedSelection) return;
+
+    if (savedSelection.aircraftId && savedSelection.aircraftId !== selectedAircraftId) {
+      setSelectedAircraftId(savedSelection.aircraftId);
+    }
+
+    if (savedSelection.bookingId && savedSelection.bookingId !== selectedBookingId) {
+      setSelectedBookingId(savedSelection.bookingId);
+    }
+  }, [deviceBinding?.deviceId, selectedAircraftId, selectedBookingId]);
+
+  useEffect(() => {
+    if (!deviceBinding?.deviceId) return;
+    if (!selectedAircraftId && !selectedBookingId) return;
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId: selectedAircraftId,
+      bookingId: selectedBookingId,
+    });
+  }, [deviceBinding?.deviceId, selectedAircraftId, selectedBookingId]);
+
+  useEffect(() => {
+    if (!deviceBinding?.deviceId) return;
+
+    const serverSession = flightSessions.find((session) => session.deviceId === deviceBinding.deviceId && session.status === 'active') || null;
+    const persistedState = readActiveTrackingState(deviceBinding.deviceId);
+    const resumeSource = serverSession || persistedState;
+    if (!resumeSource) return;
+
+    if (resumeSource.aircraftId && resumeSource.aircraftId !== selectedAircraftId) {
+      setSelectedAircraftId(resumeSource.aircraftId);
+    }
+
+    if (resumeSource.bookingId && resumeSource.bookingId !== selectedBookingId) {
+      setSelectedBookingId(resumeSource.bookingId);
+    }
+
+    if (!isTrackingActive) {
+      setIsTrackingActive(true);
+      startWatching();
+    }
+  }, [deviceBinding?.deviceId, flightSessions, isTrackingActive, selectedAircraftId, selectedBookingId, startWatching]);
 
   const buildBreadcrumb = (existing: FlightPosition[] | undefined, nextPosition: FlightPosition | null) => {
     if (!nextPosition) return existing || [];
@@ -284,6 +407,13 @@ export default function ActiveFlightPage() {
       toast({ variant: 'destructive', title: 'Aircraft Already In Use', description: `${selectedAircraft.tailNumber} is already active on another device.` });
       return;
     }
+    void fetch(`/api/flight-sessions?id=${deviceBinding.deviceId}&mode=unblock`, { method: 'DELETE' });
+    saveActiveTrackingState(deviceBinding.deviceId, {
+      active: true,
+      aircraftId: selectedAircraft.id,
+      bookingId: selectedBooking?.id,
+      savedAt: new Date().toISOString(),
+    });
     setIsTrackingActive(true);
     lastWriteRef.current = 0;
     void persistSessions(flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId).concat({
@@ -308,8 +438,164 @@ export default function ActiveFlightPage() {
     stopWatching();
     setIsTrackingActive(false);
     if (!deviceBinding) return;
+    clearActiveTrackingState(deviceBinding.deviceId);
     void persistSessions(flightSessions.map((session) => session.deviceId === deviceBinding.deviceId ? { ...session, status: 'completed', endedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : session));
   };
+
+  function FullScreenFlightLayout({ children: _children }: { children?: ReactNode }) {
+    /*
+      <div className="grid h-full min-h-0 grid-rows-[1fr] gap-3 md:grid-rows-[auto,minmax(44vh,1fr),auto]">
+        <div className="hidden rounded-2xl border border-slate-800 bg-slate-900/95 px-4 py-3 shadow-[0_20px_40px_rgba(15,23,42,0.28)] md:block">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="border border-slate-700 bg-slate-800 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-100 hover:bg-slate-800">
+                  {selectedAircraft?.tailNumber || 'Aircraft not selected'}
+                </Badge>
+                <Badge className="border border-slate-700 bg-slate-800 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-100 hover:bg-slate-800">
+                  {isTrackingActive ? 'Tracking active' : 'Tracking idle'}
+                </Badge>
+                <Badge className={cn('px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]', syncStatusClassName)}>
+                  {syncStatusLabel}
+                </Badge>
+              </div>
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
+                {selectedBooking
+                  ? `Route ${selectedBooking.bookingNumber} • ${selectedLegs.length} legs • ${activeLegState?.toWaypoint || 'No active waypoint'}`
+                  : 'Select a booking with a navlog to show route progress'}
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">HDG</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">SPD</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ALT</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TRK</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.trailPoints} pts</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-h-0 overflow-hidden rounded-2xl border border-slate-800 bg-black shadow-[0_22px_50px_rgba(15,23,42,0.35)] md:rounded-2xl">
+          <ActiveFlightLiveMap
+            booking={selectedBooking}
+            legs={selectedLegs}
+            position={position}
+            aircraftRegistration={selectedAircraft?.tailNumber}
+            activeLegIndex={activeLegState?.activeLegIndex}
+            activeLegState={activeLegState}
+          />
+        </div>
+
+        <div className="hidden max-h-[28vh] gap-3 overflow-y-auto pb-1 md:grid lg:grid-cols-[1.1fr_0.9fr_0.9fr]">
+          <Card className="border border-slate-800 bg-slate-900/95 shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-100">Route Progress</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {activeLegState ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">From</p>
+                      <p className="mt-1 font-black text-slate-100">{activeLegState.fromWaypoint || 'N/A'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">To</p>
+                      <p className="mt-1 font-black text-slate-100">{activeLegState.toWaypoint || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dist</p>
+                      <p className="mt-1 font-black text-slate-100">{activeLegState.distanceToNextNm != null ? `${activeLegState.distanceToNextNm.toFixed(1)} NM` : 'N/A'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Brg</p>
+                      <p className="mt-1 font-black text-slate-100">{activeLegState.bearingToNext != null ? `${activeLegState.bearingToNext.toFixed(0)}°` : 'N/A'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">XTK</p>
+                      <p className="mt-1 font-black text-slate-100">{activeLegState.crossTrackErrorNm != null ? `${activeLegState.crossTrackErrorNm.toFixed(1)} NM` : 'N/A'}</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/70 p-4 text-slate-300">
+                  Select a booking with a navlog and start tracking to populate route progress.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="border border-slate-800 bg-slate-900/95 shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-100">Telemetry</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Heading</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Speed</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Altitude</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Breadcrumb</p>
+                <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.trailPoints} pts</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border border-slate-800 bg-slate-900/95 shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-100">Session</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Device</p>
+                <p className="mt-1 font-black text-slate-100">{savedDeviceLabel || 'Unnamed device'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sync</p>
+                <p className="mt-1 font-black text-slate-100">{syncStatusLabel}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Map Mode</p>
+                <p className="mt-1 font-black text-slate-100">{activeLegState ? 'Route Follow' : 'Ownship Follow'}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    */
+    return (
+      <div className="relative h-full min-h-0 overflow-hidden bg-black">
+        <ActiveFlightLiveMap
+          booking={selectedBooking}
+          legs={selectedLegs}
+          position={position}
+          aircraftRegistration={selectedAircraft?.tailNumber}
+          activeLegIndex={activeLegState?.activeLegIndex}
+          activeLegState={activeLegState}
+          fullscreen
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={cn('mx-auto flex min-h-full w-full max-w-[1200px] flex-1 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
@@ -441,44 +727,11 @@ export default function ActiveFlightPage() {
                   <DialogTrigger asChild>
                     <Button variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}>Full Screen</Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-[96vw] h-[92vh] p-4">
-                    <DialogHeader>
-                      <DialogTitle className="font-black uppercase">Full Flight Tracking View</DialogTitle>
-                      <DialogDescription>Ownship position, loaded navlog route, and live telemetry.</DialogDescription>
+                  <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
+                    <DialogHeader className="sr-only">
+                      <DialogTitle>Full Flight Tracking View</DialogTitle>
                     </DialogHeader>
-                    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-                      <div className="min-h-[60vh] overflow-hidden rounded-2xl border">
-                        <ActiveFlightLiveMap booking={selectedBooking} legs={selectedLegs} position={position} aircraftRegistration={selectedAircraft?.tailNumber} activeLegIndex={activeLegState?.activeLegIndex} />
-                      </div>
-                      <div className="space-y-4 overflow-y-auto pr-1">
-                        <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-                          <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest">Live Telemetry</CardTitle></CardHeader>
-                          <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                            <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Heading</p><p className="mt-1 text-base font-black">{liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}</p></div>
-                            <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Speed</p><p className="mt-1 text-base font-black">{liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A'}</p></div>
-                            <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Altitude</p><p className="mt-1 text-base font-black">{liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}</p></div>
-                            <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Breadcrumb</p><p className="mt-1 text-base font-black">{liveTelemetry.trailPoints} pts</p></div>
-                          </CardContent>
-                        </Card>
-                        <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-                          <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest">Route Progress</CardTitle></CardHeader>
-                          <CardContent className="space-y-3 text-sm">
-                            {activeLegState ? (
-                              <>
-                                <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">From</p><p className="mt-1 font-black">{activeLegState.fromWaypoint || 'N/A'}</p></div>
-                                <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">To</p><p className="mt-1 font-black">{activeLegState.toWaypoint || 'N/A'}</p></div>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Distance</p><p className="mt-1 font-black">{activeLegState.distanceToNextNm != null ? `${activeLegState.distanceToNextNm.toFixed(1)} NM` : 'N/A'}</p></div>
-                                  <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bearing</p><p className="mt-1 font-black">{activeLegState.bearingToNext != null ? `${activeLegState.bearingToNext.toFixed(0)}°` : 'N/A'}</p></div>
-                                </div>
-                              </>
-                            ) : (
-                              <div className={cn('rounded-lg border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground', isModern && 'rounded-2xl border-slate-200 bg-slate-50/70 text-slate-500')}>Select a booking with a navlog and start tracking to populate route progress.</div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
+                    <FullScreenFlightLayout />
                   </DialogContent>
                 </Dialog>
               </CardHeader>
@@ -490,13 +743,14 @@ export default function ActiveFlightPage() {
                   <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Trail</p><p className="mt-1 text-sm font-black">{liveTelemetry.trailPoints} pts</p></div>
                 </div>
                 {!isFullscreenMapOpen ? (
-                  <ActiveFlightLiveMap
-                    booking={selectedBooking}
-                    legs={selectedLegs}
-                    position={position}
-                    aircraftRegistration={selectedAircraft?.tailNumber}
-                    activeLegIndex={activeLegState?.activeLegIndex}
-                  />
+        <ActiveFlightLiveMap
+          booking={selectedBooking}
+          legs={selectedLegs}
+          position={position}
+          aircraftRegistration={selectedAircraft?.tailNumber}
+          activeLegIndex={activeLegState?.activeLegIndex}
+          activeLegState={activeLegState}
+        />
                 ) : (
                   <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground">
                     Full screen map is open. Close it to restore the compact pilot map.
@@ -518,3 +772,4 @@ export default function ActiveFlightPage() {
     </div>
   );
 }
+

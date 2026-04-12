@@ -1,6 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensureFlightSessionsSchema } from '@/lib/server/bootstrap-db';
+import { ensureFlightSessionBlocksSchema, ensureFlightSessionsSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -15,11 +15,12 @@ async function getTenantId() {
 
 export async function GET() {
   try {
+    await ensureFlightSessionBlocksSchema();
     await ensureFlightSessionsSchema();
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ sessions: [] }, { status: 200 });
     const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-      `SELECT data FROM active_flight_sessions WHERE tenant_id = $1 ORDER BY created_at DESC`,
+      `SELECT data FROM active_flight_sessions WHERE tenant_id = $1 AND id NOT IN (SELECT id FROM active_flight_session_blocks WHERE tenant_id = $1) ORDER BY created_at DESC`,
       tenantId
     );
     return NextResponse.json({ sessions: rows.map((row) => row.data) }, { status: 200 });
@@ -31,6 +32,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await ensureFlightSessionBlocksSchema();
     await ensureFlightSessionsSchema();
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,6 +40,14 @@ export async function POST(request: Request) {
     const session = body?.session;
     if (!session || typeof session !== 'object') return NextResponse.json({ error: 'Invalid session payload.' }, { status: 400 });
     const id = session.id || randomUUID();
+    const blocked = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT id FROM active_flight_session_blocks WHERE tenant_id = $1 AND id = $2`,
+      tenantId,
+      id
+    );
+    if (blocked.length > 0) {
+      return NextResponse.json({ error: 'Session has been ended by fleet operations.' }, { status: 423 });
+    }
     const data = { ...session, id };
     await prisma.$executeRawUnsafe(
       `INSERT INTO active_flight_sessions (id, tenant_id, data, created_at, updated_at) VALUES ($1, $2, $3::jsonb, NOW(), NOW()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
@@ -54,6 +64,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    await ensureFlightSessionBlocksSchema();
     await ensureFlightSessionsSchema();
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -75,14 +86,27 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    await ensureFlightSessionBlocksSchema();
     await ensureFlightSessionsSchema();
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    const mode = searchParams.get('mode') || 'block';
+
+    if (mode === 'unblock') {
+      await prisma.$executeRawUnsafe(`DELETE FROM active_flight_session_blocks WHERE id = $1 AND tenant_id = $2`, id, tenantId);
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO active_flight_session_blocks (id, tenant_id, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) ON CONFLICT (id) DO UPDATE SET updated_at = NOW()`,
+      id,
+      tenantId
+    );
     await prisma.$executeRawUnsafe(`DELETE FROM active_flight_sessions WHERE id = $1 AND tenant_id = $2`, id, tenantId);
-    return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json({ ok: true, blocked: true }, { status: 200 });
   } catch (error) {
     console.error('[flight-sessions] delete failed:', error);
     return NextResponse.json({ error: 'Failed to delete flight session.' }, { status: 500 });
