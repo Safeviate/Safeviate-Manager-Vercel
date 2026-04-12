@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
@@ -251,6 +252,7 @@ export function ActiveFlightLiveMap({
   const [recenterNonce, setRecenterNonce] = useState(0);
   const [cacheNonce, setCacheNonce] = useState(0);
   const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
+  const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
   const [isCachingArea, setIsCachingArea] = useState(false);
 
   useEffect(() => {
@@ -326,21 +328,48 @@ export function ActiveFlightLiveMap({
           <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
             Mode: {isHeadingUp ? 'Track Up' : 'North Up'} • {followOwnship ? 'Follow on' : 'Follow off'}
           </div>
-          <div className="flex items-center justify-between gap-2 border-t border-slate-200 px-3 py-2">
-            <p className="min-w-0 flex-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{cacheStatus}</p>
+          <div className="flex min-h-14 items-center justify-between gap-2 border-t border-slate-200 px-3 py-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className={cn(
+                    'h-2.5 w-2.5 shrink-0 rounded-full',
+                    cacheState === 'complete'
+                      ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]'
+                      : cacheState === 'caching'
+                        ? 'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.14)]'
+                        : 'bg-slate-400 shadow-[0_0_0_3px_rgba(148,163,184,0.12)]'
+                  )}
+                />
+                <p className="min-w-0 flex-1 truncate text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                  {cacheStatus}
+                </p>
+                {cacheState === 'complete' && (
+                  <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                    Cached
+                  </span>
+                )}
+              </div>
+            </div>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="h-8 rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
+              className="h-8 min-w-[6.75rem] rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
               disabled={isCachingArea}
               onClick={() => {
                 setIsCachingArea(true);
-                setCacheStatus('Starting cache...');
+                setCacheState('caching');
+                setCacheStatus('Caching current view...');
                 setCacheNonce((current) => current + 1);
               }}
             >
-              {isCachingArea ? 'Caching...' : 'Cache View'}
+              <span className="inline-flex items-center gap-1.5">
+                <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', isCachingArea ? 'opacity-100' : 'opacity-0')}>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                </span>
+                <span>Cache View</span>
+              </span>
             </Button>
           </div>
         </div>
@@ -368,7 +397,12 @@ export function ActiveFlightLiveMap({
               cacheNonce={cacheNonce}
               onDone={() => setIsCachingArea(false)}
               onStatus={setCacheStatus}
-              onComplete={() => undefined}
+              onComplete={(tileCount) => {
+                setCacheState('complete');
+                setCacheStatus(
+                  tileCount > 0 ? 'Cached current view for offline use.' : 'No tiles available to cache.'
+                );
+              }}
             />
             <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
 

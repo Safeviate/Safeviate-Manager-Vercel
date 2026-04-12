@@ -139,7 +139,6 @@ export default function ActiveFlightPage() {
   const [deviceLabelInput, setDeviceLabelInput] = useState('');
   const [savedDeviceLabel, setSavedDeviceLabel] = useState('');
   const [isTrackingActive, setIsTrackingActive] = useState(false);
-  const [manualLegIndex, setManualLegIndex] = useState(0);
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [flightSessions, setFlightSessions] = useState<FlightSession[]>([]);
@@ -254,7 +253,7 @@ export default function ActiveFlightPage() {
   const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
   const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
   const selectedLegs = selectedBooking?.navlog?.legs || [];
-  const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position, manualLegIndex), [selectedLegs, position, manualLegIndex]);
+  const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position), [selectedLegs, position]);
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
@@ -340,9 +339,6 @@ export default function ActiveFlightPage() {
     trail.push(nextPosition);
     return trail.slice(-MAX_BREADCRUMB_POINTS);
   };
-
-  useEffect(() => setManualLegIndex(0), [selectedBookingId]);
-  useEffect(() => { if (activeLegState && activeLegState.activeLegIndex !== manualLegIndex) setManualLegIndex(activeLegState.activeLegIndex); }, [activeLegState, manualLegIndex]);
 
   useEffect(() => {
     if (!deviceBinding?.deviceId || typeof window === 'undefined') return;
