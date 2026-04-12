@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -313,6 +313,15 @@ export function ActiveFlightLiveMap({
       : currentLeg?.waypoint || 'N/A';
   const currentFrequency = currentLeg?.frequencies || currentLeg?.layerInfo || 'N/A';
   const nextFrequency = nextLeg?.frequencies || nextLeg?.layerInfo || 'N/A';
+  const normalizedHeading =
+    position?.headingTrue != null && !Number.isNaN(position.headingTrue)
+      ? ((position.headingTrue % 360) + 360) % 360
+      : null;
+  const mapRotationDegrees = followOwnship && normalizedHeading != null ? -normalizedHeading : 0;
+  const mapShellStyle = {
+    '--map-rotation': `${mapRotationDegrees}deg`,
+    '--map-counter-rotation': `${-mapRotationDegrees}deg`,
+  } as CSSProperties;
   const handleFollowOwnship = () => {
     setFollowOwnship(true);
     setRecenterNonce((current) => current + 1);
@@ -324,7 +333,7 @@ export function ActiveFlightLiveMap({
 
   if (fullscreen) {
     return (
-      <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black">
+      <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black" style={mapShellStyle}>
         <div className="absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Full Flight Tracking View</p>
@@ -403,7 +412,8 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
 
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="nose-up-map absolute inset-[-12%]">
           <MapContainer
             center={center}
             zoom={8}
@@ -478,7 +488,7 @@ export function ActiveFlightLiveMap({
             {position && (
               <Marker
                 position={[position.latitude, position.longitude]}
-                icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', position.headingTrue)}
+                icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', normalizedHeading)}
               >
                 <Popup>
                   <div className="space-y-1 text-xs">
@@ -495,6 +505,7 @@ export function ActiveFlightLiveMap({
               </Marker>
             )}
           </MapContainer>
+          </div>
         </div>
 
         <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-3 gap-2">
@@ -534,9 +545,25 @@ export function ActiveFlightLiveMap({
             left: 0.75rem !important;
           }
 
+          .fullscreen-map-shell .nose-up-map {
+            transform: rotate(var(--map-rotation)) scale(1.18);
+            transform-origin: 50% 50%;
+            transition: transform 180ms ease-out;
+          }
+
+          .fullscreen-map-shell .nose-up-map .leaflet-top,
+          .fullscreen-map-shell .nose-up-map .leaflet-bottom {
+            transform: rotate(var(--map-counter-rotation));
+            transform-origin: center;
+          }
+
           @media (min-width: 640px) {
             .fullscreen-map-shell .leaflet-top.leaflet-left {
               top: 11.75rem !important;
+            }
+
+            .fullscreen-map-shell .nose-up-map {
+              inset: -10%;
             }
           }
         `}</style>
@@ -545,7 +572,7 @@ export function ActiveFlightLiveMap({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" style={mapShellStyle}>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <CompassDial headingTrue={position?.headingTrue} />
@@ -582,7 +609,8 @@ export function ActiveFlightLiveMap({
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative overflow-hidden rounded-2xl">
+        <div className="nose-up-map relative min-h-[360px]">
         <MapContainer center={center} zoom={8} className="h-full min-h-[360px] w-full rounded-2xl" style={{ background: '#020617' }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -640,7 +668,7 @@ export function ActiveFlightLiveMap({
           {position && (
             <Marker
               position={[position.latitude, position.longitude]}
-              icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', position.headingTrue)}
+              icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', normalizedHeading)}
             >
               <Popup>
                 <div className="space-y-1 text-xs">
@@ -657,6 +685,20 @@ export function ActiveFlightLiveMap({
             </Marker>
           )}
         </MapContainer>
+        </div>
+        <style jsx>{`
+          .nose-up-map {
+            transform: rotate(var(--map-rotation)) scale(1.12);
+            transform-origin: 50% 50%;
+            transition: transform 180ms ease-out;
+          }
+
+          .nose-up-map :global(.leaflet-top),
+          .nose-up-map :global(.leaflet-bottom) {
+            transform: rotate(var(--map-counter-rotation));
+            transform-origin: center;
+          }
+        `}</style>
       </div>
     </div>
   );
