@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `safeviate-static-${CACHE_VERSION}`;
 const DATA_CACHE = `safeviate-data-${CACHE_VERSION}`;
 const NAV_CACHE = `safeviate-nav-${CACHE_VERSION}`;
 const TILE_CACHE = `safeviate-tiles-${CACHE_VERSION}`;
-const TILE_CACHE_MAX_ENTRIES = 400;
+const TILE_CACHE_MAX_ENTRIES = 1200;
 
 const PRECACHE_URLS = ['/offline.html', '/manifest.webmanifest', '/safeviate-icon.svg'];
 

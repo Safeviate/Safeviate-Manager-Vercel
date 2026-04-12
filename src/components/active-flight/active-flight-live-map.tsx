@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -125,16 +125,88 @@ function MapRecenterController({
 
 function MapAreaCacheController({
   cacheNonce,
+  areaDownloadNonce,
+  routeDownloadNonce,
+  routePoints,
   onDone,
+  onAreaDownloadDone,
+  onRouteDownloadDone,
   onStatus,
   onComplete,
+  onAreaDownloadStatus,
+  onAreaDownloadComplete,
+  onRouteDownloadStatus,
+  onRouteDownloadComplete,
 }: {
   cacheNonce: number;
+  areaDownloadNonce: number;
+  routeDownloadNonce: number;
+  routePoints: [number, number][];
   onDone: () => void;
+  onAreaDownloadDone: () => void;
+  onRouteDownloadDone: () => void;
   onStatus: (status: string) => void;
   onComplete: (tileCount: number) => void;
+  onAreaDownloadStatus: (status: string) => void;
+  onAreaDownloadComplete: (tileCount: number) => void;
+  onRouteDownloadStatus: (status: string) => void;
+  onRouteDownloadComplete: (tileCount: number) => void;
 }) {
   const map = useMap();
+
+  const collectVisibleTileUrls = useCallback(
+    (targetZoom: number, padding: number) => {
+      const paddedBounds = map.getBounds().pad(padding);
+      const worldSize = 2 ** targetZoom;
+      const northWest = map.project(paddedBounds.getNorthWest(), targetZoom).divideBy(256);
+      const southEast = map.project(paddedBounds.getSouthEast(), targetZoom).divideBy(256);
+
+      const minX = Math.max(0, Math.floor(Math.min(northWest.x, southEast.x)));
+      const maxX = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.x, southEast.x)));
+      const minY = Math.max(0, Math.floor(Math.min(northWest.y, southEast.y)));
+      const maxY = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.y, southEast.y)));
+
+      const urls: string[] = [];
+      for (let x = minX; x <= maxX; x += 1) {
+        for (let y = minY; y <= maxY; y += 1) {
+          urls.push(`https://tile.openstreetmap.org/${targetZoom}/${x}/${y}.png`);
+        }
+      }
+      return urls;
+    },
+    [map]
+  );
+
+  const collectBoundsTileUrls = useCallback((bounds: L.LatLngBounds, targetZoom: number, padding: number) => {
+    const paddedBounds = bounds.pad(padding);
+    const worldSize = 2 ** targetZoom;
+    const northWest = map.project(paddedBounds.getNorthWest(), targetZoom).divideBy(256);
+    const southEast = map.project(paddedBounds.getSouthEast(), targetZoom).divideBy(256);
+
+    const minX = Math.max(0, Math.floor(Math.min(northWest.x, southEast.x)));
+    const maxX = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.x, southEast.x)));
+    const minY = Math.max(0, Math.floor(Math.min(northWest.y, southEast.y)));
+    const maxY = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.y, southEast.y)));
+
+    const urls: string[] = [];
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        urls.push(`https://tile.openstreetmap.org/${targetZoom}/${x}/${y}.png`);
+      }
+    }
+    return urls;
+  }, [map]);
+
+  const warmTileUrls = useCallback(async (tileUrls: string[]) => {
+    await Promise.allSettled(
+      tileUrls.map(
+        (url) =>
+          fetch(url, { mode: 'no-cors' })
+            .then(() => undefined)
+            .catch(() => undefined)
+      )
+    );
+  }, []);
 
   useEffect(() => {
     if (cacheNonce === 0) return;
@@ -142,22 +214,12 @@ function MapAreaCacheController({
     const run = async () => {
       try {
         const zoom = map.getZoom();
-        const bounds = map.getBounds().pad(0.15);
-        const worldSize = 2 ** zoom;
-        const northWest = map.project(bounds.getNorthWest(), zoom).divideBy(256);
-        const southEast = map.project(bounds.getSouthEast(), zoom).divideBy(256);
-
-        const minX = Math.max(0, Math.floor(Math.min(northWest.x, southEast.x)));
-        const maxX = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.x, southEast.x)));
-        const minY = Math.max(0, Math.floor(Math.min(northWest.y, southEast.y)));
-        const maxY = Math.min(worldSize - 1, Math.ceil(Math.max(northWest.y, southEast.y)));
-
-        const tileUrls: string[] = [];
-        for (let x = minX; x <= maxX; x += 1) {
-          for (let y = minY; y <= maxY; y += 1) {
-            tileUrls.push(`https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`);
-          }
-        }
+        const tileUrls = Array.from(
+          new Set([
+            ...collectVisibleTileUrls(zoom, 0.3),
+            ...(zoom > MAP_MIN_ZOOM ? collectVisibleTileUrls(zoom - 1, 0.2) : []),
+          ])
+        );
 
         if (!tileUrls.length) {
           onStatus('No tiles to cache.');
@@ -167,19 +229,7 @@ function MapAreaCacheController({
         }
 
         onStatus(`Caching ${tileUrls.length} tiles...`);
-
-        await Promise.allSettled(
-          tileUrls.map(
-            (url) =>
-              new Promise<void>((resolve) => {
-                const image = new Image();
-                image.decoding = 'async';
-                image.onload = () => resolve();
-                image.onerror = () => resolve();
-                image.src = url;
-              })
-          )
-        );
+        await warmTileUrls(tileUrls);
 
         onStatus('Cached current view for offline use.');
         onComplete(tileUrls.length);
@@ -189,7 +239,97 @@ function MapAreaCacheController({
     };
 
     void run();
-  }, [cacheNonce, map, onDone, onStatus]);
+  }, [cacheNonce, collectVisibleTileUrls, map, onComplete, onDone, onStatus, warmTileUrls]);
+
+  useEffect(() => {
+    if (areaDownloadNonce === 0) return;
+
+    const run = async () => {
+      try {
+        const zoom = map.getZoom();
+        const tileUrls = Array.from(
+          new Set([
+            ...collectVisibleTileUrls(zoom, 0.75),
+            ...collectVisibleTileUrls(Math.max(zoom - 1, MAP_MIN_ZOOM), 0.6),
+            ...collectVisibleTileUrls(Math.min(zoom + 1, MAP_MAX_ZOOM), 0.45),
+          ])
+        );
+
+        if (!tileUrls.length) {
+          onAreaDownloadStatus('No area tiles available to download.');
+          onAreaDownloadComplete(0);
+          onAreaDownloadDone();
+          return;
+        }
+
+        onAreaDownloadStatus(`Saving ${tileUrls.length} area tiles on this device...`);
+        await warmTileUrls(tileUrls);
+        onAreaDownloadStatus('Area saved on this device for offline use.');
+        onAreaDownloadComplete(tileUrls.length);
+      } finally {
+        onAreaDownloadDone();
+      }
+    };
+
+    void run();
+  }, [
+    areaDownloadNonce,
+    collectVisibleTileUrls,
+    map,
+    onAreaDownloadComplete,
+    onAreaDownloadDone,
+    onAreaDownloadStatus,
+    warmTileUrls,
+  ]);
+
+  useEffect(() => {
+    if (routeDownloadNonce === 0) return;
+
+    const run = async () => {
+      try {
+        if (routePoints.length < 2) {
+          onRouteDownloadStatus('Load a route before downloading the route corridor.');
+          onRouteDownloadComplete(0);
+          onRouteDownloadDone();
+          return;
+        }
+
+        const routeBounds = L.latLngBounds(routePoints);
+        const baseZoom = Math.max(Math.min(map.getBoundsZoom(routeBounds), 12), MAP_MIN_ZOOM);
+        const tileUrls = Array.from(
+          new Set([
+            ...collectBoundsTileUrls(routeBounds, baseZoom, 0.35),
+            ...collectBoundsTileUrls(routeBounds, Math.max(baseZoom - 1, MAP_MIN_ZOOM), 0.3),
+          ])
+        );
+
+        if (!tileUrls.length) {
+          onRouteDownloadStatus('No route tiles available to download.');
+          onRouteDownloadComplete(0);
+          onRouteDownloadDone();
+          return;
+        }
+
+        onRouteDownloadStatus(`Saving ${tileUrls.length} route tiles on this device...`);
+        await warmTileUrls(tileUrls);
+        onRouteDownloadStatus('Route corridor saved on this device for offline use.');
+        onRouteDownloadComplete(tileUrls.length);
+      } finally {
+        onRouteDownloadDone();
+      }
+    };
+
+    void run();
+  }, [
+    collectBoundsTileUrls,
+    map,
+    onRouteDownloadComplete,
+    onRouteDownloadDone,
+    onRouteDownloadStatus,
+    routeDownloadNonce,
+    routePoints,
+    warmTileUrls,
+  ]);
 
   return null;
 }
@@ -238,6 +378,55 @@ function MenuCloseButton({ onClose }: { onClose?: () => void }) {
   );
 }
 
+const OFFLINE_TILE_CACHE_PREFIX = 'safeviate-tiles-';
+const MAP_MIN_ZOOM = 6;
+const MAP_MAX_ZOOM = 14;
+
+async function readOfflineTileSummary() {
+  if (typeof window === 'undefined' || !('caches' in window)) {
+    return {
+      cacheCount: 0,
+      tileCount: 0,
+      usageLabel: 'Browser cache details unavailable on this device.',
+    };
+  }
+
+  const cacheNames = (await caches.keys()).filter((cacheName) => cacheName.startsWith(OFFLINE_TILE_CACHE_PREFIX));
+  let tileCount = 0;
+
+  for (const cacheName of cacheNames) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    tileCount += keys.length;
+  }
+
+  let usageLabel = 'Storage estimate unavailable on this device.';
+  if ('storage' in navigator && typeof navigator.storage?.estimate === 'function') {
+    const estimate = await navigator.storage.estimate();
+    if (estimate.usage != null && estimate.quota != null && estimate.quota > 0) {
+      const usedMb = (estimate.usage / (1024 * 1024)).toFixed(1);
+      const quotaGb = (estimate.quota / (1024 * 1024 * 1024)).toFixed(1);
+      usageLabel = `${usedMb} MB used of ${quotaGb} GB available in browser storage.`;
+    }
+  }
+
+  return {
+    cacheCount: cacheNames.length,
+    tileCount,
+    usageLabel,
+  };
+}
+
+async function clearOfflineTileCaches() {
+  if (typeof window === 'undefined' || !('caches' in window)) return;
+  const cacheNames = await caches.keys();
+  await Promise.all(
+    cacheNames
+      .filter((cacheName) => cacheName.startsWith(OFFLINE_TILE_CACHE_PREFIX))
+      .map((cacheName) => caches.delete(cacheName))
+  );
+}
+
 export function ActiveFlightLiveMap({
   booking,
   legs,
@@ -277,10 +466,35 @@ export function ActiveFlightLiveMap({
   const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
   const [isCachingArea, setIsCachingArea] = useState(false);
+  const [areaDownloadNonce, setAreaDownloadNonce] = useState(0);
+  const [areaDownloadStatus, setAreaDownloadStatus] = useState('Download a larger area on this device.');
+  const [areaDownloadState, setAreaDownloadState] = useState<'idle' | 'downloading' | 'complete'>('idle');
+  const [isDownloadingArea, setIsDownloadingArea] = useState(false);
+  const [routeDownloadNonce, setRouteDownloadNonce] = useState(0);
+  const [routeDownloadStatus, setRouteDownloadStatus] = useState(
+    routePoints.length > 1 ? 'Download the loaded route corridor on this device.' : 'Load a route to download it on this device.'
+  );
+  const [routeDownloadState, setRouteDownloadState] = useState<'idle' | 'downloading' | 'complete'>('idle');
+  const [isDownloadingRoute, setIsDownloadingRoute] = useState(false);
+  const [offlineManagerOpen, setOfflineManagerOpen] = useState(false);
+  const [offlineTileCount, setOfflineTileCount] = useState(0);
+  const [offlineCacheCount, setOfflineCacheCount] = useState(0);
+  const [offlineUsageLabel, setOfflineUsageLabel] = useState('Checking browser storage on this device...');
+  const [isRefreshingOfflineSummary, setIsRefreshingOfflineSummary] = useState(false);
+  const [isClearingOfflineMaps, setIsClearingOfflineMaps] = useState(false);
 
   useEffect(() => {
     setFollowOwnship(true);
   }, [routeSignature]);
+
+  useEffect(() => {
+    setRouteDownloadStatus(
+      routePoints.length > 1 ? 'Download the loaded route corridor on this device.' : 'Load a route to download it on this device.'
+    );
+    if (routePoints.length <= 1 && routeDownloadState !== 'downloading') {
+      setRouteDownloadState('idle');
+    }
+  }, [routeDownloadState, routePoints.length]);
 
   useEffect(() => {
     setTrackHistory(position ? [[position.latitude, position.longitude]] : []);
@@ -322,6 +536,33 @@ export function ActiveFlightLiveMap({
     '--map-rotation': `${mapRotationDegrees}deg`,
     '--map-counter-rotation': `${-mapRotationDegrees}deg`,
   } as CSSProperties;
+  const refreshOfflineSummary = useCallback(async () => {
+    setIsRefreshingOfflineSummary(true);
+    try {
+      const summary = await readOfflineTileSummary();
+      setOfflineCacheCount(summary.cacheCount);
+      setOfflineTileCount(summary.tileCount);
+      setOfflineUsageLabel(summary.usageLabel);
+    } finally {
+      setIsRefreshingOfflineSummary(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!offlineManagerOpen) return;
+    void refreshOfflineSummary();
+  }, [offlineManagerOpen, refreshOfflineSummary]);
+
+  useEffect(() => {
+    void refreshOfflineSummary();
+  }, [refreshOfflineSummary]);
+
+  useEffect(() => {
+    if (cacheState === 'complete' || areaDownloadState === 'complete' || routeDownloadState === 'complete') {
+      void refreshOfflineSummary();
+    }
+  }, [areaDownloadState, cacheState, refreshOfflineSummary, routeDownloadState]);
+
   const handleFollowOwnship = () => {
     setFollowOwnship(true);
     setRecenterNonce((current) => current + 1);
@@ -389,34 +630,209 @@ export function ActiveFlightLiveMap({
                 )}
               </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 min-w-[6.75rem] rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
-              disabled={isCachingArea}
-              onClick={() => {
-                setIsCachingArea(true);
-                setCacheState('caching');
-                setCacheStatus('Caching current view...');
-                setCacheNonce((current) => current + 1);
-              }}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', isCachingArea ? 'opacity-100' : 'opacity-0')}>
-                  <Loader2 className="h-3 w-3 animate-spin" />
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 min-w-[6.75rem] rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
+                disabled={isCachingArea}
+                onClick={() => {
+                  setIsCachingArea(true);
+                  setCacheState('caching');
+                  setCacheStatus('Caching current view...');
+                  setCacheNonce((current) => current + 1);
+                }}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', isCachingArea ? 'opacity-100' : 'opacity-0')}>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  </span>
+                  <span>Cache View</span>
                 </span>
-                <span>Cache View</span>
-              </span>
-            </Button>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 min-w-[7.25rem] rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
+                disabled={isDownloadingArea}
+                onClick={() => {
+                  setIsDownloadingArea(true);
+                  setAreaDownloadState('downloading');
+                  setAreaDownloadStatus('Saving area on this device...');
+                  setAreaDownloadNonce((current) => current + 1);
+                }}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', isDownloadingArea ? 'opacity-100' : 'opacity-0')}>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  </span>
+                  <span>Download Area</span>
+                </span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 min-w-[7.25rem] rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 disabled:opacity-60"
+                disabled={isDownloadingRoute || routePoints.length < 2}
+                onClick={() => {
+                  setIsDownloadingRoute(true);
+                  setRouteDownloadState('downloading');
+                  setRouteDownloadStatus('Saving route corridor on this device...');
+                  setRouteDownloadNonce((current) => current + 1);
+                }}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', isDownloadingRoute ? 'opacity-100' : 'opacity-0')}>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  </span>
+                  <span>Download Route</span>
+                </span>
+              </Button>
+              <Dialog open={offlineManagerOpen} onOpenChange={setOfflineManagerOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 min-w-[7rem] rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>Offline Maps</span>
+                      {offlineTileCount > 0 && (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black tracking-normal text-emerald-700">
+                          Saved
+                        </span>
+                      )}
+                    </span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md border-slate-200 bg-white p-5 text-slate-900">
+                  <DialogHeader className="space-y-2 text-left">
+                    <DialogTitle className="text-base font-black uppercase tracking-[0.12em] text-slate-900">
+                      Offline Maps on This Device
+                    </DialogTitle>
+                    <DialogDescription className="text-sm leading-6 text-slate-600">
+                      These maps are saved in this browser on this phone, tablet, or laptop. The browser manages the storage location automatically.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-3 text-sm">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Saved Tile Packs</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{offlineCacheCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Saved Tiles</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{offlineTileCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Browser Storage</p>
+                      <p className="mt-1 font-semibold text-slate-700">{offlineUsageLabel}</p>
+                    </div>
+                    <div className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-xs font-medium leading-5 text-slate-600">
+                      Use <span className="font-black text-slate-900">Cache View</span> for a quick nearby area, <span className="font-black text-slate-900">Download Area</span> for a broader region, and <span className="font-black text-slate-900">Download Route</span> for the loaded corridor on this same device.
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 rounded-full border-slate-200 bg-white px-4 text-[11px] font-black uppercase tracking-[0.1em] text-slate-800"
+                      disabled={isRefreshingOfflineSummary || isClearingOfflineMaps}
+                      onClick={() => {
+                        void refreshOfflineSummary();
+                      }}
+                    >
+                      {isRefreshingOfflineSummary ? 'Refreshing...' : 'Refresh'}
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 rounded-full border-rose-200 bg-white px-4 text-[11px] font-black uppercase tracking-[0.1em] text-rose-700 hover:bg-rose-50 hover:text-rose-700"
+                        disabled={isClearingOfflineMaps}
+                        onClick={() => {
+                          void (async () => {
+                            setIsClearingOfflineMaps(true);
+                            try {
+                              await clearOfflineTileCaches();
+                              setCacheState('idle');
+                              setAreaDownloadState('idle');
+                              setRouteDownloadState('idle');
+                              setCacheStatus('Cache current view for offline use.');
+                              setAreaDownloadStatus('Download a larger area on this device.');
+                              setRouteDownloadStatus(
+                                routePoints.length > 1
+                                  ? 'Download the loaded route corridor on this device.'
+                                  : 'Load a route to download it on this device.'
+                              );
+                              await refreshOfflineSummary();
+                            } finally {
+                              setIsClearingOfflineMaps(false);
+                            }
+                          })();
+                        }}
+                      >
+                        {isClearingOfflineMaps ? 'Clearing...' : 'Clear Offline Maps'}
+                      </Button>
+                      <DialogClose asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 rounded-full border-slate-200 bg-white px-4 text-[11px] font-black uppercase tracking-[0.1em] text-slate-800"
+                        >
+                          Close
+                        </Button>
+                      </DialogClose>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+          <div className="grid gap-2 border-t border-slate-200 px-3 py-2 sm:grid-cols-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  'h-2.5 w-2.5 shrink-0 rounded-full',
+                  areaDownloadState === 'complete'
+                    ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]'
+                    : areaDownloadState === 'downloading'
+                      ? 'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.14)]'
+                      : 'bg-slate-400 shadow-[0_0_0_3px_rgba(148,163,184,0.12)]'
+                )}
+              />
+              <p className="min-w-0 truncate text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {areaDownloadStatus}
+              </p>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  'h-2.5 w-2.5 shrink-0 rounded-full',
+                  routeDownloadState === 'complete'
+                    ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]'
+                    : routeDownloadState === 'downloading'
+                      ? 'animate-pulse bg-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.14)]'
+                      : 'bg-slate-400 shadow-[0_0_0_3px_rgba(148,163,184,0.12)]'
+                )}
+              />
+              <p className="min-w-0 truncate text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {routeDownloadStatus}
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="absolute inset-0 overflow-hidden">
-          <div className="nose-up-map absolute inset-[-12%]">
+          <div className="nose-up-map absolute inset-[-24%]">
           <MapContainer
             center={center}
             zoom={8}
+            minZoom={MAP_MIN_ZOOM}
+            maxZoom={MAP_MAX_ZOOM}
             zoomAnimation={false}
             className="h-full w-full rounded-none"
             style={{ background: '#000000' }}
@@ -434,12 +850,35 @@ export function ActiveFlightLiveMap({
             />
             <MapAreaCacheController
               cacheNonce={cacheNonce}
+              areaDownloadNonce={areaDownloadNonce}
+              routeDownloadNonce={routeDownloadNonce}
+              routePoints={routePoints}
               onDone={() => setIsCachingArea(false)}
+              onAreaDownloadDone={() => setIsDownloadingArea(false)}
+              onRouteDownloadDone={() => setIsDownloadingRoute(false)}
               onStatus={setCacheStatus}
               onComplete={(tileCount) => {
                 setCacheState('complete');
                 setCacheStatus(
                   tileCount > 0 ? 'Cached current view for offline use.' : 'No tiles available to cache.'
+                );
+              }}
+              onAreaDownloadStatus={setAreaDownloadStatus}
+              onAreaDownloadComplete={(tileCount) => {
+                setAreaDownloadState(tileCount > 0 ? 'complete' : 'idle');
+                setAreaDownloadStatus(
+                  tileCount > 0 ? 'Area saved on this device for offline use.' : 'No area tiles available to download.'
+                );
+              }}
+              onRouteDownloadStatus={setRouteDownloadStatus}
+              onRouteDownloadComplete={(tileCount) => {
+                setRouteDownloadState(tileCount > 0 ? 'complete' : 'idle');
+                setRouteDownloadStatus(
+                  tileCount > 0
+                    ? 'Route corridor saved on this device for offline use.'
+                    : routePoints.length > 1
+                      ? 'No route tiles available to download.'
+                      : 'Load a route to download it on this device.'
                 );
               }}
             />
@@ -546,7 +985,7 @@ export function ActiveFlightLiveMap({
           }
 
           .fullscreen-map-shell .nose-up-map {
-            transform: rotate(var(--map-rotation)) scale(1.18);
+            transform: rotate(var(--map-rotation)) scale(1.42);
             transform-origin: 50% 50%;
             transition: transform 180ms ease-out;
           }
@@ -563,7 +1002,7 @@ export function ActiveFlightLiveMap({
             }
 
             .fullscreen-map-shell .nose-up-map {
-              inset: -10%;
+              inset: -20%;
             }
           }
         `}</style>
@@ -611,7 +1050,14 @@ export function ActiveFlightLiveMap({
 
       <div className="relative overflow-hidden rounded-2xl">
         <div className="nose-up-map relative min-h-[360px]">
-        <MapContainer center={center} zoom={8} className="h-full min-h-[360px] w-full rounded-2xl" style={{ background: '#020617' }}>
+        <MapContainer
+          center={center}
+          zoom={8}
+          minZoom={MAP_MIN_ZOOM}
+          maxZoom={MAP_MAX_ZOOM}
+          className="h-full min-h-[360px] w-full rounded-2xl"
+          style={{ background: '#020617' }}
+        >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
@@ -688,7 +1134,7 @@ export function ActiveFlightLiveMap({
         </div>
         <style jsx>{`
           .nose-up-map {
-            transform: rotate(var(--map-rotation)) scale(1.12);
+            transform: rotate(var(--map-rotation)) scale(1.38);
             transform-origin: 50% 50%;
             transition: transform 180ms ease-out;
           }
