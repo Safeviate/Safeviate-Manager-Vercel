@@ -123,6 +123,40 @@ function MapRecenterController({
   return null;
 }
 
+function MapResizeController() {
+  const map = useMap();
+
+  useEffect(() => {
+    let frameId = 0;
+
+    const refreshMapSize = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        map.invalidateSize(false);
+      });
+    };
+
+    refreshMapSize();
+
+    const container = map.getContainer();
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refreshMapSize) : null;
+    resizeObserver?.observe(container);
+    resizeObserver?.observe(container.parentElement || container);
+
+    window.addEventListener('resize', refreshMapSize);
+    window.addEventListener('orientationchange', refreshMapSize);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', refreshMapSize);
+      window.removeEventListener('orientationchange', refreshMapSize);
+    };
+  }, [map]);
+
+  return null;
+}
+
 function MapAreaCacheController({
   cacheNonce,
   areaDownloadNonce,
@@ -842,6 +876,7 @@ export function ActiveFlightLiveMap({
               attribution="&copy; OpenStreetMap contributors"
             />
             <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
+            <MapResizeController />
             <MapRecenterController
               routePoints={routePoints}
               position={position}
@@ -1063,6 +1098,7 @@ export function ActiveFlightLiveMap({
             attribution="&copy; OpenStreetMap contributors"
           />
           <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
+          <MapResizeController />
           <MapRecenterController
             routePoints={routePoints}
             position={position}

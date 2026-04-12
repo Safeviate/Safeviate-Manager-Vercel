@@ -774,6 +774,15 @@ export default function ActiveFlightPage() {
                       aircraftRegistration={selectedAircraft?.tailNumber}
                       activeLegIndex={activeLegState?.activeLegIndex}
                       activeLegState={activeLegState}
+                      heading={liveTelemetry.heading}
+                      speed={liveTelemetry.speed}
+                      altitude={liveTelemetry.altitude}
+                      trailPoints={liveTelemetry.trailPoints}
+                      syncStatusLabel={syncStatusLabel}
+                      syncStatusClassName={syncStatusClassName}
+                      savedDeviceLabel={savedDeviceLabel}
+                      permissionState={permissionState}
+                      isWatching={isWatching}
                     />
                   </DialogContent>
                 </Dialog>
