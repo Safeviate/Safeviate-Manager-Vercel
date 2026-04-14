@@ -1,16 +1,26 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const CANONICAL_HOST = 'safeviate-manager.vercel.app';
+const resolveCanonicalHost = () => {
+  const configuredUrl = process.env.NEXTAUTH_URL?.trim();
+  if (!configuredUrl) return '';
+
+  try {
+    return new URL(configuredUrl).host.toLowerCase();
+  } catch {
+    return '';
+  }
+};
 
 export function middleware(request: NextRequest) {
+  const canonicalHost = resolveCanonicalHost();
   const host = request.headers.get('host')?.toLowerCase() ?? '';
   const isVercelHost = host.endsWith('.vercel.app');
-  const isCanonicalHost = host === CANONICAL_HOST;
+  const isCanonicalHost = canonicalHost && host === canonicalHost;
 
-  if (isVercelHost && !isCanonicalHost) {
+  if (canonicalHost && isVercelHost && !isCanonicalHost) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.host = CANONICAL_HOST;
+    redirectUrl.host = canonicalHost;
     redirectUrl.protocol = 'https';
     redirectUrl.port = '';
     return NextResponse.redirect(redirectUrl, 308);
