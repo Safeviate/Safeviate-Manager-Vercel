@@ -27,9 +27,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        env:
-          PRISMA_SKIP_POSTINSTALL_GENERATE: "true"
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: Generate Prisma client
         run: npx prisma generate
