@@ -1,5 +1,5 @@
 name: Build and deploy Next.js app to Azure Web App
-# Azure CI trigger refresh
+# Azure CI trigger refresh 2
 
 on:
   push:
