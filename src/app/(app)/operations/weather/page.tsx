@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -8,10 +9,12 @@ import { Search, Wind, Thermometer, Eye, Navigation, Info, ExternalLink } from '
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Map as MapIcon, Lock } from 'lucide-react';
+import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { parseJsonResponse } from '@/lib/safe-json';
 
 type WeatherCloudLayer = {
@@ -140,6 +143,7 @@ const formatTimestamp = (value?: number | string | null) => {
 };
 
 export default function WeatherPage() {
+  const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const [icao, setIcao] = useState('');
   const [loading, setLoading] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherMetarData | null>(null);
@@ -152,6 +156,30 @@ export default function WeatherPage() {
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   const { toast } = useToast();
+
+  if (isTenantLoading) {
+    return <Skeleton className="h-[420px] w-full" />;
+  }
+
+  if (
+    !shouldBypassIndustryRestrictions(tenant?.id) &&
+    !isHrefEnabledForIndustry('/operations/weather', tenant?.industry) &&
+    !(tenant?.enabledMenus?.includes('/operations/weather') ?? false)
+  ) {
+    return (
+      <Card className="mx-auto w-full max-w-3xl border shadow-none">
+        <CardHeader>
+          <CardTitle className="text-2xl font-black uppercase tracking-tight">Weather Unavailable</CardTitle>
+          <CardDescription>Aviation weather tools are only available for aviation tenants.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="font-black uppercase">
+            <Link href="/operations">Back to Operations</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const mapCoords = useMemo(() => {
     // Priority: METAR -> TAF -> CheckWX -> Open-Meteo -> Default (FALA approx)

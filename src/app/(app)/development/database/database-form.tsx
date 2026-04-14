@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { isHrefEnabledForIndustry } from '@/lib/industry-access';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { menuConfig } from '@/lib/menu-config';
@@ -143,14 +144,7 @@ export function DatabaseForm() {
     const newEnabled = new Set<string>();
     const walk = (items: MenuNode[]) => {
         items.forEach(i => {
-            const isAviationOnly = i.href.includes('/bookings') || i.href.includes('/assets/aircraft') || i.href.includes('/admin/mb-config');
-            const isATOOnly = i.href.includes('/training/student-progress');
-            
-            let shouldAdd = true;
-            if (newIndustry === 'General: Occupational Health & Safety (OHS)' && isAviationOnly) shouldAdd = false;
-            if (newIndustry !== 'Aviation: Flight Training (ATO)' && isATOOnly) shouldAdd = false;
-
-            if (shouldAdd) {
+            if (isHrefEnabledForIndustry(i.href, newIndustry)) {
                 newEnabled.add(i.href);
                 if (i.subItems) walk(i.subItems);
             }

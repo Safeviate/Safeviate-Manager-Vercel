@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { IndustryRouteGuard } from '@/components/industry-route-guard';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -352,8 +353,14 @@ function WBCalculatorContent() {
 
 export default function WBCalculatorPage() {
     return (
-        <Suspense fallback={<Skeleton className="h-[600px] w-full" />}>
-            <WBCalculatorContent />
-        </Suspense>
+        <IndustryRouteGuard
+            sectionLabel="Mass & Balance"
+            description="Mass and balance tools are only available for flight-operations tenants."
+            backHref="/dashboard"
+        >
+            <Suspense fallback={<Skeleton className="h-[600px] w-full" />}>
+                <WBCalculatorContent />
+            </Suspense>
+        </IndustryRouteGuard>
     );
 }

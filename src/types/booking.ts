@@ -182,11 +182,12 @@ export interface Hazard {
 }
 
 export interface TrainingRoute {
-  id: string;
-  name: string;
-  description: string;
-  legs: NavlogLeg[];
-  hazards: Hazard[];
-  tenantId: string;
-  createdAt: string;
+    id: string;
+    name: string;
+    description: string;
+    routeType?: 'training' | 'other';
+    legs: NavlogLeg[];
+    hazards: Hazard[];
+    tenantId: string;
+    createdAt: string;
 }

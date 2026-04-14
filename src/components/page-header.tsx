@@ -35,6 +35,7 @@ const DEFAULT_HEADER_DESCRIPTIONS: Record<string, string> = {
   'My Outstanding Tasks': 'Review tasks assigned to you and follow up on due items.',
   'Operations Alerts': 'View and manage critical operational alerts.',
   'Emergency Response Plan': 'Manage emergency contacts, triggers, and response records.',
+  'Route Planner': 'Manage standardized and general aviation flight paths.',
   'Training Routes': 'Manage standardized training flight paths and sectors.',
   'Annual Audit Schedule': 'Plan and track the annual audit program.',
   Audits: 'Review audit results and follow-up status.',

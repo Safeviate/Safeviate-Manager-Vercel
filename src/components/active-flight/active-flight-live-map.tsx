@@ -1,12 +1,13 @@
 ﻿'use client';
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -862,7 +863,7 @@ export function ActiveFlightLiveMap({
 
         <div className="absolute inset-0 overflow-hidden">
           <div className="nose-up-map absolute inset-[-24%]">
-          <MapContainer
+          <LeafletMapFrame
             center={center}
             zoom={8}
             minZoom={MAP_MIN_ZOOM}
@@ -978,7 +979,7 @@ export function ActiveFlightLiveMap({
                 </Popup>
               </Marker>
             )}
-          </MapContainer>
+          </LeafletMapFrame>
           </div>
         </div>
 
@@ -1085,7 +1086,7 @@ export function ActiveFlightLiveMap({
 
       <div className="relative overflow-hidden rounded-2xl">
         <div className="nose-up-map relative min-h-[360px]">
-        <MapContainer
+        <LeafletMapFrame
           center={center}
           zoom={8}
           minZoom={MAP_MIN_ZOOM}
@@ -1166,7 +1167,7 @@ export function ActiveFlightLiveMap({
               </Popup>
             </Marker>
           )}
-        </MapContainer>
+        </LeafletMapFrame>
         </div>
         <style jsx>{`
           .nose-up-map {

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useTheme } from '@/components/theme-provider';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
@@ -20,8 +21,10 @@ import type { FlightPosition, FlightSession } from '@/types/flight-session';
 import { getOrCreateDeviceBinding, setDeviceLabel } from '@/lib/flight-session';
 import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
 import { getActiveLegState } from '@/lib/active-flight';
+import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { cn } from '@/lib/utils';
 import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
+import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -133,6 +136,7 @@ const getResumeTimestamp = (session: ActiveTrackingState | FlightSession) =>
 export default function ActiveFlightPage() {
   const { toast } = useToast();
   const { tenantId, userProfile, isLoading: isUserLoading } = useUserProfile();
+  const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const { uiMode } = useTheme();
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState('');
@@ -150,7 +154,6 @@ export default function ActiveFlightPage() {
   const lastWriteRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
   const isModern = uiMode === 'modern';
-
   useEffect(() => {
     const binding = getOrCreateDeviceBinding();
     if (!binding) return;
@@ -212,42 +215,7 @@ export default function ActiveFlightPage() {
     };
   }, []);
 
-  const persistSessions = async (next: FlightSession[]) => {
-    setFlightSessions(next);
-    const current = next[next.length - 1];
-    if (!current) return;
-    try {
-      const response = await fetch('/api/flight-sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session: current }),
-      });
-
-      if (response.status === 423) {
-        setIsTrackingActive(false);
-        stopWatching();
-        if (deviceBinding?.deviceId) {
-          clearActiveTrackingState(deviceBinding.deviceId);
-        }
-        toast({ variant: 'destructive', title: 'Tracking Ended By Ops', description: 'This device was cleared from fleet operations. Start tracking again to rejoin.' });
-        await reloadFlightSessions();
-        return;
-      }
-
-      if (!response.ok) {
-        queueFlightSessionSave(current);
-        setHasQueuedSession(true);
-        return;
-      }
-
-      clearQueuedFlightSession(current.deviceId);
-      setHasQueuedSession(false);
-    } catch {
-      queueFlightSessionSave(current);
-      setHasQueuedSession(true);
-    }
-  };
-
+  const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
   const sortedAircraft = useMemo(() => [...aircrafts].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber)), [aircrafts]);
   const selectedAircraft = useMemo(() => sortedAircraft.find((aircraft) => aircraft.id === selectedAircraftId) || null, [selectedAircraftId, sortedAircraft]);
   const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
@@ -256,7 +224,6 @@ export default function ActiveFlightPage() {
   const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
   const selectedLegs = selectedBooking?.navlog?.legs || [];
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position), [selectedLegs, position]);
-  const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
     speed: activeLegState?.groundSpeedKt ?? position?.speedKt ?? null,
@@ -264,6 +231,18 @@ export default function ActiveFlightPage() {
     heading: position?.headingTrue ?? null,
     trailPoints: flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId)?.breadcrumb?.length ?? (position ? 1 : 0),
   };
+  const syncStatusLabel = hasQueuedSession ? 'Queued for Sync' : isOnline ? 'Online' : 'Offline';
+  const syncStatusClassName = hasQueuedSession
+    ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50'
+    : isOnline
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50'
+      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50';
+
+  const conflictingAircraftSession = useMemo(() => {
+    if (!selectedAircraft || !deviceBinding?.deviceId) return null;
+    return flightSessions.find((session) => session.status === 'active' && session.aircraftId === selectedAircraft.id && session.deviceId !== deviceBinding.deviceId) || null;
+  }, [deviceBinding?.deviceId, flightSessions, selectedAircraft]);
+
   const handleAircraftSelectionChange = (aircraftId: string) => {
     setSelectedAircraftId(aircraftId);
     if (!deviceBinding?.deviceId) return;
@@ -272,6 +251,7 @@ export default function ActiveFlightPage() {
     setSelectedBookingId(bookingId);
     saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId });
   };
+
   const handleBookingSelectionChange = (bookingId: string) => {
     setSelectedBookingId(bookingId);
     if (!deviceBinding?.deviceId) return;
@@ -388,18 +368,6 @@ export default function ActiveFlightPage() {
     return () => window.removeEventListener('online', handleOnline);
   }, [deviceBinding?.deviceId]);
 
-  const syncStatusLabel = hasQueuedSession ? 'Queued for Sync' : isOnline ? 'Online' : 'Offline';
-  const syncStatusClassName = hasQueuedSession
-    ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50'
-    : isOnline
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50'
-      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50';
-
-  const conflictingAircraftSession = useMemo(() => {
-    if (!selectedAircraft || !deviceBinding?.deviceId) return null;
-    return flightSessions.find((session) => session.status === 'active' && session.aircraftId === selectedAircraft.id && session.deviceId !== deviceBinding.deviceId) || null;
-  }, [deviceBinding?.deviceId, flightSessions, selectedAircraft]);
-
   useEffect(() => {
     if (!isTrackingActive || !position || !selectedAircraft || !deviceBinding) return;
     const now = Date.now();
@@ -432,6 +400,42 @@ export default function ActiveFlightPage() {
     const next = [...flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId), nextSession];
     void persistSessions(next);
   }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraft, selectedBooking?.id, userProfile?.id]);
+
+  const persistSessions = async (next: FlightSession[]) => {
+    setFlightSessions(next);
+    const current = next[next.length - 1];
+    if (!current) return;
+    try {
+      const response = await fetch('/api/flight-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: current }),
+      });
+
+      if (response.status === 423) {
+        setIsTrackingActive(false);
+        stopWatching();
+        if (deviceBinding?.deviceId) {
+          clearActiveTrackingState(deviceBinding.deviceId);
+        }
+        toast({ variant: 'destructive', title: 'Tracking Ended By Ops', description: 'This device was cleared from fleet operations. Start tracking again to rejoin.' });
+        await reloadFlightSessions();
+        return;
+      }
+
+      if (!response.ok) {
+        queueFlightSessionSave(current);
+        setHasQueuedSession(true);
+        return;
+      }
+
+      clearQueuedFlightSession(current.deviceId);
+      setHasQueuedSession(false);
+    } catch {
+      queueFlightSessionSave(current);
+      setHasQueuedSession(true);
+    }
+  };
 
   const startTracking = () => {
     if (!selectedAircraft || !deviceBinding) return;
@@ -633,6 +637,45 @@ export default function ActiveFlightPage() {
     );
   }
 
+  const canAccessActiveFlight = shouldBypassIndustryRestrictions(tenant?.id) || isHrefEnabledForIndustry('/operations/active-flight', tenant?.industry) || (tenant?.enabledMenus?.includes('/operations/active-flight') ?? false);
+
+  if (isTenantLoading) {
+    return (
+      <div className="flex min-h-full flex-1 items-center justify-center p-6">
+        <Card className="w-full max-w-md border shadow-none">
+          <CardContent className="flex items-center gap-3 p-6">
+            <Loader2 className="h-5 w-5 animate-spin text-sky-500" />
+            <div className="space-y-1">
+              <p className="text-sm font-black uppercase tracking-widest">Loading Active Flight</p>
+              <p className="text-sm text-muted-foreground">Resolving tenant access...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!canAccessActiveFlight) {
+    return (
+      <div className="flex min-h-full flex-1 items-center justify-center p-6">
+        <Card className="w-full max-w-lg border shadow-none">
+          <CardHeader>
+            <CardTitle className="text-xl font-black uppercase tracking-tight">Active Flight Unavailable</CardTitle>
+            <CardDescription>This tenant does not have access to the active flight screen.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Your current company setup does not include this module. An administrator can enable it from Page Format if needed.
+            </p>
+            <Button asChild variant="outline" className="font-black uppercase">
+              <Link href="/dashboard">Back to Dashboard</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('mx-auto flex min-h-full w-full max-w-[1200px] flex-1 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
       {isModern && (
@@ -696,7 +739,6 @@ export default function ActiveFlightPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50')}><Link href="/operations/fleet-tracker"><Radio className="mr-2 h-4 w-4" />Open Fleet Tracker</Link></Button>
-              <Button asChild className={cn('font-black uppercase', isModern && 'bg-slate-900 text-white shadow-sm hover:bg-slate-800')}><Link href="/operations/flight-planner"><Navigation className="mr-2 h-4 w-4" />Route Planner</Link></Button>
             </div>
           </div>
         </CardHeader>
@@ -788,12 +830,13 @@ export default function ActiveFlightPage() {
                 </Dialog>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-4">
-                  <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Heading</p><p className="mt-1 text-sm font-black">{liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}</p></div>
-                  <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Speed</p><p className="mt-1 text-sm font-black">{liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A'}</p></div>
-                  <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Altitude</p><p className="mt-1 text-sm font-black">{liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}</p></div>
-                  <div className={cn('rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Trail</p><p className="mt-1 text-sm font-black">{liveTelemetry.trailPoints} pts</p></div>
-                </div>
+                <FlightTelemetryTable
+                  heading={liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}
+                  speed={liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A'}
+                  altitude={liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}
+                  trail={`${liveTelemetry.trailPoints} pts`}
+                  className={cn(isModern && 'border-slate-200/90 bg-slate-50/70')}
+                />
                 {!isFullscreenMapOpen ? (
         <ActiveFlightLiveMap
           booking={selectedBooking}

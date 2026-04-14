@@ -82,7 +82,9 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
             try {
                 const response = await fetch('/api/training-routes', { cache: 'no-store' });
                 const payload = await parseJsonResponse<{ routes?: TrainingRoute[] }>(response);
-                if (!cancelled) setTrainingRoutes(payload?.routes ?? []);
+                if (!cancelled) {
+                    setTrainingRoutes((payload?.routes ?? []).filter((route) => route.routeType !== 'other'));
+                }
             } catch {
                 if (!cancelled) setTrainingRoutes([]);
             }

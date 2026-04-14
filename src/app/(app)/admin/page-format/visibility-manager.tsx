@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { isHrefEnabledForIndustry } from '@/lib/industry-access';
 import { menuConfig } from '@/lib/menu-config';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,6 +86,7 @@ export function VisibilityManager() {
           {menuConfig.map((menu) => {
             const subHrefs = menu.subItems?.map(s => s.href) || [];
             const isEnabled = enabledHrefs.has(menu.href);
+            const isIndustryDefault = isHrefEnabledForIndustry(menu.href, tenant?.industry);
             
             return (
               <div key={menu.href} className="p-5 border rounded-2xl bg-muted/5 space-y-4 shadow-sm border-slate-200">
@@ -99,11 +101,17 @@ export function VisibilityManager() {
                     <menu.icon className="h-4 w-4 text-primary opacity-70" />
                     {menu.label}
                   </Label>
+                  {!isIndustryDefault && (
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                      Optional
+                    </span>
+                  )}
                 </div>
                 {menu.subItems && (
                   <div className="pl-8 space-y-2.5 border-l-2 ml-2.5 border-primary/10">
                     {menu.subItems.map((sub) => {
                       const isSubEnabled = enabledHrefs.has(sub.href);
+                      const isSubIndustryDefault = isHrefEnabledForIndustry(sub.href, tenant?.industry);
                       return (
                         <div key={sub.href} className="flex items-center space-x-3">
                           <Checkbox 
@@ -115,6 +123,11 @@ export function VisibilityManager() {
                           <Label htmlFor={`submod-${toIdSuffix(sub.href)}`} className="text-[11px] font-bold text-muted-foreground cursor-pointer hover:text-foreground transition-colors uppercase">
                             {sub.label}
                           </Label>
+                          {!isSubIndustryDefault && (
+                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                              Optional
+                            </span>
+                          )}
                         </div>
                       );
                     })}

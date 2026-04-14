@@ -4,6 +4,7 @@ import { ActiveFlightLiveMap } from '@/components/active-flight/active-flight-li
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DialogClose } from '@/components/ui/dialog';
+import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -76,12 +77,12 @@ export function FullScreenFlightLayout({
 
         <div className="grid flex-1 gap-3 xl:min-h-[calc(100dvh-8.5rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.6fr)]">
           <div className="flex min-h-0 flex-col gap-3">
-            <div className="grid gap-3 sm:grid-cols-4">
-              <StatCard label="Heading" value={heading != null ? `${heading.toFixed(0)}°` : 'N/A'} />
-              <StatCard label="Speed" value={speed != null ? `${speed.toFixed(0)} kt` : 'N/A'} />
-              <StatCard label="Altitude" value={altitude != null ? `${Math.round(altitude)} m` : 'N/A'} />
-              <StatCard label="Trail" value={`${trailPoints} pts`} />
-            </div>
+            <FlightTelemetryTable
+              heading={heading != null ? `${heading.toFixed(0)}°` : 'N/A'}
+              speed={speed != null ? `${speed.toFixed(0)} kt` : 'N/A'}
+              altitude={altitude != null ? `${Math.round(altitude)} m` : 'N/A'}
+              trail={`${trailPoints} pts`}
+            />
             <div className="fullscreen-lite-map flex-1 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm md:p-4 xl:min-h-0">
               <ActiveFlightLiveMap
                 booking={booking}

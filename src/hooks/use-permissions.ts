@@ -6,6 +6,7 @@ import { menuConfig } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 
 type MePayload = {
   rolePermissions?: string[];
@@ -96,16 +97,10 @@ export const usePermissions = () => {
       if (isLoading || !userProfile) return false;
 
       const tenant = payload?.tenant;
-      const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
       const itemHref = item.href;
-
-      const isAviationOnly =
-        itemHref.includes('/bookings') ||
-        itemHref.includes('/assets') ||
-        itemHref.includes('/admin/mb-config');
-      const isAviationOnlySub = itemHref.includes('/training/student-progress');
-
-      if ((!isAviation && isAviationOnly) || (!isAviation && isAviationOnlySub)) {
+      const isExplicitlyEnabled = tenant?.enabledMenus?.includes(itemHref) ?? false;
+      const bypassIndustryRestrictions = shouldBypassIndustryRestrictions(tenant?.id);
+      if (!bypassIndustryRestrictions && !isHrefEnabledForIndustry(itemHref, tenant?.industry) && !isExplicitlyEnabled) {
         return false;
       }
 
@@ -121,6 +116,7 @@ export const usePermissions = () => {
       }
 
       const isEnabledByTenant =
+        bypassIndustryRestrictions ||
         !tenant?.enabledMenus ||
         tenant.enabledMenus.includes(itemHref) ||
         (parentItem ? tenant.enabledMenus.includes(parentItem.href) : false);

@@ -126,8 +126,8 @@ export const menuConfig: MenuItem[] = [
       },
       {
         href: '/operations/training-routes',
-        label: 'Training Routes',
-        description: 'Manage and view standardized training flight paths and sectors.',
+        label: 'Route Planner',
+        description: 'Manage training and general aviation routes for planning and import.',
         permissionId: 'operations-view',
       },
     ],

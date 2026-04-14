@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, Shield, LayoutGrid } from 'lucide-react';
+import { isHrefEnabledForIndustry } from '@/lib/industry-access';
 import { menuConfig } from '@/lib/menu-config';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,8 +46,13 @@ export default function AccessOverviewPage() {
   const isLoading = isLoadingTenant || isLoadingRoles;
 
   const coreModules = useMemo(() => {
-    return menuConfig.filter(m => m.label !== 'Admin' && m.label !== 'Development');
-  }, []);
+    return menuConfig.filter(
+      (m) =>
+        m.label !== 'Admin' &&
+        m.label !== 'Development' &&
+        isHrefEnabledForIndustry(m.href, tenant?.industry)
+    );
+  }, [tenant?.industry]);
 
   if (isLoading) {
     return (

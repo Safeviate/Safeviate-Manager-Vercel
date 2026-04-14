@@ -8,9 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useTheme } from '@/components/theme-provider';
+import type { Booking, NavlogLeg } from '@/types/booking';
 import type { FlightSession } from '@/types/flight-session';
 import { getFlightSessionFreshnessLabel, isFlightSessionStale } from '@/lib/flight-session-status';
+import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { cn } from '@/lib/utils';
 
 const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-tracker-map').then((module) => module.FleetTrackerMap), {
@@ -27,21 +30,34 @@ const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-t
 
 export default function FleetTrackerPage() {
   const { toast } = useToast();
+  const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const { uiMode } = useTheme();
   const [sessions, setSessions] = useState<FlightSession[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isModern = uiMode === 'modern';
   const operationalSessions = useMemo(() => sessions.filter((session) => session.status === 'active'), [sessions]);
   const activeSessionCount = useMemo(() => operationalSessions.filter((session) => !isFlightSessionStale(session)).length, [operationalSessions]);
   const staleSessionCount = useMemo(() => operationalSessions.filter((session) => isFlightSessionStale(session)).length, [operationalSessions]);
-
   const loadSessions = async () => {
     setIsRefreshing(true);
-    const res = await fetch('/api/flight-sessions', { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
+    const [sessionsResponse, bookingsResponse] = await Promise.all([
+      fetch('/api/flight-sessions', { cache: 'no-store' }),
+      fetch('/api/bookings', { cache: 'no-store' }),
+    ]);
+
+    if (sessionsResponse.ok) {
+      const data = await sessionsResponse.json();
       setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+    }
+
+    if (bookingsResponse.ok) {
+      const data = await bookingsResponse.json();
+      setBookings(Array.isArray(data.bookings) ? data.bookings : []);
+    }
+
+    if (sessionsResponse.ok || bookingsResponse.ok) {
       setLastRefreshedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
     setIsRefreshing(false);
@@ -77,6 +93,20 @@ export default function FleetTrackerPage() {
     [operationalSessions]
   );
 
+  const navlogRoutesByBookingId = useMemo(() => {
+    return bookings.reduce<Record<string, NavlogLeg[]>>(
+      (acc, booking) => {
+        if (!booking?.id || !booking.navlog?.legs?.length) return acc;
+        const validLegs = booking.navlog.legs.filter((leg) => leg.latitude !== undefined && leg.longitude !== undefined);
+        if (validLegs.length > 1) {
+          acc[booking.id] = validLegs;
+        }
+        return acc;
+      },
+      {}
+    );
+  }, [bookings]);
+
   const clearStaleSession = async (session: FlightSession) => {
     const response = await fetch(`/api/flight-sessions?id=${session.id}`, { method: 'DELETE' });
     if (!response.ok) {
@@ -87,6 +117,37 @@ export default function FleetTrackerPage() {
     setSessions((current) => current.filter((item) => item.id !== session.id));
     toast({ title: 'Stale Session Ended', description: `${session.aircraftRegistration} was cleared from the active fleet tracker.` });
   };
+
+  if (isTenantLoading) {
+    return (
+      <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-background px-6 py-12 text-center">
+        <div className="space-y-4">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-500" />
+          <p className="text-sm font-black uppercase tracking-widest">Loading Fleet Tracker</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    !shouldBypassIndustryRestrictions(tenant?.id) &&
+    !isHrefEnabledForIndustry('/operations/fleet-tracker', tenant?.industry) &&
+    !(tenant?.enabledMenus?.includes('/operations/fleet-tracker') ?? false)
+  ) {
+    return (
+      <Card className="mx-auto w-full max-w-3xl border shadow-none">
+        <CardHeader>
+          <CardTitle className="text-2xl font-black uppercase tracking-tight">Fleet Tracker Unavailable</CardTitle>
+          <CardDescription>This live aircraft monitoring surface is only available for aviation tenants.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="font-black uppercase">
+            <Link href="/operations">Back to Operations</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className={cn('mx-auto flex w-full max-w-[1400px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
@@ -185,7 +246,7 @@ export default function FleetTrackerPage() {
               <CardTitle className="text-sm font-black uppercase tracking-widest">Fleet Map Surface</CardTitle>
               <CardDescription>Active aircraft sessions are plotted here from the server-backed session store.</CardDescription>
             </CardHeader>
-            <CardContent><FleetTrackerMap sessions={sortedSessions} /></CardContent>
+              <CardContent><FleetTrackerMap sessions={sortedSessions} navlogRoutesByBookingId={navlogRoutesByBookingId} /></CardContent>
           </Card>
           <div className="space-y-6">
             <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>

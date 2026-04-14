@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff } from 'lucide-react';
@@ -8,12 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
+import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
+
+const getRouteTypeLabel = (routeType?: TrainingRoute['routeType']) =>
+  routeType === 'other' ? 'Other Route' : 'Training Route';
 
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
   ssr: false,
@@ -21,6 +28,7 @@ const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aerona
 });
 
 export default function TrainingRoutesPage() {
+  const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const [routes, setRoutes] = useState<TrainingRoute[]>([]);
   const [activeRoute, setActiveRoute] = useState<TrainingRoute | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -28,17 +36,22 @@ export default function TrainingRoutesPage() {
   const [hazardNote, setHazardNote] = useState('');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    const loadRoutes = async () => {
-      try {
-        const res = await fetch('/api/training-routes', { cache: 'no-store' });
-        const data = await res.json();
-        const nextRoutes = Array.isArray(data.routes) ? data.routes : [];
+    useEffect(() => {
+      const loadRoutes = async () => {
+        try {
+          const res = await fetch('/api/training-routes', { cache: 'no-store' });
+          const data = await res.json();
+        const nextRoutes = Array.isArray(data.routes)
+          ? data.routes.map((route: TrainingRoute) => ({
+              ...route,
+              routeType: route.routeType === 'other' ? 'other' : 'training',
+            }))
+          : [];
         setRoutes(nextRoutes);
         if (!activeRoute && nextRoutes.length > 0) setActiveRoute(nextRoutes[0]);
-      } catch {
-        setRoutes([]);
-      }
+        } catch {
+          setRoutes([]);
+        }
     };
     loadRoutes();
   }, []);
@@ -55,8 +68,9 @@ export default function TrainingRoutesPage() {
   const handleCreateNew = () => {
     const newRoute: TrainingRoute = {
       id: uuidv4(),
-      name: 'New Training Route',
+      name: 'New Route',
       description: '',
+      routeType: 'training',
       legs: [],
       hazards: [],
       tenantId: 'safeviate',
@@ -119,12 +133,43 @@ export default function TrainingRoutesPage() {
     [routes, search]
   );
 
+  if (isTenantLoading) {
+    return (
+      <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-background px-6 py-12 text-center">
+        <div className="space-y-4">
+          <PlaneTakeoff className="mx-auto h-8 w-8 text-slate-400" />
+          <p className="text-sm font-black uppercase tracking-widest">Loading Route Planner</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    !shouldBypassIndustryRestrictions(tenant?.id) &&
+    !isHrefEnabledForIndustry('/operations/training-routes', tenant?.industry) &&
+    !(tenant?.enabledMenus?.includes('/operations/training-routes') ?? false)
+  ) {
+    return (
+      <Card className="mx-auto w-full max-w-3xl border shadow-none">
+        <CardContent className="space-y-4 p-6">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black uppercase tracking-tight">Route Planner Unavailable</h1>
+            <p className="text-sm text-muted-foreground">Route planning is only available for aviation tenants.</p>
+          </div>
+          <Button asChild variant="outline" className="font-black uppercase">
+            <Link href="/operations">Back to Operations</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col gap-4 overflow-hidden px-1">
       <Card className="flex h-full flex-col overflow-hidden border shadow-none">
         <div className="sticky top-0 z-30 border-b bg-card">
             <MainPageHeader
-            title="Training Routes"
+            title="Route Planner"
             actions={<Button onClick={handleCreateNew} className={HEADER_ACTION_BUTTON_CLASS}><Plus size={14} className="mr-2" /> New Route</Button>}
           />
         </div>
@@ -143,7 +188,7 @@ export default function TrainingRoutesPage() {
                   {filteredRoutes.map((route) => (
                     <button key={route.id} onClick={() => { setActiveRoute(route); setIsEditing(false); }} className={`w-full rounded-xl border p-3 text-left transition-all ${activeRoute?.id === route.id ? 'border-primary/20 bg-primary/5 shadow-sm' : 'border-transparent hover:bg-muted/50'}`}>
                       <div className="mb-1 flex items-center justify-between">
-                        <Badge variant="outline" className="h-4 text-[8px] font-black uppercase opacity-60">Route</Badge>
+                        <Badge variant="outline" className="h-4 text-[8px] font-black uppercase opacity-60">{getRouteTypeLabel(route.routeType)}</Badge>
                         <span className="text-[8px] font-bold text-muted-foreground">{route.legs.length} Waypoints</span>
                       </div>
                       <p className="truncate text-[11px] font-black uppercase">{route.name}</p>
@@ -171,16 +216,32 @@ export default function TrainingRoutesPage() {
                         <Button onClick={handleSave} disabled={!isEditing} className={HEADER_ACTION_BUTTON_CLASS}><Save size={14} className="mr-2" /> Save</Button>
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Name</label>
-                        <Input value={activeRoute.name} onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })} className="h-9 text-xs font-black uppercase" readOnly={!isEditing} />
+                      <div className="space-y-3">
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Name</label>
+                          <Input value={activeRoute.name} onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })} className="h-9 text-xs font-black uppercase" readOnly={!isEditing} />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Type</label>
+                          <Select
+                            value={activeRoute.routeType || 'training'}
+                            onValueChange={(value) => setActiveRoute({ ...activeRoute, routeType: value === 'other' ? 'other' : 'training' })}
+                            disabled={!isEditing}
+                          >
+                            <SelectTrigger className="h-9 text-xs font-black uppercase">
+                              <SelectValue placeholder="Select route type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="training">Training Route</SelectItem>
+                              <SelectItem value="other">Other Route</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Description / Notes</label>
+                          <Textarea value={activeRoute.description} onChange={(e) => setActiveRoute({ ...activeRoute, description: e.target.value })} className="min-h-[60px] text-[10px] font-bold" readOnly={!isEditing} placeholder="Route notes, sector details, frequency requirements, etc." />
+                        </div>
                       </div>
-                      <div>
-                        <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Description / Notes</label>
-                        <Textarea value={activeRoute.description} onChange={(e) => setActiveRoute({ ...activeRoute, description: e.target.value })} className="min-h-[60px] text-[10px] font-bold" readOnly={!isEditing} placeholder="Training sector details, frequency requirements, etc." />
-                      </div>
-                    </div>
                   </div>
                   <ScrollArea className="flex-1">
                     <div className="space-y-8 p-6 pb-12">
@@ -234,7 +295,7 @@ export default function TrainingRoutesPage() {
                 <div className="flex h-full flex-col items-center justify-center space-y-4 p-12 text-center opacity-40">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted"><MapIcon size={32} /></div>
                   <div className="max-w-xs">
-                    <p className="text-xs font-black uppercase tracking-tight">Select a Training Route</p>
+                    <p className="text-xs font-black uppercase tracking-tight">Select a Route</p>
                     <p className="mt-2 text-[10px] font-bold leading-relaxed">Choose a route from the list or create a new one to begin planning.</p>
                   </div>
                 </div>

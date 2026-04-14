@@ -122,7 +122,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             const response = await fetch('/api/training-routes', { cache: 'no-store' });
             const payload = await response.json().catch(() => ({ routes: [] }));
             if (!cancelled) {
-                setTrainingRoutes(payload.routes ?? []);
+                setTrainingRoutes((payload.routes ?? []).filter((route: TrainingRoute) => route.routeType !== 'other'));
             }
         };
 

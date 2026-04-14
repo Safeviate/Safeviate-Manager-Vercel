@@ -5,6 +5,12 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
+const normalizeRoute = (route: Record<string, unknown>, tenantId: string) => ({
+  ...route,
+  routeType: route.routeType === 'other' ? 'other' : 'training',
+  tenantId,
+});
+
 async function getTenantId() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
@@ -33,7 +39,7 @@ export async function GET() {
       tenantId
     );
 
-    return NextResponse.json({ routes: rows.map((row) => row.data) }, { status: 200 });
+    return NextResponse.json({ routes: rows.map((row) => normalizeRoute(row.data as Record<string, unknown>, tenantId)) }, { status: 200 });
   } catch (error) {
     console.error('[training-routes] fallback to empty list:', error);
     return NextResponse.json({ routes: [] }, { status: 200 });
@@ -53,7 +59,7 @@ export async function POST(request: Request) {
     }
 
     const id = route.id || randomUUID();
-    const data = { ...route, id, tenantId };
+    const data = normalizeRoute({ ...route, id }, tenantId);
 
     await prisma.$executeRawUnsafe(
       `INSERT INTO training_routes (id, tenant_id, data, created_at, updated_at)
@@ -86,7 +92,7 @@ export async function PATCH(request: Request) {
     await prisma.$executeRawUnsafe(
       `UPDATE training_routes SET data = $2::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $3`,
       route.id,
-      JSON.stringify({ ...route, tenantId }),
+      JSON.stringify(normalizeRoute(route as Record<string, unknown>, tenantId)),
       tenantId
     );
 

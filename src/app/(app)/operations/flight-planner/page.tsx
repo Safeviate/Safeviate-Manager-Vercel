@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
 import { Loader2, MapPin, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
@@ -10,6 +11,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { calculateRouteTotals, createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { useTenantConfig } from '@/hooks/use-tenant-config';
+import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
   ssr: false,
@@ -28,6 +31,7 @@ const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aerona
 const DEFAULT_CENTER: [number, number] = [-25.9, 27.9];
 
 export default function FlightPlannerPage() {
+  const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const [legs, setLegs] = useState<NavlogLeg[]>([]);
   const [departureLegId, setDepartureLegId] = useState<string | null>(null);
   const [arrivalLegId, setArrivalLegId] = useState<string | null>(null);
@@ -41,6 +45,37 @@ export default function FlightPlannerPage() {
     () => legs.find((leg) => leg.id === arrivalLegId) || null,
     [arrivalLegId, legs]
   );
+
+  if (isTenantLoading) {
+    return (
+      <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-background px-6 py-12 text-center">
+        <div className="space-y-4">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-500" />
+          <p className="text-sm font-black uppercase tracking-widest">Loading Flight Planner</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    !shouldBypassIndustryRestrictions(tenant?.id) &&
+    !isHrefEnabledForIndustry('/operations/flight-planner', tenant?.industry) &&
+    !(tenant?.enabledMenus?.includes('/operations/flight-planner') ?? false)
+  ) {
+    return (
+      <Card className="mx-auto w-full max-w-3xl border shadow-none">
+        <CardHeader>
+          <CardTitle className="text-2xl font-black uppercase tracking-tight">Flight Planner Unavailable</CardTitle>
+          <CardDescription>The route planner is only available for aviation tenants.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="font-black uppercase">
+            <Link href="/operations">Back to Operations</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleAddWaypoint = (lat: number, lon: number, identifier = 'WP', frequencies?: string, layerInfo?: string) => {
     setLegs((current) => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);

@@ -6,6 +6,7 @@ import { Fuel, AlertTriangle, Plane, Upload, Library, Plus, Trash2 } from 'lucid
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { IndustryRouteGuard } from '@/components/industry-route-guard';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -482,4 +483,14 @@ const WBCalculator = () => {
   );
 };
 
-export default WBCalculator;
+export default function MassBalanceConfigPage() {
+  return (
+    <IndustryRouteGuard
+      sectionLabel="M&B Configuration"
+      description="Mass and balance configuration is only available for flight-operations tenants."
+      backHref="/admin"
+    >
+      <WBCalculator />
+    </IndustryRouteGuard>
+  );
+}
