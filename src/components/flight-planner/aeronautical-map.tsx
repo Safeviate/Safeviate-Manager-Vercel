@@ -227,17 +227,29 @@ type FlightPlannerMapSettings = {
   baseLayer?: 'light' | 'satellite';
   showMasterChart?: boolean;
   showAirports?: boolean;
+  showAirportLabels?: boolean;
   showNavaids?: boolean;
+  showNavaidLabels?: boolean;
   showReportingPoints?: boolean;
+  showReportingPointLabels?: boolean;
   showAirspaces?: boolean;
+  showAirspaceLabels?: boolean;
   showClassE?: boolean;
+  showClassELabels?: boolean;
   showClassF?: boolean;
+  showClassFLabels?: boolean;
   showClassG?: boolean;
+  showClassGLabels?: boolean;
   showObstacles?: boolean;
+  showObstacleLabels?: boolean;
   showMilitaryAreas?: boolean;
+  showMilitaryAreaLabels?: boolean;
   showTrainingAreas?: boolean;
+  showTrainingAreaLabels?: boolean;
   showGlidingSectors?: boolean;
+  showGlidingSectorLabels?: boolean;
   showHangGlidings?: boolean;
+  showHangGlidingLabels?: boolean;
   showOnlyActiveAirspace?: boolean;
 };
 
@@ -246,17 +258,29 @@ const DEFAULT_FLIGHT_PLANNER_MAP_SETTINGS: Required<Omit<FlightPlannerMapSetting
   baseLayer: 'light',
   showMasterChart: true,
   showAirports: true,
+  showAirportLabels: true,
   showNavaids: true,
+  showNavaidLabels: true,
   showReportingPoints: true,
+  showReportingPointLabels: true,
   showAirspaces: true,
+  showAirspaceLabels: true,
   showClassE: true,
+  showClassELabels: true,
   showClassF: true,
+  showClassFLabels: true,
   showClassG: true,
+  showClassGLabels: true,
   showObstacles: false,
+  showObstacleLabels: false,
   showMilitaryAreas: true,
+  showMilitaryAreaLabels: true,
   showTrainingAreas: true,
+  showTrainingAreaLabels: true,
   showGlidingSectors: true,
+  showGlidingSectorLabels: true,
   showHangGlidings: true,
+  showHangGlidingLabels: true,
   showOnlyActiveAirspace: false,
 };
 
@@ -1085,17 +1109,29 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   const [mapZoom, setMapZoom] = useState(8);
   const [masterVisible, setMasterVisible] = useState(() => readStoredFlightPlannerMapSettings().showMasterChart ?? true);
   const [airportsVisible, setAirportsVisible] = useState(() => readStoredFlightPlannerMapSettings().showAirports ?? true);
+  const [airportLabelsVisible, setAirportLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showAirportLabels ?? true);
   const [navaidsVisible, setNavaidsVisible] = useState(() => readStoredFlightPlannerMapSettings().showNavaids ?? true);
+  const [navaidLabelsVisible, setNavaidLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showNavaidLabels ?? true);
   const [reportingVisible, setReportingVisible] = useState(() => readStoredFlightPlannerMapSettings().showReportingPoints ?? true);
+  const [reportingLabelsVisible, setReportingLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showReportingPointLabels ?? true);
   const [airspacesVisible, setAirspacesVisible] = useState(() => readStoredFlightPlannerMapSettings().showAirspaces ?? true);
+  const [airspaceLabelsVisible, setAirspaceLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showAirspaceLabels ?? true);
   const [classEVisible, setClassEVisible] = useState(() => readStoredFlightPlannerMapSettings().showClassE ?? true);
+  const [classELabelsVisible, setClassELabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showClassELabels ?? true);
   const [classFVisible, setClassFVisible] = useState(() => readStoredFlightPlannerMapSettings().showClassF ?? true);
+  const [classFLabelsVisible, setClassFLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showClassFLabels ?? true);
   const [classGVisible, setClassGVisible] = useState(() => readStoredFlightPlannerMapSettings().showClassG ?? true);
+  const [classGLabelsVisible, setClassGLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showClassGLabels ?? true);
   const [obstaclesVisible, setObstaclesVisible] = useState(() => readStoredFlightPlannerMapSettings().showObstacles ?? false);
+  const [obstacleLabelsVisible, setObstacleLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showObstacleLabels ?? false);
   const [militaryAreasVisible, setMilitaryAreasVisible] = useState(() => readStoredFlightPlannerMapSettings().showMilitaryAreas ?? true);
+  const [militaryLabelsVisible, setMilitaryLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showMilitaryAreaLabels ?? true);
   const [trainingAreasVisible, setTrainingAreasVisible] = useState(() => readStoredFlightPlannerMapSettings().showTrainingAreas ?? true);
+  const [trainingLabelsVisible, setTrainingLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showTrainingAreaLabels ?? true);
   const [glidingSectorsVisible, setGlidingSectorsVisible] = useState(() => readStoredFlightPlannerMapSettings().showGlidingSectors ?? true);
+  const [glidingLabelsVisible, setGlidingLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showGlidingSectorLabels ?? true);
   const [hangGlidingVisible, setHangGlidingVisible] = useState(() => readStoredFlightPlannerMapSettings().showHangGlidings ?? true);
+  const [hangGlidingLabelsVisible, setHangGlidingLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showHangGlidingLabels ?? true);
   const [onlyActiveAirspace, setOnlyActiveAirspace] = useState(() => readStoredFlightPlannerMapSettings().showOnlyActiveAirspace ?? false);
   const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>(() => readStoredFlightPlannerMapSettings().baseLayer ?? 'light');
   const [pendingClickLabel, setPendingClickLabel] = useState<string | null>(null);
@@ -1415,17 +1451,29 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
       baseLayer: selectedBaseLayer,
       showMasterChart: masterVisible,
       showAirports: airportsVisible,
+      showAirportLabels: airportLabelsVisible,
       showNavaids: navaidsVisible,
+      showNavaidLabels: navaidLabelsVisible,
       showReportingPoints: reportingVisible,
+      showReportingPointLabels: reportingLabelsVisible,
       showAirspaces: airspacesVisible,
+      showAirspaceLabels: airspaceLabelsVisible,
       showClassE: classEVisible,
+      showClassELabels: classELabelsVisible,
       showClassF: classFVisible,
+      showClassFLabels: classFLabelsVisible,
       showClassG: classGVisible,
+      showClassGLabels: classGLabelsVisible,
       showObstacles: obstaclesVisible,
+      showObstacleLabels: obstacleLabelsVisible,
       showMilitaryAreas: militaryAreasVisible,
+      showMilitaryAreaLabels: militaryLabelsVisible,
       showTrainingAreas: trainingAreasVisible,
+      showTrainingAreaLabels: trainingLabelsVisible,
       showGlidingSectors: glidingSectorsVisible,
+      showGlidingSectorLabels: glidingLabelsVisible,
       showHangGlidings: hangGlidingVisible,
+      showHangGlidingLabels: hangGlidingLabelsVisible,
       showOnlyActiveAirspace: onlyActiveAirspace,
     };
     const serialized = JSON.stringify(nextSettings);
@@ -1524,7 +1572,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     },
                   }}
                 >
-                  {mapZoom >= 9 && (
+                  {airportLabelsVisible && mapZoom >= 9 && (
                     <Tooltip
                       permanent
                       direction="top"
@@ -1568,7 +1616,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     },
                   }}
                 >
-                  {mapZoom >= 10 && (
+                  {navaidLabelsVisible && mapZoom >= 10 && (
                     <Tooltip
                       permanent
                       direction="top"
@@ -1612,7 +1660,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     },
                   }}
                 >
-                  {mapZoom >= 11 && (
+                  {reportingLabelsVisible && mapZoom >= 11 && (
                     <Tooltip
                       permanent
                       direction="top"
@@ -1639,10 +1687,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = props?.limits as string | undefined;
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (classELabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1660,10 +1710,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = props?.limits as string | undefined;
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (classFLabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1681,10 +1733,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = props?.limits as string | undefined;
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (classGLabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1702,10 +1756,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = props?.limits as string | undefined;
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (militaryLabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1723,10 +1779,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = props?.limits as string | undefined;
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (trainingLabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1744,10 +1802,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = props?.limits as string | undefined;
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (glidingLabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1765,10 +1825,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = props?.limits as string | undefined;
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (hangGlidingLabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1786,10 +1848,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   onEachFeature={(feature, layer) => {
                     const props = feature.properties as any;
                     const limits = formatAirspaceVerticalLimits(props as any);
-                    layer.bindTooltip(
-                      limits ? `${props?.name || 'Airspace'}${limits ? ` • ${limits}` : ''}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
-                    );
+                    if (airspaceLabelsVisible) {
+                      layer.bindTooltip(
+                        limits ? `${props?.name || 'Airspace'}${limits ? ` • ${limits}` : ''}` : `${props?.name || 'Airspace'}`,
+                        { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      );
+                    }
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
                 />
@@ -1806,6 +1870,12 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 pointToLayer={obstaclePointToLayer as any}
                 onEachFeature={(feature, layer) => {
                   const props = feature.properties as any;
+                  if (obstacleLabelsVisible && mapZoom >= 11) {
+                    layer.bindTooltip(
+                      `${props?.name || 'Obstacle'}`,
+                      { permanent: true, direction: 'top', className: airspaceLabelClassName, opacity: 0.9 }
+                    );
+                  }
                   layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Obstacle'}</div>`);
                 }}
               />
@@ -2040,6 +2110,60 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                   All supported layers are already available at this zoom.
                 </div>
               )}
+            </div>
+          </div>
+
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-700">Name Tags</p>
+              <div className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={airportLabelsVisible} onChange={(event) => setAirportLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  OpenAIP Airports
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={navaidLabelsVisible} onChange={(event) => setNavaidLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  OpenAIP Navaids
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={reportingLabelsVisible} onChange={(event) => setReportingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  OpenAIP Reporting Points
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={airspaceLabelsVisible} onChange={(event) => setAirspaceLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  OpenAIP Airspaces
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={classELabelsVisible} onChange={(event) => setClassELabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  Airspace Class E
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={classFLabelsVisible} onChange={(event) => setClassFLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  Airspace Class F
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={classGLabelsVisible} onChange={(event) => setClassGLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  Airspace Class G
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={militaryLabelsVisible} onChange={(event) => setMilitaryLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  Military Operations Areas
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={trainingLabelsVisible} onChange={(event) => setTrainingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  Training Areas
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={glidingLabelsVisible} onChange={(event) => setGlidingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  Gliding Sectors
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={hangGlidingLabelsVisible} onChange={(event) => setHangGlidingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  Hang Glidings
+                </label>
+                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
+                  <input type="checkbox" checked={obstacleLabelsVisible} onChange={(event) => setObstacleLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
+                  OpenAIP Obstacles
+                </label>
             </div>
           </div>
         </div>

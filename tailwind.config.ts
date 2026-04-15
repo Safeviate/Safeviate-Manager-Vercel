@@ -44,8 +44,16 @@ export default {
         'button-primary': {
           DEFAULT: 'hsl(var(--button-primary-background))',
           foreground: 'hsl(var(--button-primary-foreground))',
+          border: 'hsl(var(--button-primary-border))',
           accent: 'hsl(var(--button-primary-accent))',
           'accent-foreground': 'hsl(var(--button-primary-accent-foreground))',
+        },
+        'button-secondary': {
+          DEFAULT: 'hsl(var(--button-secondary-background))',
+          foreground: 'hsl(var(--button-secondary-foreground))',
+          border: 'hsl(var(--button-secondary-border))',
+          accent: 'hsl(var(--button-secondary-accent))',
+          'accent-foreground': 'hsl(var(--button-secondary-accent-foreground))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',

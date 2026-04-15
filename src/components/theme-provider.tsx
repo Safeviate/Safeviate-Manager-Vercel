@@ -15,8 +15,14 @@ type ThemeColors = {
 type ButtonThemeColors = {
   'button-primary-background': string;
   'button-primary-foreground': string;
+  'button-primary-border': string;
   'button-primary-accent': string;
   'button-primary-accent-foreground': string;
+  'button-secondary-background': string;
+  'button-secondary-foreground': string;
+  'button-secondary-border': string;
+  'button-secondary-accent': string;
+  'button-secondary-accent-foreground': string;
 };
 
 type CardThemeColors = {
@@ -142,8 +148,14 @@ const defaultColors: ThemeColors = {
 const defaultButtonColors: ButtonThemeColors = {
     'button-primary-background': '#7cc4f7',
     'button-primary-foreground': '#1e293b',
+    'button-primary-border': '#7cc4f7',
     'button-primary-accent': '#63b2a7',
     'button-primary-accent-foreground': '#ffffff',
+    'button-secondary-background': '#ffffff',
+    'button-secondary-foreground': '#1e293b',
+    'button-secondary-border': '#cbd5e1',
+    'button-secondary-accent': '#eef4fb',
+    'button-secondary-accent-foreground': '#1e293b',
 };
 const defaultCardColors: CardThemeColors = {
   card: '#ebf5fb',

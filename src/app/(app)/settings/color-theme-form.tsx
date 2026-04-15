@@ -35,6 +35,9 @@ type PalettePreset = {
 
 const HEADER_BANNER_RECOMMENDED_SIZE = '1600 x 240 px';
 const SIDEBAR_BANNER_RECOMMENDED_SIZE = '900 x 1600 px';
+const PAGE_FORMAT_PRIMARY_BUTTON_CLASS = 'h-10 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest shadow-sm';
+const PAGE_FORMAT_SECONDARY_BUTTON_CLASS = 'h-10 rounded-xl border-slate-200 bg-white px-6 text-[10px] font-black uppercase tracking-widest text-slate-800 shadow-sm hover:bg-slate-50';
+const PAGE_FORMAT_ICON_BUTTON_CLASS = 'h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50';
 
 const PALETTE_PRESETS: PalettePreset[] = [
   {
@@ -316,8 +319,14 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         buttonColors: (effectiveTheme.button as SavedTheme['buttonColors']) || {
             'button-primary-background': effectiveTheme.primaryColour || buttonTheme['button-primary-background'],
             'button-primary-foreground': buttonTheme['button-primary-foreground'],
+            'button-primary-border': effectiveTheme.primaryColour || buttonTheme['button-primary-border'],
             'button-primary-accent': effectiveTheme.accentColour || buttonTheme['button-primary-accent'],
             'button-primary-accent-foreground': buttonTheme['button-primary-accent-foreground'],
+            'button-secondary-background': buttonTheme['button-secondary-background'],
+            'button-secondary-foreground': buttonTheme['button-secondary-foreground'],
+            'button-secondary-border': buttonTheme['button-secondary-border'],
+            'button-secondary-accent': effectiveTheme.accentColour || buttonTheme['button-secondary-accent'],
+            'button-secondary-accent-foreground': buttonTheme['button-secondary-accent-foreground'],
         },
         cardColors: (effectiveTheme.card as SavedTheme['cardColors']) || { 
             card: effectiveTheme.backgroundColour || cardTheme.card, 
@@ -453,7 +462,13 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     setThemeValue('accent', preset.colors.accent);
     setButtonThemeValue('button-primary-background', preset.colors.primary);
     setButtonThemeValue('button-primary-foreground', preset.colors['primary-foreground']);
+    setButtonThemeValue('button-primary-border', preset.colors.primary);
     setButtonThemeValue('button-primary-accent', preset.colors.accent);
+    setButtonThemeValue('button-secondary-background', preset.colors.background);
+    setButtonThemeValue('button-secondary-foreground', preset.colors['primary-foreground']);
+    setButtonThemeValue('button-secondary-border', preset.colors.accent);
+    setButtonThemeValue('button-secondary-accent', preset.colors.accent);
+    setButtonThemeValue('button-secondary-accent-foreground', preset.colors['primary-foreground']);
     setPopoverThemeValue('popover', preset.colors.background);
     setPopoverThemeValue('popover-accent', preset.colors.primary);
     setSidebarThemeValue('sidebar-background', preset.colors.background);
@@ -484,10 +499,17 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
     if (key === 'header-button-foreground') return 'Header Button Text';
     if (key === 'header-button-border') return 'Header Button Border';
     if (key === 'header-button-hover') return 'Header Button Hover';
-    const clean = key.replace('popover-', '').replace('button-primary-', '').replace('sidebar-', '').replace('header-', '').replace('swimlane-header-', '');
+    const clean = key
+      .replace('popover-', '')
+      .replace('button-primary-', '')
+      .replace('button-secondary-', '')
+      .replace('sidebar-', '')
+      .replace('header-', '')
+      .replace('swimlane-header-', '');
     if (clean === 'popover' || clean === 'card' || clean === 'background') return 'Background';
     if (clean === 'button-background') return 'Sidebar Menu Surface';
     if (clean === 'foreground') return 'Text';
+    if (clean === 'border') return 'Border';
     if (clean === 'accent') return 'Selection / Hover';
     if (clean === 'accent-foreground') return 'Selection Text';
     return clean.replace(/-/g, ' ');
@@ -518,7 +540,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             Save these colors as the shared default for everyone in the tenant.
                         </p>
                     </div>
-                    <Button onClick={handleSaveToOrganization} disabled={isSavingOrganization} className="w-full sm:w-auto text-[10px] font-black uppercase h-9 px-8 shadow-md">
+                    <Button onClick={handleSaveToOrganization} disabled={isSavingOrganization} className={`w-full sm:w-auto ${PAGE_FORMAT_PRIMARY_BUTTON_CLASS}`}>
                         {isSavingOrganization ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> Save as Organization Default</>}
                     </Button>
                 </div>
@@ -557,7 +579,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                         <p className="text-[9px] font-black uppercase italic text-foreground/75">A quick read on how the current theme will feel in the app.</p>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
-                        {[theme.primary, theme.background, theme.accent, buttonTheme['button-primary-background']].map((value, index) => (
+                        {[theme.primary, theme.background, buttonTheme['button-primary-background'], buttonTheme['button-secondary-background']].map((value, index) => (
                             <div key={value + index} className="group h-10 w-10 overflow-hidden rounded-xl border shadow-sm">
                                 <div className="h-full w-full transition-transform group-hover:scale-110" style={{ backgroundColor: value }} />
                             </div>
@@ -640,14 +662,25 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                                     </div>
                                 </div>
                                 <div className="mt-4 flex flex-wrap gap-2">
-                                    <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: theme.primary, color: theme['primary-foreground'] }}>
-                                        Primary
+                                    <span
+                                        className="rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest transition-colors"
+                                        style={{
+                                            backgroundColor: buttonTheme['button-primary-background'],
+                                            color: buttonTheme['button-primary-foreground'],
+                                            borderColor: buttonTheme['button-primary-border'],
+                                        }}
+                                    >
+                                        Main Button
                                     </span>
-                                    <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: theme.accent, color: theme['primary-foreground'] }}>
-                                        Accent
-                                    </span>
-                                    <span className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: buttonTheme['button-primary-background'], color: buttonTheme['button-primary-foreground'] }}>
-                                        Button
+                                    <span
+                                        className="rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest transition-colors"
+                                        style={{
+                                            backgroundColor: buttonTheme['button-secondary-background'],
+                                            color: buttonTheme['button-secondary-foreground'],
+                                            borderColor: buttonTheme['button-secondary-border'],
+                                        }}
+                                    >
+                                        Secondary Button
                                     </span>
                                 </div>
                             </div>
@@ -676,7 +709,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                         type="button"
                         variant="outline"
                         onClick={handleReset}
-                        className="h-8 rounded-full border-primary/20 bg-background px-3 text-[9px] font-black uppercase tracking-widest shadow-sm"
+                        className={PAGE_FORMAT_SECONDARY_BUTTON_CLASS}
                     >
                         Reset to defaults
                     </Button>
@@ -698,7 +731,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             type="button"
                             variant="outline"
                             onClick={() => applyPalettePreset(preset)}
-                            className={`h-auto justify-start gap-3 rounded-2xl border-2 bg-background p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-muted/40 ${
+                            className={`h-auto justify-start gap-3 rounded-2xl border-2 bg-background p-3 text-left text-slate-800 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 ${
                                 activePaletteName === preset.name ? 'border-primary ring-1 ring-primary/30 bg-primary/5' : ''
                             }`}
                             aria-pressed={activePaletteName === preset.name}
@@ -769,14 +802,36 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                             <ChevronDown className={`h-4 w-4 transition-transform ${isSectionOpen('buttons') ? 'rotate-180' : ''}`} />
                         </CollapsibleTrigger>
                         <CollapsibleContent className="space-y-4">
-                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls button fill, text, and hover states.</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {Object.entries(buttonTheme).map(([name, value]) => (
-                                <div key={name} className="space-y-1.5">
-                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
-                                    <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                            <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls the two shared button systems used across the app.</p>
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Primary Buttons</h4>
+                                    <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls fill, text, border, and hover states for main call-to-action buttons.</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        {Object.entries(buttonTheme)
+                                            .filter(([name]) => name.startsWith('button-primary-'))
+                                            .map(([name, value]) => (
+                                                <div key={name} className="space-y-1.5">
+                                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                                    <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                                </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                ))}
+                                <div className="space-y-3">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">Secondary Buttons</h4>
+                                    <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls fill, text, border, and hover states for outline and utility buttons.</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        {Object.entries(buttonTheme)
+                                            .filter(([name]) => name.startsWith('button-secondary-'))
+                                            .map(([name, value]) => (
+                                                <div key={name} className="space-y-1.5">
+                                                    <Label htmlFor={name} className="text-[9px] font-black uppercase text-foreground">{formatLabel(name)}</Label>
+                                                    <Input id={name} type="color" value={value} onChange={(e) => setButtonThemeValue(name as keyof typeof buttonTheme, e.target.value)} className="p-1 h-10 w-full rounded-md cursor-pointer border shadow-sm" />
+                                                </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </CollapsibleContent>
                     </section>
@@ -824,7 +879,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                className="text-[10px] font-black uppercase"
+                                                className={PAGE_FORMAT_SECONDARY_BUTTON_CLASS}
                                                 disabled={isUploadingHeaderImage}
                                                 onClick={() => setHeaderBackgroundImage('')}
                                             >
@@ -952,7 +1007,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                className="text-[10px] font-black uppercase"
+                                                className={PAGE_FORMAT_SECONDARY_BUTTON_CLASS}
                                                 disabled={isUploadingSidebarImage}
                                                 onClick={() => setSidebarBackgroundImage('')}
                                             >
@@ -1076,7 +1131,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
             <p className='mb-4 text-[10px] font-black uppercase italic text-foreground/75'>Save your current look as a browser-only preset for this device.</p>
             <div className="flex flex-col sm:flex-row items-center gap-3">
                 <Input placeholder="Personal theme name..." value={themeName} onChange={(e) => setThemeName(e.target.value)} className="h-11 font-black text-sm uppercase placeholder:font-black placeholder:text-[10px] placeholder:italic" />
-                <Button onClick={handleSaveTheme} className="w-full sm:w-auto h-11 px-10 text-[10px] font-black uppercase shadow-lg tracking-tight">Save Browser Preset</Button>
+                <Button onClick={handleSaveTheme} className={`w-full sm:w-auto ${PAGE_FORMAT_PRIMARY_BUTTON_CLASS}`}>Save Browser Preset</Button>
             </div>
         </div>
 
@@ -1088,8 +1143,8 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                         <div key={theme.name} className="flex items-center justify-between p-4 border rounded-2xl bg-background shadow-sm group hover:border-primary/20 transition-all">
                             <span className="font-black text-[10px] uppercase tracking-tight text-foreground">{theme.name}</span>
                             <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="outline" size="sm" onClick={() => handleApplyTheme(theme)} className="h-8 px-4 text-[9px] font-black uppercase border-slate-300">Apply</Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteTheme(theme.name)} className="h-8 w-8 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="sm" onClick={() => handleApplyTheme(theme)} className={PAGE_FORMAT_SECONDARY_BUTTON_CLASS}>Apply</Button>
+                                <Button variant="outline" size="icon" onClick={() => handleDeleteTheme(theme.name)} className={PAGE_FORMAT_ICON_BUTTON_CLASS}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                         </div>
                     ))}
@@ -1100,7 +1155,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
         <Separator />
 
         <div className="flex justify-start">
-            <Button onClick={handleReset} variant="outline" className="text-[10px] font-black uppercase h-11 px-10 border-slate-300 hover:bg-muted/50 shadow-sm">Reset This Device Only</Button>
+            <Button onClick={handleReset} variant="outline" className={PAGE_FORMAT_SECONDARY_BUTTON_CLASS}>Reset This Device Only</Button>
         </div>
     </div>
   );

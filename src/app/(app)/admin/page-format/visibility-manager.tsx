@@ -11,6 +11,8 @@ import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LayoutGrid } from 'lucide-react';
 
+const PAGE_FORMAT_PRIMARY_BUTTON_CLASS = 'h-10 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest shadow-sm';
+
 export function VisibilityManager() {
   const { toast } = useToast();
   const { tenant, isLoading: isLoadingTenant } = useTenantConfig();
@@ -79,7 +81,7 @@ export function VisibilityManager() {
             </h3>
             <p className="text-xs text-muted-foreground italic">Select functional modules enabled for the organization sidebar.</p>
           </div>
-          <Button onClick={handleSaveModules} className="text-[10px] font-black uppercase h-9 px-6 shadow-md">Apply Changes</Button>
+          <Button onClick={handleSaveModules} className={PAGE_FORMAT_PRIMARY_BUTTON_CLASS}>Apply Changes</Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

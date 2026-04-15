@@ -24,7 +24,6 @@ import { getActiveLegState } from '@/lib/active-flight';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { cn } from '@/lib/utils';
 import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
-import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -490,9 +489,6 @@ export default function ActiveFlightPage() {
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="border border-slate-700 bg-slate-800 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-100 hover:bg-slate-800">
-                  {selectedAircraft?.tailNumber || 'Aircraft not selected'}
-                </Badge>
-                <Badge className="border border-slate-700 bg-slate-800 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-100 hover:bg-slate-800">
                   {isTrackingActive ? 'Tracking active' : 'Tracking idle'}
                 </Badge>
                 <Badge className={cn('px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]', syncStatusClassName)}>
@@ -692,9 +688,6 @@ export default function ActiveFlightPage() {
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
-                  {selectedAircraft?.tailNumber || 'aircraft not selected'}
-                </Badge>
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
                   {isTrackingActive ? 'tracking active' : 'tracking idle'}
                 </Badge>
                 <Badge className={cn('px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]', syncStatusClassName)}>
@@ -801,58 +794,19 @@ export default function ActiveFlightPage() {
                   <CardTitle className="text-sm font-black uppercase tracking-widest">Pilot Live Map</CardTitle>
                   <CardDescription>Ownship track, loaded flight path, and live route progress.</CardDescription>
                 </div>
-                <Dialog open={isFullscreenMapOpen} onOpenChange={setIsFullscreenMapOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}>Full Screen</Button>
-                  </DialogTrigger>
-                  <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
-                    <DialogHeader className="sr-only">
-                      <DialogTitle>Full Flight Tracking View</DialogTitle>
-                    </DialogHeader>
-                    <FullScreenFlightLayout
-                      booking={selectedBooking}
-                      legs={selectedLegs}
-                      position={position}
-                      aircraftRegistration={selectedAircraft?.tailNumber}
-                      activeLegIndex={activeLegState?.activeLegIndex}
-                      activeLegState={activeLegState}
-                      heading={liveTelemetry.heading}
-                      speed={liveTelemetry.speed}
-                      altitude={liveTelemetry.altitude}
-                      trailPoints={liveTelemetry.trailPoints}
-                      syncStatusLabel={syncStatusLabel}
-                      syncStatusClassName={syncStatusClassName}
-                      savedDeviceLabel={savedDeviceLabel}
-                      permissionState={permissionState}
-                      isWatching={isWatching}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
+                </CardHeader>
               <CardContent className="space-y-4">
-                <FlightTelemetryTable
-                  heading={liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}
-                  speed={liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A'}
-                  altitude={liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}
-                  trail={`${liveTelemetry.trailPoints} pts`}
-                  className={cn(isModern && 'border-slate-200/90 bg-slate-50/70')}
+                <ActiveFlightLiveMap
+                  booking={selectedBooking}
+                  legs={selectedLegs}
+                  position={position}
+                  aircraftRegistration={selectedAircraft?.tailNumber}
+                  activeLegIndex={activeLegState?.activeLegIndex}
+                  activeLegState={activeLegState}
+                  compactLayout
                 />
-                {!isFullscreenMapOpen ? (
-        <ActiveFlightLiveMap
-          booking={selectedBooking}
-          legs={selectedLegs}
-          position={position}
-          aircraftRegistration={selectedAircraft?.tailNumber}
-          activeLegIndex={activeLegState?.activeLegIndex}
-          activeLegState={activeLegState}
-        />
-                ) : (
-                  <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground">
-                    Full screen map is open. Close it to restore the compact pilot map.
-                  </div>
-                )}
               </CardContent>
-            </Card>
+              </Card>
             <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
               <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest">Active Leg Status</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">{activeLegState ? <div className={cn('rounded-lg border bg-muted/10 p-3 text-xs font-medium', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}>Next waypoint {activeLegState.toWaypoint || 'N/A'} | {activeLegState.distanceToNextNm != null ? `${activeLegState.distanceToNextNm.toFixed(1)} NM` : 'Unavailable'}</div> : <div className={cn('rounded-lg border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground', isModern && 'rounded-2xl border-slate-200 bg-slate-50/70 text-slate-500')}>Select a booking and start tracking to compute the active leg.</div>}</CardContent>

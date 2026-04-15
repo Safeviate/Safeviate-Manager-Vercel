@@ -22,7 +22,6 @@ async function getTenantIdForSession() {
   const profile = await prisma.user.upsert({
     where: { email },
     update: {
-      id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
       tenantId: 'safeviate',
       firstName: session?.user?.name?.split(' ')[0] ?? 'User',
       lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',

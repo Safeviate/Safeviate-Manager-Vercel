@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
@@ -91,17 +92,27 @@ function MapRecenterController({
   routePoints,
   position,
   recenterNonce,
+  recenterMode,
   onDone,
 }: {
   routePoints: [number, number][];
   position: FlightPosition | null;
   recenterNonce: number;
+  recenterMode: 'route' | 'position';
   onDone: () => void;
 }) {
   const map = useMap();
 
   useEffect(() => {
     if (recenterNonce === 0) return;
+
+    if (recenterMode === 'position') {
+      if (position) {
+        map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
+      }
+      onDone();
+      return;
+    }
 
     if (routePoints.length > 1) {
       map.fitBounds(L.latLngBounds(routePoints).pad(0.25), { animate: false });
@@ -119,7 +130,7 @@ function MapRecenterController({
       map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
       onDone();
     }
-  }, [map, onDone, position, recenterNonce, routePoints]);
+  }, [map, onDone, position, recenterMode, recenterNonce, routePoints]);
 
   return null;
 }
@@ -470,6 +481,7 @@ export function ActiveFlightLiveMap({
   activeLegIndex,
   activeLegState,
   fullscreen = false,
+  compactLayout = false,
 }: {
   booking: Booking | null;
   legs: NavlogLeg[];
@@ -478,6 +490,7 @@ export function ActiveFlightLiveMap({
   activeLegIndex?: number;
   activeLegState?: ActiveLegState | null;
   fullscreen?: boolean;
+  compactLayout?: boolean;
 }) {
   const routePoints = useMemo(
     () =>
@@ -497,6 +510,7 @@ export function ActiveFlightLiveMap({
   const [trackHistory, setTrackHistory] = useState<[number, number][]>([]);
   const [followOwnship, setFollowOwnship] = useState(true);
   const [recenterNonce, setRecenterNonce] = useState(0);
+  const [recenterMode, setRecenterMode] = useState<'route' | 'position'>('position');
   const [cacheNonce, setCacheNonce] = useState(0);
   const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
@@ -517,6 +531,7 @@ export function ActiveFlightLiveMap({
   const [offlineUsageLabel, setOfflineUsageLabel] = useState('Checking browser storage on this device...');
   const [isRefreshingOfflineSummary, setIsRefreshingOfflineSummary] = useState(false);
   const [isClearingOfflineMaps, setIsClearingOfflineMaps] = useState(false);
+  const [compactFullscreenOpen, setCompactFullscreenOpen] = useState(false);
 
   useEffect(() => {
     setFollowOwnship(true);
@@ -600,10 +615,16 @@ export function ActiveFlightLiveMap({
 
   const handleFollowOwnship = () => {
     setFollowOwnship(true);
+    setRecenterMode('route');
     setRecenterNonce((current) => current + 1);
   };
   const handleNorthUp = () => {
     setFollowOwnship(false);
+    setRecenterMode('route');
+    setRecenterNonce((current) => current + 1);
+  };
+  const handleCentre = () => {
+    setRecenterMode('position');
     setRecenterNonce((current) => current + 1);
   };
 
@@ -882,6 +903,7 @@ export function ActiveFlightLiveMap({
               routePoints={routePoints}
               position={position}
               recenterNonce={recenterNonce}
+              recenterMode={recenterMode}
               onDone={() => setRecenterNonce(0)}
             />
             <MapAreaCacheController
@@ -983,7 +1005,41 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
 
-        <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-3 gap-2">
+        <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-4 gap-2">
+          <Dialog open={compactFullscreenOpen} onOpenChange={setCompactFullscreenOpen}>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+              >
+                Full Screen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Full Flight Tracking View</DialogTitle>
+              </DialogHeader>
+              <FullScreenFlightLayout
+                booking={booking}
+                legs={legs}
+                position={position}
+                aircraftRegistration={aircraftRegistration}
+                activeLegIndex={activeLegIndex}
+                activeLegState={activeLegState}
+                heading={position?.headingTrue ?? null}
+                speed={position?.speedKt ?? null}
+                altitude={position?.altitude ?? null}
+                trailPoints={trackHistory.length}
+                syncStatusLabel={followOwnship ? 'Ownship Follow' : 'North Up'}
+                syncStatusClassName="border-slate-200 bg-white text-slate-800 hover:bg-white"
+                savedDeviceLabel="Embedded Map"
+                permissionState="granted"
+                isWatching
+              />
+            </DialogContent>
+          </Dialog>
           <Button
             type="button"
             size="sm"
@@ -1007,11 +1063,9 @@ export function ActiveFlightLiveMap({
             size="sm"
             variant="outline"
             className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
-            onClick={() => {
-              setRecenterNonce((current) => current + 1);
-            }}
+            onClick={handleCentre}
           >
-            Center View
+            Centre
           </Button>
         </div>
         <style jsx global>{`
@@ -1046,6 +1100,194 @@ export function ActiveFlightLiveMap({
     );
   }
 
+    if (compactLayout) {
+      const compactHeading = position?.headingTrue != null ? `${Math.round(((position.headingTrue % 360) + 360) % 360)}°` : 'N/A';
+      const compactSpeed = position?.speedKt != null ? `${position.speedKt.toFixed(0)} kt` : 'N/A';
+      const compactAltitude = position?.altitude != null ? `${Math.round(position.altitude)} m` : 'N/A';
+      const compactTrail = `${trackHistory.length} pts`;
+
+      return (
+        <div className="overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm" style={mapShellStyle}>
+            <table className="w-full table-fixed border-collapse">
+              <tbody>
+                <tr className="bg-slate-50/55">
+                  <td className="border-b border-r border-slate-200/80 p-2 align-middle">
+                    <Dialog open={compactFullscreenOpen} onOpenChange={setCompactFullscreenOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
+                        >
+                          Full Screen
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
+                        <DialogHeader className="sr-only">
+                          <DialogTitle>Full Flight Tracking View</DialogTitle>
+                        </DialogHeader>
+                        <FullScreenFlightLayout
+                          booking={booking}
+                          legs={legs}
+                          position={position}
+                          aircraftRegistration={aircraftRegistration}
+                          activeLegIndex={activeLegIndex}
+                          activeLegState={activeLegState}
+                          heading={position?.headingTrue ?? null}
+                          speed={position?.speedKt ?? null}
+                          altitude={position?.altitude ?? null}
+                          trailPoints={trackHistory.length}
+                          syncStatusLabel={followOwnship ? 'Ownship Follow' : 'North Up'}
+                          syncStatusClassName="border-slate-200 bg-white text-slate-800 hover:bg-white"
+                          savedDeviceLabel="Embedded Map"
+                          permissionState="granted"
+                          isWatching
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </td>
+                  <td className="border-b border-r border-slate-200/80 p-2 align-middle">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
+                      onClick={handleFollowOwnship}
+                    >
+                      Nose Up
+                    </Button>
+                  </td>
+                  <td className="border-b border-r border-slate-200/80 p-2 align-middle">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
+                      onClick={handleNorthUp}
+                    >
+                      North Up
+                    </Button>
+                  </td>
+                  <td className="border-b border-slate-200/80 p-2 align-middle">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
+                      onClick={handleCentre}
+                    >
+                      Centre
+                    </Button>
+                  </td>
+                </tr>
+                <tr className="bg-white">
+                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Heading</td>
+                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Speed</td>
+                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Altitude</td>
+                  <td className="border-b border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Trail</td>
+                </tr>
+                <tr className="bg-white">
+                  <td className="border-r border-slate-200/80 px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactHeading}</td>
+                  <td className="border-r border-slate-200/80 px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactSpeed}</td>
+                  <td className="border-r border-slate-200/80 px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactAltitude}</td>
+                  <td className="px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactTrail}</td>
+                </tr>
+              </tbody>
+            </table>
+          {compactFullscreenOpen ? (
+            <div className="flex min-h-[360px] items-center justify-center px-6 py-12 text-center text-sm text-slate-500">
+              Full screen map is open. Close it to restore the compact pilot map.
+            </div>
+          ) : (
+          <div className="nose-up-map relative min-h-[360px] bg-slate-950/5">
+            <LeafletMapFrame
+              center={center}
+              zoom={8}
+              minZoom={MAP_MIN_ZOOM}
+              maxZoom={MAP_MAX_ZOOM}
+              className="h-full min-h-[360px] w-full rounded-none"
+              style={{ background: '#f8fafc' }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+              />
+              <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
+              <MapResizeController />
+            <MapRecenterController
+              routePoints={routePoints}
+              position={position}
+              recenterNonce={recenterNonce}
+              recenterMode={recenterMode}
+              onDone={() => setRecenterNonce(0)}
+            />
+              <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
+
+              {routePoints.length > 1 && (
+                <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
+              )}
+
+              {trackHistory.length > 1 && (
+                <Polyline positions={trackHistory} color="#38bdf8" weight={3} opacity={0.7} />
+              )}
+
+              {activeLegIndex !== undefined &&
+                validRouteLegs[activeLegIndex]?.latitude !== undefined &&
+                validRouteLegs[activeLegIndex]?.longitude !== undefined &&
+                validRouteLegs[activeLegIndex + 1]?.latitude !== undefined &&
+                validRouteLegs[activeLegIndex + 1]?.longitude !== undefined && (
+                  <Polyline
+                    positions={[
+                      [validRouteLegs[activeLegIndex]!.latitude!, validRouteLegs[activeLegIndex]!.longitude!],
+                      [validRouteLegs[activeLegIndex + 1]!.latitude!, validRouteLegs[activeLegIndex + 1]!.longitude!],
+                    ]}
+                    color="#0ea5e9"
+                    weight={6}
+                    opacity={0.95}
+                  />
+                )}
+
+              {legs.map((leg, index) => {
+                if (leg.latitude === undefined || leg.longitude === undefined) return null;
+
+                return (
+                  <Marker key={leg.id} position={[leg.latitude, leg.longitude]} icon={WaypointIcon}>
+                    <Popup>
+                      <div className="space-y-1 text-xs">
+                        <p className="font-black uppercase">{leg.waypoint}</p>
+                        <p className="text-muted-foreground">Waypoint {index + 1}</p>
+                        {leg.frequencies && <p>{leg.frequencies}</p>}
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+
+              {position && (
+                <Marker
+                  position={[position.latitude, position.longitude]}
+                  icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', normalizedHeading)}
+                >
+                  <Popup>
+                    <div className="space-y-1 text-xs">
+                      <p className="font-black uppercase">{aircraftRegistration || 'Ownship'}</p>
+                      {booking && <p>Booking #{booking.bookingNumber}</p>}
+                      <p>
+                        {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
+                      </p>
+                      <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
+                      <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
+                      <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+            </LeafletMapFrame>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3" style={mapShellStyle}>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm">
@@ -1065,21 +1307,27 @@ export function ActiveFlightLiveMap({
             size="sm"
             variant="outline"
             className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={() => setFollowOwnship((current) => !current)}
+            onClick={handleNorthUp}
           >
-            {followOwnship ? 'Nose Up' : 'North Up'}
+            North Up
           </Button>
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={() => {
-              setFollowOwnship(true);
-              setRecenterNonce((current) => current + 1);
-            }}
+            onClick={handleFollowOwnship}
           >
-            Recenter
+            Nose Up
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={handleCentre}
+          >
+            Centre
           </Button>
         </div>
       </div>
@@ -1104,6 +1352,7 @@ export function ActiveFlightLiveMap({
             routePoints={routePoints}
             position={position}
             recenterNonce={recenterNonce}
+            recenterMode={recenterMode}
             onDone={() => setRecenterNonce(0)}
           />
           <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
