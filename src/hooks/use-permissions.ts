@@ -98,6 +98,15 @@ export const usePermissions = () => {
 
       const tenant = payload?.tenant;
       const itemHref = item.href;
+      const userRole = (userProfile as Personnel).role?.toLowerCase();
+      if (userRole === 'dev' || userRole === 'developer') {
+        return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
+      }
+
+      if (effectivePermissions.has('*')) {
+        return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
+      }
+
       const isExplicitlyEnabled = tenant?.enabledMenus?.includes(itemHref) ?? false;
       const bypassIndustryRestrictions = shouldBypassIndustryRestrictions(tenant?.id);
       if (!bypassIndustryRestrictions && !isHrefEnabledForIndustry(itemHref, tenant?.industry) && !isExplicitlyEnabled) {
@@ -105,15 +114,6 @@ export const usePermissions = () => {
       }
 
       if (userProfile.accessOverrides?.hiddenMenus?.includes(itemHref)) return false;
-
-      const userRole = (userProfile as Personnel).role?.toLowerCase();
-      if (userRole === 'dev' || userRole === 'developer') {
-        return true;
-      }
-
-      if (effectivePermissions.has('*')) {
-        return true;
-      }
 
       const isEnabledByTenant =
         bypassIndustryRestrictions ||

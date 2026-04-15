@@ -19,6 +19,48 @@ const metersPerSecondToKnots = (value: number | null) => {
   return value * 1.943844;
 };
 
+const normalizeHeading = (value: number | null | undefined) => {
+  if (value == null || Number.isNaN(value)) return null;
+  return ((value % 360) + 360) % 360;
+};
+
+const toRadians = (value: number) => (value * Math.PI) / 180;
+const toDegrees = (value: number) => (value * 180) / Math.PI;
+
+const calculateDistanceMeters = (
+  startLatitude: number,
+  startLongitude: number,
+  endLatitude: number,
+  endLongitude: number
+) => {
+  const earthRadiusMeters = 6371000;
+  const deltaLatitude = toRadians(endLatitude - startLatitude);
+  const deltaLongitude = toRadians(endLongitude - startLongitude);
+  const a =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(toRadians(startLatitude)) *
+      Math.cos(toRadians(endLatitude)) *
+      Math.sin(deltaLongitude / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusMeters * c;
+};
+
+const calculateTrackBearing = (
+  startLatitude: number,
+  startLongitude: number,
+  endLatitude: number,
+  endLongitude: number
+) => {
+  const startLatitudeRadians = toRadians(startLatitude);
+  const endLatitudeRadians = toRadians(endLatitude);
+  const deltaLongitudeRadians = toRadians(endLongitude - startLongitude);
+  const y = Math.sin(deltaLongitudeRadians) * Math.cos(endLatitudeRadians);
+  const x =
+    Math.cos(startLatitudeRadians) * Math.sin(endLatitudeRadians) -
+    Math.sin(startLatitudeRadians) * Math.cos(endLatitudeRadians) * Math.cos(deltaLongitudeRadians);
+  return normalizeHeading(toDegrees(Math.atan2(y, x)));
+};
+
 type GeolocationSnapshot = Pick<GeolocationState, 'position' | 'error' | 'permissionState' | 'isWatching'>;
 
 const geolocationStore = {
@@ -77,6 +119,25 @@ export function useGeolocationTrack(): GeolocationState {
     setGeolocationSnapshot({ error: null, isWatching: true });
     geolocationStore.watchId = navigator.geolocation.watchPosition(
       (geoPosition) => {
+        const previousPosition = geolocationStore.snapshot.position;
+        const speedKt = metersPerSecondToKnots(geoPosition.coords.speed);
+        const browserHeading = normalizeHeading(geoPosition.coords.heading);
+        const derivedHeading =
+          previousPosition &&
+          calculateDistanceMeters(
+            previousPosition.latitude,
+            previousPosition.longitude,
+            geoPosition.coords.latitude,
+            geoPosition.coords.longitude
+          ) >= 15
+            ? calculateTrackBearing(
+                previousPosition.latitude,
+                previousPosition.longitude,
+                geoPosition.coords.latitude,
+                geoPosition.coords.longitude
+              )
+            : null;
+
         setGeolocationSnapshot({
           permissionState: 'granted',
           isWatching: true,
@@ -85,8 +146,8 @@ export function useGeolocationTrack(): GeolocationState {
             longitude: geoPosition.coords.longitude,
             accuracy: geoPosition.coords.accuracy,
             altitude: geoPosition.coords.altitude,
-            speedKt: metersPerSecondToKnots(geoPosition.coords.speed),
-            headingTrue: geoPosition.coords.heading,
+            speedKt,
+            headingTrue: derivedHeading ?? browserHeading ?? previousPosition?.headingTrue ?? null,
             timestamp: new Date(geoPosition.timestamp).toISOString(),
           },
         });

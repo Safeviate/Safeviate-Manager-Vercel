@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff } from 'lucide-react';
+import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff, PanelLeft, Route } from 'lucide-react';
 import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aerona
 });
 
 export default function TrainingRoutesPage() {
+  type InspectorTab = 'routes' | 'selected' | null;
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const [routes, setRoutes] = useState<TrainingRoute[]>([]);
   const [activeRoute, setActiveRoute] = useState<TrainingRoute | null>(null);
@@ -35,6 +36,9 @@ export default function TrainingRoutesPage() {
   const [hazardToEdit, setHazardToEdit] = useState<{ lat: number; lng: number } | null>(null);
   const [hazardNote, setHazardNote] = useState('');
   const [search, setSearch] = useState('');
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('routes');
+  const [showRouteList, setShowRouteList] = useState(true);
+  const [showSelectedRoute, setShowSelectedRoute] = useState(true);
 
     useEffect(() => {
       const loadRoutes = async () => {
@@ -78,6 +82,7 @@ export default function TrainingRoutesPage() {
     };
     setActiveRoute(newRoute);
     setIsEditing(true);
+    setInspectorTab('selected');
   };
 
   const handleAddWaypoint = (lat: number, lon: number, identifier?: string) => {
@@ -112,6 +117,7 @@ export default function TrainingRoutesPage() {
       const nextRoutes = exists ? routes.map((route) => (route.id === activeRoute.id ? activeRoute : route)) : [activeRoute, ...routes];
       setRoutes(nextRoutes);
       setIsEditing(false);
+      setInspectorTab('selected');
     } catch (e) {
       console.error(e);
     }
@@ -123,6 +129,7 @@ export default function TrainingRoutesPage() {
       const nextRoutes = routes.filter((route) => route.id !== routeId);
       setRoutes(nextRoutes);
       if (activeRoute?.id === routeId) setActiveRoute(null);
+      setInspectorTab('routes');
     } catch (e) {
       console.error(e);
     }
@@ -174,132 +181,290 @@ export default function TrainingRoutesPage() {
           />
         </div>
 
-        <CardContent className="flex-1 overflow-hidden p-0 bg-muted/5">
-          <div className="grid h-full grid-cols-1 overflow-hidden lg:grid-cols-[300px_1fr_350px]">
-            <div className="flex h-full flex-col overflow-hidden border-r bg-background">
-              <div className="border-b bg-muted/10 p-4">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search routes..." className="h-8 pl-9 text-[10px] font-bold uppercase" />
-                </div>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="space-y-1 p-2">
-                  {filteredRoutes.map((route) => (
-                    <button key={route.id} onClick={() => { setActiveRoute(route); setIsEditing(false); }} className={`w-full rounded-xl border p-3 text-left transition-all ${activeRoute?.id === route.id ? 'border-primary/20 bg-primary/5 shadow-sm' : 'border-transparent hover:bg-muted/50'}`}>
-                      <div className="mb-1 flex items-center justify-between">
-                        <Badge variant="outline" className="h-4 text-[8px] font-black uppercase opacity-60">{getRouteTypeLabel(route.routeType)}</Badge>
-                        <span className="text-[8px] font-bold text-muted-foreground">{route.legs.length} Waypoints</span>
-                      </div>
-                      <p className="truncate text-[11px] font-black uppercase">{route.name}</p>
-                      <p className="mt-1 line-clamp-1 text-[9px] font-bold italic text-muted-foreground">{route.description || 'No description'}</p>
-                    </button>
-                  ))}
-                  {filteredRoutes.length === 0 && (<div className="space-y-3 p-8 text-center opacity-40"><PlaneTakeoff size={32} className="mx-auto" /><p className="text-[10px] font-black uppercase tracking-widest">No routes found</p></div>)}
-                </div>
-              </ScrollArea>
-            </div>
-
-            <div className="relative flex h-full flex-col overflow-hidden bg-slate-900">
+        <CardContent className="relative flex-1 overflow-hidden p-0 bg-muted/5">
+          <div className="relative h-full overflow-hidden">
+            <div className="absolute inset-0">
               <AeronauticalMap legs={activeRoute?.legs || []} hazards={activeRoute?.hazards || []} onAddWaypoint={handleAddWaypoint} onAddHazard={handleAddHazardRequest} />
-              {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
-            <div className="flex h-full flex-col overflow-hidden border-l bg-background">
-              {activeRoute ? (
-                <div className="flex h-full flex-col">
-                  <div className="space-y-4 border-b p-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Profile</p>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
-                        <Button onClick={handleSave} disabled={!isEditing} className={HEADER_ACTION_BUTTON_CLASS}><Save size={14} className="mr-2" /> Save</Button>
+            <div className="pointer-events-none absolute inset-3 z-[4000]">
+              <div className="pointer-events-auto absolute left-0 top-14 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab((current) => (current === 'routes' ? null : 'routes'))}
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl border shadow-xl backdrop-blur transition-colors ${
+                    inspectorTab === 'routes'
+                      ? 'border-primary/30 bg-white text-primary'
+                      : 'border-slate-200 bg-white/95 text-slate-600 hover:bg-white'
+                  }`}
+                  aria-label="Toggle route selector"
+                >
+                  <PanelLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab((current) => (current === 'selected' ? null : 'selected'))}
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl border shadow-xl backdrop-blur transition-colors ${
+                    inspectorTab === 'selected'
+                      ? 'border-primary/30 bg-white text-primary'
+                      : 'border-slate-200 bg-white/95 text-slate-600 hover:bg-white'
+                  }`}
+                  aria-label="Toggle selected route inspector"
+                >
+                  <Route size={18} />
+                </button>
+              </div>
+
+              {inspectorTab ? (
+                <div className="pointer-events-auto absolute right-0 top-14 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+                  <div className="flex h-10 items-center justify-between gap-3 border-b border-slate-100 px-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                        {inspectorTab === 'routes' ? 'Route Selector' : 'Selected Route'}
+                      </p>
+                      <p className="truncate text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                        {inspectorTab === 'routes'
+                          ? `${filteredRoutes.length} route${filteredRoutes.length === 1 ? '' : 's'} available`
+                          : activeRoute
+                            ? `${activeRoute.name} • ${activeRoute.legs.length} legs`
+                            : 'No route selected'}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-7 rounded-full border-slate-200 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700"
+                      onClick={() => setInspectorTab(null)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+
+                  {inspectorTab === 'routes' ? (
+                    <div className="p-3">
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search routes..." className="h-8 pl-9 text-[10px] font-bold uppercase" />
+                      </div>
+                      <ScrollArea className="mt-3 h-[calc(100vh-18rem)]">
+                        <div className="space-y-1 pr-1">
+                          {filteredRoutes.map((route) => (
+                            <button
+                              key={route.id}
+                              onClick={() => {
+                                setActiveRoute(route);
+                                setIsEditing(false);
+                                setInspectorTab('selected');
+                              }}
+                              className={`w-full rounded-xl border p-3 text-left transition-all ${activeRoute?.id === route.id ? 'border-primary/20 bg-primary/5 shadow-sm' : 'border-transparent bg-white/80 hover:bg-muted/50'}`}
+                            >
+                              <div className="mb-1 flex items-center justify-between">
+                                <Badge variant="outline" className="h-4 text-[8px] font-black uppercase opacity-60">{getRouteTypeLabel(route.routeType)}</Badge>
+                                <span className="text-[8px] font-bold text-muted-foreground">{route.legs.length} Waypoints</span>
+                              </div>
+                              <p className="truncate text-[11px] font-black uppercase">{route.name}</p>
+                              <p className="mt-1 line-clamp-1 text-[9px] font-bold italic text-muted-foreground">{route.description || 'No description'}</p>
+                            </button>
+                          ))}
+                          {filteredRoutes.length === 0 && (<div className="space-y-3 p-8 text-center opacity-40"><PlaneTakeoff size={32} className="mx-auto" /><p className="text-[10px] font-black uppercase tracking-widest">No routes found</p></div>)}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  ) : activeRoute ? (
+                    <div className="space-y-4 p-4">
+                      <div className="rounded-xl border bg-background/70 p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Summary</p>
+                        <p className="mt-2 text-sm font-black uppercase">{activeRoute.name}</p>
+                        <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">{getRouteTypeLabel(activeRoute.routeType)}</p>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <div className="rounded-lg border bg-white px-3 py-2">
+                            <p className="text-[8px] font-black uppercase text-muted-foreground">Waypoints</p>
+                            <p className="text-lg font-black">{activeRoute.legs.length}</p>
+                          </div>
+                          <div className="rounded-lg border bg-white px-3 py-2">
+                            <p className="text-[8px] font-black uppercase text-muted-foreground">Hazards</p>
+                            <p className="text-lg font-black">{activeRoute.hazards.length}</p>
+                          </div>
+                        </div>
+                        <p className="mt-4 text-[10px] font-bold leading-relaxed text-muted-foreground">
+                          {activeRoute.description || 'No route notes yet. Start editing or add waypoints directly from the map.'}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => setIsEditing(true)} className={`${HEADER_ACTION_BUTTON_CLASS} flex-1`}>
+                          <Save size={14} className="mr-2" /> Edit Route
+                        </Button>
+                        <Button variant="outline" className={`${HEADER_SECONDARY_BUTTON_CLASS} flex-1`} onClick={() => setInspectorTab('routes')}>
+                          Browse Routes
+                        </Button>
                       </div>
                     </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Name</label>
-                          <Input value={activeRoute.name} onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })} className="h-9 text-xs font-black uppercase" readOnly={!isEditing} />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Type</label>
-                          <Select
-                            value={activeRoute.routeType || 'training'}
-                            onValueChange={(value) => setActiveRoute({ ...activeRoute, routeType: value === 'other' ? 'other' : 'training' })}
-                            disabled={!isEditing}
-                          >
-                            <SelectTrigger className="h-9 text-xs font-black uppercase">
-                              <SelectValue placeholder="Select route type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="training">Training Route</SelectItem>
-                              <SelectItem value="other">Other Route</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Description / Notes</label>
-                          <Textarea value={activeRoute.description} onChange={(e) => setActiveRoute({ ...activeRoute, description: e.target.value })} className="min-h-[60px] text-[10px] font-bold" readOnly={!isEditing} placeholder="Route notes, sector details, frequency requirements, etc." />
-                        </div>
+                  ) : (
+                    <div className="flex min-h-[320px] flex-col items-center justify-center space-y-4 p-8 text-center opacity-40">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted"><MapIcon size={32} /></div>
+                      <div className="max-w-xs">
+                        <p className="text-xs font-black uppercase tracking-tight">Select a Route</p>
+                        <p className="mt-2 text-[10px] font-bold leading-relaxed">Pick a route from the rail, or create a new one to inspect it here.</p>
                       </div>
-                  </div>
-                  <ScrollArea className="flex-1">
-                    <div className="space-y-8 p-6 pb-12">
-                      <section className="space-y-4">
-                        <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Planned Legs</h3>
-                        <div className="space-y-2">
-                          {activeRoute.legs.map((leg, i) => (
-                            <div key={leg.id} className="group overflow-hidden rounded-xl border bg-background p-3 shadow-sm transition-all hover:border-primary/20">
-                              <div className="mb-2 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-[10px] font-black uppercase">{i + 1}</div>
-                                  <Input value={leg.waypoint} onChange={(e) => { const next = [...activeRoute.legs]; next[i].waypoint = e.target.value; setActiveRoute({ ...activeRoute, legs: next }); }} className="h-6 w-24 border-none p-0 text-[10px] font-bold uppercase shadow-none focus-visible:ring-0" readOnly={!isEditing} />
-                                </div>
-                                {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}><Trash2 size={12} /></Button>}
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-[8px] font-black uppercase text-muted-foreground">Alt (ft)</p>
-                                  <Input type="number" value={leg.altitude} onChange={(e) => { const next = [...activeRoute.legs]; next[i].altitude = Number(e.target.value); setActiveRoute({ ...activeRoute, legs: next }); }} className="h-7 border-dashed text-[10px] font-black" readOnly={!isEditing} />
-                                </div>
-                                <div className="flex items-end justify-end">
-                                  <p className="font-mono text-[9px] font-bold text-muted-foreground">{leg.latitude?.toFixed(3)}, {leg.longitude?.toFixed(3)}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {activeRoute.legs.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><Navigation className="mx-auto mb-2 h-6 w-6 opacity-50 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Click map to add waypoints</p></div>}
-                        </div>
-                      </section>
-                      <Separator />
-                      <section className="space-y-4">
-                        <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-destructive"><div className="h-2 w-2 rounded-full bg-destructive" /> Safety Hazards</h3>
-                        <div className="space-y-2">
-                          {activeRoute.hazards.map((hazard) => (
-                            <div key={hazard.id} className="group relative space-y-2 rounded-xl border border-destructive/10 bg-destructive/5 p-3 transition-all hover:border-destructive/30">
-                              <div className="flex items-center justify-between">
-                                <Badge variant="destructive" className="h-4 text-[8px] font-black uppercase">Alert</Badge>
-                                {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.filter((item) => item.id !== hazard.id) })}><Trash2 size={12} /></Button>}
-                              </div>
-                              <Textarea value={hazard.note} onChange={(e) => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.map((item) => item.id === hazard.id ? { ...item, note: e.target.value } : item) })} className="h-16 resize-none border-none bg-transparent p-0 text-[10px] font-bold leading-relaxed shadow-none focus-visible:ring-0" placeholder="Hazard description..." readOnly={!isEditing} />
-                              <p className="font-mono text-[8px] font-black text-destructive/60">{hazard.lat.toFixed(4)}, {hazard.lng.toFixed(4)}</p>
-                            </div>
-                          ))}
-                          {activeRoute.hazards.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><AlertTriangle className="mx-auto mb-2 h-6 w-6 opacity-40 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mark hazards from the map</p></div>}
-                        </div>
-                      </section>
                     </div>
-                  </ScrollArea>
+                  )}
                 </div>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center space-y-4 p-12 text-center opacity-40">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted"><MapIcon size={32} /></div>
-                  <div className="max-w-xs">
-                    <p className="text-xs font-black uppercase tracking-tight">Select a Route</p>
-                    <p className="mt-2 text-[10px] font-bold leading-relaxed">Choose a route from the list or create a new one to begin planning.</p>
+              ) : null}
+
+              <div className="hidden pointer-events-auto absolute left-0 top-14 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+                <div className={`flex items-center justify-between gap-3 px-3 ${showRouteList ? 'h-10 border-b border-slate-100' : 'h-10'}`}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Route Selector</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-7 rounded-full border-slate-200 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700"
+                    onClick={() => setShowRouteList((current) => !current)}
+                  >
+                    {showRouteList ? 'Collapse' : 'Expand'}
+                  </Button>
+                </div>
+                {showRouteList ? (
+                  <div className="p-3">
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search routes..." className="h-8 pl-9 text-[10px] font-bold uppercase" />
+                    </div>
+                    <ScrollArea className="mt-3 h-[calc(100vh-18rem)]">
+                      <div className="space-y-1 pr-1">
+                        {filteredRoutes.map((route) => (
+                          <button key={route.id} onClick={() => { setActiveRoute(route); setIsEditing(false); }} className={`w-full rounded-xl border p-3 text-left transition-all ${activeRoute?.id === route.id ? 'border-primary/20 bg-primary/5 shadow-sm' : 'border-transparent bg-white/80 hover:bg-muted/50'}`}>
+                            <div className="mb-1 flex items-center justify-between">
+                              <Badge variant="outline" className="h-4 text-[8px] font-black uppercase opacity-60">{getRouteTypeLabel(route.routeType)}</Badge>
+                              <span className="text-[8px] font-bold text-muted-foreground">{route.legs.length} Waypoints</span>
+                            </div>
+                            <p className="truncate text-[11px] font-black uppercase">{route.name}</p>
+                            <p className="mt-1 line-clamp-1 text-[9px] font-bold italic text-muted-foreground">{route.description || 'No description'}</p>
+                          </button>
+                        ))}
+                        {filteredRoutes.length === 0 && (<div className="space-y-3 p-8 text-center opacity-40"><PlaneTakeoff size={32} className="mx-auto" /><p className="text-[10px] font-black uppercase tracking-widest">No routes found</p></div>)}
+                      </div>
+                    </ScrollArea>
                   </div>
+                ) : null}
+              </div>
+
+              <div className="hidden pointer-events-auto absolute right-0 top-14 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+                <div className={`flex items-center justify-between gap-3 px-3 ${showSelectedRoute ? 'h-10 border-b border-slate-100' : 'h-10'}`}>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Selected Route</p>
+                    <p className="truncate text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                      {activeRoute ? `${activeRoute.name} • ${activeRoute.legs.length} legs` : 'No route selected'}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-7 rounded-full border-slate-200 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700"
+                    onClick={() => setShowSelectedRoute((current) => !current)}
+                  >
+                    {showSelectedRoute ? 'Collapse' : 'Expand'}
+                  </Button>
                 </div>
-              )}
+                {showSelectedRoute ? (
+                <div className="max-h-[calc(100vh-12rem)] overflow-hidden">
+                  {activeRoute ? (
+                    <div className="flex h-full flex-col">
+                      <div className="space-y-3 border-b p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Profile</p>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
+                              <Button onClick={handleSave} disabled={!isEditing} className={HEADER_ACTION_BUTTON_CLASS}><Save size={14} className="mr-2" /> Save</Button>
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Name</label>
+                              <Input value={activeRoute.name} onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })} className="h-9 text-xs font-black uppercase" readOnly={!isEditing} />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Type</label>
+                              <Select
+                                value={activeRoute.routeType || 'training'}
+                                onValueChange={(value) => setActiveRoute({ ...activeRoute, routeType: value === 'other' ? 'other' : 'training' })}
+                                disabled={!isEditing}
+                              >
+                                <SelectTrigger className="h-9 text-xs font-black uppercase">
+                                  <SelectValue placeholder="Select route type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="training">Training Route</SelectItem>
+                                  <SelectItem value="other">Other Route</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Description / Notes</label>
+                              <Textarea value={activeRoute.description} onChange={(e) => setActiveRoute({ ...activeRoute, description: e.target.value })} className="min-h-[60px] text-[10px] font-bold" readOnly={!isEditing} placeholder="Route notes, sector details, frequency requirements, etc." />
+                            </div>
+                          </div>
+                      </div>
+                      <ScrollArea className="flex-1">
+                        <div className="space-y-8 p-4 pb-12">
+                          <section className="space-y-4">
+                            <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Planned Legs</h3>
+                            <div className="space-y-2">
+                              {activeRoute.legs.map((leg, i) => (
+                                <div key={leg.id} className="group overflow-hidden rounded-xl border bg-background p-3 shadow-sm transition-all hover:border-primary/20">
+                                  <div className="mb-2 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-[10px] font-black uppercase">{i + 1}</div>
+                                      <Input value={leg.waypoint} onChange={(e) => { const next = [...activeRoute.legs]; next[i].waypoint = e.target.value; setActiveRoute({ ...activeRoute, legs: next }); }} className="h-6 w-24 border-none p-0 text-[10px] font-bold uppercase shadow-none focus-visible:ring-0" readOnly={!isEditing} />
+                                    </div>
+                                    {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}><Trash2 size={12} /></Button>}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <p className="text-[8px] font-black uppercase text-muted-foreground">Alt (ft)</p>
+                                      <Input type="number" value={leg.altitude} onChange={(e) => { const next = [...activeRoute.legs]; next[i].altitude = Number(e.target.value); setActiveRoute({ ...activeRoute, legs: next }); }} className="h-7 border-dashed text-[10px] font-black" readOnly={!isEditing} />
+                                    </div>
+                                    <div className="flex items-end justify-end">
+                                      <p className="font-mono text-[9px] font-bold text-muted-foreground">{leg.latitude?.toFixed(3)}, {leg.longitude?.toFixed(3)}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {activeRoute.legs.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><Navigation className="mx-auto mb-2 h-6 w-6 opacity-50 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Click map to add waypoints</p></div>}
+                            </div>
+                          </section>
+                          <Separator />
+                          <section className="space-y-4">
+                            <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-destructive"><div className="h-2 w-2 rounded-full bg-destructive" /> Safety Hazards</h3>
+                            <div className="space-y-2">
+                              {activeRoute.hazards.map((hazard) => (
+                                <div key={hazard.id} className="group relative space-y-2 rounded-xl border border-destructive/10 bg-destructive/5 p-3 transition-all hover:border-destructive/30">
+                                  <div className="flex items-center justify-between">
+                                    <Badge variant="destructive" className="h-4 text-[8px] font-black uppercase">Alert</Badge>
+                                    {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.filter((item) => item.id !== hazard.id) })}><Trash2 size={12} /></Button>}
+                                  </div>
+                                  <Textarea value={hazard.note} onChange={(e) => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.map((item) => item.id === hazard.id ? { ...item, note: e.target.value } : item) })} className="h-16 resize-none border-none bg-transparent p-0 text-[10px] font-bold leading-relaxed shadow-none focus-visible:ring-0" placeholder="Hazard description..." readOnly={!isEditing} />
+                                  <p className="font-mono text-[8px] font-black text-destructive/60">{hazard.lat.toFixed(4)}, {hazard.lng.toFixed(4)}</p>
+                                </div>
+                              ))}
+                              {activeRoute.hazards.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><AlertTriangle className="mx-auto mb-2 h-6 w-6 opacity-40 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mark hazards from the map</p></div>}
+                            </div>
+                          </section>
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  ) : (
+                    <div className="flex min-h-[320px] flex-col items-center justify-center space-y-4 p-8 text-center opacity-40">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted"><MapIcon size={32} /></div>
+                      <div className="max-w-xs">
+                        <p className="text-xs font-black uppercase tracking-tight">Select a Route</p>
+                        <p className="mt-2 text-[10px] font-bold leading-relaxed">Choose a route from the list or create a new one to begin planning.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                ) : null}
+              </div>
+              {!isEditing && activeRoute && (<div className="pointer-events-auto absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
           </div>
         </CardContent>

@@ -26,12 +26,16 @@ export function LeafletMapFrame({
   style,
   children,
 }: LeafletMapFrameProps) {
+  const mapKey = `${minZoom ?? 'min'}-${maxZoom ?? 'max'}`;
+
   return (
     <MapContainer
+      key={mapKey}
       center={center}
       zoom={zoom}
       minZoom={minZoom}
       maxZoom={maxZoom}
+      scrollWheelZoom
       zoomAnimation={zoomAnimation}
       preferCanvas={preferCanvas}
       className={className}

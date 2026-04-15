@@ -4,15 +4,18 @@ import { TileLayer, Marker, Popup, Polyline, GeoJSON, FeatureGroup, useMapEvents
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { NavlogLeg, Hazard } from '@/types/booking';
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useMapZoomPreferences } from '@/hooks/use-map-zoom-preferences';
+import { useMapZoomDraft } from '@/hooks/use-map-zoom-draft';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
+import { clearOpenAipCache, consumeOpenAipCacheHit, getCachedOpenAipResponse, setCachedOpenAipResponse } from '@/lib/openaip-cache';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -161,7 +164,52 @@ const LAYER_LOAD_LEVELS: LayerLoadLevel[] = [
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+type Bbox = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+};
+
+type ViewportCacheEntry<T> = {
+  bbox: Bbox;
+  data: T;
+};
+
+const viewportRequestCache = new Map<string, ViewportCacheEntry<unknown>>();
+
+const parseBbox = (bbox: string): Bbox => {
+  const [west, south, east, north] = bbox.split(',').map(Number);
+  return { west, south, east, north };
+};
+
+const containsBbox = (outer: Bbox, inner: Bbox) =>
+  outer.west <= inner.west &&
+  outer.south <= inner.south &&
+  outer.east >= inner.east &&
+  outer.north >= inner.north;
+
+const readViewportCache = <T,>(cacheKey: string, bbox: string): T | null => {
+  const nextBbox = parseBbox(bbox);
+  const cached = viewportRequestCache.get(cacheKey) as ViewportCacheEntry<T> | undefined;
+  if (cached && containsBbox(cached.bbox, nextBbox)) {
+    return cached.data;
+  }
+
+  return null;
+};
+
+const writeViewportCache = <T,>(cacheKey: string, bbox: string, data: T) => {
+  viewportRequestCache.set(cacheKey, { bbox: parseBbox(bbox), data });
+};
+
 async function fetchOpenAipJson<T>(url: string, retries = 1): Promise<T | null> {
+  const cacheKey = `safeviate.openaip:${url}`;
+  const cached = getCachedOpenAipResponse<T>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       const response = await fetch(url);
@@ -173,7 +221,11 @@ async function fetchOpenAipJson<T>(url: string, retries = 1): Promise<T | null> 
         return null;
       }
 
-      return (await parseJsonResponse<T>(response)) ?? null;
+      const parsed = (await parseJsonResponse<T>(response)) ?? null;
+      if (parsed) {
+        setCachedOpenAipResponse(cacheKey, url, parsed);
+      }
+      return parsed;
     } catch (error) {
       if (attempt < retries) {
         await delay(250 * (attempt + 1));
@@ -329,9 +381,11 @@ const CLICK_MOVE_TOLERANCE_METERS = 20;
 function MapEvents({
   onShortPress,
   onLongPress,
+  onMapClick,
 }: {
   onShortPress: (lat: number, lon: number) => void;
   onLongPress: (lat: number, lon: number) => void;
+  onMapClick?: () => void;
 }) {
   const map = useMap();
   const pressRef = useRef<{
@@ -388,12 +442,19 @@ function MapEvents({
   useMapEvents({
     mousedown(e) {
       if ((e.originalEvent as MouseEvent).button !== 0) return;
+      onMapClick?.();
       startPress(e.latlng);
+    },
+    zoomstart() {
+      onMapClick?.();
+    },
+    dragstart() {
+      onMapClick?.();
+      clearPress();
     },
     mouseup(e) {
       endPress(e.latlng);
     },
-    dragstart: clearPress,
     contextmenu: clearPress,
   });
 
@@ -403,6 +464,7 @@ function MapEvents({
 
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) { clearPress(); return; }
+      onMapClick?.();
       const touch = e.touches[0];
       const latlng = map.containerPointToLatLng(L.point(touch.clientX - container.getBoundingClientRect().left, touch.clientY - container.getBoundingClientRect().top));
       startPress(latlng);
@@ -458,6 +520,7 @@ function VisiblePointLoader({
   const map = useMap();
   const requestSeq = useRef(0);
   const lastRequestKeyRef = useRef('');
+  const cachedResourceDataRef = useRef(new Map<string, ViewportCacheEntry<{ items?: unknown[] }>>());
 
   const activeResources = useMemo(() => {
     const resources: Array<typeof OPENAIP_POINT_RESOURCES[number]> = [];
@@ -483,17 +546,39 @@ function VisiblePointLoader({
     const nextSeq = ++requestSeq.current;
 
     try {
+      const cachedResponses = activeResources
+        .map((resource) => {
+          const cached = cachedResourceDataRef.current.get(resource);
+          if (!cached || !containsBbox(cached.bbox, parseBbox(bbox))) return null;
+          return { resource, data: cached.data };
+        })
+        .filter(Boolean) as Array<{ resource: string; data: { items?: unknown[] } }>;
+
+      const missingResources = activeResources.filter((resource) => {
+        const cached = cachedResourceDataRef.current.get(resource);
+        return !cached || !containsBbox(cached.bbox, parseBbox(bbox));
+      });
+
+      if (cachedResponses.length === activeResources.length) {
+        const combined = cachedResponses.flatMap(({ resource, data }) =>
+          (data.items || []).map((item: any) => ({ ...item, sourceLayer: resource }))
+        );
+        onFeaturesLoaded(combined);
+        return;
+      }
+
       const responses = await Promise.all(
-        activeResources.map(async (resource) => {
+        missingResources.map(async (resource) => {
           const data =
             (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=${resource}&bbox=${bbox}`)) ?? { items: [] };
+          cachedResourceDataRef.current.set(resource, { bbox: parseBbox(bbox), data });
           return { resource, data };
         })
       );
 
       if (nextSeq !== requestSeq.current) return;
 
-      const combined = responses.flatMap(({ resource, data }) =>
+      const combined = [...cachedResponses, ...responses].flatMap(({ resource, data }) =>
         (data.items || []).map((item: any) => ({ ...item, sourceLayer: resource }))
       );
       onFeaturesLoaded(combined);
@@ -540,6 +625,7 @@ function VisibleAirspaceLoader({
   const map = useMap();
   const requestSeq = useRef(0);
   const lastRequestKeyRef = useRef('');
+  const lastCachedRef = useRef<ViewportCacheEntry<{ items?: unknown[] }> | null>(null);
 
   const loadVisibleAirspaces = useCallback(async () => {
     if (!enabled) return;
@@ -556,8 +642,14 @@ function VisibleAirspaceLoader({
     const nextSeq = ++requestSeq.current;
 
     try {
+      if (lastCachedRef.current && containsBbox(lastCachedRef.current.bbox, parseBbox(bbox))) {
+        onFeaturesLoaded((lastCachedRef.current.data.items || []) as OpenAipAirspace[]);
+        return;
+      }
+
       const data =
         (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=airspaces&bbox=${bbox}`)) ?? { items: [] };
+      lastCachedRef.current = { bbox: parseBbox(bbox), data };
       if (nextSeq !== requestSeq.current) return;
       onFeaturesLoaded((data.items || []) as OpenAipAirspace[]);
     } catch (error) {
@@ -587,6 +679,7 @@ function VisibleObstacleLoader({
   const map = useMap();
   const requestSeq = useRef(0);
   const lastRequestKeyRef = useRef('');
+  const lastCachedRef = useRef<ViewportCacheEntry<{ items?: unknown[] }> | null>(null);
 
   const loadVisibleObstacles = useCallback(async () => {
     if (!enabled) return;
@@ -603,8 +696,14 @@ function VisibleObstacleLoader({
     const nextSeq = ++requestSeq.current;
 
     try {
+      if (lastCachedRef.current && containsBbox(lastCachedRef.current.bbox, parseBbox(bbox))) {
+        onFeaturesLoaded((lastCachedRef.current.data.items || []) as OpenAipObstacle[]);
+        return;
+      }
+
       const data =
         (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=obstacles&bbox=${bbox}`)) ?? { items: [] };
+      lastCachedRef.current = { bbox: parseBbox(bbox), data };
       if (nextSeq !== requestSeq.current) return;
       onFeaturesLoaded((data.items || []) as OpenAipObstacle[]);
     } catch (error) {
@@ -955,7 +1054,7 @@ const SearchControl = ({
   return (
     <div
       ref={containerRef}
-      className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-sm pointer-events-auto"
+      className="absolute top-4 left-1/2 z-[1000] w-full max-w-sm -translate-x-1/2 pointer-events-auto"
     >
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -974,7 +1073,7 @@ const SearchControl = ({
               handleSelect(results[0]);
             }
           }}
-          className="pl-9 pr-9 h-10 shadow-lg"
+          className="h-10 rounded-2xl border-slate-200 bg-white/95 pl-9 pr-9 text-[10px] font-bold shadow-xl backdrop-blur placeholder:text-slate-500"
         />
         {query && (
           <button
@@ -1134,10 +1233,31 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   const [hangGlidingLabelsVisible, setHangGlidingLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showHangGlidingLabels ?? true);
   const [onlyActiveAirspace, setOnlyActiveAirspace] = useState(() => readStoredFlightPlannerMapSettings().showOnlyActiveAirspace ?? false);
   const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>(() => readStoredFlightPlannerMapSettings().baseLayer ?? 'light');
+  const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
+    storageKey: FLIGHT_PLANNER_MAP_SETTINGS_KEY + '.zoom',
+    defaultMinZoom: 3,
+    defaultMaxZoom: 18,
+  });
+  const mapMinZoom = zoomPreferences.minZoom;
+  const mapMaxZoom = zoomPreferences.maxZoom;
+  const {
+    draftMin: zoomDraftMin,
+    draftMax: zoomDraftMax,
+    setDraftMin: setZoomDraftMin,
+    setDraftMax: setZoomDraftMax,
+    saveDrafts: saveZoomDrafts,
+  } = useMapZoomDraft({
+    minZoom: mapMinZoom,
+    maxZoom: mapMaxZoom,
+    setZoomRange,
+    saveZoomRange,
+  });
   const [pendingClickLabel, setPendingClickLabel] = useState<string | null>(null);
   const [layerInfo, setLayerInfo] = useState<LayerInfoState | null>(null);
+  const [cacheStatus, setCacheStatus] = useState<'served from cache' | 'loaded from network' | 'waiting for data' | 'cache cleared'>('waiting for data');
   const lastPersistedSettingsRef = useRef<string>('');
-  const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(true);
+  const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(false);
+  const [showLayerSelectorPanel, setShowLayerSelectorPanel] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -1177,6 +1297,20 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     };
   }, [airspaceFeatures, onlyActiveAirspace]);
   const obstacleGeoJson = useMemo(() => obstacleFeatureCollection(obstacleFeatures), [obstacleFeatures]);
+  const handleViewportFeaturesLoaded = useCallback((features: OpenAipFeature[]) => {
+    setCacheStatus(consumeOpenAipCacheHit() ? 'served from cache' : 'loaded from network');
+    setViewportFeatures(features);
+  }, []);
+  const handleSearchResultsLoaded = useCallback((results: OpenAipFeature[]) => {
+    setCacheStatus(consumeOpenAipCacheHit() ? 'served from cache' : 'loaded from network');
+    setSearchFeatures(results);
+  }, []);
+  const handleClearOpenAipCache = useCallback(() => {
+    clearOpenAipCache();
+    setCacheStatus('cache cleared');
+    setViewportFeatures([]);
+    setSearchFeatures([]);
+  }, []);
   const activeLayerLabels = useMemo(() => {
     const layers: string[] = [selectedBaseLayer === 'light' ? 'Light (Standard)' : 'Satellite (Hybrid)'];
     if (masterVisible) layers.push('OpenAIP Master Chart');
@@ -1209,15 +1343,14 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     selectedBaseLayer,
     trainingAreasVisible,
   ]);
-  const layerLevelSummary = useMemo(() => {
-    const availableNow = LAYER_LOAD_LEVELS.filter((layer) => mapZoom >= layer.minZoom);
-    const upcoming = LAYER_LOAD_LEVELS.filter((layer) => mapZoom < layer.minZoom).slice(0, 4);
-
-    return {
-      availableNow,
-      upcoming,
-    };
-  }, [mapZoom]);
+  const layerLevelRows = useMemo(
+    () =>
+      LAYER_LOAD_LEVELS.map((layer) => ({
+        ...layer,
+        availableNow: mapZoom >= layer.minZoom,
+      })),
+    [mapZoom],
+  );
   const airspaceStyle = useCallback((feature: any) => {
     const category = feature?.properties?.category;
     let palette = { color: '#38bdf8', fillColor: '#38bdf8' };
@@ -1514,38 +1647,31 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     <LeafletMapFrame
       center={center}
       zoom={8}
-      maxZoom={14}
+      minZoom={mapMinZoom}
+      maxZoom={mapMaxZoom}
       preferCanvas
-      className="h-full w-full outline-none"
+      className="flight-planner-map h-full w-full outline-none"
       style={{ background: '#0f172a' }}
     >
-      <LayersControl position="topleft" collapsed>
-        <LayersControl.BaseLayer checked={selectedBaseLayer === 'light'} name="Light (Standard)">
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors"
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer checked={selectedBaseLayer === 'satellite'} name="Satellite (Hybrid)">
-          <TileLayer
-            url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-            attribution="&copy; Google Maps"
-          />
-        </LayersControl.BaseLayer>
+      <TileLayer
+        url={selectedBaseLayer === 'light' ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'}
+        attribution={selectedBaseLayer === 'light' ? '&copy; OpenStreetMap contributors' : '&copy; Google Maps'}
+      />
 
-        <LayersControl.Overlay checked={masterVisible} name="OpenAIP Master Chart">
+      <>
+        {masterVisible && (
           <TileLayer
             url="/api/openaip/tiles/openaip/{z}/{x}/{y}"
             attribution="&copy; OpenAIP"
             opacity={1}
-            minZoom={8}
+            minZoom={Math.max(mapMinZoom, 8)}
             minNativeZoom={8}
             maxNativeZoom={16}
-            maxZoom={20}
+            maxZoom={Math.min(mapMaxZoom, 20)}
           />
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={airportsVisible} name="OpenAIP Airports">
+        {airportsVisible && (
           <FeatureGroup>
             {mapZoom >= 8 && airportFeatures.map((feature) => {
               const coords = feature.geometry?.coordinates;
@@ -1587,9 +1713,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
               );
             })}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={navaidsVisible} name="OpenAIP Navaids">
+        {navaidsVisible && (
           <FeatureGroup>
             {mapZoom >= 9 && navaidFeatures.map((feature) => {
               const coords = feature.geometry?.coordinates;
@@ -1631,9 +1757,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
               );
             })}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={reportingVisible} name="OpenAIP Reporting Points">
+        {reportingVisible && (
           <FeatureGroup>
             {mapZoom >= 10 && reportingPointFeatures.map((feature) => {
               const coords = feature.geometry?.coordinates;
@@ -1675,9 +1801,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
               );
             })}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={classEVisible} name="Class E">
+        {classEVisible && (
           <FeatureGroup>
             {airspaceCollections.classE.features.length > 0 && (
                 <GeoJSON
@@ -1698,9 +1824,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={classFVisible} name="Class F">
+        {classFVisible && (
           <FeatureGroup>
             {airspaceCollections.classF.features.length > 0 && (
                 <GeoJSON
@@ -1721,9 +1847,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={classGVisible} name="Class G">
+        {classGVisible && (
           <FeatureGroup>
             {airspaceCollections.classG.features.length > 0 && (
                 <GeoJSON
@@ -1744,9 +1870,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={militaryAreasVisible} name="Military Operations Areas">
+        {militaryAreasVisible && (
           <FeatureGroup>
             {airspaceCollections.military.features.length > 0 && (
                 <GeoJSON
@@ -1767,9 +1893,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={trainingAreasVisible} name="Training Areas">
+        {trainingAreasVisible && (
           <FeatureGroup>
             {airspaceCollections.training.features.length > 0 && (
                 <GeoJSON
@@ -1790,9 +1916,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={glidingSectorsVisible} name="Gliding Sectors">
+        {glidingSectorsVisible && (
           <FeatureGroup>
             {airspaceCollections.gliding.features.length > 0 && (
                 <GeoJSON
@@ -1813,9 +1939,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={hangGlidingVisible} name="Hang Glidings">
+        {hangGlidingVisible && (
           <FeatureGroup>
             {airspaceCollections.hangGliding.features.length > 0 && (
                 <GeoJSON
@@ -1836,9 +1962,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={airspacesVisible} name="OpenAIP Airspaces">
+        {airspacesVisible && (
           <FeatureGroup>
             {airspaceCollections.general.features.length > 0 && (
                 <GeoJSON
@@ -1859,9 +1985,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                 />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
+        )}
 
-        <LayersControl.Overlay checked={obstaclesVisible} name="OpenAIP Obstacles">
+        {obstaclesVisible && (
           <FeatureGroup>
             {mapZoom >= 11 && obstacleGeoJson.features.length > 0 && (
               <GeoJSON
@@ -1881,8 +2007,98 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
               />
             )}
           </FeatureGroup>
-        </LayersControl.Overlay>
-      </LayersControl>
+        )}
+      </>
+
+      {showLayerSelectorPanel ? (
+      <>
+      <div className="pointer-events-auto absolute left-3 top-3 z-[1000] w-[340px] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
+        <div className="mb-2 flex items-center gap-2 pr-2">
+          <button
+            type="button"
+            className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+            onClick={() => setShowLayerSelectorPanel(false)}
+          >
+            Close
+          </button>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+              <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
+              <span className="text-[10px] font-semibold">Light (Standard)</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+              <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
+              <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
+            </label>
+            <div className="space-y-1 pt-1">
+              {[
+                ['OpenAIP Master Chart', masterVisible, setMasterVisible],
+                ['OpenAIP Airports', airportsVisible, setAirportsVisible],
+                ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
+                ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
+                ['Class E', classEVisible, setClassEVisible],
+                ['Class F', classFVisible, setClassFVisible],
+                ['Class G', classGVisible, setClassGVisible],
+                ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
+                ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
+                ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
+                ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
+                ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
+                ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
+              ].map(([label, checked, setter]) => (
+                <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                  <input
+                    type="checkbox"
+                    checked={checked as boolean}
+                    onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
+                  />
+                  <span className="text-[10px] font-semibold">{label as string}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Labels</p>
+            {[
+              ['Airport Labels', airportLabelsVisible, setAirportLabelsVisible],
+              ['Navaid Labels', navaidLabelsVisible, setNavaidLabelsVisible],
+              ['Reporting Labels', reportingLabelsVisible, setReportingLabelsVisible],
+              ['Airspace Labels', airspaceLabelsVisible, setAirspaceLabelsVisible],
+              ['Class E Labels', classELabelsVisible, setClassELabelsVisible],
+              ['Class F Labels', classFLabelsVisible, setClassFLabelsVisible],
+              ['Class G Labels', classGLabelsVisible, setClassGLabelsVisible],
+              ['Military Labels', militaryLabelsVisible, setMilitaryLabelsVisible],
+              ['Training Labels', trainingLabelsVisible, setTrainingLabelsVisible],
+              ['Gliding Labels', glidingLabelsVisible, setGlidingLabelsVisible],
+              ['Hang Gliding Labels', hangGlidingLabelsVisible, setHangGlidingLabelsVisible],
+              ['Obstacle Labels', obstacleLabelsVisible, setObstacleLabelsVisible],
+            ].map(([label, checked, setter]) => (
+              <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={checked as boolean}
+                  onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
+                />
+                <span className="text-[10px] font-semibold">{label as string}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+      </>
+      ) : (
+        <button
+          type="button"
+          className="pointer-events-auto absolute left-3 top-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+          onClick={() => setShowLayerSelectorPanel(true)}
+        >
+          Layers
+        </button>
+      )}
 
       <LayerStateSync
         onBaseLayerChange={setSelectedBaseLayer}
@@ -1900,6 +2116,18 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
           if (name === 'Gliding Sectors') setGlidingSectorsVisible(active);
           if (name === 'Hang Glidings') setHangGlidingVisible(active);
           if (name === 'OpenAIP Obstacles') setObstaclesVisible(active);
+          if (name === 'Airport Labels') setAirportLabelsVisible(active);
+          if (name === 'Navaid Labels') setNavaidLabelsVisible(active);
+          if (name === 'Reporting Labels') setReportingLabelsVisible(active);
+          if (name === 'Airspace Labels') setAirspaceLabelsVisible(active);
+          if (name === 'Class E Labels') setClassELabelsVisible(active);
+          if (name === 'Class F Labels') setClassFLabelsVisible(active);
+          if (name === 'Class G Labels') setClassGLabelsVisible(active);
+          if (name === 'Military Labels') setMilitaryLabelsVisible(active);
+          if (name === 'Training Labels') setTrainingLabelsVisible(active);
+          if (name === 'Gliding Labels') setGlidingLabelsVisible(active);
+          if (name === 'Hang Gliding Labels') setHangGlidingLabelsVisible(active);
+          if (name === 'Obstacle Labels') setObstacleLabelsVisible(active);
         }}
       />
 
@@ -1909,7 +2137,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
         airportsEnabled={airportsVisible}
         navaidsEnabled={navaidsVisible}
         reportingEnabled={reportingVisible}
-        onFeaturesLoaded={setViewportFeatures}
+        onFeaturesLoaded={handleViewportFeaturesLoaded}
       />
       <VisibleAirspaceLoader
         enabled={
@@ -1931,7 +2159,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
       <SearchControl
         onAddWaypoint={onAddWaypoint}
         onResultsChange={(results) => {
-          setSearchFeatures(results);
+          handleSearchResultsLoaded(results);
         }}
       />
 
@@ -2050,128 +2278,119 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
       </LeafletMapFrame>
 
       {showLayerLevelsPanel ? (
-      <div className="pointer-events-auto absolute right-4 top-4 z-[1000] w-[280px] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
-        <div className="flex items-start justify-between gap-3">
+      <>
+      <div className="pointer-events-auto absolute right-4 top-4 z-[1000] w-[340px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
+        <div className="flex h-10 items-center justify-between gap-3 border-b border-slate-100 px-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layer Levels</p>
             <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
               Zoom {mapZoom} • decide what to load
             </p>
+            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+              Cache status: {cacheStatus}
+            </p>
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700">
-              {layerLevelSummary.availableNow.length} now
+              {layerLevelRows.length} total
             </div>
             <button
               type="button"
               className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
               onClick={() => setShowLayerLevelsPanel(false)}
             >
-              Hide card
+              Collapse
             </button>
           </div>
         </div>
 
-        <div className="mt-3 space-y-3">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-700">Load now</p>
-            <div className="mt-1 space-y-1">
-              {layerLevelSummary.availableNow.map((layer) => (
-                <div key={layer.label} className="flex items-start justify-between gap-3 rounded-md border border-slate-100 bg-slate-50 px-2 py-1">
-                  <div className="min-w-0">
-                    <p className="truncate font-black uppercase tracking-[0.12em] text-slate-900">{layer.label}</p>
-                    <p className="text-[9px] leading-snug text-slate-500">{layer.description}</p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 font-black uppercase tracking-[0.14em] text-emerald-800">
-                    {layer.minZoom}+
-                  </span>
-                </div>
-              ))}
-            </div>
+        <div className="mt-3 grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Min Zoom</span>
+              <Input
+                type="number"
+                min={0}
+                max={mapMaxZoom}
+                value={zoomDraftMin}
+                onChange={(event) => setZoomDraftMin(event.target.value)}
+                className="h-8 w-full rounded-lg border-slate-200 bg-white px-2 text-xs font-black"
+                aria-label="Flight Planner minimum zoom"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Max Zoom</span>
+              <Input
+                type="number"
+                min={mapMinZoom}
+                max={22}
+                value={zoomDraftMax}
+                onChange={(event) => setZoomDraftMax(event.target.value)}
+                className="h-8 w-full rounded-lg border-slate-200 bg-white px-2 text-xs font-black"
+                aria-label="Flight Planner maximum zoom"
+              />
+            </label>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 rounded-lg border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-50"
+            onClick={() => {
+              resetZoomRange();
+            }}
+            >
+              Reset Zoom
+            </Button>
+            <Button
+              type="button"
+              className="h-8 rounded-lg px-3 text-[9px] font-black uppercase tracking-[0.16em]"
+              onClick={() => saveZoomDrafts()}
+            >
+              Save Zoom
+            </Button>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-8 rounded-lg border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-50"
+            onClick={handleClearOpenAipCache}
+          >
+            Clear Cache
+          </Button>
+        </div>
 
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Next up</p>
-            <div className="mt-1 space-y-1">
-              {layerLevelSummary.upcoming.length > 0 ? (
-                layerLevelSummary.upcoming.map((layer) => (
-                <div key={layer.label} className="flex items-start justify-between gap-3 rounded-md border border-amber-100 bg-amber-50/70 px-2 py-1">
-                  <div className="min-w-0">
-                    <p className="truncate font-black uppercase tracking-[0.12em] text-slate-900">{layer.label}</p>
-                    <p className="text-[9px] leading-snug text-slate-500">{layer.description}</p>
-                  </div>
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 font-black uppercase tracking-[0.14em] text-amber-800">
-                      {layer.minZoom}+
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                  All supported layers are already available at this zoom.
-                </div>
-              )}
+        <div className="mt-3 space-y-1">
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-700">Supported layers</p>
+          {layerLevelRows.map((layer) => (
+            <div
+              key={layer.label}
+              className={`flex items-start justify-between gap-3 rounded-md px-2 py-1 ${
+                layer.availableNow ? 'border border-emerald-100 bg-emerald-50/70' : 'border border-slate-100 bg-slate-50'
+              }`}
+            >
+              <div className="min-w-0">
+                <p className="truncate font-black uppercase tracking-[0.12em] text-slate-900">{layer.label}</p>
+                <p className="text-[9px] leading-snug text-slate-500">{layer.description}</p>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 font-black uppercase tracking-[0.14em] ${
+                  layer.availableNow
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {layer.availableNow ? 'now' : `${layer.minZoom}+`}
+              </span>
             </div>
-          </div>
-
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-700">Name Tags</p>
-              <div className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={airportLabelsVisible} onChange={(event) => setAirportLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  OpenAIP Airports
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={navaidLabelsVisible} onChange={(event) => setNavaidLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  OpenAIP Navaids
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={reportingLabelsVisible} onChange={(event) => setReportingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  OpenAIP Reporting Points
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={airspaceLabelsVisible} onChange={(event) => setAirspaceLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  OpenAIP Airspaces
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={classELabelsVisible} onChange={(event) => setClassELabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  Airspace Class E
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={classFLabelsVisible} onChange={(event) => setClassFLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  Airspace Class F
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={classGLabelsVisible} onChange={(event) => setClassGLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  Airspace Class G
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={militaryLabelsVisible} onChange={(event) => setMilitaryLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  Military Operations Areas
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={trainingLabelsVisible} onChange={(event) => setTrainingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  Training Areas
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={glidingLabelsVisible} onChange={(event) => setGlidingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  Gliding Sectors
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={hangGlidingLabelsVisible} onChange={(event) => setHangGlidingLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  Hang Glidings
-                </label>
-                <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700">
-                  <input type="checkbox" checked={obstacleLabelsVisible} onChange={(event) => setObstacleLabelsVisible(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600" />
-                  OpenAIP Obstacles
-                </label>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
+      </>
       ) : (
         <button
           type="button"
-          className="pointer-events-auto absolute right-4 top-4 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+          className="pointer-events-auto absolute right-4 top-4 z-[1000] flex h-10 items-center rounded-2xl border border-slate-200 bg-white/95 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
           onClick={() => setShowLayerLevelsPanel(true)}
         >
           Layer Levels

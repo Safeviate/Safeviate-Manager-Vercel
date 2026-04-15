@@ -503,7 +503,7 @@ export default function ActiveFlightPage() {
             </div>
             <div className="grid gap-2 sm:grid-cols-4">
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">HDG</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TRK</p>
                 <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}</p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
@@ -579,7 +579,7 @@ export default function ActiveFlightPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Heading</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Track</p>
                 <p className="mt-1 text-sm font-black text-slate-100">{liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}</p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
@@ -728,7 +728,7 @@ export default function ActiveFlightPage() {
                 <Badge className={cn('text-[10px] font-black uppercase tracking-widest', isModern && 'border-slate-200 bg-sky-50 text-sky-800 hover:bg-sky-50')}>Active Flight</Badge>
               </div>
               <CardTitle className="text-2xl font-black uppercase tracking-tight">Register This Device To An Aircraft</CardTitle>
-              <CardDescription className="max-w-3xl text-sm">Instructors and pilots use this page to track their own live position. It binds the current phone or tablet to an aircraft registration and streams route progress, heading, speed, and altitude.</CardDescription>
+              <CardDescription className="max-w-3xl text-sm">Instructors and pilots use this page to track their own live position. It binds the current phone or tablet to an aircraft registration and streams route progress, track, speed, and altitude.</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50')}><Link href="/operations/fleet-tracker"><Radio className="mr-2 h-4 w-4" />Open Fleet Tracker</Link></Button>

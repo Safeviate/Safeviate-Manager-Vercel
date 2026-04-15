@@ -221,6 +221,37 @@
   }
 }
 
+.leaflet-top .leaflet-control {
+  margin-top: 0.75rem;
+}
+
+.leaflet-left .leaflet-control {
+  margin-left: 0.75rem;
+}
+
+.leaflet-right .leaflet-control {
+  margin-right: 0.75rem;
+}
+
+.leaflet-control-layers,
+.leaflet-bar {
+  border: 1px solid rgb(226 232 240) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.45) !important;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(12px);
+}
+
+.leaflet-control-layers-toggle,
+.leaflet-bar a {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
 @media print {
   .no-print {
     display: none !important;

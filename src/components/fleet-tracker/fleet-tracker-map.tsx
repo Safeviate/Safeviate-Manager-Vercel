@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { FeatureGroup, Marker, Polyline, Popup, TileLayer, LayersControl, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -8,6 +8,10 @@ import type { FlightSession } from '@/types/flight-session';
 import type { NavlogLeg } from '@/types/booking';
 import { isFlightSessionStale } from '@/lib/flight-session-status';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
+import { useMapZoomPreferences } from '@/hooks/use-map-zoom-preferences';
+import { useMapZoomDraft } from '@/hooks/use-map-zoom-draft';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -141,6 +145,23 @@ export function FleetTrackerMap({
   sessions: FlightSession[];
   navlogRoutesByBookingId?: Record<string, NavlogLeg[]>;
 }) {
+  const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
+    storageKey: 'safeviate.fleet-tracker-map-zoom',
+    defaultMinZoom: 3,
+    defaultMaxZoom: 18,
+  });
+  const {
+    draftMin: zoomDraftMin,
+    draftMax: zoomDraftMax,
+    setDraftMin: setZoomDraftMin,
+    setDraftMax: setZoomDraftMax,
+    saveDrafts: saveZoomDrafts,
+  } = useMapZoomDraft({
+    minZoom: zoomPreferences.minZoom,
+    maxZoom: zoomPreferences.maxZoom,
+    setZoomRange,
+    saveZoomRange,
+  });
   const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>('light');
   const [showAircraftNames, setShowAircraftNames] = useState(true);
   const [showAircraftTrails, setShowAircraftTrails] = useState(true);
@@ -209,6 +230,8 @@ export function FleetTrackerMap({
   const center = positionedSessions[0]
     ? ([positionedSessions[0].lastPosition!.latitude, positionedSessions[0].lastPosition!.longitude] as [number, number])
     : ([-25.9, 27.9] as [number, number]);
+  const mapMinZoom = zoomPreferences.minZoom;
+  const mapMaxZoom = zoomPreferences.maxZoom;
 
   return (
     <div className="space-y-3">
@@ -225,6 +248,50 @@ export function FleetTrackerMap({
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Map Mode</p>
             <p className="text-sm font-semibold text-slate-900">North-up · {selectedBaseLayer === 'light' ? 'Light' : 'Satellite'}</p>
           </div>
+          <div className="h-8 w-px bg-slate-200" />
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Zoom</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                max={mapMaxZoom}
+                value={zoomDraftMin}
+                onChange={(event) => setZoomDraftMin(event.target.value)}
+                className="h-8 w-16 rounded-full border-slate-200 bg-white px-2 text-xs font-black"
+                aria-label="Fleet Tracker minimum zoom"
+              />
+              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">to</span>
+              <Input
+                type="number"
+                min={mapMinZoom}
+                max={22}
+                value={zoomDraftMax}
+                onChange={(event) => setZoomDraftMax(event.target.value)}
+                className="h-8 w-16 rounded-full border-slate-200 bg-white px-2 text-xs font-black"
+                aria-label="Fleet Tracker maximum zoom"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 rounded-full border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={() => {
+              resetZoomRange();
+            }}
+            >
+              Reset Zoom
+            </Button>
+            <Button
+              type="button"
+              className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.12em]"
+              onClick={() => saveZoomDrafts()}
+            >
+              Save Zoom
+            </Button>
+          </div>
           {referenceSession && (
             <>
               <div className="h-8 w-px bg-slate-200" />
@@ -238,7 +305,14 @@ export function FleetTrackerMap({
       </div>
 
       <div className="relative overflow-hidden rounded-2xl">
-        <LeafletMapFrame center={center} zoom={6} className="h-[640px] w-full rounded-2xl xl:h-[700px]" style={{ background: '#020617' }}>
+        <LeafletMapFrame
+          center={center}
+          zoom={6}
+          minZoom={mapMinZoom}
+          maxZoom={mapMaxZoom}
+          className="h-[640px] w-full rounded-2xl xl:h-[700px]"
+          style={{ background: '#020617' }}
+        >
           <LayersControl position="topleft" collapsed>
             <LayersControl.BaseLayer checked={selectedBaseLayer === 'light'} name="Light (Standard)">
               <TileLayer

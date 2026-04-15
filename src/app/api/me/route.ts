@@ -2,6 +2,19 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+
+const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
+
+const buildSuperUserProfile = (sessionUser: { id?: string | null; email?: string | null; name?: string | null }) => ({
+  id: sessionUser.id || sessionUser.email || 'safeviate-super-user',
+  tenantId: 'safeviate',
+  email: sessionUser.email?.trim().toLowerCase() || '',
+  firstName: sessionUser.name?.split(' ')[0] ?? 'User',
+  lastName: sessionUser.name?.split(' ').slice(1).join(' ') || '',
+  role: 'developer',
+  permissions: ['*'],
+});
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -10,6 +23,21 @@ export async function GET() {
 
     if (!email) {
       return NextResponse.json({ profile: null }, { status: 200 });
+    }
+
+    if (SUPER_USERS.includes(email)) {
+      return NextResponse.json(
+        {
+          profile: buildSuperUserProfile({
+            id: session?.user?.id,
+            email,
+            name: session?.user?.name,
+          }),
+          tenant: { id: 'safeviate', name: 'Safeviate' },
+          rolePermissions: ['*'],
+        },
+        { status: 200 }
+      );
     }
 
     await prisma.tenant.upsert({

@@ -6,9 +6,12 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
+import { useMapZoomPreferences } from '@/hooks/use-map-zoom-preferences';
+import { useMapZoomDraft } from '@/hooks/use-map-zoom-draft';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -244,14 +247,35 @@ function MapAreaCacheController({
   }, [map]);
 
   const warmTileUrls = useCallback(async (tileUrls: string[]) => {
-    await Promise.allSettled(
-      tileUrls.map(
-        (url) =>
+    const knownTiles = readOfflineTileManifest();
+    const nextTileUrls = tileUrls.filter((url) => !knownTiles.has(url));
+    if (!nextTileUrls.length) return 0;
+
+    const warmedTileUrls: string[] = [];
+    const batchSize = 12;
+
+    for (let index = 0; index < nextTileUrls.length; index += batchSize) {
+      const batch = nextTileUrls.slice(index, index + batchSize);
+      const results = await Promise.allSettled(
+        batch.map((url) =>
           fetch(url, { mode: 'no-cors' })
-            .then(() => undefined)
-            .catch(() => undefined)
-      )
-    );
+            .then(() => url)
+            .catch(() => null)
+        )
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          warmedTileUrls.push(result.value);
+        }
+      }
+    }
+
+    if (warmedTileUrls.length) {
+      writeOfflineTileManifest([...knownTiles, ...warmedTileUrls]);
+    }
+
+    return warmedTileUrls.length;
   }, []);
 
   useEffect(() => {
@@ -274,11 +298,15 @@ function MapAreaCacheController({
           return;
         }
 
-        onStatus(`Caching ${tileUrls.length} tiles...`);
-        await warmTileUrls(tileUrls);
+        onStatus(`Checking ${tileUrls.length} tiles for local reuse...`);
+        const warmedTileCount = await warmTileUrls(tileUrls);
 
-        onStatus('Cached current view for offline use.');
-        onComplete(tileUrls.length);
+        onStatus(
+          warmedTileCount > 0
+            ? `Cached ${warmedTileCount} new tiles for offline reuse.`
+            : 'Current view already warmed on this device.'
+        );
+        onComplete(warmedTileCount > 0 ? warmedTileCount : tileUrls.length);
       } finally {
         onDone();
       }
@@ -308,10 +336,14 @@ function MapAreaCacheController({
           return;
         }
 
-        onAreaDownloadStatus(`Saving ${tileUrls.length} area tiles on this device...`);
-        await warmTileUrls(tileUrls);
-        onAreaDownloadStatus('Area saved on this device for offline use.');
-        onAreaDownloadComplete(tileUrls.length);
+        onAreaDownloadStatus(`Checking ${tileUrls.length} area tiles for local reuse...`);
+        const warmedTileCount = await warmTileUrls(tileUrls);
+        onAreaDownloadStatus(
+          warmedTileCount > 0
+            ? `Area warmed with ${warmedTileCount} new tiles on this device.`
+            : 'Area tiles already warmed on this device.'
+        );
+        onAreaDownloadComplete(warmedTileCount > 0 ? warmedTileCount : tileUrls.length);
       } finally {
         onAreaDownloadDone();
       }
@@ -356,10 +388,14 @@ function MapAreaCacheController({
           return;
         }
 
-        onRouteDownloadStatus(`Saving ${tileUrls.length} route tiles on this device...`);
-        await warmTileUrls(tileUrls);
-        onRouteDownloadStatus('Route corridor saved on this device for offline use.');
-        onRouteDownloadComplete(tileUrls.length);
+        onRouteDownloadStatus(`Checking ${tileUrls.length} route tiles for local reuse...`);
+        const warmedTileCount = await warmTileUrls(tileUrls);
+        onRouteDownloadStatus(
+          warmedTileCount > 0
+            ? `Route corridor warmed with ${warmedTileCount} new tiles on this device.`
+            : 'Route corridor tiles already warmed on this device.'
+        );
+        onRouteDownloadComplete(warmedTileCount > 0 ? warmedTileCount : tileUrls.length);
       } finally {
         onRouteDownloadDone();
       }
@@ -400,7 +436,7 @@ function CompassDial({
         <div className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.65)]" />
       </div>
       <div className="space-y-0.5">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Heading</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Track</p>
         <p className="text-sm font-black tracking-wide text-slate-900">
           {headingTrue != null && !Number.isNaN(headingTrue) ? `${Math.round(((headingTrue % 360) + 360) % 360)} deg` : '---'}
         </p>
@@ -425,11 +461,36 @@ function MenuCloseButton({ onClose }: { onClose?: () => void }) {
 }
 
 const OFFLINE_TILE_CACHE_PREFIX = 'safeviate-tiles-';
-const MAP_MIN_ZOOM = 6;
-const MAP_MAX_ZOOM = 14;
+const OFFLINE_TILE_MANIFEST_KEY = 'safeviate-tile-manifest-v1';
+const FALLBACK_MAP_MIN_ZOOM = 6;
+const FALLBACK_MAP_MAX_ZOOM = 14;
+const MAP_MIN_ZOOM = FALLBACK_MAP_MIN_ZOOM;
+const MAP_MAX_ZOOM = FALLBACK_MAP_MAX_ZOOM;
+
+function readOfflineTileManifest() {
+  if (typeof window === 'undefined') return new Set<string>();
+  try {
+    const raw = window.localStorage.getItem(OFFLINE_TILE_MANIFEST_KEY);
+    if (!raw) return new Set<string>();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set<string>();
+    return new Set(parsed.filter((value): value is string => typeof value === 'string'));
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeOfflineTileManifest(tileUrls: Iterable<string>) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(OFFLINE_TILE_MANIFEST_KEY, JSON.stringify(Array.from(new Set(tileUrls))));
+  } catch {
+    // Ignore browser storage failures and keep warmed browser cache behavior.
+  }
+}
 
 async function readOfflineTileSummary() {
-  if (typeof window === 'undefined' || !('caches' in window)) {
+  if (typeof window === 'undefined') {
     return {
       cacheCount: 0,
       tileCount: 0,
@@ -437,14 +498,9 @@ async function readOfflineTileSummary() {
     };
   }
 
-  const cacheNames = (await caches.keys()).filter((cacheName) => cacheName.startsWith(OFFLINE_TILE_CACHE_PREFIX));
-  let tileCount = 0;
-
-  for (const cacheName of cacheNames) {
-    const cache = await caches.open(cacheName);
-    const keys = await cache.keys();
-    tileCount += keys.length;
-  }
+  const tileManifest = readOfflineTileManifest();
+  const tileCount = tileManifest.size;
+  const cacheCount = tileCount > 0 ? 1 : 0;
 
   let usageLabel = 'Storage estimate unavailable on this device.';
   if ('storage' in navigator && typeof navigator.storage?.estimate === 'function') {
@@ -457,13 +513,20 @@ async function readOfflineTileSummary() {
   }
 
   return {
-    cacheCount: cacheNames.length,
+    cacheCount,
     tileCount,
-    usageLabel,
+    usageLabel: tileCount > 0 ? `${usageLabel} Tile manifest tracks ${tileCount} warmed tiles for this browser.` : usageLabel,
   };
 }
 
 async function clearOfflineTileCaches() {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(OFFLINE_TILE_MANIFEST_KEY);
+    } catch {
+      // Ignore browser storage failures and still attempt any cache cleanup below.
+    }
+  }
   if (typeof window === 'undefined' || !('caches' in window)) return;
   const cacheNames = await caches.keys();
   await Promise.all(
@@ -492,6 +555,26 @@ export function ActiveFlightLiveMap({
   fullscreen?: boolean;
   compactLayout?: boolean;
 }) {
+  const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
+    storageKey: 'safeviate.active-flight-map-zoom',
+    defaultMinZoom: FALLBACK_MAP_MIN_ZOOM,
+    defaultMaxZoom: FALLBACK_MAP_MAX_ZOOM,
+  });
+  const mapMinZoom = zoomPreferences.minZoom;
+  const mapMaxZoom = zoomPreferences.maxZoom;
+  const {
+    draftMin: zoomDraftMin,
+    draftMax: zoomDraftMax,
+    setDraftMin: setZoomDraftMin,
+    setDraftMax: setZoomDraftMax,
+    saveDrafts: saveZoomDrafts,
+  } = useMapZoomDraft({
+    minZoom: mapMinZoom,
+    maxZoom: mapMaxZoom,
+    setZoomRange,
+    saveZoomRange,
+  });
+
   const routePoints = useMemo(
     () =>
       legs
@@ -512,7 +595,7 @@ export function ActiveFlightLiveMap({
   const [recenterNonce, setRecenterNonce] = useState(0);
   const [recenterMode, setRecenterMode] = useState<'route' | 'position'>('position');
   const [cacheNonce, setCacheNonce] = useState(0);
-  const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
+  const [cacheStatus, setCacheStatus] = useState('Ready to cache current view.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
   const [isCachingArea, setIsCachingArea] = useState(false);
   const [areaDownloadNonce, setAreaDownloadNonce] = useState(0);
@@ -520,8 +603,9 @@ export function ActiveFlightLiveMap({
   const [areaDownloadState, setAreaDownloadState] = useState<'idle' | 'downloading' | 'complete'>('idle');
   const [isDownloadingArea, setIsDownloadingArea] = useState(false);
   const [routeDownloadNonce, setRouteDownloadNonce] = useState(0);
+  const flightCacheLabel = booking?.bookingNumber ? `flight #${booking.bookingNumber}` : 'selected flight';
   const [routeDownloadStatus, setRouteDownloadStatus] = useState(
-    routePoints.length > 1 ? 'Download the loaded route corridor on this device.' : 'Load a route to download it on this device.'
+    routePoints.length > 1 ? `Cache ${flightCacheLabel} route on this device.` : 'Load a flight route to cache it on this device.'
   );
   const [routeDownloadState, setRouteDownloadState] = useState<'idle' | 'downloading' | 'complete'>('idle');
   const [isDownloadingRoute, setIsDownloadingRoute] = useState(false);
@@ -539,12 +623,12 @@ export function ActiveFlightLiveMap({
 
   useEffect(() => {
     setRouteDownloadStatus(
-      routePoints.length > 1 ? 'Download the loaded route corridor on this device.' : 'Load a route to download it on this device.'
+      routePoints.length > 1 ? `Cache ${flightCacheLabel} route on this device.` : 'Load a flight route to cache it on this device.'
     );
     if (routePoints.length <= 1 && routeDownloadState !== 'downloading') {
       setRouteDownloadState('idle');
     }
-  }, [routeDownloadState, routePoints.length]);
+  }, [flightCacheLabel, routeDownloadState, routePoints.length]);
 
   useEffect(() => {
     setTrackHistory(position ? [[position.latitude, position.longitude]] : []);
@@ -615,7 +699,7 @@ export function ActiveFlightLiveMap({
 
   const handleFollowOwnship = () => {
     setFollowOwnship(true);
-    setRecenterMode('route');
+    setRecenterMode('position');
     setRecenterNonce((current) => current + 1);
   };
   const handleNorthUp = () => {
@@ -639,7 +723,7 @@ export function ActiveFlightLiveMap({
           <table className="w-full table-fixed border-collapse text-left">
             <tbody>
               <tr className="border-b border-slate-200">
-                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">HDG</th>
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">TRK</th>
                 <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">ALT</th>
                 <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">GS</th>
               </tr>
@@ -696,7 +780,7 @@ export function ActiveFlightLiveMap({
                 onClick={() => {
                   setIsCachingArea(true);
                   setCacheState('caching');
-                  setCacheStatus('Caching current view...');
+                  setCacheStatus('Warming cache for current view...');
                   setCacheNonce((current) => current + 1);
                 }}
               >
@@ -736,7 +820,7 @@ export function ActiveFlightLiveMap({
                 onClick={() => {
                   setIsDownloadingRoute(true);
                   setRouteDownloadState('downloading');
-                  setRouteDownloadStatus('Saving route corridor on this device...');
+                  setRouteDownloadStatus(`Caching ${flightCacheLabel} route on this device...`);
                   setRouteDownloadNonce((current) => current + 1);
                 }}
               >
@@ -744,7 +828,7 @@ export function ActiveFlightLiveMap({
                   <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', isDownloadingRoute ? 'opacity-100' : 'opacity-0')}>
                     <Loader2 className="h-3 w-3 animate-spin" />
                   </span>
-                  <span>Download Route</span>
+                  <span>Cache Flight</span>
                 </span>
               </Button>
               <Dialog open={offlineManagerOpen} onOpenChange={setOfflineManagerOpen}>
@@ -770,10 +854,13 @@ export function ActiveFlightLiveMap({
                     <DialogTitle className="text-base font-black uppercase tracking-[0.12em] text-slate-900">
                       Offline Maps on This Device
                     </DialogTitle>
-                    <DialogDescription className="text-sm leading-6 text-slate-600">
-                      These maps are saved in this browser on this phone, tablet, or laptop. The browser manages the storage location automatically.
-                    </DialogDescription>
-                  </DialogHeader>
+                  <DialogDescription className="text-sm leading-6 text-slate-600">
+                    These maps are saved in this browser on this phone, tablet, or laptop. The browser manages the storage location automatically.
+                  </DialogDescription>
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Offline cache: {cacheStatus}
+                  </p>
+                </DialogHeader>
                   <div className="grid gap-3 text-sm">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Saved Tile Packs</p>
@@ -788,7 +875,7 @@ export function ActiveFlightLiveMap({
                       <p className="mt-1 font-semibold text-slate-700">{offlineUsageLabel}</p>
                     </div>
                     <div className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-xs font-medium leading-5 text-slate-600">
-                      Use <span className="font-black text-slate-900">Cache View</span> for a quick nearby area, <span className="font-black text-slate-900">Download Area</span> for a broader region, and <span className="font-black text-slate-900">Download Route</span> for the loaded corridor on this same device.
+                      Use <span className="font-black text-slate-900">Cache View</span> for a quick nearby area, <span className="font-black text-slate-900">Download Area</span> for a broader region, and <span className="font-black text-slate-900">Cache Flight</span> for the selected flight corridor on this same device.
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1">
@@ -817,7 +904,7 @@ export function ActiveFlightLiveMap({
                               setCacheState('idle');
                               setAreaDownloadState('idle');
                               setRouteDownloadState('idle');
-                              setCacheStatus('Cache current view for offline use.');
+                              setCacheStatus('Ready to cache current view.');
                               setAreaDownloadStatus('Download a larger area on this device.');
                               setRouteDownloadStatus(
                                 routePoints.length > 1
@@ -887,8 +974,8 @@ export function ActiveFlightLiveMap({
           <LeafletMapFrame
             center={center}
             zoom={8}
-            minZoom={MAP_MIN_ZOOM}
-            maxZoom={MAP_MAX_ZOOM}
+            minZoom={mapMinZoom}
+            maxZoom={mapMaxZoom}
             zoomAnimation={false}
             className="h-full w-full rounded-none"
             style={{ background: '#000000' }}
@@ -917,9 +1004,7 @@ export function ActiveFlightLiveMap({
               onStatus={setCacheStatus}
               onComplete={(tileCount) => {
                 setCacheState('complete');
-                setCacheStatus(
-                  tileCount > 0 ? 'Cached current view for offline use.' : 'No tiles available to cache.'
-                );
+                setCacheStatus(tileCount > 0 ? 'Cache ready for current view.' : 'Nothing to cache in current view.');
               }}
               onAreaDownloadStatus={setAreaDownloadStatus}
               onAreaDownloadComplete={(tileCount) => {
@@ -933,10 +1018,10 @@ export function ActiveFlightLiveMap({
                 setRouteDownloadState(tileCount > 0 ? 'complete' : 'idle');
                 setRouteDownloadStatus(
                   tileCount > 0
-                    ? 'Route corridor saved on this device for offline use.'
+                    ? `${flightCacheLabel} route cached on this device.`
                     : routePoints.length > 1
-                      ? 'No route tiles available to download.'
-                      : 'Load a route to download it on this device.'
+                      ? 'No flight route tiles available to cache.'
+                      : 'Load a flight route to cache it on this device.'
                 );
               }}
             />
@@ -996,7 +1081,7 @@ export function ActiveFlightLiveMap({
                     </p>
                     <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
                     <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                    <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
+                    <p>Track: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
                   </div>
                 </Popup>
               </Marker>
@@ -1180,7 +1265,7 @@ export function ActiveFlightLiveMap({
                   </td>
                 </tr>
                 <tr className="bg-white">
-                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Heading</td>
+                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Track</td>
                   <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Speed</td>
                   <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Altitude</td>
                   <td className="border-b border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Trail</td>
@@ -1202,8 +1287,8 @@ export function ActiveFlightLiveMap({
             <LeafletMapFrame
               center={center}
               zoom={8}
-              minZoom={MAP_MIN_ZOOM}
-              maxZoom={MAP_MAX_ZOOM}
+              minZoom={mapMinZoom}
+              maxZoom={mapMaxZoom}
               className="h-full min-h-[360px] w-full rounded-none"
               style={{ background: '#f8fafc' }}
             >
@@ -1276,7 +1361,7 @@ export function ActiveFlightLiveMap({
                       </p>
                       <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
                       <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                      <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
+                      <p>Track: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
                     </div>
                   </Popup>
                 </Marker>
@@ -1299,6 +1384,50 @@ export function ActiveFlightLiveMap({
             <p className="text-sm font-semibold text-slate-900">
               {followOwnship ? 'Nose-up' : 'North-up'}
             </p>
+          </div>
+          <div className="h-8 w-px bg-slate-200" />
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Zoom</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                max={mapMaxZoom}
+                value={zoomDraftMin}
+                onChange={(event) => setZoomDraftMin(event.target.value)}
+                className="h-8 w-16 rounded-full border-slate-200 bg-white px-2 text-xs font-black"
+                aria-label="Active Flight minimum zoom"
+              />
+              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">to</span>
+              <Input
+                type="number"
+                min={mapMinZoom}
+                max={22}
+                value={zoomDraftMax}
+                onChange={(event) => setZoomDraftMax(event.target.value)}
+                className="h-8 w-16 rounded-full border-slate-200 bg-white px-2 text-xs font-black"
+                aria-label="Active Flight maximum zoom"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 rounded-full border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={() => {
+              resetZoomRange();
+            }}
+            >
+              Reset Zoom
+            </Button>
+            <Button
+              type="button"
+              className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.12em]"
+              onClick={() => saveZoomDrafts()}
+            >
+              Save Zoom
+            </Button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -1337,8 +1466,8 @@ export function ActiveFlightLiveMap({
         <LeafletMapFrame
           center={center}
           zoom={8}
-          minZoom={MAP_MIN_ZOOM}
-          maxZoom={MAP_MAX_ZOOM}
+          minZoom={mapMinZoom}
+          maxZoom={mapMaxZoom}
           className="h-full min-h-[360px] w-full rounded-2xl"
           style={{ background: '#020617' }}
         >
@@ -1411,7 +1540,7 @@ export function ActiveFlightLiveMap({
                   </p>
                   <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
                   <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                  <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
+                  <p>Track: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
                 </div>
               </Popup>
             </Marker>
