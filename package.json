@@ -17,11 +17,13 @@
     "db:push:local": "dotenv -e .env.local -- drizzle-kit push",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
+    "prisma:push:local": "dotenv -e .env.local -- prisma db push",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:studio": "node scripts/prisma-studio.cjs",
     "prisma:studio:prod": "node scripts/prisma-studio.cjs --prod"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.31.0",
     "@genkit-ai/google-genai": "^1.20.0",
     "@genkit-ai/next": "^1.20.0",
     "@hello-pangea/dnd": "^16.6.0",
@@ -51,7 +53,6 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@types/google.maps": "^3.58.1",
     "@types/leaflet": "^1.9.21",
-    "@vercel/blob": "^2.3.3",
     "@vis.gl/react-google-maps": "^1.8.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

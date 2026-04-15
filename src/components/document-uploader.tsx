@@ -99,7 +99,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
       toast({
         variant: 'destructive',
         title: 'Uploads are not configured',
-        description: 'Add BLOB_READ_WRITE_TOKEN in Vercel to enable file and photo uploads in production.',
+        description: 'Add Azure Blob Storage settings to enable file and photo uploads in production.',
       });
       return;
     }
@@ -290,7 +290,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
           <Alert variant="destructive">
             <AlertTitle>Uploads are not configured</AlertTitle>
             <AlertDescription>
-              Add <code>BLOB_READ_WRITE_TOKEN</code> in Vercel to enable uploads in production.
+              Add <code>AZURE_STORAGE_CONNECTION_STRING</code> and <code>AZURE_STORAGE_CONTAINER_NAME</code> in Azure App Service to enable uploads in production.
             </AlertDescription>
           </Alert>
         ) : null}

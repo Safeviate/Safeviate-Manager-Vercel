@@ -80,7 +80,7 @@ export function ProjectDocumentUploader({
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Uploads are not configured</AlertTitle>
           <AlertDescription>
-            Add <code>BLOB_READ_WRITE_TOKEN</code> in Vercel to enable project document and photo uploads in production.
+            Add <code>AZURE_STORAGE_CONNECTION_STRING</code> and <code>AZURE_STORAGE_CONTAINER_NAME</code> in Azure App Service to enable project document and photo uploads in production.
           </AlertDescription>
         </Alert>
       ) : null}

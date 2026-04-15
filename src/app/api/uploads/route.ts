@@ -1,5 +1,5 @@
 import { authOptions } from '@/auth';
-import { put } from '@vercel/blob';
+import { BlobServiceClient } from '@azure/storage-blob';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -7,6 +7,17 @@ import path from 'node:path';
 
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+function getAzureBlobConfig() {
+  const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING?.trim();
+  const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME?.trim() || 'uploads';
+
+  if (!connectionString) {
+    return null;
+  }
+
+  return { connectionString, containerName };
 }
 
 export async function POST(request: Request) {
@@ -32,16 +43,23 @@ export async function POST(request: Request) {
   const safeFileName = sanitizeFileName(file.name);
   const blobPath = `uploads/${datePrefix}/${safeDisplayName}-${Date.now()}-${safeFileName}`;
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const blob = await put(blobPath, file, {
-      access: 'public',
-      addRandomSuffix: false,
-      contentType: file.type || 'application/octet-stream',
+  const azureBlobConfig = getAzureBlobConfig();
+  if (azureBlobConfig) {
+    const serviceClient = BlobServiceClient.fromConnectionString(azureBlobConfig.connectionString);
+    const containerClient = serviceClient.getContainerClient(azureBlobConfig.containerName);
+    await containerClient.createIfNotExists({ access: 'blob' });
+
+    const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
+    const bytes = await file.arrayBuffer();
+    await blockBlobClient.uploadData(Buffer.from(bytes), {
+      blobHTTPHeaders: {
+        blobContentType: file.type || 'application/octet-stream',
+      },
     });
 
     return NextResponse.json({
       name: displayName,
-      url: blob.url,
+      url: blockBlobClient.url,
       uploadDate: now.toISOString(),
       expirationDate: null,
       size: file.size,
@@ -49,11 +67,11 @@ export async function POST(request: Request) {
     });
   }
 
-  if (process.env.VERCEL) {
+  if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
       {
         error:
-          'BLOB_READ_WRITE_TOKEN is missing in Vercel. Add Vercel Blob to this project to enable file uploads in production.',
+          'Azure Blob Storage is not configured. Add AZURE_STORAGE_CONNECTION_STRING and AZURE_STORAGE_CONTAINER_NAME to enable file uploads in production.',
       },
       { status: 503 }
     );
