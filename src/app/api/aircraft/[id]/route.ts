@@ -1,5 +1,7 @@
 import { authOptions } from '@/auth';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { normalizeUploadUrl } from '@/lib/server/azure-blob';
 import { ensureAircraftSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -17,6 +19,24 @@ async function getTenantId() {
   return currentUser?.tenantId || 'safeviate';
 }
 
+function normalizeAircraftDocumentUrls(aircraft: unknown) {
+  if (!aircraft || typeof aircraft !== 'object') return aircraft;
+
+  const record = aircraft as Record<string, unknown>;
+  const documents = Array.isArray(record.documents)
+    ? record.documents.map((document) => {
+        if (!document || typeof document !== 'object') return document;
+        const docRecord = document as Record<string, unknown>;
+        return {
+          ...docRecord,
+          url: typeof docRecord.url === 'string' ? normalizeUploadUrl(docRecord.url) : docRecord.url,
+        };
+      })
+    : record.documents;
+
+  return { ...record, documents };
+}
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await ensureAircraftSchema();
@@ -28,7 +48,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       where: { id, tenantId },
     });
 
-    return NextResponse.json({ aircraft: row?.data ?? null }, { status: 200 });
+    return NextResponse.json({ aircraft: normalizeAircraftDocumentUrls(row?.data ?? null) }, { status: 200 });
   } catch (error) {
     console.error('[aircraft/[id]] fallback to null:', error);
     return NextResponse.json({ aircraft: null }, { status: 200 });
@@ -48,17 +68,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Missing aircraft payload.' }, { status: 400 });
     }
 
+    const data = normalizeAircraftDocumentUrls({ ...incoming, id }) as Prisma.InputJsonValue;
+
     await prisma.aircraftRecord.upsert({
       where: { id },
       update: {
         tenantId,
-        data: { ...incoming, id },
+        data,
         updatedAt: new Date(),
       },
       create: {
         id,
         tenantId,
-        data: { ...incoming, id },
+        data,
       },
     });
 

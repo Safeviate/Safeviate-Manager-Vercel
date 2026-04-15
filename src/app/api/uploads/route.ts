@@ -1,5 +1,5 @@
 import { authOptions } from '@/auth';
-import { BlobServiceClient } from '@azure/storage-blob';
+import { buildUploadViewUrl, getAzureBlobContainerClient } from '@/lib/server/azure-blob';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -7,17 +7,6 @@ import path from 'node:path';
 
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-}
-
-function getAzureBlobConfig() {
-  const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING?.trim();
-  const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME?.trim() || 'uploads';
-
-  if (!connectionString) {
-    return null;
-  }
-
-  return { connectionString, containerName };
 }
 
 export async function POST(request: Request) {
@@ -43,11 +32,9 @@ export async function POST(request: Request) {
   const safeFileName = sanitizeFileName(file.name);
   const blobPath = `uploads/${datePrefix}/${safeDisplayName}-${Date.now()}-${safeFileName}`;
 
-  const azureBlobConfig = getAzureBlobConfig();
-  if (azureBlobConfig) {
-    const serviceClient = BlobServiceClient.fromConnectionString(azureBlobConfig.connectionString);
-    const containerClient = serviceClient.getContainerClient(azureBlobConfig.containerName);
-    await containerClient.createIfNotExists({ access: 'blob' });
+  const containerClient = getAzureBlobContainerClient();
+  if (containerClient) {
+    await containerClient.createIfNotExists();
 
     const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
     const bytes = await file.arrayBuffer();
@@ -59,7 +46,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       name: displayName,
-      url: blockBlobClient.url,
+      url: buildUploadViewUrl(blobPath),
       uploadDate: now.toISOString(),
       expirationDate: null,
       size: file.size,

@@ -7,7 +7,6 @@ import type { Aircraft } from '@/types/aircraft';
 import { Button } from '@/components/ui/button';
 import { Eye, Upload, Trash2, Calendar, ShieldCheck, Gauge, Timer, Box, FileText, Zap, Settings, Edit3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import Image from 'next/image';
 import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
@@ -199,7 +198,7 @@ export function ViewAircraftDetails({ aircraft, onEdit, onManageComponents, onMa
                 </DialogHeader>
                 <div className="relative w-full h-[92vh] flex items-center justify-center">
                     {viewingImageUrl && (
-                        <Image src={viewingImageUrl} alt="Document Intelligence" fill className="object-contain" unoptimized />
+                        <img src={viewingImageUrl} alt="Document Intelligence" className="h-full w-full object-contain" />
                     )}
                 </div>
             </DialogContent>
