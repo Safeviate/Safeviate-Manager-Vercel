@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera } from 'lucide-react';
+import { Camera, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseJsonResponse } from '@/lib/safe-json';
@@ -42,6 +42,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
 
   const cleanupCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -56,6 +57,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     setFile(null);
     setCapturedImage(null);
     setHasCameraPermission(null);
+    setCameraFacingMode('environment');
     setUploadMode(restrictedMode || 'file');
   }, [defaultFileName, restrictedMode]);
 
@@ -71,6 +73,7 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
 
   const openDialog = (mode: UploadMode = 'file') => {
     setUploadMode(restrictedMode || mode);
+    setCameraFacingMode('environment');
     setIsOpen(true);
   };
   
@@ -79,14 +82,23 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
     if (isOpen && uploadMode === 'camera' && !capturedImage) {
       const getCameraPermission = async () => {
         try {
-          // Request a lower resolution to reduce file size
           const constraints = {
             video: {
+              facingMode: { ideal: cameraFacingMode },
               width: { ideal: 640 },
               height: { ideal: 480 }
             }
           };
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+              }
+            });
+          }
           setHasCameraPermission(true);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -109,7 +121,14 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [isOpen, uploadMode, capturedImage, toast]);
+  }, [cameraFacingMode, capturedImage, isOpen, toast, uploadMode]);
+
+  const toggleCameraFacingMode = () => {
+    cleanupCamera();
+    setCapturedImage(null);
+    setHasCameraPermission(null);
+    setCameraFacingMode((current) => (current === 'environment' ? 'user' : 'environment'));
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -288,10 +307,16 @@ export function DocumentUploader({ trigger, defaultFileName = '', onDocumentUplo
                             {capturedImage ? (
                                 <Button type="button" variant="outline" onClick={handleRetake}>Retake Photo</Button>
                             ) : (
-                                <Button type="button" onClick={handleCapture} disabled={hasCameraPermission !== true}>
-                                    <Camera className='mr-2' />
-                                    Capture
-                                </Button>
+                                <>
+                                  <Button type="button" variant="outline" onClick={toggleCameraFacingMode} disabled={hasCameraPermission === false}>
+                                      <RotateCcw className='mr-2 h-4 w-4' />
+                                      Swap Camera
+                                  </Button>
+                                  <Button type="button" onClick={handleCapture} disabled={hasCameraPermission !== true}>
+                                      <Camera className='mr-2' />
+                                      Capture
+                                  </Button>
+                                </>
                             )}
                         </div>
                     </div>

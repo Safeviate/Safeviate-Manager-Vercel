@@ -56,7 +56,7 @@ export default function AircraftFleetPage() {
           actions={canManageAssets ? <AddAircraftDialog tenantId={tenantId || ''} /> : undefined}
         />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <AircraftList data={aircrafts || []} tenantId={tenantId || ''} />
+          <AircraftList data={aircrafts || []} tenantId={tenantId || ''} canEdit={canManageAssets} />
         </CardContent>
       </Card>
     </div>

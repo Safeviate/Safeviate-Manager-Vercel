@@ -16,6 +16,10 @@ jobs:
       NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAIP_API_KEY: ${{ secrets.OPENAIP_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+      AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.AZURE_STORAGE_CONTAINER_NAME }}
 
     steps:
       - name: Checkout repository
