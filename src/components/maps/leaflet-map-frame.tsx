@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { MapContainer } from 'react-leaflet';
 
 type LeafletMapFrameProps = {
@@ -27,6 +27,15 @@ export function LeafletMapFrame({
   children,
 }: LeafletMapFrameProps) {
   const mapKey = `${minZoom ?? 'min'}-${maxZoom ?? 'max'}`;
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <MapContainer

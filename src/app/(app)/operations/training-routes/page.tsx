@@ -16,6 +16,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Textarea } from '@/components/ui/textarea';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
+import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -72,7 +73,7 @@ export default function TrainingRoutesPage() {
   const handleCreateNew = () => {
     const newRoute: TrainingRoute = {
       id: uuidv4(),
-      name: 'New Route',
+      name: '',
       description: '',
       routeType: 'training',
       legs: [],
@@ -85,16 +86,27 @@ export default function TrainingRoutesPage() {
     setInspectorTab('selected');
   };
 
-  const handleAddWaypoint = (lat: number, lon: number, identifier?: string) => {
+  const handleAddWaypoint = (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => {
     if (!isEditing || !activeRoute) return;
-    const newLeg: NavlogLeg = {
-      id: uuidv4(),
-      waypoint: identifier || `WP ${activeRoute.legs.length + 1}`,
-      latitude: lat,
-      longitude: lon,
-      altitude: 4500,
-    };
+    const newLeg = createNavlogLegFromCoordinates(
+      activeRoute.legs,
+      lat,
+      lon,
+      identifier || 'WP',
+      frequencies,
+      layerInfo
+    );
+    newLeg.altitude = 4500;
     setActiveRoute({ ...activeRoute, legs: [...activeRoute.legs, newLeg] });
+  };
+
+  const handleDeleteWaypoint = (legId: string) => {
+    if (!activeRoute) return;
+    setActiveRoute({
+      ...activeRoute,
+      legs: activeRoute.legs.filter((leg) => leg.id !== legId),
+    });
+    setIsEditing(true);
   };
 
   const handleAddHazardRequest = (lat: number, lng: number) => {
@@ -121,6 +133,16 @@ export default function TrainingRoutesPage() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleClearRoute = () => {
+    if (!activeRoute) return;
+    setActiveRoute({
+      ...activeRoute,
+      legs: [],
+      hazards: [],
+    });
+    setIsEditing(true);
   };
 
   const handleDelete = async (routeId: string) => {
@@ -188,7 +210,7 @@ export default function TrainingRoutesPage() {
             </div>
 
             <div className="pointer-events-none absolute inset-3 z-[4000]">
-              <div className="pointer-events-auto absolute left-0 top-14 flex flex-col gap-2">
+              <div className="pointer-events-auto absolute right-0 top-0 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setInspectorTab((current) => (current === 'routes' ? null : 'routes'))}
@@ -216,11 +238,11 @@ export default function TrainingRoutesPage() {
               </div>
 
               {inspectorTab ? (
-                <div className="pointer-events-auto absolute right-0 top-14 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+                <div className="pointer-events-auto absolute right-0 top-0 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
                   <div className="flex h-10 items-center justify-between gap-3 border-b border-slate-100 px-3">
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-                        {inspectorTab === 'routes' ? 'Route Selector' : 'Selected Route'}
+                        {inspectorTab === 'routes' ? 'Saved Routes' : 'Draft Route'}
                       </p>
                       <p className="truncate text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
                         {inspectorTab === 'routes'
@@ -246,7 +268,7 @@ export default function TrainingRoutesPage() {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search routes..." className="h-8 pl-9 text-[10px] font-bold uppercase" />
                       </div>
-                      <ScrollArea className="mt-3 h-[calc(100vh-18rem)]">
+                      <ScrollArea className="mt-3 max-h-[calc(100vh-16rem)]">
                         <div className="space-y-1 pr-1">
                           {filteredRoutes.map((route) => (
                             <button
@@ -271,11 +293,23 @@ export default function TrainingRoutesPage() {
                       </ScrollArea>
                     </div>
                   ) : activeRoute ? (
-                    <div className="space-y-4 p-4">
-                      <div className="rounded-xl border bg-background/70 p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Summary</p>
-                        <p className="mt-2 text-sm font-black uppercase">{activeRoute.name}</p>
-                        <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">{getRouteTypeLabel(activeRoute.routeType)}</p>
+                      <div className="space-y-4 p-4">
+                        <div className="rounded-xl border bg-background/70 p-4">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Create Route</p>
+                        <div className="mt-2 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black uppercase">{activeRoute.name}</p>
+                            <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">{getRouteTypeLabel(activeRoute.routeType)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}>
+                              <Trash2 size={14} />
+                            </Button>
+                            <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={handleClearRoute}>
+                              Clear Route
+                            </Button>
+                          </div>
+                        </div>
                         <div className="mt-4 grid grid-cols-2 gap-3">
                           <div className="rounded-lg border bg-white px-3 py-2">
                             <p className="text-[8px] font-black uppercase text-muted-foreground">Waypoints</p>
@@ -289,6 +323,47 @@ export default function TrainingRoutesPage() {
                         <p className="mt-4 text-[10px] font-bold leading-relaxed text-muted-foreground">
                           {activeRoute.description || 'No route notes yet. Start editing or add waypoints directly from the map.'}
                         </p>
+                        <div className="mt-4 space-y-2">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                            Waypoints
+                          </p>
+                          {activeRoute.legs.length > 0 ? (
+                            <div className="space-y-2">
+                              {activeRoute.legs.map((leg, index) => (
+                                <div
+                                  key={leg.id}
+                                  className="flex items-start justify-between gap-3 rounded-lg border bg-white px-3 py-2"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-[10px] font-black uppercase text-slate-700">
+                                      {index + 1}. {leg.waypoint}
+                                    </p>
+                                    <p className="text-[9px] font-mono font-bold text-muted-foreground">
+                                      {leg.latitude?.toFixed(4) ?? '-'}, {leg.longitude?.toFixed(4) ?? '-'}
+                                    </p>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-2">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+                                      {leg.altitude ? `${leg.altitude} ft` : 'No alt'}
+                                    </p>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-destructive"
+                                      onClick={() => handleDeleteWaypoint(leg.id)}
+                                    >
+                                      <Trash2 size={12} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="rounded-lg border border-dashed bg-white px-3 py-3 text-[10px] font-bold text-muted-foreground">
+                              No waypoints yet.
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={() => setIsEditing(true)} className={`${HEADER_ACTION_BUTTON_CLASS} flex-1`}>
@@ -311,9 +386,9 @@ export default function TrainingRoutesPage() {
                 </div>
               ) : null}
 
-              <div className="hidden pointer-events-auto absolute left-0 top-14 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+              <div className="hidden pointer-events-auto absolute right-0 top-0 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
                 <div className={`flex items-center justify-between gap-3 px-3 ${showRouteList ? 'h-10 border-b border-slate-100' : 'h-10'}`}>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Route Selector</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Saved Routes</p>
                   <Button
                     type="button"
                     variant="outline"
@@ -348,10 +423,10 @@ export default function TrainingRoutesPage() {
                 ) : null}
               </div>
 
-              <div className="hidden pointer-events-auto absolute right-0 top-14 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+              <div className="hidden pointer-events-auto absolute right-0 top-0 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
                 <div className={`flex items-center justify-between gap-3 px-3 ${showSelectedRoute ? 'h-10 border-b border-slate-100' : 'h-10'}`}>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Selected Route</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Draft Route</p>
                     <p className="truncate text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
                       {activeRoute ? `${activeRoute.name} • ${activeRoute.legs.length} legs` : 'No route selected'}
                     </p>
@@ -374,13 +449,28 @@ export default function TrainingRoutesPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Profile</p>
                             <div className="flex items-center gap-2">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
-                              <Button onClick={handleSave} disabled={!isEditing} className={HEADER_ACTION_BUTTON_CLASS}><Save size={14} className="mr-2" /> Save</Button>
+                              <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={handleClearRoute}>
+                                Clear Route
+                              </Button>
+                              <Button
+                                onClick={handleSave}
+                                disabled={!isEditing || !activeRoute.name.trim()}
+                                className={HEADER_ACTION_BUTTON_CLASS}
+                              >
+                                <Save size={14} className="mr-2" /> Save Route
+                              </Button>
                             </div>
                           </div>
                           <div className="space-y-3">
                             <div>
                               <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Name</label>
-                              <Input value={activeRoute.name} onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })} className="h-9 text-xs font-black uppercase" readOnly={!isEditing} />
+                              <Input
+                                value={activeRoute.name}
+                                onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })}
+                                className="h-9 text-xs font-black uppercase"
+                                readOnly={!isEditing}
+                                placeholder="Enter route name"
+                              />
                             </div>
                             <div>
                               <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Type</label>
@@ -404,7 +494,7 @@ export default function TrainingRoutesPage() {
                             </div>
                           </div>
                       </div>
-                      <ScrollArea className="flex-1">
+                      <ScrollArea className="flex-1 max-h-[calc(100vh-24rem)]">
                         <div className="space-y-8 p-4 pb-12">
                           <section className="space-y-4">
                             <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Planned Legs</h3>
@@ -416,7 +506,7 @@ export default function TrainingRoutesPage() {
                                       <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-[10px] font-black uppercase">{i + 1}</div>
                                       <Input value={leg.waypoint} onChange={(e) => { const next = [...activeRoute.legs]; next[i].waypoint = e.target.value; setActiveRoute({ ...activeRoute, legs: next }); }} className="h-6 w-24 border-none p-0 text-[10px] font-bold uppercase shadow-none focus-visible:ring-0" readOnly={!isEditing} />
                                     </div>
-                                    {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}><Trash2 size={12} /></Button>}
+                                    {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => handleDeleteWaypoint(leg.id)}><Trash2 size={12} /></Button>}
                                   </div>
                                   <div className="grid grid-cols-2 gap-4">
                                     <div>

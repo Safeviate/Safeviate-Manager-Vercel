@@ -141,27 +141,6 @@ const getSearchZoom = (sourceLayer: OpenAipFeature['sourceLayer']) => {
   return 13; // reporting-points
 };
 
-type LayerLoadLevel = {
-  label: string;
-  minZoom: number;
-  description: string;
-};
-
-const LAYER_LOAD_LEVELS: LayerLoadLevel[] = [
-  { label: 'OpenAIP Master Chart', minZoom: 8, description: 'Base aeronautical chart tiles.' },
-  { label: 'OpenAIP Airports', minZoom: 8, description: 'Airport markers and runway labels.' },
-  { label: 'Airspace Class E', minZoom: 8, description: 'Controlled airspace boundaries.' },
-  { label: 'Airspace Class F', minZoom: 8, description: 'Controlled airspace boundaries.' },
-  { label: 'Airspace Class G', minZoom: 8, description: 'Controlled airspace boundaries.' },
-  { label: 'OpenAIP Navaids', minZoom: 9, description: 'VOR/NDB and radio aids.' },
-  { label: 'Military Operations Areas', minZoom: 9, description: 'Restricted military activity zones.' },
-  { label: 'Training Areas', minZoom: 9, description: 'Training and practice areas.' },
-  { label: 'Gliding Sectors', minZoom: 9, description: 'Gliding sector airspace.' },
-  { label: 'Hang Glidings', minZoom: 9, description: 'Hang gliding launch and operation areas.' },
-  { label: 'OpenAIP Reporting Points', minZoom: 10, description: 'Published reporting points.' },
-  { label: 'OpenAIP Obstacles', minZoom: 11, description: 'Obstacles and vertical hazards.' },
-];
-
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type Bbox = {
@@ -1343,14 +1322,6 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     selectedBaseLayer,
     trainingAreasVisible,
   ]);
-  const layerLevelRows = useMemo(
-    () =>
-      LAYER_LOAD_LEVELS.map((layer) => ({
-        ...layer,
-        availableNow: mapZoom >= layer.minZoom,
-      })),
-    [mapZoom],
-  );
   const airspaceStyle = useCallback((feature: any) => {
     const category = feature?.properties?.category;
     let palette = { color: '#38bdf8', fillColor: '#38bdf8' };
@@ -2012,55 +1983,63 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
 
       {showLayerSelectorPanel ? (
       <>
-      <div className="pointer-events-auto absolute left-3 top-3 z-[1000] w-[340px] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
-        <div className="mb-2 flex items-center gap-2 pr-2">
-          <button
-            type="button"
-            className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-            onClick={() => setShowLayerSelectorPanel(false)}
-          >
-            Close
-          </button>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-              <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
-              <span className="text-[10px] font-semibold">Light (Standard)</span>
-            </label>
-            <label className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-              <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
-              <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
-            </label>
-            <div className="space-y-1 pt-1">
-              {[
-                ['OpenAIP Master Chart', masterVisible, setMasterVisible],
-                ['OpenAIP Airports', airportsVisible, setAirportsVisible],
-                ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
-                ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
-                ['Class E', classEVisible, setClassEVisible],
-                ['Class F', classFVisible, setClassFVisible],
-                ['Class G', classGVisible, setClassGVisible],
-                ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
-                ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
-                ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
-                ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
-                ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
-                ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
-              ].map(([label, checked, setter]) => (
-                <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                  <input
-                    type="checkbox"
-                    checked={checked as boolean}
-                    onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
-                  />
-                  <span className="text-[10px] font-semibold">{label as string}</span>
-                </label>
-              ))}
+      <div className="pointer-events-auto absolute bottom-4 left-4 z-[1000] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
+        <div className="border-b border-slate-100 px-3 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+              onClick={() => setShowLayerSelectorPanel(false)}
+            >
+              Close
+            </button>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
+          </div>
+          <div className="mt-2 flex items-center justify-end gap-2">
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700">
+              Base Layer
             </div>
           </div>
-
+        </div>
+        <div className="px-3 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+          <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+            <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
+            <span className="text-[10px] font-semibold">Light (Standard)</span>
+          </label>
+          <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+            <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
+            <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
+          </label>
+        </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 overflow-y-auto px-3 pb-3 pr-1">
+          <div className="space-y-2">
+            {[
+              ['OpenAIP Master Chart', masterVisible, setMasterVisible],
+              ['OpenAIP Airports', airportsVisible, setAirportsVisible],
+              ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
+              ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
+              ['Class E', classEVisible, setClassEVisible],
+              ['Class F', classFVisible, setClassFVisible],
+              ['Class G', classGVisible, setClassGVisible],
+              ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
+              ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
+              ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
+              ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
+              ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
+              ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
+            ].map(([label, checked, setter]) => (
+              <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={checked as boolean}
+                  onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
+                />
+                <span className="text-[10px] font-semibold">{label as string}</span>
+              </label>
+            ))}
+          </div>
           <div className="space-y-2">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Labels</p>
             {[
@@ -2093,7 +2072,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
       ) : (
         <button
           type="button"
-          className="pointer-events-auto absolute left-3 top-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+          className="pointer-events-auto absolute bottom-4 left-4 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
           onClick={() => setShowLayerSelectorPanel(true)}
         >
           Layers
@@ -2164,7 +2143,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
       />
 
       {pendingClickLabel && (
-        <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border bg-background/95 px-3 py-2 text-[10px] font-black uppercase tracking-widest shadow-xl backdrop-blur">
+        <div className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2 rounded-xl border bg-background/95 px-3 py-2 text-[10px] font-black uppercase tracking-widest shadow-xl backdrop-blur">
           Last click: {pendingClickLabel}
         </div>
       )}
@@ -2279,32 +2258,29 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
 
       {showLayerLevelsPanel ? (
       <>
-      <div className="pointer-events-auto absolute right-4 top-4 z-[1000] w-[340px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
-        <div className="flex h-10 items-center justify-between gap-3 border-b border-slate-100 px-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layer Levels</p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
+      <div className="pointer-events-auto absolute bottom-4 right-4 z-[1000] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
+        <div className="border-b border-slate-100 px-3 py-3">
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
+              className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+              onClick={() => setShowLayerLevelsPanel(false)}
+            >
+              Close
+            </button>
+            <p className="min-w-0 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layer Levels</p>
+          </div>
+          <div className="mt-2 space-y-1">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
               Zoom {mapZoom} • decide what to load
             </p>
-            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
               Cache status: {cacheStatus}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700">
-              {layerLevelRows.length} total
-            </div>
-            <button
-              type="button"
-              className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-              onClick={() => setShowLayerLevelsPanel(false)}
-            >
-              Collapse
-            </button>
-          </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 gap-2 overflow-y-auto p-3">
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1">
               <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Min Zoom</span>
@@ -2359,42 +2335,18 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
             Clear Cache
           </Button>
         </div>
-
-        <div className="mt-3 space-y-1">
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-700">Supported layers</p>
-          {layerLevelRows.map((layer) => (
-            <div
-              key={layer.label}
-              className={`flex items-start justify-between gap-3 rounded-md px-2 py-1 ${
-                layer.availableNow ? 'border border-emerald-100 bg-emerald-50/70' : 'border border-slate-100 bg-slate-50'
-              }`}
-            >
-              <div className="min-w-0">
-                <p className="truncate font-black uppercase tracking-[0.12em] text-slate-900">{layer.label}</p>
-                <p className="text-[9px] leading-snug text-slate-500">{layer.description}</p>
-              </div>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 font-black uppercase tracking-[0.14em] ${
-                  layer.availableNow
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-amber-100 text-amber-800'
-                }`}
-              >
-                {layer.availableNow ? 'now' : `${layer.minZoom}+`}
-              </span>
-            </div>
-          ))}
-        </div>
       </div>
       </>
       ) : (
-        <button
-          type="button"
-          className="pointer-events-auto absolute right-4 top-4 z-[1000] flex h-10 items-center rounded-2xl border border-slate-200 bg-white/95 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-          onClick={() => setShowLayerLevelsPanel(true)}
-        >
-          Layer Levels
-        </button>
+        <div className="pointer-events-auto absolute bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
+          <button
+            type="button"
+            className="flex h-10 items-center rounded-2xl border border-slate-200 bg-white/95 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+            onClick={() => setShowLayerLevelsPanel(true)}
+          >
+            Layer Levels
+          </button>
+        </div>
       )}
     </div>
   );
