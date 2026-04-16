@@ -1,5 +1,5 @@
 import { authOptions } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import {
   ensureAircraftSchema,
   ensureBookingsSchema,
@@ -46,6 +46,10 @@ export async function GET() {
     const email = session?.user?.email?.trim().toLowerCase();
 
     if (!email) {
+      return NextResponse.json(EMPTY_SUMMARY, { status: 200 });
+    }
+
+    if (!(await isDatabaseAvailable())) {
       return NextResponse.json(EMPTY_SUMMARY, { status: 200 });
     }
 

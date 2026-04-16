@@ -6,10 +6,19 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
+const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
+
 async function getTenantId() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
-  if (!email) return null;
+  if (!email) {
+    return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  }
+
+  const seedEmail = process.env.AUTH_SEED_EMAIL?.trim().toLowerCase();
+  if (SUPER_USERS.includes(email) || (seedEmail && email === seedEmail)) {
+    return 'safeviate';
+  }
 
   const currentUser = await prisma.user.findUnique({
     where: { email },

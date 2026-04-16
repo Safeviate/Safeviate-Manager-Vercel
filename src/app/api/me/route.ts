@@ -1,5 +1,5 @@
 import { authOptions } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -38,6 +38,10 @@ export async function GET() {
         },
         { status: 200 }
       );
+    }
+
+    if (!(await isDatabaseAvailable())) {
+      return NextResponse.json({ profile: null }, { status: 200 });
     }
 
     await prisma.tenant.upsert({

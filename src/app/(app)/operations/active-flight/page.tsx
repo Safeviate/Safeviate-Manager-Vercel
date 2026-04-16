@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -162,11 +161,18 @@ export default function ActiveFlightPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [scheduleRes, sessionsRes] = await Promise.all([fetch('/api/schedule-data'), fetch('/api/flight-sessions', { cache: 'no-store' })]);
-      if (scheduleRes.ok) {
-        const data = await scheduleRes.json();
-        setAircrafts(data.aircraft || []);
-        setBookings(data.bookings || []);
+      const [aircraftRes, bookingsRes, sessionsRes] = await Promise.all([
+        fetch('/api/aircraft', { cache: 'no-store' }),
+        fetch('/api/bookings', { cache: 'no-store' }),
+        fetch('/api/flight-sessions', { cache: 'no-store' }),
+      ]);
+      if (aircraftRes.ok) {
+        const data = await aircraftRes.json().catch(() => ({ aircraft: [] }));
+        setAircrafts(Array.isArray(data.aircraft) ? data.aircraft : []);
+      }
+      if (bookingsRes.ok) {
+        const data = await bookingsRes.json().catch(() => ({ bookings: [] }));
+        setBookings(Array.isArray(data.bookings) ? data.bookings : []);
       }
       if (sessionsRes.ok) {
         const data = await sessionsRes.json();
@@ -781,17 +787,37 @@ export default function ActiveFlightPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="active-flight-aircraft-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft Registration</Label>
-              <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
-                <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="font-semibold"><SelectValue placeholder="Select an aircraft" /></SelectTrigger>
-                <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
-              </Select>
+              <select
+                id="active-flight-aircraft-select"
+                aria-label="Aircraft registration"
+                value={selectedAircraftId}
+                onChange={(event) => handleAircraftSelectionChange(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-semibold ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Select an aircraft</option>
+                {sortedAircraft.map((aircraft) => (
+                  <option key={aircraft.id} value={aircraft.id}>
+                    {aircraft.tailNumber}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="active-flight-booking-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking / Navlog Route</Label>
-              <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
-                <SelectTrigger id="active-flight-booking-select" aria-label="Booking or navlog route" className="font-semibold"><SelectValue placeholder="Select a booking with a navlog" /></SelectTrigger>
-                <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
-              </Select>
+              <select
+                id="active-flight-booking-select"
+                aria-label="Booking or navlog route"
+                value={selectedBookingId}
+                onChange={(event) => handleBookingSelectionChange(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-semibold ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Select a booking with a navlog</option>
+                {candidateBookings.map((booking) => (
+                  <option key={booking.id} value={booking.id}>
+                    #{booking.bookingNumber} - {booking.date} - {(booking.navlog?.legs?.length || 0)} legs
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <Button className={HEADER_ACTION_BUTTON_CLASS} disabled={!selectedAircraft || !!conflictingAircraftSession} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>

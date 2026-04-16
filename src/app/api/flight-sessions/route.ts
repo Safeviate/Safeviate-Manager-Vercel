@@ -8,7 +8,9 @@ import { randomUUID } from 'node:crypto';
 async function getTenantId() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
-  if (!email) return null;
+  if (!email) {
+    return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  }
   const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
   return currentUser?.tenantId || 'safeviate';
 }

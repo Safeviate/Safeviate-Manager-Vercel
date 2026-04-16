@@ -1,5 +1,5 @@
 import { authOptions } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { ensureAircraftSchema, ensureBookingsSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -10,6 +10,10 @@ export async function GET() {
     const email = session?.user?.email?.trim().toLowerCase();
 
     if (!email) {
+      return NextResponse.json({ aircraft: [], bookings: [] }, { status: 200 });
+    }
+
+    if (!(await isDatabaseAvailable())) {
       return NextResponse.json({ aircraft: [], bookings: [] }, { status: 200 });
     }
 

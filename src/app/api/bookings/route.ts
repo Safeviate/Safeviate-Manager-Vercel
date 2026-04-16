@@ -5,6 +5,8 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
+const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
+
 function isCompletedStatus(status: unknown) {
   return status === 'Completed';
 }
@@ -12,7 +14,14 @@ function isCompletedStatus(status: unknown) {
 async function getTenantId() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
-  if (!email) return null;
+  if (!email) {
+    return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  }
+
+  const seedEmail = process.env.AUTH_SEED_EMAIL?.trim().toLowerCase();
+  if (SUPER_USERS.includes(email) || (seedEmail && email === seedEmail)) {
+    return 'safeviate';
+  }
 
   await prisma.tenant.upsert({
     where: { id: 'safeviate' },

@@ -51,6 +51,14 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
+type DatabaseAvailabilityCache = {
+  checkedAt: number;
+  available: boolean;
+};
+
+const DATABASE_AVAILABILITY_TTL_MS = 15_000;
+let databaseAvailabilityCache: DatabaseAvailabilityCache | null = null;
+
 export const prisma =
   global.__prisma ??
   new PrismaClient({
@@ -59,4 +67,24 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;
+}
+
+export async function isDatabaseAvailable(forceRefresh = false) {
+  const now = Date.now();
+  if (
+    !forceRefresh &&
+    databaseAvailabilityCache &&
+    now - databaseAvailabilityCache.checkedAt < DATABASE_AVAILABILITY_TTL_MS
+  ) {
+    return databaseAvailabilityCache.available;
+  }
+
+  try {
+    await prisma.$queryRawUnsafe('SELECT 1');
+    databaseAvailabilityCache = { checkedAt: now, available: true };
+    return true;
+  } catch {
+    databaseAvailabilityCache = { checkedAt: now, available: false };
+    return false;
+  }
 }

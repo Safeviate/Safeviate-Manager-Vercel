@@ -1,7 +1,7 @@
 ﻿'use client';
 
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { type CSSProperties, type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Marker, Pane, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Layers3, Loader2, SlidersHorizontal } from 'lucide-react';
@@ -22,6 +22,54 @@ const WaypointIcon = L.divIcon({
   iconSize: [14, 14],
   iconAnchor: [7, 7],
 });
+
+const OPENAIP_PANE_STYLE = { zIndex: 325 } as const;
+const OPENAIP_POINT_PANE_STYLE = { zIndex: 560 } as const;
+const OPENAIP_LABEL_PANE_STYLE = { zIndex: 650 } as const;
+
+type OpenAipPointFeature = {
+  _id: string;
+  name: string;
+  icaoCode?: string;
+  identifier?: string;
+  geometry?: {
+    coordinates?: [number, number];
+  };
+  sourceLayer: 'airports' | 'navaids' | 'reporting-points';
+};
+
+const airportPointIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:12px;height:12px;border-radius:9999px;background:#2563eb;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(37,99,235,0.25);"></div>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
+const navaidPointIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:12px;height:12px;border-radius:4px;background:#7c3aed;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(124,58,237,0.22);"></div>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
+const reportingPointIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid #f59e0b;filter:drop-shadow(0 0 2px rgba(245,158,11,0.35));"></div>',
+  iconSize: [14, 12],
+  iconAnchor: [7, 10],
+});
+
+const openAipLabelClassName = 'active-flight-openaip-label';
+
+async function fetchOpenAipJson<T>(url: string): Promise<T | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
 
 const createAircraftMarkerIcon = (label: string, headingTrue?: number | null) =>
   L.divIcon({
@@ -142,34 +190,296 @@ function MapResizeController() {
   const map = useMap();
 
   useEffect(() => {
+    const container = map.getContainer();
     let frameId = 0;
+    let timeoutId: number | null = null;
+    let lastWidth = container.clientWidth;
+    let lastHeight = container.clientHeight;
 
-    const refreshMapSize = () => {
-      window.cancelAnimationFrame(frameId);
-      frameId = window.requestAnimationFrame(() => {
-        map.invalidateSize(false);
-      });
+    const invalidateIfSizeChanged = () => {
+      const nextWidth = container.clientWidth;
+      const nextHeight = container.clientHeight;
+
+      if (nextWidth === 0 || nextHeight === 0) return;
+      if (nextWidth === lastWidth && nextHeight === lastHeight) return;
+
+      lastWidth = nextWidth;
+      lastHeight = nextHeight;
+      map.invalidateSize(false);
     };
 
-    refreshMapSize();
+    const scheduleRefresh = () => {
+      window.cancelAnimationFrame(frameId);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
 
-    const container = map.getContainer();
-    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refreshMapSize) : null;
+      timeoutId = window.setTimeout(() => {
+        frameId = window.requestAnimationFrame(() => {
+          invalidateIfSizeChanged();
+        });
+      }, 80);
+    };
+
+    frameId = window.requestAnimationFrame(() => {
+      lastWidth = 0;
+      lastHeight = 0;
+      invalidateIfSizeChanged();
+    });
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            scheduleRefresh();
+          })
+        : null;
     resizeObserver?.observe(container);
-    resizeObserver?.observe(container.parentElement || container);
 
-    window.addEventListener('resize', refreshMapSize);
-    window.addEventListener('orientationchange', refreshMapSize);
+    window.addEventListener('resize', scheduleRefresh);
+    window.addEventListener('orientationchange', scheduleRefresh);
 
     return () => {
       window.cancelAnimationFrame(frameId);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
       resizeObserver?.disconnect();
-      window.removeEventListener('resize', refreshMapSize);
-      window.removeEventListener('orientationchange', refreshMapSize);
+      window.removeEventListener('resize', scheduleRefresh);
+      window.removeEventListener('orientationchange', scheduleRefresh);
     };
   }, [map]);
 
   return null;
+}
+
+function MapZoomState({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
+
+  useMapEvents({
+    zoomend() {
+      onZoomChange(map.getZoom());
+    },
+  });
+
+  return null;
+}
+
+function VisiblePointLoader({
+  airportsEnabled,
+  navaidsEnabled,
+  reportingEnabled,
+  onFeaturesLoaded,
+}: {
+  airportsEnabled: boolean;
+  navaidsEnabled: boolean;
+  reportingEnabled: boolean;
+  onFeaturesLoaded: (features: OpenAipPointFeature[]) => void;
+}) {
+  const map = useMap();
+  const requestSeq = useRef(0);
+  const lastRequestKeyRef = useRef('');
+
+  const activeResources = useMemo(() => {
+    const resources: OpenAipPointFeature['sourceLayer'][] = [];
+    if (airportsEnabled) resources.push('airports');
+    if (navaidsEnabled) resources.push('navaids');
+    if (reportingEnabled) resources.push('reporting-points');
+    return resources;
+  }, [airportsEnabled, navaidsEnabled, reportingEnabled]);
+
+  const loadVisiblePoints = useCallback(async () => {
+    if (activeResources.length === 0) {
+      onFeaturesLoaded([]);
+      return;
+    }
+
+    const bounds = map.getBounds().pad(0.25);
+    const bbox = [
+      bounds.getWest().toFixed(6),
+      bounds.getSouth().toFixed(6),
+      bounds.getEast().toFixed(6),
+      bounds.getNorth().toFixed(6),
+    ].join(',');
+    const requestKey = `${activeResources.join(',')}|${bbox}`;
+    if (lastRequestKeyRef.current === requestKey) return;
+    lastRequestKeyRef.current = requestKey;
+    const nextSeq = ++requestSeq.current;
+
+    const responses = await Promise.all(
+      activeResources.map(async (resource) => {
+        const data = await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=${resource}&bbox=${bbox}`);
+        return (data?.items || []).map((item: any) => ({ ...item, sourceLayer: resource })) as OpenAipPointFeature[];
+      })
+    );
+
+    if (nextSeq !== requestSeq.current) return;
+    onFeaturesLoaded(responses.flat());
+  }, [activeResources, map, onFeaturesLoaded]);
+
+  useEffect(() => {
+    void loadVisiblePoints();
+  }, [loadVisiblePoints]);
+
+  useMapEvents({
+    moveend() {
+      void loadVisiblePoints();
+    },
+    zoomend() {
+      void loadVisiblePoints();
+    },
+  });
+
+  return null;
+}
+
+function ActiveFlightOpenAipLayers({
+  mapMinZoom,
+  mapMaxZoom,
+  showOpenAipChart,
+  airportsVisible,
+  airportLabelsVisible,
+  navaidsVisible,
+  navaidLabelsVisible,
+  reportingVisible,
+  reportingLabelsVisible,
+  mapZoom,
+  onMapZoomChange,
+  viewportFeatures,
+  onViewportFeaturesLoaded,
+}: {
+  mapMinZoom: number;
+  mapMaxZoom: number;
+  showOpenAipChart: boolean;
+  airportsVisible: boolean;
+  airportLabelsVisible: boolean;
+  navaidsVisible: boolean;
+  navaidLabelsVisible: boolean;
+  reportingVisible: boolean;
+  reportingLabelsVisible: boolean;
+  mapZoom: number;
+  onMapZoomChange: (zoom: number) => void;
+  viewportFeatures: OpenAipPointFeature[];
+  onViewportFeaturesLoaded: (features: OpenAipPointFeature[]) => void;
+}) {
+  const airportFeatures = useMemo(
+    () => viewportFeatures.filter((feature) => feature.sourceLayer === 'airports'),
+    [viewportFeatures]
+  );
+  const navaidFeatures = useMemo(
+    () => viewportFeatures.filter((feature) => feature.sourceLayer === 'navaids'),
+    [viewportFeatures]
+  );
+  const reportingPointFeatures = useMemo(
+    () => viewportFeatures.filter((feature) => feature.sourceLayer === 'reporting-points'),
+    [viewportFeatures]
+  );
+
+  return (
+    <>
+      <MapZoomState onZoomChange={onMapZoomChange} />
+      <VisiblePointLoader
+        airportsEnabled={airportsVisible}
+        navaidsEnabled={navaidsVisible}
+        reportingEnabled={reportingVisible}
+        onFeaturesLoaded={onViewportFeaturesLoaded}
+      />
+      {showOpenAipChart ? (
+        <Pane name="active-flight-openaip" style={OPENAIP_PANE_STYLE}>
+          <TileLayer
+            pane="active-flight-openaip"
+            url="/api/openaip/tiles/openaip/{z}/{x}/{y}"
+            attribution="&copy; OpenAIP"
+            opacity={1}
+            minZoom={Math.max(mapMinZoom, 8)}
+            minNativeZoom={8}
+            maxNativeZoom={16}
+            maxZoom={Math.min(mapMaxZoom, 20)}
+          />
+        </Pane>
+      ) : null}
+      <Pane name="active-flight-openaip-points" style={OPENAIP_POINT_PANE_STYLE} />
+      <Pane name="active-flight-openaip-labels" style={OPENAIP_LABEL_PANE_STYLE} />
+
+      {airportsVisible && mapZoom >= 8
+        ? airportFeatures.map((feature) => {
+            const coords = feature.geometry?.coordinates;
+            if (!coords) return null;
+            const [lon, lat] = coords;
+            const identifier = feature.icaoCode || feature.identifier || feature.name;
+            return (
+              <Marker key={feature._id} position={[lat, lon]} icon={airportPointIcon} pane="active-flight-openaip-points">
+                {airportLabelsVisible && mapZoom >= 9 ? (
+                  <Tooltip
+                    permanent
+                    pane="active-flight-openaip-labels"
+                    direction="top"
+                    offset={[0, -6]}
+                    opacity={0.95}
+                    className={openAipLabelClassName}
+                  >
+                    {identifier}
+                  </Tooltip>
+                ) : null}
+              </Marker>
+            );
+          })
+        : null}
+
+      {navaidsVisible && mapZoom >= 9
+        ? navaidFeatures.map((feature) => {
+            const coords = feature.geometry?.coordinates;
+            if (!coords) return null;
+            const [lon, lat] = coords;
+            const identifier = feature.icaoCode || feature.identifier || feature.name;
+            return (
+              <Marker key={feature._id} position={[lat, lon]} icon={navaidPointIcon} pane="active-flight-openaip-points">
+                {navaidLabelsVisible && mapZoom >= 10 ? (
+                  <Tooltip
+                    permanent
+                    pane="active-flight-openaip-labels"
+                    direction="top"
+                    offset={[0, -6]}
+                    opacity={0.95}
+                    className={openAipLabelClassName}
+                  >
+                    {identifier}
+                  </Tooltip>
+                ) : null}
+              </Marker>
+            );
+          })
+        : null}
+
+      {reportingVisible && mapZoom >= 10
+        ? reportingPointFeatures.map((feature) => {
+            const coords = feature.geometry?.coordinates;
+            if (!coords) return null;
+            const [lon, lat] = coords;
+            const identifier = feature.icaoCode || feature.identifier || feature.name;
+            return (
+              <Marker key={feature._id} position={[lat, lon]} icon={reportingPointIcon} pane="active-flight-openaip-points">
+                {reportingLabelsVisible && mapZoom >= 11 ? (
+                  <Tooltip
+                    permanent
+                    pane="active-flight-openaip-labels"
+                    direction="top"
+                    offset={[0, -6]}
+                    opacity={0.95}
+                    className={openAipLabelClassName}
+                  >
+                    {identifier}
+                  </Tooltip>
+                ) : null}
+              </Marker>
+            );
+          })
+        : null}
+    </>
+  );
 }
 
 function MapAreaCacheController({
@@ -625,6 +935,33 @@ export function ActiveFlightLiveMap({
   const [isClearingOfflineMaps, setIsClearingOfflineMaps] = useState(false);
   const [compactFullscreenOpen, setCompactFullscreenOpen] = useState(false);
   const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>('light');
+  const [showOpenAipChart, setShowOpenAipChart] = useState(true);
+  const [airportsVisible, setAirportsVisible] = useState(true);
+  const [airportLabelsVisible, setAirportLabelsVisible] = useState(true);
+  const [navaidsVisible, setNavaidsVisible] = useState(true);
+  const [navaidLabelsVisible, setNavaidLabelsVisible] = useState(true);
+  const [reportingVisible, setReportingVisible] = useState(true);
+  const [reportingLabelsVisible, setReportingLabelsVisible] = useState(true);
+  const [airspacesVisible, setAirspacesVisible] = useState(true);
+  const [airspaceLabelsVisible, setAirspaceLabelsVisible] = useState(false);
+  const [classEVisible, setClassEVisible] = useState(false);
+  const [classELabelsVisible, setClassELabelsVisible] = useState(false);
+  const [classFVisible, setClassFVisible] = useState(false);
+  const [classFLabelsVisible, setClassFLabelsVisible] = useState(false);
+  const [classGVisible, setClassGVisible] = useState(true);
+  const [classGLabelsVisible, setClassGLabelsVisible] = useState(false);
+  const [militaryAreasVisible, setMilitaryAreasVisible] = useState(false);
+  const [militaryLabelsVisible, setMilitaryLabelsVisible] = useState(false);
+  const [trainingAreasVisible, setTrainingAreasVisible] = useState(false);
+  const [trainingLabelsVisible, setTrainingLabelsVisible] = useState(false);
+  const [glidingSectorsVisible, setGlidingSectorsVisible] = useState(false);
+  const [glidingLabelsVisible, setGlidingLabelsVisible] = useState(false);
+  const [hangGlidingVisible, setHangGlidingVisible] = useState(false);
+  const [hangGlidingLabelsVisible, setHangGlidingLabelsVisible] = useState(false);
+  const [obstaclesVisible, setObstaclesVisible] = useState(true);
+  const [obstacleLabelsVisible, setObstacleLabelsVisible] = useState(false);
+  const [mapZoom, setMapZoom] = useState(8);
+  const [viewportFeatures, setViewportFeatures] = useState<OpenAipPointFeature[]>([]);
   const [showLayerSelectorPanel, setShowLayerSelectorPanel] = useState(false);
   const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(false);
   const layerSelectorPanelOpen = layerSelectorOpen ?? showLayerSelectorPanel;
@@ -635,6 +972,69 @@ export function ActiveFlightLiveMap({
       const stored = window.localStorage.getItem('safeviate.active-flight-map-layer');
       if (stored === 'light' || stored === 'satellite') {
         setSelectedBaseLayer(stored);
+      }
+
+      const storedOpenAip = window.localStorage.getItem('safeviate.active-flight-map-openaip-chart');
+      if (storedOpenAip === 'true' || storedOpenAip === 'false') {
+        setShowOpenAipChart(storedOpenAip === 'true');
+      }
+
+      const storedAirports = window.localStorage.getItem('safeviate.active-flight-map-airports');
+      if (storedAirports === 'true' || storedAirports === 'false') {
+        setAirportsVisible(storedAirports === 'true');
+      }
+
+      const storedAirportLabels = window.localStorage.getItem('safeviate.active-flight-map-airport-labels');
+      if (storedAirportLabels === 'true' || storedAirportLabels === 'false') {
+        setAirportLabelsVisible(storedAirportLabels === 'true');
+      }
+
+      const storedNavaids = window.localStorage.getItem('safeviate.active-flight-map-navaids');
+      if (storedNavaids === 'true' || storedNavaids === 'false') {
+        setNavaidsVisible(storedNavaids === 'true');
+      }
+
+      const storedNavaidLabels = window.localStorage.getItem('safeviate.active-flight-map-navaid-labels');
+      if (storedNavaidLabels === 'true' || storedNavaidLabels === 'false') {
+        setNavaidLabelsVisible(storedNavaidLabels === 'true');
+      }
+
+      const storedReporting = window.localStorage.getItem('safeviate.active-flight-map-reporting');
+      if (storedReporting === 'true' || storedReporting === 'false') {
+        setReportingVisible(storedReporting === 'true');
+      }
+
+      const storedReportingLabels = window.localStorage.getItem('safeviate.active-flight-map-reporting-labels');
+      if (storedReportingLabels === 'true' || storedReportingLabels === 'false') {
+        setReportingLabelsVisible(storedReportingLabels === 'true');
+      }
+
+      const booleanKeys: Array<[string, Dispatch<SetStateAction<boolean>>]> = [
+        ['safeviate.active-flight-map-airspaces', setAirspacesVisible],
+        ['safeviate.active-flight-map-airspace-labels', setAirspaceLabelsVisible],
+        ['safeviate.active-flight-map-class-e', setClassEVisible],
+        ['safeviate.active-flight-map-class-e-labels', setClassELabelsVisible],
+        ['safeviate.active-flight-map-class-f', setClassFVisible],
+        ['safeviate.active-flight-map-class-f-labels', setClassFLabelsVisible],
+        ['safeviate.active-flight-map-class-g', setClassGVisible],
+        ['safeviate.active-flight-map-class-g-labels', setClassGLabelsVisible],
+        ['safeviate.active-flight-map-military', setMilitaryAreasVisible],
+        ['safeviate.active-flight-map-military-labels', setMilitaryLabelsVisible],
+        ['safeviate.active-flight-map-training', setTrainingAreasVisible],
+        ['safeviate.active-flight-map-training-labels', setTrainingLabelsVisible],
+        ['safeviate.active-flight-map-gliding', setGlidingSectorsVisible],
+        ['safeviate.active-flight-map-gliding-labels', setGlidingLabelsVisible],
+        ['safeviate.active-flight-map-hang-gliding', setHangGlidingVisible],
+        ['safeviate.active-flight-map-hang-gliding-labels', setHangGlidingLabelsVisible],
+        ['safeviate.active-flight-map-obstacles', setObstaclesVisible],
+        ['safeviate.active-flight-map-obstacle-labels', setObstacleLabelsVisible],
+      ];
+
+      for (const [key, setter] of booleanKeys) {
+        const stored = window.localStorage.getItem(key);
+        if (stored === 'true' || stored === 'false') {
+          setter(stored === 'true');
+        }
       }
     } catch {
       // keep default
@@ -648,6 +1048,70 @@ export function ActiveFlightLiveMap({
       // ignore storage failures
     }
   }, [selectedBaseLayer]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('safeviate.active-flight-map-openaip-chart', String(showOpenAipChart));
+    } catch {
+      // ignore storage failures
+    }
+  }, [showOpenAipChart]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('safeviate.active-flight-map-airports', String(airportsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-airport-labels', String(airportLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-navaids', String(navaidsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-navaid-labels', String(navaidLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-reporting', String(reportingVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-reporting-labels', String(reportingLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-airspaces', String(airspacesVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-airspace-labels', String(airspaceLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-class-e', String(classEVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-class-e-labels', String(classELabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-class-f', String(classFVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-class-f-labels', String(classFLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-class-g', String(classGVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-class-g-labels', String(classGLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-military', String(militaryAreasVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-military-labels', String(militaryLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-training', String(trainingAreasVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-training-labels', String(trainingLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-gliding', String(glidingSectorsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-gliding-labels', String(glidingLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-hang-gliding', String(hangGlidingVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-hang-gliding-labels', String(hangGlidingLabelsVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-obstacles', String(obstaclesVisible));
+      window.localStorage.setItem('safeviate.active-flight-map-obstacle-labels', String(obstacleLabelsVisible));
+    } catch {
+      // ignore storage failures
+    }
+  }, [
+    airportsVisible,
+    airportLabelsVisible,
+    navaidsVisible,
+    navaidLabelsVisible,
+    reportingVisible,
+    reportingLabelsVisible,
+    airspacesVisible,
+    airspaceLabelsVisible,
+    classEVisible,
+    classELabelsVisible,
+    classFVisible,
+    classFLabelsVisible,
+    classGVisible,
+    classGLabelsVisible,
+    militaryAreasVisible,
+    militaryLabelsVisible,
+    trainingAreasVisible,
+    trainingLabelsVisible,
+    glidingSectorsVisible,
+    glidingLabelsVisible,
+    hangGlidingVisible,
+    hangGlidingLabelsVisible,
+    obstaclesVisible,
+    obstacleLabelsVisible,
+  ]);
 
   useEffect(() => {
     setFollowOwnship(true);
@@ -742,6 +1206,9 @@ export function ActiveFlightLiveMap({
   const handleCentre = () => {
     setRecenterMode('position');
     setRecenterNonce((current) => current + 1);
+  };
+  const handleClearOpenAipCache = () => {
+    setCacheStatus('Cache cleared.');
   };
 
   if (fullscreen) {
@@ -1012,9 +1479,31 @@ export function ActiveFlightLiveMap({
             className="h-full w-full rounded-none"
             style={{ background: '#000000' }}
           >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
+            {selectedBaseLayer === 'satellite' ? (
+              <TileLayer
+                url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                attribution="&copy; Google Maps"
+              />
+            ) : (
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+              />
+            )}
+            <ActiveFlightOpenAipLayers
+              mapMinZoom={mapMinZoom}
+              mapMaxZoom={mapMaxZoom}
+              showOpenAipChart={showOpenAipChart}
+              airportsVisible={airportsVisible}
+              airportLabelsVisible={airportLabelsVisible}
+              navaidsVisible={navaidsVisible}
+              navaidLabelsVisible={navaidLabelsVisible}
+              reportingVisible={reportingVisible}
+              reportingLabelsVisible={reportingLabelsVisible}
+              mapZoom={mapZoom}
+              onMapZoomChange={setMapZoom}
+              viewportFeatures={viewportFeatures}
+              onViewportFeaturesLoaded={setViewportFeatures}
             />
             <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
             <MapResizeController />
@@ -1203,6 +1692,23 @@ export function ActiveFlightLiveMap({
             transform-origin: center;
           }
 
+          .fullscreen-map-shell .nose-up-map .${openAipLabelClassName} {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            color: #1d4ed8;
+            font-size: 7px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 0;
+            text-transform: uppercase;
+          }
+
+          .fullscreen-map-shell .nose-up-map .${openAipLabelClassName}::before {
+            display: none;
+          }
+
           @media (min-width: 640px) {
             .fullscreen-map-shell .leaflet-top.leaflet-left {
               top: 11.75rem !important;
@@ -1240,6 +1746,21 @@ export function ActiveFlightLiveMap({
                   attribution="&copy; OpenStreetMap contributors"
                 />
               )}
+              <ActiveFlightOpenAipLayers
+                mapMinZoom={mapMinZoom}
+                mapMaxZoom={mapMaxZoom}
+                showOpenAipChart={showOpenAipChart}
+                airportsVisible={airportsVisible}
+                airportLabelsVisible={airportLabelsVisible}
+                navaidsVisible={navaidsVisible}
+                navaidLabelsVisible={navaidLabelsVisible}
+                reportingVisible={reportingVisible}
+                reportingLabelsVisible={reportingLabelsVisible}
+                mapZoom={mapZoom}
+                onMapZoomChange={setMapZoom}
+                viewportFeatures={viewportFeatures}
+                onViewportFeaturesLoaded={setViewportFeatures}
+              />
               <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
               <MapResizeController />
             <MapRecenterController
@@ -1312,6 +1833,177 @@ export function ActiveFlightLiveMap({
               )}
             </LeafletMapFrame>
           </div>
+          {layerSelectorPanelOpen ? (
+            <div className="pointer-events-auto absolute bottom-4 left-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
+              <div className="border-b border-slate-100 px-3 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                    onClick={() => {
+                      onLayerSelectorOpenChange?.(false);
+                      setShowLayerSelectorPanel(false);
+                    }}
+                  >
+                    Close
+                  </button>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
+                </div>
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700">
+                    Base Layer
+                  </div>
+                </div>
+              </div>
+              <div className="px-3 py-3">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                    <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
+                    <span className="text-[10px] font-semibold">Light (Standard)</span>
+                  </label>
+                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                    <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
+                    <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
+                  </label>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 overflow-y-auto px-3 pb-3 pr-1">
+                <div className="space-y-2">
+                  {[
+                    ['OpenAIP Master Chart', showOpenAipChart, setShowOpenAipChart],
+                    ['OpenAIP Airports', airportsVisible, setAirportsVisible],
+                    ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
+                    ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
+                    ['Class E', classEVisible, setClassEVisible],
+                    ['Class F', classFVisible, setClassFVisible],
+                    ['Class G', classGVisible, setClassGVisible],
+                    ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
+                    ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
+                    ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
+                    ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
+                    ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
+                    ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
+                  ].map(([label, checked, setter]) => (
+                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                      <input
+                        type="checkbox"
+                        checked={checked as boolean}
+                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
+                      />
+                      <span className="text-[10px] font-semibold">{label as string}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Labels</p>
+                  {[
+                    ['Airport Labels', airportLabelsVisible, setAirportLabelsVisible],
+                    ['Navaid Labels', navaidLabelsVisible, setNavaidLabelsVisible],
+                    ['Reporting Labels', reportingLabelsVisible, setReportingLabelsVisible],
+                    ['Airspace Labels', airspaceLabelsVisible, setAirspaceLabelsVisible],
+                    ['Class E Labels', classELabelsVisible, setClassELabelsVisible],
+                    ['Class F Labels', classFLabelsVisible, setClassFLabelsVisible],
+                    ['Class G Labels', classGLabelsVisible, setClassGLabelsVisible],
+                    ['Military Labels', militaryLabelsVisible, setMilitaryLabelsVisible],
+                    ['Training Labels', trainingLabelsVisible, setTrainingLabelsVisible],
+                    ['Gliding Labels', glidingLabelsVisible, setGlidingLabelsVisible],
+                    ['Hang Gliding Labels', hangGlidingLabelsVisible, setHangGlidingLabelsVisible],
+                    ['Obstacle Labels', obstacleLabelsVisible, setObstacleLabelsVisible],
+                  ].map(([label, checked, setter]) => (
+                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                      <input
+                        type="checkbox"
+                        checked={checked as boolean}
+                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
+                      />
+                      <span className="text-[10px] font-semibold">{label as string}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {layerLevelsPanelOpen ? (
+            <div className="pointer-events-auto absolute bottom-4 right-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
+              <div className="border-b border-slate-100 px-3 py-3">
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                    onClick={() => {
+                      onLayerLevelsOpenChange?.(false);
+                      setShowLayerLevelsPanel(false);
+                    }}
+                  >
+                    Close
+                  </button>
+                  <p className="min-w-0 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
+                </div>
+                <div className="mt-2 space-y-1">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                    Zoom {mapZoom} • decide what to load
+                  </p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Cache status: {cacheStatus}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 overflow-y-auto p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="space-y-1">
+                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Min Zoom</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={mapMaxZoom}
+                      value={zoomDraftMin}
+                      onChange={(event) => setZoomDraftMin(event.target.value)}
+                      className="h-8 w-full rounded-lg border-slate-200 bg-white px-2 text-xs font-black"
+                      aria-label="Active Flight minimum zoom"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Max Zoom</span>
+                    <Input
+                      type="number"
+                      min={mapMinZoom}
+                      max={22}
+                      value={zoomDraftMax}
+                      onChange={(event) => setZoomDraftMax(event.target.value)}
+                      className="h-8 w-full rounded-lg border-slate-200 bg-white px-2 text-xs font-black"
+                      aria-label="Active Flight maximum zoom"
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 rounded-lg border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-50"
+                    onClick={() => resetZoomRange()}
+                  >
+                    Reset Zoom
+                  </Button>
+                  <Button
+                    type="button"
+                    className="h-8 rounded-lg px-3 text-[9px] font-black uppercase tracking-[0.16em]"
+                    onClick={() => saveZoomDrafts()}
+                  >
+                    Save Zoom
+                  </Button>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 rounded-lg border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-50"
+                  onClick={handleClearOpenAipCache}
+                >
+                  Clear Cache
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <style jsx>{`
             .nose-up-map {
               transform: rotate(var(--map-rotation)) scale(1.38);
@@ -1320,11 +2012,28 @@ export function ActiveFlightLiveMap({
             }
 
             .nose-up-map :global(.leaflet-top),
-            .nose-up-map :global(.leaflet-bottom) {
-              transform: rotate(var(--map-counter-rotation));
-              transform-origin: center;
-            }
-          `}</style>
+          .nose-up-map :global(.leaflet-bottom) {
+            transform: rotate(var(--map-counter-rotation));
+            transform-origin: center;
+          }
+
+          .nose-up-map :global(.${openAipLabelClassName}) {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            color: #1d4ed8;
+            font-size: 7px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 0;
+            text-transform: uppercase;
+          }
+
+          .nose-up-map :global(.${openAipLabelClassName}::before) {
+            display: none;
+          }
+        `}</style>
       </div>
     );
   }
@@ -1427,9 +2136,31 @@ export function ActiveFlightLiveMap({
           className="h-full min-h-[360px] w-full rounded-2xl"
           style={{ background: '#020617' }}
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors"
+          {selectedBaseLayer === 'satellite' ? (
+            <TileLayer
+              url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              attribution="&copy; Google Maps"
+            />
+          ) : (
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+          )}
+          <ActiveFlightOpenAipLayers
+            mapMinZoom={mapMinZoom}
+            mapMaxZoom={mapMaxZoom}
+            showOpenAipChart={showOpenAipChart}
+            airportsVisible={airportsVisible}
+            airportLabelsVisible={airportLabelsVisible}
+            navaidsVisible={navaidsVisible}
+            navaidLabelsVisible={navaidLabelsVisible}
+            reportingVisible={reportingVisible}
+            reportingLabelsVisible={reportingLabelsVisible}
+            mapZoom={mapZoom}
+            onMapZoomChange={setMapZoom}
+            viewportFeatures={viewportFeatures}
+            onViewportFeaturesLoaded={setViewportFeatures}
           />
           <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
           <MapResizeController />
@@ -1515,36 +2246,117 @@ export function ActiveFlightLiveMap({
             transform: rotate(var(--map-counter-rotation));
             transform-origin: center;
           }
+
+          .nose-up-map :global(.${openAipLabelClassName}) {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            color: #1d4ed8;
+            font-size: 7px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 0;
+            text-transform: uppercase;
+          }
+
+          .nose-up-map :global(.${openAipLabelClassName}::before) {
+            display: none;
+          }
         `}</style>
           </div>
           {layerSelectorPanelOpen ? (
-            <div className="absolute right-3 top-3 z-[1200] w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
-              <div className="mb-3 flex items-center gap-2">
-                <Layers3 className="h-4 w-4 text-slate-500" />
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Layers</p>
+            <div className="pointer-events-auto absolute bottom-4 left-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
+              <div className="border-b border-slate-100 px-3 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                    onClick={() => {
+                      onLayerSelectorOpenChange?.(false);
+                      setShowLayerSelectorPanel(false);
+                    }}
+                  >
+                    Close
+                  </button>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
+                </div>
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700">
+                    Base Layer
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant={selectedBaseLayer === 'light' ? 'default' : 'outline'}
-                  className="w-full justify-start"
-                  onClick={() => setSelectedBaseLayer('light')}
-                >
-                  Light
-                </Button>
-                <Button
-                  type="button"
-                  variant={selectedBaseLayer === 'satellite' ? 'default' : 'outline'}
-                  className="w-full justify-start"
-                  onClick={() => setSelectedBaseLayer('satellite')}
-                >
-                  Satellite
-                </Button>
+              <div className="px-3 py-3">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                    <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
+                    <span className="text-[10px] font-semibold">Light (Standard)</span>
+                  </label>
+                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                    <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
+                    <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
+                  </label>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 overflow-y-auto px-3 pb-3 pr-1">
+                <div className="space-y-2">
+                  {[
+                    ['OpenAIP Master Chart', showOpenAipChart, setShowOpenAipChart],
+                    ['OpenAIP Airports', airportsVisible, setAirportsVisible],
+                    ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
+                    ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
+                    ['Class E', classEVisible, setClassEVisible],
+                    ['Class F', classFVisible, setClassFVisible],
+                    ['Class G', classGVisible, setClassGVisible],
+                    ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
+                    ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
+                    ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
+                    ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
+                    ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
+                    ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
+                  ].map(([label, checked, setter]) => (
+                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                      <input
+                        type="checkbox"
+                        checked={checked as boolean}
+                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
+                      />
+                      <span className="text-[10px] font-semibold">{label as string}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Labels</p>
+                  {[
+                    ['Airport Labels', airportLabelsVisible, setAirportLabelsVisible],
+                    ['Navaid Labels', navaidLabelsVisible, setNavaidLabelsVisible],
+                    ['Reporting Labels', reportingLabelsVisible, setReportingLabelsVisible],
+                    ['Airspace Labels', airspaceLabelsVisible, setAirspaceLabelsVisible],
+                    ['Class E Labels', classELabelsVisible, setClassELabelsVisible],
+                    ['Class F Labels', classFLabelsVisible, setClassFLabelsVisible],
+                    ['Class G Labels', classGLabelsVisible, setClassGLabelsVisible],
+                    ['Military Labels', militaryLabelsVisible, setMilitaryLabelsVisible],
+                    ['Training Labels', trainingLabelsVisible, setTrainingLabelsVisible],
+                    ['Gliding Labels', glidingLabelsVisible, setGlidingLabelsVisible],
+                    ['Hang Gliding Labels', hangGlidingLabelsVisible, setHangGlidingLabelsVisible],
+                    ['Obstacle Labels', obstacleLabelsVisible, setObstacleLabelsVisible],
+                  ].map(([label, checked, setter]) => (
+                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
+                      <input
+                        type="checkbox"
+                        checked={checked as boolean}
+                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
+                      />
+                      <span className="text-[10px] font-semibold">{label as string}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}
           {layerLevelsPanelOpen ? (
-            <div className="absolute left-3 bottom-3 z-[1200] w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
+            <div className="pointer-events-auto absolute left-3 bottom-3 z-[1200] w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
               <div className="mb-3 flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-slate-500" />
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Map Zoom</p>

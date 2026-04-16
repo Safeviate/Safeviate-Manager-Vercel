@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 
 type TableName =
   | 'users'
@@ -28,6 +28,11 @@ type TableName =
 const tableCache = new Map<TableName, boolean>();
 
 async function hasTable(tableName: TableName) {
+  if (!(await isDatabaseAvailable())) {
+    tableCache.set(tableName, false);
+    return false;
+  }
+
   if (tableCache.has(tableName)) {
     return tableCache.get(tableName)!;
   }
@@ -84,6 +89,7 @@ export async function ensureCoreSchema() {
 }
 
 export async function ensureAircraftSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('aircrafts')) {
     return;
   }
@@ -101,6 +107,7 @@ export async function ensureAircraftSchema() {
 }
 
 export async function ensureToolsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('tools')) {
     return;
   }
@@ -118,6 +125,7 @@ export async function ensureToolsSchema() {
 }
 
 export async function ensureSafetyFileProjectsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('safety_file_projects')) {
     return;
   }
@@ -135,6 +143,7 @@ export async function ensureSafetyFileProjectsSchema() {
 }
 
 export async function ensureSafetyFileAssignmentsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('safety_file_assignments')) {
     return;
   }
@@ -158,6 +167,7 @@ export async function ensureSafetyFileAssignmentsSchema() {
 }
 
 export async function ensureTenantConfigSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('tenant_configs')) {
     return;
   }
@@ -174,6 +184,7 @@ export async function ensureTenantConfigSchema() {
 }
 
 export async function ensureAlertsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('alerts')) {
     return;
   }
@@ -191,6 +202,7 @@ export async function ensureAlertsSchema() {
 }
 
 export async function ensureCompanyDocumentsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('company_documents')) {
     return;
   }
@@ -212,6 +224,7 @@ export async function ensureCompanyDocumentsSchema() {
 }
 
 export async function ensureExternalOrganizationsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('external_organizations')) {
     return;
   }
@@ -229,6 +242,7 @@ export async function ensureExternalOrganizationsSchema() {
 }
 
 export async function ensureTrainingRoutesSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('training_routes')) {
     return;
   }
@@ -246,6 +260,7 @@ export async function ensureTrainingRoutesSchema() {
 }
 
 export async function ensureErpStateSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('erp_state')) {
     return;
   }
@@ -264,6 +279,7 @@ export async function ensureErpStateSchema() {
 }
 
 export async function ensureBookingsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('bookings')) {
     return;
   }
@@ -281,6 +297,7 @@ export async function ensureBookingsSchema() {
 }
 
 export async function ensureFlightSessionsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('active_flight_sessions')) {
     return;
   }
@@ -298,6 +315,7 @@ export async function ensureFlightSessionsSchema() {
 }
 
 export async function ensureFlightSessionBlocksSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('active_flight_session_blocks')) {
     return;
   }
@@ -314,6 +332,7 @@ export async function ensureFlightSessionBlocksSchema() {
 }
 
 export async function ensureSafetyReportsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('safety_reports')) {
     return;
   }
@@ -331,6 +350,7 @@ export async function ensureSafetyReportsSchema() {
 }
 
 export async function ensureQualityAuditsSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('quality_audits')) {
     return;
   }
@@ -348,6 +368,7 @@ export async function ensureQualityAuditsSchema() {
 }
 
 export async function ensureManagementOfChangeSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('management_of_change')) {
     return;
   }
@@ -365,6 +386,7 @@ export async function ensureManagementOfChangeSchema() {
 }
 
 export async function ensureRisksSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('risks')) {
     return;
   }
@@ -382,6 +404,7 @@ export async function ensureRisksSchema() {
 }
 
 export async function ensureCorrectiveActionPlansSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (await hasTable('corrective_action_plans')) {
     return;
   }
@@ -399,6 +422,7 @@ export async function ensureCorrectiveActionPlansSchema() {
 }
 
 export async function ensurePersonnelSchema() {
+  if (!(await isDatabaseAvailable())) return;
   if (!(await hasTable('personnel'))) {
     return;
   }

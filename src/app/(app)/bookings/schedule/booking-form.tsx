@@ -413,8 +413,56 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="instructorId" render={({ field }) => ( <FormItem><FormLabel>Instructor</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger><SelectValue placeholder="Select Instructor..." /></SelectTrigger></FormControl><SelectContent>{instructors.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="studentId" render={({ field }) => ( <FormItem><FormLabel>Student</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger><SelectValue placeholder="Select Student..." /></SelectTrigger></FormControl><SelectContent>{students.map(p => (<SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField
+                                control={form.control}
+                                name="instructorId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Instructor</FormLabel>
+                                        <FormControl>
+                                            <select
+                                                value={field.value || ''}
+                                                onChange={(event) => field.onChange(event.target.value)}
+                                                disabled={isLocked || !canEditBooking}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select Instructor...</option>
+                                                {instructors.map((pilot) => (
+                                                    <option key={pilot.id} value={pilot.id}>
+                                                        {pilot.firstName} {pilot.lastName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="studentId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Student</FormLabel>
+                                        <FormControl>
+                                            <select
+                                                value={field.value || ''}
+                                                onChange={(event) => field.onChange(event.target.value)}
+                                                disabled={isLocked || !canEditBooking}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select Student...</option>
+                                                {students.map((pilot) => (
+                                                    <option key={pilot.id} value={pilot.id}>
+                                                        {pilot.firstName} {pilot.lastName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
 
                         {!existingBooking && (
