@@ -4,7 +4,7 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 import { Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Loader2 } from 'lucide-react';
+import { Layers3, Loader2, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -545,6 +545,10 @@ export function ActiveFlightLiveMap({
   activeLegState,
   fullscreen = false,
   compactLayout = false,
+  layerSelectorOpen,
+  layerLevelsOpen,
+  onLayerSelectorOpenChange,
+  onLayerLevelsOpenChange,
 }: {
   booking: Booking | null;
   legs: NavlogLeg[];
@@ -554,6 +558,10 @@ export function ActiveFlightLiveMap({
   activeLegState?: ActiveLegState | null;
   fullscreen?: boolean;
   compactLayout?: boolean;
+  layerSelectorOpen?: boolean;
+  layerLevelsOpen?: boolean;
+  onLayerSelectorOpenChange?: (open: boolean) => void;
+  onLayerLevelsOpenChange?: (open: boolean) => void;
 }) {
   const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
     storageKey: 'safeviate.active-flight-map-zoom',
@@ -616,6 +624,30 @@ export function ActiveFlightLiveMap({
   const [isRefreshingOfflineSummary, setIsRefreshingOfflineSummary] = useState(false);
   const [isClearingOfflineMaps, setIsClearingOfflineMaps] = useState(false);
   const [compactFullscreenOpen, setCompactFullscreenOpen] = useState(false);
+  const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>('light');
+  const [showLayerSelectorPanel, setShowLayerSelectorPanel] = useState(false);
+  const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(false);
+  const layerSelectorPanelOpen = layerSelectorOpen ?? showLayerSelectorPanel;
+  const layerLevelsPanelOpen = layerLevelsOpen ?? showLayerLevelsPanel;
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('safeviate.active-flight-map-layer');
+      if (stored === 'light' || stored === 'satellite') {
+        setSelectedBaseLayer(stored);
+      }
+    } catch {
+      // keep default
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('safeviate.active-flight-map-layer', selectedBaseLayer);
+    } catch {
+      // ignore storage failures
+    }
+  }, [selectedBaseLayer]);
 
   useEffect(() => {
     setFollowOwnship(true);
@@ -1185,105 +1217,10 @@ export function ActiveFlightLiveMap({
     );
   }
 
-    if (compactLayout) {
-      const compactHeading = position?.headingTrue != null ? `${Math.round(((position.headingTrue % 360) + 360) % 360)}°` : 'N/A';
-      const compactSpeed = position?.speedKt != null ? `${position.speedKt.toFixed(0)} kt` : 'N/A';
-      const compactAltitude = position?.altitude != null ? `${Math.round(position.altitude)} m` : 'N/A';
-      const compactTrail = `${trackHistory.length} pts`;
-
+  if (compactLayout) {
       return (
-        <div className="overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm" style={mapShellStyle}>
-            <table className="w-full table-fixed border-collapse">
-              <tbody>
-                <tr className="bg-slate-50/55">
-                  <td className="border-b border-r border-slate-200/80 p-2 align-middle">
-                    <Dialog open={compactFullscreenOpen} onOpenChange={setCompactFullscreenOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
-                        >
-                          Full Screen
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
-                        <DialogHeader className="sr-only">
-                          <DialogTitle>Full Flight Tracking View</DialogTitle>
-                        </DialogHeader>
-                        <FullScreenFlightLayout
-                          booking={booking}
-                          legs={legs}
-                          position={position}
-                          aircraftRegistration={aircraftRegistration}
-                          activeLegIndex={activeLegIndex}
-                          activeLegState={activeLegState}
-                          heading={position?.headingTrue ?? null}
-                          speed={position?.speedKt ?? null}
-                          altitude={position?.altitude ?? null}
-                          trailPoints={trackHistory.length}
-                          syncStatusLabel={followOwnship ? 'Ownship Follow' : 'North Up'}
-                          syncStatusClassName="border-slate-200 bg-white text-slate-800 hover:bg-white"
-                          savedDeviceLabel="Embedded Map"
-                          permissionState="granted"
-                          isWatching
-                        />
-                      </DialogContent>
-                    </Dialog>
-                  </td>
-                  <td className="border-b border-r border-slate-200/80 p-2 align-middle">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
-                      onClick={handleFollowOwnship}
-                    >
-                      Nose Up
-                    </Button>
-                  </td>
-                  <td className="border-b border-r border-slate-200/80 p-2 align-middle">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
-                      onClick={handleNorthUp}
-                    >
-                      North Up
-                    </Button>
-                  </td>
-                  <td className="border-b border-slate-200/80 p-2 align-middle">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-11 w-full rounded-md border-slate-200 bg-white px-2 text-[8px] font-black uppercase tracking-[0.14em] text-slate-800 shadow-none hover:bg-slate-50 sm:px-3 sm:text-[9px]"
-                      onClick={handleCentre}
-                    >
-                      Centre
-                    </Button>
-                  </td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Track</td>
-                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Speed</td>
-                  <td className="border-b border-r border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Altitude</td>
-                  <td className="border-b border-slate-200/80 px-3 py-3 text-center text-[8px] font-black uppercase tracking-[0.16em] text-slate-500 sm:px-4 sm:text-[9px]">Trail</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="border-r border-slate-200/80 px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactHeading}</td>
-                  <td className="border-r border-slate-200/80 px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactSpeed}</td>
-                  <td className="border-r border-slate-200/80 px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactAltitude}</td>
-                  <td className="px-3 py-3 text-center text-[11px] font-black text-slate-950 sm:px-4 sm:text-xs">{compactTrail}</td>
-                </tr>
-              </tbody>
-            </table>
-          {compactFullscreenOpen ? (
-            <div className="flex min-h-[360px] items-center justify-center px-6 py-12 text-center text-sm text-slate-500">
-              Full screen map is open. Close it to restore the compact pilot map.
-            </div>
-          ) : (
-          <div className="nose-up-map relative min-h-[360px] bg-slate-950/5">
+        <div className="relative h-full min-h-[360px] overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm" style={mapShellStyle}>
+          <div className="nose-up-map relative h-full min-h-[360px] bg-slate-950/5">
             <LeafletMapFrame
               center={center}
               zoom={8}
@@ -1292,10 +1229,17 @@ export function ActiveFlightLiveMap({
               className="h-full min-h-[360px] w-full rounded-none"
               style={{ background: '#f8fafc' }}
             >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
-              />
+              {selectedBaseLayer === 'satellite' ? (
+                <TileLayer
+                  url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                  attribution="&copy; Google Maps"
+                />
+              ) : (
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+              )}
               <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
               <MapResizeController />
             <MapRecenterController
@@ -1368,7 +1312,19 @@ export function ActiveFlightLiveMap({
               )}
             </LeafletMapFrame>
           </div>
-        )}
+          <style jsx>{`
+            .nose-up-map {
+              transform: rotate(var(--map-rotation)) scale(1.38);
+              transform-origin: 50% 50%;
+              transition: transform 180ms ease-out;
+            }
+
+            .nose-up-map :global(.leaflet-top),
+            .nose-up-map :global(.leaflet-bottom) {
+              transform: rotate(var(--map-counter-rotation));
+              transform-origin: center;
+            }
+          `}</style>
       </div>
     );
   }
@@ -1560,7 +1516,72 @@ export function ActiveFlightLiveMap({
             transform-origin: center;
           }
         `}</style>
+          </div>
+          {layerSelectorPanelOpen ? (
+            <div className="absolute right-3 top-3 z-[1200] w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
+              <div className="mb-3 flex items-center gap-2">
+                <Layers3 className="h-4 w-4 text-slate-500" />
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Layers</p>
+              </div>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant={selectedBaseLayer === 'light' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => setSelectedBaseLayer('light')}
+                >
+                  Light
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedBaseLayer === 'satellite' ? 'default' : 'outline'}
+                  className="w-full justify-start"
+                  onClick={() => setSelectedBaseLayer('satellite')}
+                >
+                  Satellite
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {layerLevelsPanelOpen ? (
+            <div className="absolute left-3 bottom-3 z-[1200] w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
+              <div className="mb-3 flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-slate-500" />
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Map Zoom</p>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={mapMaxZoom}
+                    value={zoomDraftMin}
+                    onChange={(event) => setZoomDraftMin(event.target.value)}
+                    className="h-9 text-xs font-black"
+                    aria-label="Active Flight minimum zoom"
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">to</span>
+                  <Input
+                    type="number"
+                    min={mapMinZoom}
+                    max={22}
+                    value={zoomDraftMax}
+                    onChange={(event) => setZoomDraftMax(event.target.value)}
+                    className="h-9 text-xs font-black"
+                    aria-label="Active Flight maximum zoom"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="outline" onClick={() => resetZoomRange()}>
+                    Reset
+                  </Button>
+                  <Button type="button" onClick={() => saveZoomDrafts()}>
+                    Save
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
       </div>
-    </div>
-  );
-}
+    );
+  }

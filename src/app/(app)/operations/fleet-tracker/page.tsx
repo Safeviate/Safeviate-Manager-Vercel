@@ -1,20 +1,20 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Navigation, PlaneTakeoff, RadioTower, Users } from 'lucide-react';
+import { ChevronDown, Layers3, Loader2, RadioTower, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
-import { useTheme } from '@/components/theme-provider';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { FlightSession } from '@/types/flight-session';
 import { getFlightSessionFreshnessLabel, isFlightSessionStale } from '@/lib/flight-session-status';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
-import { cn } from '@/lib/utils';
+import { MainPageHeader, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-tracker-map').then((module) => module.FleetTrackerMap), {
   ssr: false,
@@ -31,12 +31,14 @@ const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-t
 export default function FleetTrackerPage() {
   const { toast } = useToast();
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
-  const { uiMode } = useTheme();
   const [sessions, setSessions] = useState<FlightSession[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const isModern = uiMode === 'modern';
+  const [isEndingStaleSessions, setIsEndingStaleSessions] = useState(false);
+  const [activeBroadcastsOpen, setActiveBroadcastsOpen] = useState(false);
+  const [showLayerSelectorOpen, setShowLayerSelectorOpen] = useState(false);
+  const [showLayerLevelsOpen, setShowLayerLevelsOpen] = useState(false);
   const operationalSessions = useMemo(() => sessions.filter((session) => session.status === 'active'), [sessions]);
   const activeSessionCount = useMemo(() => operationalSessions.filter((session) => !isFlightSessionStale(session)).length, [operationalSessions]);
   const staleSessionCount = useMemo(() => operationalSessions.filter((session) => isFlightSessionStale(session)).length, [operationalSessions]);
@@ -118,6 +120,39 @@ export default function FleetTrackerPage() {
     toast({ title: 'Stale Session Ended', description: `${session.aircraftRegistration} was cleared from the active fleet tracker.` });
   };
 
+  const clearAllStaleSessions = async () => {
+    const staleSessions = operationalSessions.filter((session) => isFlightSessionStale(session));
+    if (!staleSessions.length) return;
+
+    setIsEndingStaleSessions(true);
+    let clearedCount = 0;
+
+    try {
+      for (const session of staleSessions) {
+        const response = await fetch(`/api/flight-sessions?id=${session.id}`, { method: 'DELETE' });
+        if (response.ok) {
+          clearedCount += 1;
+        }
+      }
+
+      if (clearedCount > 0) {
+        setSessions((current) => current.filter((session) => !staleSessions.some((stale) => stale.id === session.id)));
+        toast({
+          title: 'Stale Sessions Ended',
+          description: `${clearedCount} stale session${clearedCount === 1 ? '' : 's'} cleared from fleet tracker.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Could Not End Stale Sessions',
+          description: 'No stale sessions could be cleared right now.',
+        });
+      }
+    } finally {
+      setIsEndingStaleSessions(false);
+    }
+  };
+
   if (isTenantLoading) {
     return (
       <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-background px-6 py-12 text-center">
@@ -141,200 +176,133 @@ export default function FleetTrackerPage() {
           <CardDescription>This live aircraft monitoring surface is only available for aviation tenants.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild variant="outline" className="font-black uppercase">
-            <Link href="/operations">Back to Operations</Link>
-          </Button>
+          <Button variant="outline" className="font-black uppercase">Back to Operations</Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className={cn('mx-auto flex w-full max-w-[1400px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
-      {isModern && (
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(15,23,42,0.95)_40%,_rgba(30,41,59,0.94))] px-6 py-6 text-white shadow-[0_24px_60px_rgba(15,23,42,0.22)] md:px-8 md:py-7">
-          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_center,_rgba(96,165,250,0.2),_transparent_62%)] md:block" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-2xl space-y-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-cyan-100/80">Fleet Tracker</p>
-              <div className="space-y-2">
-                <h1 className="text-3xl font-black tracking-tight md:text-4xl">Live aircraft monitoring for operational control.</h1>
-                <p className="max-w-xl text-sm text-slate-200/85 md:text-[15px]">
-                  Watch active broadcasts, route progress, and field telemetry in one cleaner live-ops surface.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
-                  {sortedSessions.length} tracked sessions
-                </Badge>
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
-                  {activeSessionCount} live
-                </Badge>
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
-                  {staleSessionCount} stale
-                </Badge>
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
-                  server-backed tracking
-                </Badge>
-                {lastRefreshedAt && (
-                  <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
-                    refreshed {lastRefreshedAt}
-                  </Badge>
-                )}
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
-                  <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,0.15)]" />
-                  live refresh
-                </Badge>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 border-white/20 bg-white/10 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/15"
-                  onClick={() => void loadSessions()}
-                  disabled={isRefreshing}
-                >
-                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
-                </Button>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-200">Active Fleet</p>
-                  <RadioTower className="h-4 w-4 text-cyan-200" />
-                </div>
-                <p className="mt-3 text-3xl font-black text-white">{sortedSessions.length}</p>
-                <p className="mt-1 text-xs text-slate-200/80">Aircraft currently transmitting live positions.</p>
-              </div>
-              <Link href="/operations/active-flight" className="block">
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md transition hover:bg-white/14">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-200">Pilot View</p>
-                    <PlaneTakeoff className="h-4 w-4 text-emerald-200" />
-                  </div>
-                  <p className="mt-3 text-lg font-black text-white">Open Active Flight</p>
-                  <p className="mt-1 text-xs text-slate-200/80">Launch the instructor tracking cockpit.</p>
-                </div>
-              </Link>
-            </div>
+    <>
+      <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
+        <Card className="flex h-full flex-col overflow-hidden border shadow-none">
+          <div className="sticky top-0 z-30 border-b bg-card">
+            <MainPageHeader title="Fleet Tracker" />
           </div>
-        </section>
-      )}
-
-      <Card className={cn('border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-        <CardHeader className={cn('border-b bg-muted/20', isModern && 'bg-transparent')}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={cn('text-[10px] font-black uppercase tracking-widest', isModern && 'border-slate-200 bg-slate-50 text-slate-700')}>School View</Badge>
-                <Badge className={cn('text-[10px] font-black uppercase tracking-widest', isModern && 'border-slate-200 bg-sky-50 text-sky-800 hover:bg-sky-50')}>Fleet Tracker</Badge>
-                <Badge variant="outline" className={cn('text-[10px] font-black uppercase tracking-widest', isModern && 'border-slate-200 bg-amber-50 text-amber-800')}>
-                  {activeSessionCount} live / {staleSessionCount} stale
-                </Badge>
-              </div>
-              <CardTitle className="text-2xl font-black uppercase tracking-tight">Live Aircraft Monitoring</CardTitle>
-              <CardDescription className="max-w-3xl text-sm">This page is the ops-side surface for watching all active aircraft sessions.</CardDescription>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50')}><Link href="/operations/active-flight"><PlaneTakeoff className="mr-2 h-4 w-4" />Pilot Active Flight</Link></Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.3fr_0.7fr]">
-          <Card className={cn('self-start border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-            <CardHeader>
-              <CardTitle className="text-sm font-black uppercase tracking-widest">Fleet Map Surface</CardTitle>
-              <CardDescription>Active aircraft sessions are plotted here from the server-backed session store.</CardDescription>
-            </CardHeader>
-              <CardContent><FleetTrackerMap sessions={sortedSessions} navlogRoutesByBookingId={navlogRoutesByBookingId} /></CardContent>
-          </Card>
-          <div className="space-y-6">
-            <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-              <CardHeader className="flex flex-row items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest">Active Broadcasts</CardTitle>
-                  <CardDescription>Live sessions stored on the server appear here automatically.</CardDescription>
-                </div>
-                {lastRefreshedAt && (
-                  <Badge variant="outline" className={cn('shrink-0 text-[10px] font-black uppercase tracking-widest', isModern && 'border-slate-200 bg-slate-50 text-slate-700')}>
-                    Refreshed {lastRefreshedAt}
-                  </Badge>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {sortedSessions.length === 0 && <div className={cn('rounded-xl border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground', isModern && 'rounded-2xl border-slate-200 bg-slate-50/70 text-slate-500')}>No active aircraft sessions yet.</div>}
-                {sortedSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={cn(
-                      'rounded-xl border bg-muted/10 p-4',
-                      isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70 shadow-sm',
-                      isFlightSessionStale(session) && 'border-amber-200 bg-amber-50/40',
-                      isModern && isFlightSessionStale(session) && 'border-amber-200 bg-amber-50/50'
-                    )}
+          <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
+            <div className="sticky top-0 z-20 border-b bg-background px-4 py-3 md:px-6">
+              <div className="flex flex-wrap items-end justify-end gap-2" aria-label="Fleet tracker action bar">
+                <div className="hidden flex-wrap items-end justify-end gap-2 md:flex">
+                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => void loadSessions()} disabled={isRefreshing}>
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    {isRefreshing ? 'Refreshing' : 'Refresh'}
+                  </Button>
+                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setShowLayerSelectorOpen((current) => !current)}>
+                    <Layers3 className="h-4 w-4" />
+                    Layers
+                  </Button>
+                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setShowLayerLevelsOpen((current) => !current)}>
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Map Zoom
+                  </Button>
+                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setActiveBroadcastsOpen(true)}>
+                    <RadioTower className="h-4 w-4" />
+                    Active Broadcasts
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur"
+                    onClick={() => void clearAllStaleSessions()}
+                    disabled={staleSessionCount === 0 || isEndingStaleSessions}
                   >
-                    {isFlightSessionStale(session) ? (
-                      <div className="mb-2 inline-flex rounded-full border border-amber-200 bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-amber-900">
-                        Stale session
-                      </div>
-                    ) : null}
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-black uppercase">{session.aircraftRegistration}</p>
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{session.pilotName}</p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-black uppercase tracking-widest',
-                          isModern && 'border-slate-200 bg-white text-slate-700',
-                          isFlightSessionStale(session) && 'border-amber-300 bg-amber-100 text-amber-900'
-                        )}
-                      >
-                        {isFlightSessionStale(session) ? 'Stale' : session.status}
-                      </Badge>
+                    {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
+                  </Button>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-10 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-sm font-medium shadow-sm hover:bg-muted md:hidden">
+                      <span className="flex items-center gap-2">
+                        <RadioTower className="h-4 w-4" />
+                        Actions
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                    <DropdownMenuItem onClick={() => void loadSessions()} disabled={isRefreshing}>
+                      <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> {isRefreshing ? 'Refreshing' : 'Refresh'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowLayerSelectorOpen((current) => !current)}>
+                      <Layers3 className="mr-2 h-4 w-4" /> {showLayerSelectorOpen ? 'Hide Layers' : 'Show Layers'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowLayerLevelsOpen((current) => !current)}>
+                      <SlidersHorizontal className="mr-2 h-4 w-4" /> {showLayerLevelsOpen ? 'Hide Map Zoom' : 'Show Map Zoom'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setActiveBroadcastsOpen(true)}>
+                      <RadioTower className="mr-2 h-4 w-4" /> Active Broadcasts
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void clearAllStaleSessions()} disabled={staleSessionCount === 0 || isEndingStaleSessions}>
+                      {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+              <div className="absolute inset-0">
+                <FleetTrackerMap
+                  sessions={sortedSessions}
+                  navlogRoutesByBookingId={navlogRoutesByBookingId}
+                  layerSelectorOpen={showLayerSelectorOpen}
+                  layerLevelsOpen={showLayerLevelsOpen}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <Dialog open={activeBroadcastsOpen} onOpenChange={setActiveBroadcastsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-black uppercase tracking-widest">Active Broadcasts</DialogTitle>
+            <DialogDescription>Live sessions currently visible on the fleet map.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {lastRefreshedAt ? <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Last refreshed {lastRefreshedAt}</p> : null}
+            {sortedSessions.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-500">No active aircraft sessions yet.</div>
+            ) : (
+              sortedSessions.map((session) => (
+                <div key={session.id} className={`rounded-2xl border p-4 ${isFlightSessionStale(session) ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200/90 bg-slate-50/70'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black uppercase">{session.aircraftRegistration}</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{session.pilotName}</p>
                     </div>
-                    {session.lastPosition && (
-                      <div className={cn('mt-3 rounded-lg border bg-background/80 p-3', isModern && 'rounded-2xl border-slate-200 bg-white', isFlightSessionStale(session) && 'border-amber-200 bg-amber-50/60')}>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Latest Coordinates</p>
-                        <p className="mt-1 font-mono text-xs font-bold">{session.lastPosition.latitude.toFixed(6)}, {session.lastPosition.longitude.toFixed(6)}</p>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          <div>Speed: {session.groundSpeedKt != null ? `${session.groundSpeedKt.toFixed(0)} kt` : session.lastPosition.speedKt != null ? `${session.lastPosition.speedKt.toFixed(0)} kt` : 'N/A'}</div>
-                          <div>Altitude: {session.lastPosition.altitude != null ? `${Math.round(session.lastPosition.altitude)} m` : 'N/A'}</div>
-                          <div>Bearing: {session.lastPosition.headingTrue != null ? `${session.lastPosition.headingTrue.toFixed(0)}°` : 'N/A'}</div>
-                          <div>Trail: {(session.breadcrumb || []).length} pts</div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      <div>Device: {session.deviceLabel || 'Unnamed device'}</div>
-                      <div>Updated: {getFlightSessionFreshnessLabel(session)}</div>
-                    </div>
-                    {isFlightSessionStale(session) && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={cn('mt-3 w-full font-black uppercase text-amber-700', isModern && 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100')}
-                        onClick={() => clearStaleSession(session)}
-                      >
-                        End Stale Session
-                      </Button>
-                    )}
+                    <Badge variant="outline" className={isFlightSessionStale(session) ? 'border-amber-300 bg-amber-100 text-amber-900' : ''}>
+                      {isFlightSessionStale(session) ? 'Stale' : session.status}
+                    </Badge>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-            <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-              <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest">Ops Monitoring Goals</CardTitle></CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className={cn('flex items-start gap-3 rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><Users className={cn('mt-0.5 h-4 w-4 text-primary', isModern && 'text-sky-700')} /><p className="text-foreground/90">See every active aircraft for the school in one place.</p></div>
-                <div className={cn('flex items-start gap-3 rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><RadioTower className={cn('mt-0.5 h-4 w-4 text-primary', isModern && 'text-cyan-700')} /><p className="text-foreground/90">Know which pilot and device are currently broadcasting each registration.</p></div>
-                <div className={cn('flex items-start gap-3 rounded-lg border bg-muted/10 p-3', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}><Navigation className={cn('mt-0.5 h-4 w-4 text-primary', isModern && 'text-emerald-700')} /><p className="text-foreground/90">Open individual aircraft detail views later for route progress and latest movement.</p></div>
-              </CardContent>
-            </Card>
+                  {session.lastPosition ? (
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div>{session.lastPosition.latitude.toFixed(6)}, {session.lastPosition.longitude.toFixed(6)}</div>
+                      <div>Updated: {getFlightSessionFreshnessLabel(session)}</div>
+                      <div>Speed: {session.groundSpeedKt != null ? `${session.groundSpeedKt.toFixed(0)} kt` : session.lastPosition.speedKt != null ? `${session.lastPosition.speedKt.toFixed(0)} kt` : 'N/A'}</div>
+                      <div>Trail: {(session.breadcrumb || []).length} pts</div>
+                    </div>
+                  ) : null}
+                  {isFlightSessionStale(session) ? (
+                    <Button type="button" variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS + ' mt-3'} onClick={() => clearStaleSession(session)}>
+                      End Stale Session
+                    </Button>
+                  ) : null}
+                </div>
+              ))
+            )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

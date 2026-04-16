@@ -347,6 +347,17 @@ export default function TrainingRoutesPage() {
                   hazards={activeRoute?.hazards || []}
                   onAddWaypoint={handleAddWaypoint}
                   onAddHazard={handleAddHazardRequest}
+                  rightAccessory={
+                    <button
+                      type="button"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+                      onClick={() => setShowRouteSummary((current) => !current)}
+                      aria-label={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                      title={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                    >
+                      <Route className="h-4 w-4" />
+                    </button>
+                  }
                   showLayerSelectorControl={false}
                   showLayerLevelsControl={false}
                   layerSelectorOpen={showLayerSelectorOpen}
@@ -355,18 +366,6 @@ export default function TrainingRoutesPage() {
                   onLayerLevelsOpenChange={setShowLayerLevelsOpen}
                 />
               </div>
-
-              {!showRouteSummary ? (
-                <button
-                  type="button"
-                  className="pointer-events-auto absolute right-4 top-2 z-[1200] flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-                  onClick={() => setShowRouteSummary(true)}
-                  aria-label="Show route summary"
-                  title="Show route summary"
-                >
-                  <Route className="h-4 w-4" />
-                </button>
-              ) : null}
 
               <div className="pointer-events-none absolute inset-3 z-[2000]">
               <div className="hidden">

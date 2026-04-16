@@ -23,12 +23,26 @@ if (isProduction) {
   if (!process.env.DATABASE_URL && process.env.SAFEVIATE_DATABASE_URL) {
     process.env.DATABASE_URL = process.env.SAFEVIATE_DATABASE_URL.trim();
   }
+
+  if (!process.env.DATABASE_URL && process.env.DATABASE_URL_UNPOOLED) {
+    process.env.DATABASE_URL = process.env.DATABASE_URL_UNPOOLED.trim();
+  }
+
+  if (!process.env.DATABASE_URL && process.env.NEON2_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.NEON2_DATABASE_URL.trim();
+  }
 }
 
 assertRequiredEnv(
   isProduction
     ? [['DATABASE_URL', 'DATABASE_URL_UNPOOLED', 'NEON2_DATABASE_URL', 'POSTGRES_URL']]
-    : [['SAFEVIATE_DATABASE_URL', 'SAFEVIATE_DATABASE_URL_UNPOOLED']],
+    : [[
+        'DATABASE_URL',
+        'DATABASE_URL_UNPOOLED',
+        'SAFEVIATE_DATABASE_URL',
+        'SAFEVIATE_DATABASE_URL_UNPOOLED',
+        'NEON2_DATABASE_URL',
+      ]],
   'database client'
 );
 
