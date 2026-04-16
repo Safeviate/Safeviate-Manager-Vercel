@@ -8,7 +8,7 @@ import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingW
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2 } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -1051,7 +1051,21 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden relative">
                             <div className="flex-1 min-h-0 w-full relative z-0">
-                                <AeronauticalMap legs={plannedLegs} onAddWaypoint={handleAddWaypoint} />
+                                <AeronauticalMap
+                                  legs={plannedLegs}
+                                  onAddWaypoint={handleAddWaypoint}
+                                  rightAccessory={
+                                    <button
+                                      type="button"
+                                      className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+                                      onClick={() => setShowRouteSummary((current) => !current)}
+                                      aria-label={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                                      title={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                                    >
+                                      <Route className="h-4 w-4" />
+                                    </button>
+                                  }
+                                />
                                 
                                 {/* Route Summary Cards - Absolute positioned over the map */}
                                 {showRouteSummary && (
@@ -1116,18 +1130,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </div>
                                 )}
 
-                                {/* Floating toggle button if hidden */}
-                                {!showRouteSummary && (
-                                    <div className="absolute top-4 right-4 z-[1000]">
-                                        <Button 
-                                            size="sm" 
-                                            className="bg-background/90 backdrop-blur shadow-lg border h-10 w-10 p-0 rounded-full"
-                                            onClick={() => setShowRouteSummary(true)}
-                                        >
-                                            <ListFilter className="h-5 w-5" />
-                                        </Button>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </TabsContent>

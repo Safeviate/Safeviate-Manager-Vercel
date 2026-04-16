@@ -1,14 +1,15 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff, PanelLeft, Route } from 'lucide-react';
+import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff, MapPinned, ListFilter, Layers3, SlidersHorizontal, ChevronDown, Route, X } from 'lucide-react';
 import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -16,7 +17,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Textarea } from '@/components/ui/textarea';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
-import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { calculateRouteTotals, createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { cn } from '@/lib/utils';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -37,6 +39,12 @@ export default function TrainingRoutesPage() {
   const [hazardToEdit, setHazardToEdit] = useState<{ lat: number; lng: number } | null>(null);
   const [hazardNote, setHazardNote] = useState('');
   const [search, setSearch] = useState('');
+  const [showRouteSummary, setShowRouteSummary] = useState(false);
+  const [showAllRoutesOpen, setShowAllRoutesOpen] = useState(false);
+  const [saveRouteOpen, setSaveRouteOpen] = useState(false);
+  const [routeNameDraft, setRouteNameDraft] = useState('');
+  const [showLayerSelectorOpen, setShowLayerSelectorOpen] = useState(false);
+  const [showLayerLevelsOpen, setShowLayerLevelsOpen] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('routes');
   const [showRouteList, setShowRouteList] = useState(true);
   const [showSelectedRoute, setShowSelectedRoute] = useState(true);
@@ -82,6 +90,7 @@ export default function TrainingRoutesPage() {
       createdAt: new Date().toISOString(),
     };
     setActiveRoute(newRoute);
+    setRouteNameDraft('');
     setIsEditing(true);
     setInspectorTab('selected');
   };
@@ -121,14 +130,23 @@ export default function TrainingRoutesPage() {
     setHazardToEdit(null);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (nameOverride?: string) => {
     if (!activeRoute) return;
+    const nextName = (nameOverride ?? routeNameDraft ?? activeRoute.name).trim() || activeRoute.name.trim();
+    if (!nextName) return;
     try {
+      const nextRoute = {
+        ...activeRoute,
+        name: nextName,
+      };
       const exists = routes.some((route) => route.id === activeRoute.id);
-      await persistRoute(activeRoute, exists ? 'PATCH' : 'POST');
-      const nextRoutes = exists ? routes.map((route) => (route.id === activeRoute.id ? activeRoute : route)) : [activeRoute, ...routes];
+      await persistRoute(nextRoute, exists ? 'PATCH' : 'POST');
+      const nextRoutes = exists ? routes.map((route) => (route.id === activeRoute.id ? nextRoute : route)) : [nextRoute, ...routes];
       setRoutes(nextRoutes);
+      setActiveRoute(nextRoute);
+      setRouteNameDraft(nextRoute.name);
       setIsEditing(false);
+      setSaveRouteOpen(false);
       setInspectorTab('selected');
     } catch (e) {
       console.error(e);
@@ -161,6 +179,7 @@ export default function TrainingRoutesPage() {
     () => routes.filter((route) => route.name.toLowerCase().includes(search.toLowerCase()) || route.description.toLowerCase().includes(search.toLowerCase())),
     [routes, search]
   );
+  const routeTotals = useMemo(() => calculateRouteTotals(activeRoute?.legs || []), [activeRoute?.legs]);
 
   if (isTenantLoading) {
     return (
@@ -194,49 +213,163 @@ export default function TrainingRoutesPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-hidden px-1">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
       <Card className="flex h-full flex-col overflow-hidden border shadow-none">
         <div className="sticky top-0 z-30 border-b bg-card">
             <MainPageHeader
             title="Route Planner"
-            actions={<Button onClick={handleCreateNew} className={HEADER_ACTION_BUTTON_CLASS}><Plus size={14} className="mr-2" /> New Route</Button>}
           />
         </div>
 
-        <CardContent className="relative flex-1 overflow-hidden p-0 bg-muted/5">
-          <div className="relative h-full overflow-hidden">
-            <div className="absolute inset-0">
-              <AeronauticalMap legs={activeRoute?.legs || []} hazards={activeRoute?.hazards || []} onAddWaypoint={handleAddWaypoint} onAddHazard={handleAddHazardRequest} />
-            </div>
-
-            <div className="pointer-events-none absolute inset-3 z-[4000]">
-              <div className="pointer-events-auto absolute right-0 top-0 flex items-center gap-2">
-                <button
+        <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-0 bg-muted/5">
+          <div className="sticky top-0 z-20 border-b bg-background px-4 py-3 md:px-6">
+            <div className="flex flex-wrap items-end justify-end gap-2" aria-label="Route planner action bar">
+              <div className="hidden flex-wrap items-end justify-end gap-2 md:flex">
+                <Button
                   type="button"
-                  onClick={() => setInspectorTab((current) => (current === 'routes' ? null : 'routes'))}
-                  className={`flex h-11 w-11 items-center justify-center rounded-2xl border shadow-xl backdrop-blur transition-colors ${
-                    inspectorTab === 'routes'
-                      ? 'border-primary/30 bg-white text-primary'
-                      : 'border-slate-200 bg-white/95 text-slate-600 hover:bg-white'
-                  }`}
-                  aria-label="Toggle route selector"
+                  variant="outline"
+                  className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur"
+                  onClick={() => setShowRouteSummary((current) => !current)}
                 >
-                  <PanelLeft size={18} />
-                </button>
-                <button
+                  <ListFilter className="h-4 w-4" />
+                  {showRouteSummary ? 'Hide Route' : 'Show Route'}
+                </Button>
+                <Button
                   type="button"
-                  onClick={() => setInspectorTab((current) => (current === 'selected' ? null : 'selected'))}
-                  className={`flex h-11 w-11 items-center justify-center rounded-2xl border shadow-xl backdrop-blur transition-colors ${
-                    inspectorTab === 'selected'
-                      ? 'border-primary/30 bg-white text-primary'
-                      : 'border-slate-200 bg-white/95 text-slate-600 hover:bg-white'
-                  }`}
-                  aria-label="Toggle selected route inspector"
+                  variant="outline"
+                  className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur"
+                  onClick={() => setShowLayerSelectorOpen((current) => !current)}
                 >
-                  <Route size={18} />
-                </button>
+                  <Layers3 className="h-4 w-4" />
+                  Layers
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur"
+                  onClick={() => setShowLayerLevelsOpen((current) => !current)}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Map Zoom
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur"
+                  onClick={() => setShowAllRoutesOpen(true)}
+                >
+                  <Search className="h-4 w-4" />
+                  Show All Routes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur"
+                  onClick={handleClearRoute}
+                  disabled={!activeRoute || (!activeRoute.legs.length && !activeRoute.hazards.length && !activeRoute.name.trim())}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Clear Route
+                </Button>
+                <Button onClick={handleCreateNew} className={HEADER_ACTION_BUTTON_CLASS}>
+                  <Plus size={14} className="mr-2" /> New Route
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (activeRoute) {
+                      setRouteNameDraft(activeRoute.name);
+                      setSaveRouteOpen(true);
+                    }
+                  }}
+                  disabled={!activeRoute || !isEditing}
+                  className={HEADER_ACTION_BUTTON_CLASS}
+                >
+                  <Save size={14} className="mr-2" /> Save Route
+                </Button>
               </div>
 
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-sm font-medium shadow-sm hover:bg-muted md:hidden"
+                  >
+                    <span className="flex items-center gap-2">
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Actions
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="z-[7000] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                  <DropdownMenuItem onClick={() => setShowLayerSelectorOpen((current) => !current)}>
+                    <Layers3 className="mr-2 h-4 w-4" /> {showLayerSelectorOpen ? 'Hide Layers' : 'Show Layers'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowLayerLevelsOpen((current) => !current)}>
+                    <SlidersHorizontal className="mr-2 h-4 w-4" /> {showLayerLevelsOpen ? 'Hide Map Zoom' : 'Show Map Zoom'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowRouteSummary((current) => !current)}>
+                    <ListFilter className="mr-2 h-4 w-4" /> {showRouteSummary ? 'Hide Route' : 'Show Route'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowAllRoutesOpen(true)}>
+                    <Search className="mr-2 h-4 w-4" /> Show All Routes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleClearRoute}
+                    disabled={!activeRoute || (!activeRoute.legs.length && !activeRoute.hazards.length && !activeRoute.name.trim())}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Clear Route
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCreateNew}>
+                    <Plus className="mr-2 h-4 w-4" /> New Route
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (activeRoute) {
+                        setRouteNameDraft(activeRoute.name);
+                        setSaveRouteOpen(true);
+                      }
+                    }}
+                    disabled={!activeRoute || !isEditing}
+                  >
+                    <Save className="mr-2 h-4 w-4" /> Save Route
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+              <div className="absolute inset-0">
+                <AeronauticalMap
+                  legs={activeRoute?.legs || []}
+                  hazards={activeRoute?.hazards || []}
+                  onAddWaypoint={handleAddWaypoint}
+                  onAddHazard={handleAddHazardRequest}
+                  showLayerSelectorControl={false}
+                  showLayerLevelsControl={false}
+                  layerSelectorOpen={showLayerSelectorOpen}
+                  layerLevelsOpen={showLayerLevelsOpen}
+                  onLayerSelectorOpenChange={setShowLayerSelectorOpen}
+                  onLayerLevelsOpenChange={setShowLayerLevelsOpen}
+                />
+              </div>
+
+              {!showRouteSummary ? (
+                <button
+                  type="button"
+                  className="pointer-events-auto absolute right-4 top-2 z-[1200] flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+                  onClick={() => setShowRouteSummary(true)}
+                  aria-label="Show route summary"
+                  title="Show route summary"
+                >
+                  <Route className="h-4 w-4" />
+                </button>
+              ) : null}
+
+              <div className="pointer-events-none absolute inset-3 z-[2000]">
+              <div className="hidden">
               {inspectorTab ? (
                 <div className="pointer-events-auto absolute right-0 top-0 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
                   <div className="flex h-10 items-center justify-between gap-3 border-b border-slate-100 px-3">
@@ -248,7 +381,7 @@ export default function TrainingRoutesPage() {
                         {inspectorTab === 'routes'
                           ? `${filteredRoutes.length} route${filteredRoutes.length === 1 ? '' : 's'} available`
                           : activeRoute
-                            ? `${activeRoute.name} • ${activeRoute.legs.length} legs`
+                            ? `${activeRoute.name} â€¢ ${activeRoute.legs.length} legs`
                             : 'No route selected'}
                       </p>
                     </div>
@@ -385,8 +518,71 @@ export default function TrainingRoutesPage() {
                   )}
                 </div>
               ) : null}
+              </div>
 
-              <div className="hidden pointer-events-auto absolute right-0 top-0 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+              {showRouteSummary ? (
+                <div className="pointer-events-none absolute right-4 top-2 z-[1000] flex w-[300px] flex-col">
+                  <Card className="pointer-events-auto flex h-fit max-h-full min-h-0 flex-col overflow-hidden border bg-background/95 shadow-2xl backdrop-blur">
+                    <CardHeader className="shrink-0 flex flex-row items-center justify-between space-y-0 p-4 border-b">
+                      <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                        <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setShowRouteSummary(false)}
+                        aria-label="Hide route summary"
+                        title="Hide route summary"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardHeader>
+                    <ScrollArea className="max-h-[calc(100vh-14rem)] overflow-y-auto">
+                      <div className="space-y-2 p-2">
+                        {activeRoute?.legs.length ? activeRoute.legs.map((leg, index) => (
+                          <div key={leg.id} className="group flex items-center gap-3 rounded-lg border bg-muted/10 p-3 transition-colors hover:bg-muted/20">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="truncate text-[11px] font-black uppercase">{index + 1}. {leg.waypoint}</span>
+                                <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+                              </div>
+                              {leg.frequencies && <p className="mt-1 text-[9px] font-semibold text-emerald-700">{leg.frequencies}</p>}
+                              {leg.layerInfo && <p className="text-[9px] font-semibold text-primary">{leg.layerInfo}</p>}
+                              <div className="mt-1 flex gap-3">
+                                <div className="flex flex-col">
+                                  <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
+                                  <span className="text-[10px] font-black">{leg.distance?.toFixed(1) || '-'} NM</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
+                                  <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0) || '-'}°</span>
+                                </div>
+                              </div>
+                            </div>
+                            {isEditing && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+                                onClick={() => handleDeleteWaypoint(leg.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        )) : (
+                          <div className="flex min-h-[240px] flex-col items-center justify-center space-y-3 rounded-xl border border-dashed bg-slate-50 p-6 text-center">
+                            <MapIcon className="h-8 w-8 opacity-40" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">No waypoints yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </Card>
+                </div>
+              ) : null}
+<div className="hidden pointer-events-auto absolute right-0 top-0 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur"> 
                 <div className={`flex items-center justify-between gap-3 px-3 ${showRouteList ? 'h-10 border-b border-slate-100' : 'h-10'}`}>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Saved Routes</p>
                   <Button
@@ -428,7 +624,7 @@ export default function TrainingRoutesPage() {
                   <div className="min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Draft Route</p>
                     <p className="truncate text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                      {activeRoute ? `${activeRoute.name} • ${activeRoute.legs.length} legs` : 'No route selected'}
+                      {activeRoute ? `${activeRoute.name} â€¢ ${activeRoute.legs.length} legs` : 'No route selected'}
                     </p>
                   </div>
                   <Button
@@ -453,8 +649,11 @@ export default function TrainingRoutesPage() {
                                 Clear Route
                               </Button>
                               <Button
-                                onClick={handleSave}
-                                disabled={!isEditing || !activeRoute.name.trim()}
+                                onClick={() => {
+                                  setRouteNameDraft(activeRoute.name);
+                                  setSaveRouteOpen(true);
+                                }}
+                                disabled={!isEditing}
                                 className={HEADER_ACTION_BUTTON_CLASS}
                               >
                                 <Save size={14} className="mr-2" /> Save Route
@@ -579,6 +778,83 @@ export default function TrainingRoutesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showAllRoutesOpen} onOpenChange={setShowAllRoutesOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-black uppercase tracking-widest">All Routes</DialogTitle>
+            <DialogDescription>Select a saved route to load it into the planner.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-2">
+            <div className="space-y-2 py-2">
+              {filteredRoutes.map((route) => (
+                <button
+                  key={route.id}
+                  type="button"
+                  className={`w-full rounded-xl border p-3 text-left transition-all ${activeRoute?.id === route.id ? 'border-primary/20 bg-primary/5 shadow-sm' : 'border-border bg-background hover:bg-muted/50'}`}
+                  onClick={() => {
+                    setActiveRoute(route);
+                    setRouteNameDraft(route.name);
+                    setIsEditing(false);
+                    setShowAllRoutesOpen(false);
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-black uppercase">{route.name || 'Untitled Route'}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase text-muted-foreground">{route.legs.length} waypoints</p>
+                    </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase opacity-70">
+                      {getRouteTypeLabel(route.routeType)}
+                    </Badge>
+                  </div>
+                </button>
+              ))}
+              {filteredRoutes.length === 0 && (
+                <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center">
+                  <PlaneTakeoff className="mx-auto mb-2 h-6 w-6 opacity-40 text-muted-foreground" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No routes found</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={saveRouteOpen} onOpenChange={setSaveRouteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-black uppercase tracking-widest">Save Route</DialogTitle>
+            <DialogDescription>Name this route before saving it to the database.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Route Name</label>
+            <Input
+              value={routeNameDraft}
+              onChange={(e) => setRouteNameDraft(e.target.value)}
+              placeholder="Enter route name"
+              className="h-10 text-xs font-black uppercase"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={() => {
+                if (!activeRoute) return;
+                void handleSave(routeNameDraft);
+              }}
+              className={HEADER_ACTION_BUTTON_CLASS}
+              disabled={!routeNameDraft.trim()}
+            >
+              <Save size={14} className="mr-2" /> Save Route
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

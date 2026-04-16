@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback, useRef, useMemo, type Dispatch, type 
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X, Plus } from 'lucide-react';
+import { Search, X, Plus, Layers3, SlidersHorizontal } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useMapZoomPreferences } from '@/hooks/use-map-zoom-preferences';
@@ -37,6 +37,13 @@ interface AeronauticalMapProps {
   onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
   hazards?: Hazard[];
   onAddHazard?: (lat: number, lng: number) => void;
+  rightAccessory?: React.ReactNode;
+  showLayerSelectorControl?: boolean;
+  showLayerLevelsControl?: boolean;
+  layerSelectorOpen?: boolean;
+  layerLevelsOpen?: boolean;
+  onLayerSelectorOpenChange?: (open: boolean) => void;
+  onLayerLevelsOpenChange?: (open: boolean) => void;
 }
 
 const HazardIcon = L.divIcon({
@@ -941,9 +948,11 @@ const blockMapInteraction = (event: React.SyntheticEvent) => {
 const SearchControl = ({
   onAddWaypoint,
   onResultsChange,
+  rightAccessory,
 }: {
   onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
   onResultsChange: (results: OpenAipFeature[]) => void;
+  rightAccessory?: React.ReactNode;
 }) => {
   const map = useMap();
   const [query, setQuery] = useState('');
@@ -1033,41 +1042,44 @@ const SearchControl = ({
   return (
     <div
       ref={containerRef}
-      className="absolute top-4 left-1/2 z-[1000] w-full max-w-sm -translate-x-1/2 pointer-events-auto"
+      className="absolute left-16 right-16 top-2 z-[1000] w-auto pointer-events-auto sm:left-1/2 sm:right-auto sm:w-full sm:max-w-sm sm:-translate-x-1/2"
     >
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search Airport, Navaid, or Point..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              setQuery('');
-              setResults([]);
-              onResultsChangeRef.current([]);
-            } else if (event.key === 'Enter' && results[0]) {
-              event.preventDefault();
-              handleSelect(results[0]);
-            }
-          }}
-          className="h-10 rounded-2xl border-slate-200 bg-white/95 pl-9 pr-9 text-[10px] font-bold shadow-xl backdrop-blur placeholder:text-slate-500"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              setQuery('');
-              setResults([]);
-              onResultsChangeRef.current([]);
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search Airport, Navaid, or Point..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                setQuery('');
+                setResults([]);
+                onResultsChangeRef.current([]);
+              } else if (event.key === 'Enter' && results[0]) {
+                event.preventDefault();
+                handleSelect(results[0]);
+              }
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+            className="h-10 rounded-2xl border-slate-200 bg-white/95 pl-9 pr-9 text-[10px] font-bold shadow-xl backdrop-blur placeholder:text-slate-500"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setQuery('');
+                setResults([]);
+                onResultsChangeRef.current([]);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {rightAccessory ? <div className="shrink-0">{rightAccessory}</div> : null}
       </div>
 
       {results.length > 0 && (
@@ -1178,7 +1190,18 @@ const SearchControl = ({
   );
 };
 
-export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onAddHazard }: AeronauticalMapProps) {
+export default function AeronauticalMap({
+  legs,
+  onAddWaypoint,
+  hazards = [],
+  onAddHazard,
+  showLayerSelectorControl = true,
+  showLayerLevelsControl = true,
+  layerSelectorOpen,
+  layerLevelsOpen,
+  onLayerSelectorOpenChange,
+  onLayerLevelsOpenChange,
+}: AeronauticalMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [searchFeatures, setSearchFeatures] = useState<OpenAipFeature[]>([]);
   const [viewportFeatures, setViewportFeatures] = useState<OpenAipFeature[]>([]);
@@ -1237,6 +1260,8 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   const lastPersistedSettingsRef = useRef<string>('');
   const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(false);
   const [showLayerSelectorPanel, setShowLayerSelectorPanel] = useState(false);
+  const layerSelectorPanelOpen = layerSelectorOpen ?? showLayerSelectorPanel;
+  const layerLevelsPanelOpen = layerLevelsOpen ?? showLayerLevelsPanel;
 
   useEffect(() => {
     setIsMounted(true);
@@ -1981,15 +2006,18 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
         )}
       </>
 
-      {showLayerSelectorPanel ? (
-      <>
+      {layerSelectorPanelOpen ? (
+        <>
       <div className="pointer-events-auto absolute bottom-4 left-4 z-[1000] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
         <div className="border-b border-slate-100 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-              onClick={() => setShowLayerSelectorPanel(false)}
+                onClick={() => {
+                  onLayerSelectorOpenChange?.(false);
+                  setShowLayerSelectorPanel(false);
+                }}
             >
               Close
             </button>
@@ -2069,15 +2097,20 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
         </div>
       </div>
       </>
-      ) : (
+      ) : showLayerSelectorControl ? (
         <button
           type="button"
-          className="pointer-events-auto absolute bottom-4 left-4 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-          onClick={() => setShowLayerSelectorPanel(true)}
+          className="pointer-events-auto absolute bottom-4 left-4 z-[1000] flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+          onClick={() => {
+            onLayerSelectorOpenChange?.(true);
+            setShowLayerSelectorPanel(true);
+          }}
+          aria-label="Open layers menu"
+          title="Layers"
         >
-          Layers
+          <Layers3 className="h-4 w-4" />
         </button>
-      )}
+      ) : null}
 
       <LayerStateSync
         onBaseLayerChange={setSelectedBaseLayer}
@@ -2256,19 +2289,22 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
 
       </LeafletMapFrame>
 
-      {showLayerLevelsPanel ? (
-      <>
+      {layerLevelsPanelOpen ? (
+        <>
       <div className="pointer-events-auto absolute bottom-4 right-4 z-[1000] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
         <div className="border-b border-slate-100 px-3 py-3">
           <div className="flex items-start gap-2">
             <button
               type="button"
               className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-              onClick={() => setShowLayerLevelsPanel(false)}
+                onClick={() => {
+                  onLayerLevelsOpenChange?.(false);
+                  setShowLayerLevelsPanel(false);
+                }}
             >
               Close
             </button>
-            <p className="min-w-0 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layer Levels</p>
+            <p className="min-w-0 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
           </div>
           <div className="mt-2 space-y-1">
             <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
@@ -2337,17 +2373,20 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
         </div>
       </div>
       </>
-      ) : (
-        <div className="pointer-events-auto absolute bottom-4 right-4 z-[1000] flex flex-col items-end gap-2">
-          <button
-            type="button"
-            className="flex h-10 items-center rounded-2xl border border-slate-200 bg-white/95 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-            onClick={() => setShowLayerLevelsPanel(true)}
-          >
-            Layer Levels
-          </button>
-        </div>
-      )}
+      ) : showLayerLevelsControl ? (
+        <button
+          type="button"
+          className="pointer-events-auto absolute bottom-4 right-4 z-[1000] flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+          onClick={() => {
+            onLayerLevelsOpenChange?.(true);
+            setShowLayerLevelsPanel(true);
+          }}
+          aria-label="Open map zoom menu"
+          title="Map Zoom"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
+      ) : null}
     </div>
   );
 }
