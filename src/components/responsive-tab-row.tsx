@@ -26,10 +26,12 @@ type ResponsiveTabRowProps = {
   options: ResponsiveTabOption[];
   placeholder: string;
   className?: string;
+  leadingAction?: ReactNode;
   action?: ReactNode;
   joinedDesktopTabs?: boolean;
   flatTabs?: boolean;
   buttonLikeTabs?: boolean;
+  centerTabs?: boolean;
 };
 
 export function ResponsiveTabRow({
@@ -38,10 +40,12 @@ export function ResponsiveTabRow({
   options,
   placeholder,
   className,
+  leadingAction,
   action,
   joinedDesktopTabs = false,
   flatTabs = false,
   buttonLikeTabs = false,
+  centerTabs = false,
 }: ResponsiveTabRowProps) {
   const isMobile = useIsMobile();
 
@@ -74,10 +78,13 @@ export function ResponsiveTabRow({
           {action ? <div className="flex justify-end">{action}</div> : null}
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-3">
+        <div className={cn("flex items-center gap-3", leadingAction || action ? "justify-between" : centerTabs ? "justify-center" : "justify-between")}>
+          {leadingAction ? <div className="shrink-0">{leadingAction}</div> : null}
           <TabsList className={cn(
-            flatTabs ? "bg-transparent border-0 shadow-none p-0 gap-2 justify-start overflow-x-auto no-scrollbar flex items-center" : `${HEADER_TAB_LIST_CLASS} bg-transparent border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center`,
+            flatTabs ? "bg-transparent border-0 shadow-none p-0 gap-2 overflow-x-auto no-scrollbar flex items-center" : `${HEADER_TAB_LIST_CLASS} bg-transparent border-b-0 overflow-x-auto no-scrollbar flex items-center`,
             joinedDesktopTabs ? "gap-0 !rounded-none border border-input overflow-hidden" : "gap-1.5"
+            ,
+            centerTabs ? "justify-center mx-auto" : "justify-start"
           )}>
             {options.map((option) => {
               const Icon = option.icon;
@@ -118,6 +125,7 @@ type OrganizationTabsRowProps = {
   className?: string;
   flatTabs?: boolean;
   buttonLikeTabs?: boolean;
+  centerTabs?: boolean;
 };
 
 export function OrganizationTabsRow({
@@ -127,6 +135,7 @@ export function OrganizationTabsRow({
   className,
   flatTabs = false,
   buttonLikeTabs = false,
+  centerTabs = false,
 }: OrganizationTabsRowProps) {
   return (
     <ResponsiveTabRow
@@ -136,6 +145,7 @@ export function OrganizationTabsRow({
       className={className}
       flatTabs={flatTabs}
       buttonLikeTabs={buttonLikeTabs}
+      centerTabs={centerTabs}
       options={[
         { value: 'internal', label: 'Internal', icon: Building },
         ...organizations.map((organization) => ({

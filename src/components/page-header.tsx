@@ -80,7 +80,7 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
         </div>
 
         {actions && (
-          <div className="flex w-full flex-wrap items-center gap-1.5 lg:w-auto [&_button]:h-8 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-[9px] [&_button]:tracking-[0.08em] [&_a]:h-8 [&_a]:gap-1.5 [&_a]:px-3 [&_a]:text-[9px] [&_a]:tracking-[0.08em]">
+          <div className="main-page-header__actions flex w-full flex-wrap items-center gap-1.5 lg:w-auto [&_button]:h-8 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-[9px] [&_button]:tracking-[0.08em] [&_a]:h-8 [&_a]:gap-1.5 [&_a]:px-3 [&_a]:text-[9px] [&_a]:tracking-[0.08em]">
             {actions}
           </div>
         )}

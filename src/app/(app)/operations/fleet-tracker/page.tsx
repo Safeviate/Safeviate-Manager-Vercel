@@ -188,7 +188,7 @@ export default function FleetTrackerPage() {
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
         <Card className="flex h-full flex-col overflow-hidden border shadow-none">
           <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
-            <div className="sticky top-0 z-20 border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
+            <div className="sticky top-0 z-[1350] border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
               <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Fleet tracker action bar">
                 <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
                   <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => void loadSessions()} disabled={isRefreshing}>

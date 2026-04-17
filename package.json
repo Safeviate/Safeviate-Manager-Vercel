@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "audit:density": "node scripts/card-density-audit.cjs",
     "test:e2e": "playwright test",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",

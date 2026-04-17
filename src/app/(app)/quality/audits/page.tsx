@@ -198,6 +198,7 @@ export default function AuditsPage() {
             <Card className="h-full min-h-0 flex flex-col overflow-hidden shadow-none border">
                 <MainPageHeader 
                     title="Audits"
+                    className="lg:[&_.main-page-header__header]:flex-col lg:[&_.main-page-header__header]:items-center lg:[&_.main-page-header__header]:gap-2 lg:[&_.main-page-header__header]:py-1.5 lg:[&_.main-page-header__description]:text-center lg:[&_.main-page-header__actions]:w-full lg:[&_.main-page-header__actions]:justify-center"
                     actions={
                         <Button
                           asChild
@@ -221,6 +222,7 @@ export default function AuditsPage() {
                         organizations={organizations || []}
                         activeTab={activeOrgTab}
                         onTabChange={setActiveOrgTab}
+                        centerTabs
                         className="px-3 py-2 border-b bg-muted/5 shrink-0 md:px-4"
                     />
                 )}
@@ -230,6 +232,7 @@ export default function AuditsPage() {
                         value={activeStatusTab}
                         onValueChange={setActiveStatusTab}
                         placeholder="Filter Status"
+                        centerTabs
                         className="px-3 py-2 border-b bg-muted/5 shrink-0 md:px-4"
                         options={[
                             { value: 'active', label: `Active (${activeAudits.length})`, icon: ListFilter },

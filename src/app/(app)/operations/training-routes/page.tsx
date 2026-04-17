@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff, MapPinned, ListFilter, Layers3, SlidersHorizontal, ChevronDown, Route, X } from 'lucide-react';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -215,20 +215,14 @@ export default function TrainingRoutesPage() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
       <Card className="flex h-full flex-col overflow-hidden border shadow-none">
-        <div className="sticky top-0 z-30 border-b bg-card">
-            <MainPageHeader
-            title="Route Planner"
-          />
-        </div>
-
         <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-0 bg-muted/5">
           <div className="sticky top-0 z-20 border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
-            <div className="flex items-center justify-end gap-1.5 md:gap-2" aria-label="Route planner action bar">
-              <div className="hidden items-center justify-end gap-1.5 md:flex md:gap-2">
+            <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Route planner action bar">
+              <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                  className={HEADER_SECONDARY_BUTTON_CLASS}
                   onClick={() => setShowRouteSummary((current) => !current)}
                 >
                   <ListFilter className="h-4 w-4" />
@@ -237,7 +231,7 @@ export default function TrainingRoutesPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                  className={HEADER_SECONDARY_BUTTON_CLASS}
                   onClick={() => setShowLayerSelectorOpen((current) => !current)}
                 >
                   <Layers3 className="h-4 w-4" />
@@ -246,7 +240,7 @@ export default function TrainingRoutesPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                  className={HEADER_SECONDARY_BUTTON_CLASS}
                   onClick={() => setShowLayerLevelsOpen((current) => !current)}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
@@ -255,7 +249,7 @@ export default function TrainingRoutesPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                  className={HEADER_SECONDARY_BUTTON_CLASS}
                   onClick={() => setShowAllRoutesOpen(true)}
                 >
                   <Search className="h-4 w-4" />
@@ -264,14 +258,14 @@ export default function TrainingRoutesPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                  className={HEADER_SECONDARY_BUTTON_CLASS}
                   onClick={handleClearRoute}
                   disabled={!activeRoute || (!activeRoute.legs.length && !activeRoute.hazards.length && !activeRoute.name.trim())}
                 >
                   <Trash2 className="h-4 w-4" />
                   Clear Route
                 </Button>
-                <Button onClick={handleCreateNew} className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur">
+                <Button onClick={handleCreateNew} className={HEADER_ACTION_BUTTON_CLASS}>
                   <Plus size={14} className="mr-2" /> New Route
                 </Button>
                 <Button
@@ -282,7 +276,7 @@ export default function TrainingRoutesPage() {
                     }
                   }}
                   disabled={!activeRoute || !isEditing}
-                  className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                  className={HEADER_ACTION_BUTTON_CLASS}
                 >
                   <Save size={14} className="mr-2" /> Save Route
                 </Button>
@@ -293,7 +287,7 @@ export default function TrainingRoutesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-full justify-between rounded-xl border-slate-300 bg-background px-3 text-xs font-medium shadow-sm hover:bg-muted md:hidden"
+                    className={`${HEADER_MOBILE_ACTION_BUTTON_CLASS} rounded-xl md:hidden`}
                   >
                     <span className="flex items-center gap-2">
                       <SlidersHorizontal className="h-4 w-4" />

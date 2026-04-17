@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, StopCircle, PlusCircle, Clock, User, Flag, ShieldAlert, CheckCircle2, ArrowLeft, History } from 'lucide-react';
+import { StopCircle, PlusCircle, Clock, User, Flag, ShieldAlert, CheckCircle2, ArrowLeft, History } from 'lucide-react';
 import type { ERPEvent, ERPLogEntry, ERPEventStatus, ERPTrigger } from '@/types/erp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -26,16 +26,17 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 interface DiaryTabProps {
   tenantId: string;
+  startOpen: boolean;
+  onStartOpenChange: (open: boolean) => void;
 }
 
-export function DiaryTab({ tenantId }: DiaryTabProps) {
+export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabProps) {
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   
   const canManage = hasPermission('operations-erp-manage');
 
-  const [isStartOpen, setIsStartOpen] = useState(false);
   const [isCloseOpen, setIsCloseOpen] = useState(false);
   const [selectedTriggerId, setSelectedTriggerId] = useState<string | null>(null);
   const [newLogEntry, setNewLogEntry] = useState('');
@@ -196,7 +197,7 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
 
     const nextEvents = [newEvent, ...events];
     void persistEvents(nextEvents);
-    setIsStartOpen(false);
+    onStartOpenChange(false);
     setSelectedTriggerId(null);
     toast({ title: isMock ? 'Mock Started' : 'ERP ACTIVATED', variant: isMock ? 'default' : 'destructive' });
   };
@@ -489,60 +490,10 @@ export function DiaryTab({ tenantId }: DiaryTabProps) {
         </div>
       ) : (
         <div className="h-full min-h-0 overflow-y-auto no-scrollbar">
-          <div className="border-b px-4 py-3"> {/* Reduced padding from px-6 py-4 to px-4 py-3 */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
-                <h2 className="font-headline text-2xl font-semibold">Response History</h2>
-                <p className="text-sm text-muted-foreground">Review archived ERP sessions and reopen them in read-only mode.</p>
-              </div>
-              {canManage && (
-                <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive" className={HEADER_ACTION_BUTTON_CLASS}>
-                      <Play className="mr-2 h-4 w-4" /> Start ERP Session
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle>Activate Emergency Response</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleStartERP} className="space-y-4 pt-4">
-                      <div className="space-y-2">
-                        <Label>Activation Trigger (Internal)</Label>
-                        <Select name="triggerId" onValueChange={setSelectedTriggerId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select internal trigger..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(triggers || []).map(t => (
-                              <SelectItem key={t.id} value={t.id}>{t.eventType}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Session Title / Context</Label>
-                        <Input name="title" placeholder="e.g., ZS-ABC Overdue - Flight 123" required />
-                      </div>
-                      <div className="flex items-center space-x-2 rounded-lg border bg-muted/10 p-3">
-                        <Switch name="isMock" id="mock-mode-empty" defaultChecked={true} />
-                        <Label htmlFor="mock-mode-empty" className="cursor-pointer">Simulation / Mock Exercise</Label>
-                      </div>
-                      <p className="text-xs italic text-muted-foreground">Initiating based on an internal trigger provides immediate response context.</p>
-                      <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button type="submit" variant="destructive" className={HEADER_ACTION_BUTTON_CLASS}>Activate Protocol</Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          </div>
-          <div className="border-b px-6 py-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <h4 className="font-headline text-xl font-semibold">Past Sessions</h4>
+          <div className="border-b px-3 py-1.5">
+            <div className="flex h-8 items-center justify-center gap-2 text-center">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-semibold">Past Sessions</h4>
             </div>
           </div>
           <div className="space-y-4 p-6">

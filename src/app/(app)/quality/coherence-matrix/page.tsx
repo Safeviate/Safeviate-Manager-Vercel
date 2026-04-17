@@ -892,6 +892,7 @@ export default function CoherenceMatrixPage() {
         <Card className="h-full min-h-0 flex flex-col overflow-hidden shadow-none border">
             <MainPageHeader 
                 title="Coherence Matrix"
+                className="lg:[&_.main-page-header__header]:flex-col lg:[&_.main-page-header__header]:items-center lg:[&_.main-page-header__header]:gap-2 lg:[&_.main-page-header__header]:py-1.5 lg:[&_.main-page-header__description]:text-center lg:[&_.main-page-header__actions]:w-full lg:[&_.main-page-header__actions]:justify-center"
                 actions={
                     canManageMatrix ? (
                     isMobile ? (
@@ -969,13 +970,14 @@ export default function CoherenceMatrixPage() {
                     activeTab={activeOrgTab}
                     onTabChange={setActiveOrgTab}
                     buttonLikeTabs
+                    centerTabs
                     className="px-3 py-2 border-b bg-muted/5 shrink-0 md:px-4"
                 />
             )}
 
             <div className="border-b bg-muted/5 px-3 py-2 shrink-0 md:px-4">
                 <Tabs value={regulationTabToUiValue(activeRegulationTab)} onValueChange={(value) => setActiveRegulationTab(uiValueToRegulationTab(value))} className="w-full">
-                    <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center gap-1.5">
+                    <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-center overflow-x-auto no-scrollbar flex items-center gap-1.5 mx-auto">
                         {REGULATION_TABS.map((tab) => (
                             <TabsTrigger key={tab.value} value={regulationTabToUiValue(tab.value)} className="rounded-md h-8 px-3 text-[9px] font-black uppercase tracking-[0.08em] border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                                 {tab.label}

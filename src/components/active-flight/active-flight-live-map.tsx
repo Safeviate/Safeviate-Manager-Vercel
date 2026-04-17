@@ -1198,7 +1198,10 @@ export function ActiveFlightLiveMap({
 
   if (fullscreen) {
     return (
-      <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black" style={mapShellStyle}>
+      <div
+        className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black"
+        style={{ ...mapShellStyle, touchAction: 'none', overscrollBehavior: 'none' }}
+      >
         <div className="absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Full Flight Tracking View</p>
@@ -1462,7 +1465,7 @@ export function ActiveFlightLiveMap({
             maxZoom={mapMaxZoom}
             zoomAnimation={false}
             className="h-full w-full rounded-none"
-            style={{ background: '#000000' }}
+            style={{ background: '#000000', touchAction: 'none', overscrollBehavior: 'none' }}
           >
             {selectedBaseLayer === 'satellite' ? (
               <TileLayer
@@ -1693,7 +1696,10 @@ export function ActiveFlightLiveMap({
 
   if (compactLayout) {
       return (
-        <div className="relative h-full min-h-[360px] overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm" style={mapShellStyle}>
+        <div
+          className="relative h-full min-h-[360px] overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm"
+          style={{ ...mapShellStyle, touchAction: 'none', overscrollBehavior: 'none' }}
+        >
           <div className="nose-up-map relative h-full min-h-[360px] bg-slate-950/5">
             <LeafletMapFrame
               center={center}
@@ -1701,7 +1707,7 @@ export function ActiveFlightLiveMap({
               minZoom={mapMinZoom}
               maxZoom={mapMaxZoom}
               className="h-full min-h-[360px] w-full rounded-none"
-              style={{ background: '#f8fafc' }}
+              style={{ background: '#f8fafc', touchAction: 'none', overscrollBehavior: 'none' }}
             >
               {selectedBaseLayer === 'satellite' ? (
                 <TileLayer

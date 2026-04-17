@@ -204,14 +204,17 @@ export function FleetTrackerMap({
   const mapMaxZoom = zoomPreferences.maxZoom;
 
   return (
-      <div className="relative h-full overflow-hidden rounded-2xl">
+      <div
+        className="relative h-full overflow-hidden rounded-2xl"
+        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+      >
         <LeafletMapFrame
           center={center}
           zoom={6}
           minZoom={mapMinZoom}
           maxZoom={mapMaxZoom}
           className="h-[640px] w-full rounded-2xl xl:h-[700px]"
-          style={{ background: '#020617' }}
+          style={{ background: '#020617', touchAction: 'none', overscrollBehavior: 'none' }}
         >
           {selectedBaseLayer === 'satellite' ? (
             <TileLayer

@@ -1639,7 +1639,7 @@ export default function AeronauticalMap({
     : [-25.9, 27.9];
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" style={{ touchAction: 'none', overscrollBehavior: 'none' }}>
     <LeafletMapFrame
       center={center}
       zoom={8}
@@ -1647,7 +1647,7 @@ export default function AeronauticalMap({
       maxZoom={mapMaxZoom}
       preferCanvas
       className="flight-planner-map h-full w-full outline-none"
-      style={{ background: '#0f172a' }}
+      style={{ background: '#0f172a', touchAction: 'none', overscrollBehavior: 'none' }}
     >
       <TileLayer
         url={selectedBaseLayer === 'light' ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'}

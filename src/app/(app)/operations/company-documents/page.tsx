@@ -187,19 +187,19 @@ export default function CompanyDocumentsPage() {
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
-            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end min-w-0 lg:w-auto">
-              <div className="relative w-full sm:w-96 lg:w-[360px] lg:flex-none">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <CardHeader className="shrink-0 border-b bg-muted/5 px-2 py-1.5 md:px-3 md:py-2">
+          <div className="flex justify-center">
+            <div className="flex w-full min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:justify-center">
+              <div className="relative w-full sm:w-80 lg:w-[360px] lg:flex-none">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search documents..."
-                  className="pl-9 bg-background"
+                  className="h-8 bg-background pl-9 text-xs"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Badge variant="outline" className="font-mono text-[10px] h-9 px-3 whitespace-nowrap">
+              <Badge variant="outline" className="h-8 whitespace-nowrap px-3 font-mono text-[10px]">
                 {filteredDocs.length} TOTAL
               </Badge>
               {canManage && (
@@ -210,7 +210,7 @@ export default function CompanyDocumentsPage() {
                       onClick={() => open()}
                       variant={isMobile ? "outline" : "default"}
                       size={isMobile ? "sm" : "default"}
-                      className={isMobile ? "h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 lg:w-auto" : undefined}
+                      className={isMobile ? "h-8 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:w-auto" : "h-8 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm"}
                     >
                       <span className="flex items-center gap-2">
                         <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
@@ -233,7 +233,7 @@ export default function CompanyDocumentsPage() {
             ) : filteredDocs.length > 0 ? (
               <Table>
                 <TableHeader className="bg-muted/30">
-                  <TableRow>
+                  <TableRow className="h-8">
                     <TableHead className="w-10 text-center">Type</TableHead>
                     <TableHead>Document Name</TableHead>
                     <TableHead>Uploaded</TableHead>
@@ -245,19 +245,19 @@ export default function CompanyDocumentsPage() {
                       {filteredDocs.map((doc) => {
                     const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
                     return (
-                    <TableRow key={doc.id} className="group">
-                      <TableCell className="text-center text-sm font-medium text-foreground">
+                    <TableRow key={doc.id} className="group h-10">
+                      <TableCell className="px-3 py-2 text-center text-sm font-medium text-foreground">
                         {doc.type === 'image' ? (
                           <ImageIcon className="h-4 w-4 text-primary mx-auto" />
                         ) : (
                           <FileType className="h-4 w-4 text-muted-foreground mx-auto" />
                         )}
                       </TableCell>
-                      <TableCell className="text-sm font-medium text-foreground">{doc.name}</TableCell>
-                      <TableCell className="text-sm font-medium text-foreground">
+                      <TableCell className="px-3 py-2 text-sm font-medium text-foreground">{doc.name}</TableCell>
+                      <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
                         {format(new Date(doc.uploadDate), 'dd MMM yyyy')}
                       </TableCell>
-                      <TableCell className="text-sm font-medium text-foreground">
+                      <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
                         <div className="flex items-center gap-2">
                           <Popover>
                             <PopoverTrigger asChild>
@@ -287,7 +287,7 @@ export default function CompanyDocumentsPage() {
                           </Popover>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right text-sm font-medium text-foreground">
+                      <TableCell className="px-3 py-2 text-right text-sm font-medium text-foreground">
                         <div className="flex justify-end gap-2">
                           <ViewActionButton onClick={() => setViewingDoc(doc)} />
                           {canManage && (

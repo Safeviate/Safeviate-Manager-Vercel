@@ -130,13 +130,19 @@ export default function AlertsPage() {
             onValueChange={setActiveTab}
             placeholder="Select Filter"
             className="border-b bg-muted/5 px-3 py-2 shrink-0"
-            action={canCreateAlerts ? <AlertForm onCreate={handleCreateAlert} /> : null}
+            centerTabs
             options={tabs.map((tab) => ({
               value: tab.value,
               label: `${tab.label} (${tab.count})`,
               icon: ListFilter,
             }))}
           />
+
+          {canCreateAlerts ? (
+            <div className="border-b bg-muted/5 px-3 py-2 shrink-0 flex justify-center">
+              <AlertForm onCreate={handleCreateAlert} />
+            </div>
+          ) : null}
 
           <CardContent className="flex-1 min-h-0 overflow-hidden p-0 bg-muted/5">
             <TabsContent value="red-tags" className="mt-0 h-full min-h-0 overflow-y-auto no-scrollbar">

@@ -324,6 +324,7 @@ export default function BookingsHistoryPage() {
             onValueChange={setActiveTab}
             placeholder="Filter by Type"
             className="border-b bg-muted/5 px-3 py-2 shrink-0"
+            centerTabs
             options={tabs.map((tab) => ({
               value: tab.value,
               label: tab.label,

@@ -383,6 +383,7 @@ export default function SchedulePage() {
             <MainPageHeader 
                 title="Daily Schedule"
                 description=""
+                className="lg:[&_.main-page-header__header]:justify-center"
                 actions={
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
