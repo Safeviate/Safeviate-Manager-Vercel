@@ -1,8 +1,8 @@
 # Safeviate Manager
 
-This is a Next.js app configured for deployment on Vercel.
+This is a Next.js app deployed on Azure App Service with Azure Database for PostgreSQL and Azure Blob Storage.
 
-For local development, copy `.env.local.example` to `.env.local` and set the required runtime env vars there. For production, set the same values in Vercel Project Settings > Environment Variables:
+For local development, copy `.env.local.example` to `.env.local` and set the required runtime env vars there. For Azure, set the production values in App Service application settings:
 
 - `RESEND_API_KEY`
 - `MAIL_FROM`
@@ -14,7 +14,9 @@ For local development, copy `.env.local.example` to `.env.local` and set the req
 - `OPENAI_API_KEY`
 - `OPENAIP_API_KEY` for the map tile proxy
 - `DATABASE_URL`
-- `BLOB_READ_WRITE_TOKEN` if you want document/photo uploads to work in production
+- `DATABASE_URL_UNPOOLED`
+- `AZURE_STORAGE_CONNECTION_STRING`
+- `AZURE_STORAGE_CONTAINER_NAME`
 
 ## Prisma (Development)
 
@@ -26,7 +28,7 @@ This repo now includes Prisma alongside existing Drizzle code during migration.
 2. Generate client:
 `npm run prisma:generate`
 
-3. Push schema to your **development** database:
-`npm run prisma:push`
+3. Push schema to the Azure database from local `.env.local`:
+`npm run prisma:push:local`
 
-Use a dev-only `DATABASE_URL` locally and keep production values in Vercel environment variables.
+Keep local auth URLs on `http://localhost:9002`, and set both `DATABASE_URL` and `DATABASE_URL_UNPOOLED` in `.env.local` to the Azure PostgreSQL connection string with `sslmode=require`.

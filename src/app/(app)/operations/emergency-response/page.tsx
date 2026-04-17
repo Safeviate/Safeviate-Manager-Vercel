@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Phone, AlertCircle, Megaphone, ScrollText, HelpCircle, FileSearch, Calculator } from 'lucide-react';
-import { MainPageHeader } from "@/components/page-header";
 import { ContactsTab } from './contacts-tab';
 import { TriggersTab } from './triggers-tab';
 import { MediaTab } from './media-tab';
@@ -49,10 +48,6 @@ export default function EmergencyResponsePage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-4 h-full overflow-hidden px-2 sm:px-4 pt-2">
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-          <MainPageHeader 
-            title="Emergency Response Plan"
-          />
-          
           {shouldShowOrganizationTabs && (
             <OrganizationTabsRow
               organizations={organizations || []}

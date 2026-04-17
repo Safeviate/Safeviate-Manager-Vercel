@@ -339,7 +339,6 @@ export default function VehicleUsagePage() {
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader
           title="Vehicle Usage"
-          description="Book company vehicles out and back in, with a live view of what is currently on the road."
           actions={canManageVehicleUsage ? <BookOutDialog vehicles={vehicles} activeVehicleIds={activeVehicleIds} actorName={actorName} onBookOut={handleBookOut} /> : undefined}
         />
         <CardContent className="flex-1 min-h-0 overflow-hidden p-0 bg-background">

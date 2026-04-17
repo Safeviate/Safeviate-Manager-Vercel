@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -98,37 +98,36 @@ export default function ExternalOrganizationsPage() {
 
   return (
     <div className="flex flex-col gap-6 h-full p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight uppercase">External Organizations</h1>
-          <p className="text-xs text-muted-foreground italic font-medium">Manage external companies involved in quality audits.</p>
-        </div>
-        {canManage && (
-          <Button
-            onClick={() => handleOpenForm()}
-            variant={isMobile ? 'outline' : 'default'}
-            size={isMobile ? 'sm' : 'default'}
-            className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : 'font-black uppercase text-[10px] h-9 tracking-tight'}
-          >
-            <span className="flex items-center gap-2">
-              <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} /> Add Organization
-            </span>
-            {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-          </Button>
-        )}
-      </div>
-
       <Card className="shadow-none border overflow-hidden">
+        {canManage && (
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border bg-muted/5 px-4 py-3" style={{ borderBottomColor: 'hsl(var(--card-border))' }}>
+            <Button
+              onClick={() => handleOpenForm()}
+              variant={isMobile ? 'outline' : 'default'}
+              size={isMobile ? 'sm' : 'default'}
+              className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : 'font-black uppercase text-[10px] h-9 tracking-tight'}
+            >
+              <span className="flex items-center gap-2">
+                <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} /> Add Organization
+              </span>
+              {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+            </Button>
+          </div>
+        )}
         <CardContent className="p-0">
+          <div className="border-b border-border bg-muted/30" style={{ borderBottomColor: 'hsl(var(--card-border))' }}>
+            <Table>
+              <TableHeader className="bg-transparent [&_tr]:border-0">
+                <TableRow>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider">Organization Name</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider">Contact Email</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider">Address</TableHead>
+                  <TableHead className="text-right text-[10px] font-black uppercase tracking-wider">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+            </Table>
+          </div>
           <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow>
-                <TableHead className="text-[10px] font-black uppercase tracking-wider">Organization Name</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-wider">Contact Email</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-wider">Address</TableHead>
-                <TableHead className="text-right text-[10px] font-black uppercase tracking-wider">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={4} className="text-center p-8 text-[10px] font-black uppercase tracking-widest italic text-muted-foreground">Loading...</TableCell></TableRow>

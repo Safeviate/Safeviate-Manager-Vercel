@@ -1,0 +1,4 @@
+interface:
+  display_name: "Topbar First Page Headers"
+  short_description: "Use the top bar as the page header and keep in-card headers slim"
+  default_prompt: "Use this skill when a page already has a global top bar title and the in-page card header should be removed or reduced to a slim supporting strip for descriptions and actions across Safeviate."

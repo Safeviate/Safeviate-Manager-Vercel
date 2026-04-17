@@ -34,11 +34,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
   if (isLoading && pathname !== '/login') {
     return (
       <div className="flex flex-col flex-1 h-screen overflow-hidden">
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-header px-4 text-header-foreground sm:px-6">
-          <Skeleton className="h-7 w-7 md:hidden" />
-          <Skeleton className="h-6 w-32" />
+        <header className="sticky top-0 z-10 flex h-12 items-center gap-3 border-b bg-header px-3 text-header-foreground sm:h-13 sm:px-4">
+          <Skeleton className="h-6 w-6 md:hidden" />
+          <Skeleton className="h-5 w-28" />
         </header>
-        <div className="p-4 lg:p-6 flex-1 overflow-y-auto space-y-6">
+        <div className="flex-1 space-y-5 overflow-y-auto p-3 lg:p-4">
           <div className="space-y-2">
             <Skeleton className="h-8 w-1/4" />
             <Skeleton className="h-4 w-1/2" />

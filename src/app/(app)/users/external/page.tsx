@@ -81,7 +81,6 @@ export default function ExternalUsersPage() {
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader 
           title="External Users"
-          description="Manage all external partners and clients."
           actions={
             canCreateUsers && (
               <PersonnelForm 

@@ -243,14 +243,101 @@
   backdrop-filter: blur(12px);
 }
 
-.leaflet-control-layers-toggle,
-.leaflet-bar a {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.5rem;
-  min-height: 2.5rem;
+.leaflet-tooltip.openaip-layer-label {
+  display: inline-block !important;
+  width: max-content !important;
+  height: max-content !important;
+  padding: 1px 4px !important;
+  background: #ffffff !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  color: #1d4ed8 !important;
+  font-size: 7px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  line-height: 1 !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
 }
+
+.leaflet-tooltip.openaip-layer-label::before {
+  display: none !important;
+}
+
+  .leaflet-control-layers-toggle,
+  .leaflet-bar a {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  @media (max-height: 500px) and (orientation: landscape) {
+    .app-topbar {
+      height: 3rem;
+      padding-right: 0.75rem;
+    }
+
+    .app-topbar-brand-slot {
+      gap: 0.375rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+
+    .app-topbar-menu-trigger {
+      display: inline-flex !important;
+      width: 2rem;
+      height: 2rem;
+      flex-shrink: 0;
+    }
+
+    .app-sidebar-brand-label {
+      font-size: 0.8125rem;
+    }
+
+    .app-topbar-title {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    .app-topbar-title-text {
+      font-size: 0.8125rem;
+    }
+
+    .app-topbar-actions {
+      gap: 0.25rem;
+    }
+
+    .app-topbar-icon {
+      width: 2rem;
+      height: 2rem;
+    }
+
+    .app-topbar-profile {
+      gap: 0.25rem;
+      padding: 0.125rem 0.5rem;
+    }
+
+    .app-topbar-avatar {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .main-page-header__header {
+      gap: 0.25rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .main-page-header__title {
+      font-size: 1rem;
+    }
+
+    .main-page-header__description {
+      display: none;
+    }
+  }
 
 @media print {
   .no-print {

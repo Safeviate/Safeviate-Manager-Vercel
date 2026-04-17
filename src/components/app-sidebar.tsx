@@ -360,7 +360,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="top-0 h-svh">
-      <SidebarContent className="pt-[69px]">
+      <SidebarContent className="pt-[44px] sm:pt-[48px]">
         <SidebarItems />
       </SidebarContent>
       <SidebarFooter>

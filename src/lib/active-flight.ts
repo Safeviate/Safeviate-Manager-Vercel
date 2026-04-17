@@ -80,7 +80,7 @@ export function getActiveLegState(
     { lat: nextLeg.latitude!, lon: nextLeg.longitude! }
   );
   const groundSpeedKt = position.speedKt ?? undefined;
-  const etaToNextMinutes =
+  const etaToNextWaypointMinutes =
     groundSpeedKt && groundSpeedKt > 0 ? (distanceToNextNm / groundSpeedKt) * 60 : undefined;
   const crossTrackErrorNm = getCrossTrackErrorNm(position, fromLeg, nextLeg);
 
@@ -93,7 +93,7 @@ export function getActiveLegState(
     toWaypoint: nextLeg.waypoint,
     distanceToNextNm,
     bearingToNext,
-    etaToNextMinutes,
+    etaToNextWaypointMinutes,
     groundSpeedKt,
     crossTrackErrorNm,
     onCourse: crossTrackErrorNm !== undefined ? crossTrackErrorNm <= ON_COURSE_THRESHOLD_NM : undefined,

@@ -6,9 +6,9 @@ import { getMissingEnvVars } from '@/lib/server/env';
 let db: ReturnType<typeof createDb> | null = null;
 
 function createDb() {
-  const databaseUrl = process.env.NEON2_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim();
+  const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) {
-    const missing = getMissingEnvVars([['DATABASE_URL', 'NEON2_DATABASE_URL']]);
+    const missing = getMissingEnvVars(['DATABASE_URL']);
     throw new Error(`[env] Missing required environment variables for database access: ${missing.join(', ')}`);
   }
 

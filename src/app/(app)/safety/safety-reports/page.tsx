@@ -29,7 +29,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/generate-safety-protocol-recommendations';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
@@ -319,36 +319,42 @@ export default function SafetyReportsPage() {
     const filteredReports = (allReports || []).filter(r => 
         orgId === 'internal' ? !r.organizationId : r.organizationId === orgId
     );
+    const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };
 
     return (
         <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-            <MainPageHeader 
-                title="Safety Occurrences"
-                description="Monitor and manage all internal and external safety reports."
-                actions={
-                    <div className="flex w-full items-center gap-3 sm:w-auto">
-                        <Button
-                            asChild
-                            variant={isMobile ? 'outline' : 'default'}
-                            size="sm"
-                            className={cn(
-                              isMobile
-                                ? HEADER_MOBILE_ACTION_BUTTON_CLASS
-                                : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`
-                            )}
-                        >
-                            <Link href={`/safety/new-report?orgId=${orgId}`}>
-                                <span className="flex items-center gap-2">
-                                    <PlusCircle className="h-4 w-4" />
-                                    {isMobile ? 'File' : 'File New Report'}
-                                </span>
-                                {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-                            </Link>
-                        </Button>
+            <div className="flex flex-col bg-muted/5">
+                {shouldShowOrganizationTabs && (
+                    <div className="w-full border-b border-border px-4 py-3" style={headerBandBorderStyle}>
+                        <OrganizationTabsRow
+                            organizations={organizations || []}
+                            activeTab={activeOrgTab}
+                            onTabChange={setActiveOrgTab}
+                            className="border-0 bg-transparent px-0 py-0 shrink-0"
+                        />
                     </div>
-                }
-            />
-            {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+                )}
+                <div className="w-full border-b border-border px-4 py-3 flex justify-end" style={headerBandBorderStyle}>
+                    <Button
+                        asChild
+                        variant={isMobile ? 'outline' : 'default'}
+                        size="sm"
+                        className={cn(
+                          isMobile
+                            ? HEADER_MOBILE_ACTION_BUTTON_CLASS
+                            : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`
+                        )}
+                    >
+                        <Link href={`/safety/new-report?orgId=${orgId}`}>
+                            <span className="flex items-center gap-2">
+                                <PlusCircle className="h-4 w-4" />
+                                {isMobile ? 'File' : 'File New Report'}
+                            </span>
+                            {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+                        </Link>
+                    </Button>
+                </div>
+            </div>
             <CardContent className="flex-1 p-0 bg-background overflow-y-auto">
                 <ReportsTable reports={filteredReports} tenantId={tenantId || ''} canManage={canManageAll} />
             </CardContent>

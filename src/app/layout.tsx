@@ -9,7 +9,7 @@ import { assertRequiredEnv } from '@/lib/server/env';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 assertRequiredEnv(
-  [['DATABASE_URL', 'DATABASE_URL_UNPOOLED', 'NEON2_DATABASE_URL', 'NEON2_DATABASE_URL_UNPOOLED'], 'NEXTAUTH_SECRET', 'OPENAI_API_KEY'],
+  [['DATABASE_URL', 'DATABASE_URL_UNPOOLED'], 'NEXTAUTH_SECRET', 'OPENAI_API_KEY'],
   'application bootstrap'
 );
 

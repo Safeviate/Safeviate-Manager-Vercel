@@ -176,7 +176,7 @@ export default function ExamTopicsPage() {
             </div>
         </div>
 
-        <div className="bg-muted/5 px-6 py-3 border-b">
+        <div className="bg-muted/5 px-3 py-2 border-b">
             <div className="flex items-center gap-2 text-muted-foreground">
                 <BookOpen className="h-4 w-4" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Active Database Topics</span>

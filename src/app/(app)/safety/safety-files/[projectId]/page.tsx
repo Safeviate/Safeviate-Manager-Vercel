@@ -363,7 +363,7 @@ export default function SafetyFileProjectPage({
               value={activeTab}
               onValueChange={(value) => setActiveTab(value as (typeof DETAIL_TABS)[number]['value'])}
               placeholder="Select Section"
-              className="shrink-0 border-b bg-muted/5 px-6 py-3"
+              className="shrink-0 border-b bg-muted/5 px-3 py-2"
               options={DETAIL_TABS.map((tab) => ({
                 value: tab.value,
                 label: tab.label,

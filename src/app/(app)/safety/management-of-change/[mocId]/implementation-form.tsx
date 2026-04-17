@@ -803,18 +803,18 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                             {/* ── Phases ────────────────────────────────────── */}
                             <div className="min-h-0 flex-1 overflow-y-auto">
                             <div className="mx-auto w-full max-w-6xl space-y-5 px-6 pb-24">
-                                <div className="sticky top-0 z-10 -mx-6 border-b border-slate-200 bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="sticky top-0 z-10 -mx-6 border-b border-slate-200 bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="min-w-0">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Phase Controls</p>
-                                            <p className="text-xs font-medium text-muted-foreground">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-primary">Phase Controls</p>
+                                            <p className="text-[10px] font-medium text-muted-foreground">
                                                 Save your implementation phases after editing titles, steps, hazards, and mitigations.
                                             </p>
                                         </div>
                                         <Button
                                             type="submit"
                                             disabled={isSaving || !form.formState.isDirty}
-                                            className="h-10 gap-2 rounded-full px-5 text-[10px] font-black uppercase tracking-[0.18em]"
+                                            className="h-8 gap-1.5 rounded-full px-4 text-[9px] font-black uppercase tracking-[0.16em]"
                                         >
                                             <Save className="h-3.5 w-3.5" />
                                             {isSaving ? 'Saving Strategy...' : form.formState.isDirty ? 'Save Strategy' : 'Strategy Saved'}
@@ -822,7 +822,7 @@ export const ImplementationForm = forwardRef<ImplementationFormHandle, Implement
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            className="h-10 gap-2 rounded-full px-5 text-[10px] font-black uppercase tracking-[0.18em]"
+                                            className="h-8 gap-1.5 rounded-full px-4 text-[9px] font-black uppercase tracking-[0.16em]"
                                             onClick={handleAddPhase}
                                         >
                                             <PlusCircle className="h-3.5 w-3.5" />

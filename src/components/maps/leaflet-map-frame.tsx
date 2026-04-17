@@ -8,6 +8,7 @@ type LeafletMapFrameProps = {
   zoom: number;
   minZoom?: number;
   maxZoom?: number;
+  wheelPxPerZoomLevel?: number;
   zoomAnimation?: boolean;
   preferCanvas?: boolean;
   className?: string;
@@ -20,6 +21,7 @@ export function LeafletMapFrame({
   zoom,
   minZoom,
   maxZoom,
+  wheelPxPerZoomLevel = 100,
   zoomAnimation,
   preferCanvas,
   className,
@@ -45,6 +47,7 @@ export function LeafletMapFrame({
       minZoom={minZoom}
       maxZoom={maxZoom}
       scrollWheelZoom
+      wheelPxPerZoomLevel={wheelPxPerZoomLevel}
       zoomAnimation={zoomAnimation}
       preferCanvas={preferCanvas}
       className={className}

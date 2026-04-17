@@ -188,12 +188,9 @@ export default function CompanyDocumentsPage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5 p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1 min-w-0">
-              <h2 className="text-xl font-black tracking-tight uppercase">Company Documents</h2>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end min-w-0">
-              <div className="relative w-full sm:w-96 lg:w-[360px]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end min-w-0 lg:w-auto">
+              <div className="relative w-full sm:w-96 lg:w-[360px] lg:flex-none">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search documents..."

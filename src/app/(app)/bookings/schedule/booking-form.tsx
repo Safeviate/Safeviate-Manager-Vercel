@@ -20,7 +20,7 @@ import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking, OverrideLog, TrainingRoute, ChecklistPhoto } from '@/types/booking';
-import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, CheckCircle2 } from 'lucide-react';
+import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, CheckCircle2, PlaneTakeoff } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
@@ -138,6 +138,10 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     // LOGIC: A booking is "underway" if it is Approved or tech logs have started
     const isUnderway = existingBooking?.status === 'Approved' || existingBooking?.status === 'Completed' || existingBooking?.preFlight;
     const canEditUnderway = canOverride; // If you have override, you can edit underway bookings
+    const canTrackFlight = !!existingBooking
+        && existingBooking.status !== 'Completed'
+        && existingBooking.status !== 'Cancelled'
+        && existingBooking.status !== 'Cancelled with Reason';
     
     const canDelete = hasPermission('bookings-delete') && (!isUnderway || canOverride);
 
@@ -731,6 +735,14 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 <Button variant="outline" size="sm" asChild className="h-10 gap-2 ml-auto sm:ml-0">
                                     <Link href={`/bookings/history/${existingBooking.id}`}>
                                         <Eye className="h-4 w-4" /> View
+                                    </Link>
+                                </Button>
+                            )}
+
+                            {existingBooking && canTrackFlight && (
+                                <Button variant="outline" size="sm" asChild className="h-10 gap-2 sm:ml-0">
+                                    <Link href={`/operations/active-flight?bookingId=${encodeURIComponent(existingBooking.id)}&aircraftId=${encodeURIComponent(existingBooking.aircraftId)}&setup=1`}>
+                                        <PlaneTakeoff className="h-4 w-4" /> Track Flight
                                     </Link>
                                 </Button>
                             )}

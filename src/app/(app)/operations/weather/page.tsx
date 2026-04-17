@@ -378,7 +378,7 @@ export default function WeatherPage() {
                   placeholder="Enter ICAO (e.g. KJFK, EGLL)"
                   value={icao}
                   onChange={(e) => setIcao(e.target.value)}
-                  className="w-full sm:w-64 font-mono uppercase font-black bg-background h-11"
+                  className="w-full sm:w-64 font-mono uppercase font-black bg-background h-10"
                   maxLength={4}
                 />
                 <Button type="submit" disabled={loading} className={HEADER_ACTION_BUTTON_CLASS}>
@@ -386,7 +386,7 @@ export default function WeatherPage() {
                   {loading ? 'Fetching' : 'Search Updates'}
                 </Button>
               </form>
-              <div className="h-10 w-px bg-border hidden sm:block mx-1" />
+
               <Button 
                 variant="outline" 
                 onClick={() => setIsSyncDialogOpen(true)}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -100,8 +100,7 @@ export default function ExternalCompaniesPage() {
   return (
     <div className="flex flex-col gap-6 h-full min-h-0 max-w-[1200px] mx-auto w-full">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4">
-          <CardTitle>External Companies</CardTitle>
+        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
           {canManage && (
             <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
               <Button
@@ -121,16 +120,22 @@ export default function ExternalCompaniesPage() {
         </CardHeader>
         <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="p-6">
+            <div className="px-6 pb-6">
+              <div className="-mx-6 border-b border-border bg-muted/30" style={{ borderBottomColor: 'hsl(var(--card-border))' }}>
+                <div className="px-6">
+                  <Table>
+                    <TableHeader className="[&_tr]:border-0">
+                      <TableRow>
+                        <TableHead>Company Name</TableHead>
+                        <TableHead>Contact Email</TableHead>
+                        <TableHead>Address</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                  </Table>
+                </div>
+              </div>
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Company Name</TableHead>
-                    <TableHead>Contact Email</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
                 <TableBody>
                   {isLoadingOrgs ? (
                     <TableRow><TableCell colSpan={4} className="text-center p-8">Loading...</TableCell></TableRow>

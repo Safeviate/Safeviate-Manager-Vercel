@@ -46,11 +46,11 @@ export function ResponsiveTabRow({
   const isMobile = useIsMobile();
 
   return (
-    <div className={className || 'border-b bg-muted/5 px-4 py-3 shrink-0'}>
+    <div className={className || 'border-b bg-muted/5 px-3 py-2 shrink-0'}>
       {isMobile ? (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Select value={value} onValueChange={onValueChange}>
-            <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground h-10 px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent/40">
+            <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground h-8 px-3 py-1.5 text-[10px] font-medium shadow-sm hover:bg-accent/40">
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent className="w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]">
@@ -77,7 +77,7 @@ export function ResponsiveTabRow({
         <div className="flex items-center justify-between gap-3">
           <TabsList className={cn(
             flatTabs ? "bg-transparent border-0 shadow-none p-0 gap-2 justify-start overflow-x-auto no-scrollbar flex items-center" : `${HEADER_TAB_LIST_CLASS} bg-transparent border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center`,
-            joinedDesktopTabs ? "gap-0 !rounded-none border border-input overflow-hidden" : "gap-2"
+            joinedDesktopTabs ? "gap-0 !rounded-none border border-input overflow-hidden" : "gap-1.5"
           )}>
             {options.map((option) => {
               const Icon = option.icon;
@@ -87,9 +87,9 @@ export function ResponsiveTabRow({
                   value={option.value}
                   className={cn(
                     buttonLikeTabs
-                      ? "h-10 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm gap-2.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                      ? "h-8 rounded-md border border-input bg-background px-3 py-1.5 text-[10px] font-medium shadow-sm gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                       : flatTabs
-                        ? "rounded-md border border-input bg-transparent px-5 py-2 text-[10px] font-black uppercase tracking-widest shadow-none data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                        ? "rounded-md border border-input bg-transparent px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] shadow-none data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                         : `${HEADER_TAB_TRIGGER_CLASS} border bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`,
                     joinedDesktopTabs && !flatTabs
                       ? "!rounded-none border-0 border-r border-input last:border-r-0 data-[state=active]:rounded-none"

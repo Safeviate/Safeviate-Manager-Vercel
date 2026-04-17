@@ -272,11 +272,11 @@ export default function RiskRegisterPage() {
                 value={activeAreaTab}
                 onValueChange={setActiveAreaTab}
                 placeholder="Select Area"
-                className="border-b bg-muted/5 px-4 py-3 shrink-0"
+                className="border-b bg-muted/5 px-3 py-2 shrink-0"
                 options={displayAreas.map((area) => ({ value: area, label: area, icon: LayoutGrid }))}
               />
             ) : (
-              <div className="border-b bg-muted/5 px-4 py-6 text-center">
+              <div className="border-b bg-muted/5 px-3 py-4 text-center">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">No Risk Areas Configured</p>
                 <p className="mt-1 text-sm text-muted-foreground">Use Manage Areas to add the tabs you want for this register.</p>
               </div>

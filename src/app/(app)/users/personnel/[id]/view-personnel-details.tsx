@@ -376,7 +376,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                     value={activeTab}
                     onValueChange={setActiveTab}
                     placeholder="Select Section"
-                    className="border-b bg-muted/5 px-4 py-3 shrink-0"
+                    className="border-b bg-muted/5 px-3 py-2 shrink-0"
                     options={availableTabs}
                 />
 

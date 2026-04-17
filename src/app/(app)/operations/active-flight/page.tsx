@@ -3,14 +3,15 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Layers3, Loader2, PlaneTakeoff, Settings2, SlidersHorizontal } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Layers3, LocateFixed, Loader2, PlaneTakeoff, Settings2, SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
@@ -22,7 +23,9 @@ import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
 import { getActiveLegState } from '@/lib/active-flight';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { cn } from '@/lib/utils';
-import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS, MainPageHeader } from '@/components/page-header';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { ActiveFlightTelemetryStrip } from '@/components/active-flight/active-flight-telemetry-strip';
+import { MOBILE_ACTION_MENU_ITEM_CLASS, MOBILE_ACTION_MENU_STATE_ITEM_CLASS, MobileActionDropdown } from '@/components/mobile-action-dropdown';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -57,6 +60,17 @@ const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/act
 const getFlightSessionOutboxKey = (deviceId: string) => `${FLIGHT_SESSION_OUTBOX_PREFIX}${deviceId}`;
 const getActiveTrackingStateKey = (deviceId: string) => `${ACTIVE_TRACKING_STATE_PREFIX}${deviceId}`;
 const getActiveTrackingSelectionKey = (deviceId: string) => `${ACTIVE_TRACKING_SELECTION_PREFIX}${deviceId}`;
+
+const isTrackableBooking = (booking: Booking) =>
+  booking.status !== 'Completed' &&
+  booking.status !== 'Cancelled' &&
+  booking.status !== 'Cancelled with Reason';
+
+const getTrackableBookings = (bookings: Booking[], aircraftId?: string) =>
+  bookings
+    .filter((booking) => !aircraftId || booking.aircraftId === aircraftId)
+    .filter(isTrackableBooking)
+    .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
 
 const readQueuedFlightSession = (deviceId: string) => {
   if (typeof window === 'undefined') return null;
@@ -131,7 +145,22 @@ const getResumeTimestamp = (session: ActiveTrackingState | FlightSession) =>
   ('startedAt' in session && session.startedAt) ||
   'resume';
 
+const readInitialMapToggle = (key: string, fallback = true) => {
+  if (typeof window === 'undefined') return fallback;
+
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (stored === 'true') return true;
+    if (stored === 'false') return false;
+  } catch {
+    // keep fallback
+  }
+
+  return fallback;
+};
+
 export default function ActiveFlightPage() {
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { tenantId, userProfile, isLoading: isUserLoading } = useUserProfile();
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
@@ -146,10 +175,17 @@ export default function ActiveFlightPage() {
   const [sessionSetupOpen, setSessionSetupOpen] = useState(false);
   const [showLayerSelectorOpen, setShowLayerSelectorOpen] = useState(false);
   const [showLayerLevelsOpen, setShowLayerLevelsOpen] = useState(false);
+  const [followOwnship, setFollowOwnship] = useState(true);
+  const [centreMapNonce, setCentreMapNonce] = useState(0);
+  const [airportsVisible, setAirportsVisible] = useState(() => readInitialMapToggle('safeviate.active-flight-map-airports', true));
+  const [airportLabelsVisible, setAirportLabelsVisible] = useState(() => readInitialMapToggle('safeviate.active-flight-map-airport-labels', true));
+  const [navaidsVisible, setNavaidsVisible] = useState(() => readInitialMapToggle('safeviate.active-flight-map-navaids', true));
+  const [navaidLabelsVisible, setNavaidLabelsVisible] = useState(() => readInitialMapToggle('safeviate.active-flight-map-navaid-labels', true));
   const [isOnline, setIsOnline] = useState(true);
   const [hasQueuedSession, setHasQueuedSession] = useState(false);
   const selectionHydratedRef = useRef<string | null>(null);
   const resumeHydratedRef = useRef<string | null>(null);
+  const handoffHydratedRef = useRef<string | null>(null);
   const lastWriteRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
   useEffect(() => {
@@ -223,12 +259,23 @@ export default function ActiveFlightPage() {
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
   const sortedAircraft = useMemo(() => [...aircrafts].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber)), [aircrafts]);
   const selectedAircraft = useMemo(() => sortedAircraft.find((aircraft) => aircraft.id === selectedAircraftId) || null, [selectedAircraftId, sortedAircraft]);
-  const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
+  const candidateBookings = useMemo(() => getTrackableBookings(bookings, selectedAircraftId), [bookings, selectedAircraftId]);
   const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
   const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
   const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
   const selectedLegs = selectedBooking?.navlog?.legs || [];
+  const selectedRouteSignature = useMemo(
+    () =>
+      selectedLegs
+        .filter((leg) => leg.latitude !== undefined && leg.longitude !== undefined)
+        .map((leg) => `${leg.latitude!.toFixed(6)},${leg.longitude!.toFixed(6)}`)
+        .join('|'),
+    [selectedLegs]
+  );
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position), [selectedLegs, position]);
+  const handleCentreMap = () => {
+    setCentreMapNonce((current) => current + 1);
+  };
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
     speed: activeLegState?.groundSpeedKt ?? position?.speedKt ?? null,
@@ -243,6 +290,10 @@ export default function ActiveFlightPage() {
       ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50'
       : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50';
 
+  useEffect(() => {
+    setFollowOwnship(true);
+  }, [selectedRouteSignature]);
+
   const conflictingAircraftSession = useMemo(() => {
     if (!selectedAircraft || !deviceBinding?.deviceId) return null;
     return flightSessions.find((session) => session.status === 'active' && session.aircraftId === selectedAircraft.id && session.deviceId !== deviceBinding.deviceId) || null;
@@ -251,17 +302,22 @@ export default function ActiveFlightPage() {
   const handleAircraftSelectionChange = (aircraftId: string) => {
     setSelectedAircraftId(aircraftId);
     if (!deviceBinding?.deviceId) return;
-    const nextBooking = bookings.find((booking) => booking.aircraftId === aircraftId && (booking.navlog?.legs?.length || 0) > 0) || null;
+    const nextBooking = getTrackableBookings(bookings, aircraftId)[0] || null;
     const bookingId = nextBooking?.id || '';
     setSelectedBookingId(bookingId);
     saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId });
   };
 
   const handleBookingSelectionChange = (bookingId: string) => {
+    const nextBooking = bookings.find((booking) => booking.id === bookingId) || null;
+    const nextAircraftId = nextBooking?.aircraftId || selectedAircraftId;
+    if (nextAircraftId !== selectedAircraftId) {
+      setSelectedAircraftId(nextAircraftId);
+    }
     setSelectedBookingId(bookingId);
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
-      aircraftId: selectedAircraftId,
+      aircraftId: nextAircraftId,
       bookingId,
     });
   };
@@ -282,6 +338,45 @@ export default function ActiveFlightPage() {
       setSelectedBookingId(savedSelection.bookingId);
     }
   }, [deviceBinding?.deviceId]);
+
+  useEffect(() => {
+    if (!deviceBinding?.deviceId) return;
+
+    const requestedBookingId = searchParams.get('bookingId')?.trim() || '';
+    const requestedAircraftId = searchParams.get('aircraftId')?.trim() || '';
+    const requestedSetup = searchParams.get('setup');
+    const handoffKey = `${requestedAircraftId}:${requestedBookingId}:${requestedSetup || ''}`;
+
+    if (!requestedBookingId && !requestedAircraftId) return;
+    if (handoffHydratedRef.current === handoffKey) return;
+
+    const requestedBooking = requestedBookingId
+      ? getTrackableBookings(bookings).find((booking) => booking.id === requestedBookingId) || null
+      : null;
+    const nextAircraftId = requestedBooking?.aircraftId || requestedAircraftId;
+    const nextAircraft = nextAircraftId
+      ? sortedAircraft.find((aircraft) => aircraft.id === nextAircraftId) || null
+      : null;
+
+    if (!requestedBooking && !nextAircraft) return;
+
+    const nextBookingId =
+      requestedBooking?.id ||
+      (nextAircraftId ? getTrackableBookings(bookings, nextAircraftId)[0]?.id || '' : '');
+
+    setSelectedAircraftId(nextAircraft?.id || nextAircraftId);
+    setSelectedBookingId(nextBookingId);
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId: nextAircraft?.id || nextAircraftId,
+      bookingId: nextBookingId,
+    });
+
+    if (requestedSetup === '1') {
+      setSessionSetupOpen(true);
+    }
+
+    handoffHydratedRef.current = handoffKey;
+  }, [bookings, deviceBinding?.deviceId, searchParams, sortedAircraft]);
 
   useEffect(() => {
     if (!selectedAircraftId) return;
@@ -397,7 +492,7 @@ export default function ActiveFlightPage() {
       breadcrumb: buildBreadcrumb(existingSession?.breadcrumb, position),
       distanceToNextNm: activeLegState?.distanceToNextNm,
       bearingToNext: activeLegState?.bearingToNext,
-      etaToNextMinutes: activeLegState?.etaToNextMinutes,
+      etaToNextWaypointMinutes: activeLegState?.etaToNextWaypointMinutes,
       crossTrackErrorNm: activeLegState?.crossTrackErrorNm,
       onCourse: activeLegState?.onCourse,
       groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? undefined,
@@ -479,12 +574,31 @@ export default function ActiveFlightPage() {
     startWatching();
   };
 
-  const stopTrackingSession = () => {
+  const stopTrackingSession = async () => {
     stopWatching();
     setIsTrackingActive(false);
+    lastWriteRef.current = 0;
+
     if (!deviceBinding) return;
+
     clearActiveTrackingState(deviceBinding.deviceId);
-    void persistSessions(flightSessions.map((session) => session.deviceId === deviceBinding.deviceId ? { ...session, status: 'completed', endedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : session));
+    clearQueuedFlightSession(deviceBinding.deviceId);
+    setHasQueuedSession(false);
+    setFlightSessions((current) => current.filter((session) => session.deviceId !== deviceBinding.deviceId));
+
+    try {
+      const response = await fetch(`/api/flight-sessions?id=${deviceBinding.deviceId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error('Failed to end the active session.');
+      }
+      await reloadFlightSessions();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Stop Tracking Failed',
+        description: error instanceof Error ? error.message : 'The live session could not be cleared right now.',
+      });
+    }
   };
 
   function LegacyFullscreenFlightLayout({ children: _children }: { children?: unknown }) {
@@ -536,6 +650,9 @@ export default function ActiveFlightPage() {
             aircraftRegistration={selectedAircraft?.tailNumber}
             activeLegIndex={activeLegState?.activeLegIndex}
             activeLegState={activeLegState}
+            followOwnship={followOwnship}
+            onFollowOwnshipChange={setFollowOwnship}
+            centreMapNonce={centreMapNonce}
           />
         </div>
 
@@ -634,6 +751,9 @@ export default function ActiveFlightPage() {
           activeLegIndex={activeLegState?.activeLegIndex}
           activeLegState={activeLegState}
           fullscreen
+          followOwnship={followOwnship}
+          onFollowOwnshipChange={setFollowOwnship}
+          centreMapNonce={centreMapNonce}
         />
       </div>
     );
@@ -682,61 +802,139 @@ export default function ActiveFlightPage() {
     <>
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
         <Card className="flex h-full flex-col overflow-hidden border shadow-none">
-          <div className="sticky top-0 z-30 border-b bg-card">
-            <MainPageHeader title="Active Flight" />
-          </div>
           <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
-            <div className="sticky top-0 z-20 border-b bg-background px-4 py-3 md:px-6">
-              <div className="flex flex-wrap items-end justify-end gap-2" aria-label="Active flight action bar">
-                <div className="hidden flex-wrap items-end justify-end gap-2 md:flex">
-                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setSessionSetupOpen(true)}>
+            <div className="sticky top-0 z-20 border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
+              <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Active flight action bar">
+                <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
+                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setSessionSetupOpen(true)}>
                     <Settings2 className="h-4 w-4" />
                     Session Setup
                   </Button>
-                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setShowLayerSelectorOpen((current) => !current)}>
+                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerSelectorOpen((current) => !current)}>
                     <Layers3 className="h-4 w-4" />
                     Layers
                   </Button>
-                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setShowLayerLevelsOpen((current) => !current)}>
+                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerLevelsOpen((current) => !current)}>
                     <SlidersHorizontal className="h-4 w-4" />
                     Map Zoom
                   </Button>
-                  <Button asChild className={HEADER_ACTION_BUTTON_CLASS}>
-                    <Link href="/operations/fleet-tracker">
-                      <PlaneTakeoff size={14} className="mr-2" />
-                      Fleet Tracker
-                    </Link>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                    onClick={handleCentreMap}
+                  >
+                    <LocateFixed className="h-4 w-4" />
+                    Centre Map
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                    onClick={() => setFollowOwnship(false)}
+                  >
+                    North Up
+                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                      onClick={() => setFollowOwnship(true)}
+                  >
+                    Nose Up
                   </Button>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-sm font-medium shadow-sm hover:bg-muted md:hidden">
-                      <span className="flex items-center gap-2">
-                        <Settings2 className="h-4 w-4" />
-                        Actions
-                      </span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
-                    <DropdownMenuItem onClick={() => setSessionSetupOpen(true)}>
-                      <Settings2 className="mr-2 h-4 w-4" /> Session Setup
+                <div className="w-full md:hidden">
+                  <MobileActionDropdown icon={Settings2} label="Actions">
+                    <DropdownMenuItem
+                      onClick={() => setSessionSetupOpen(true)}
+                      className={MOBILE_ACTION_MENU_ITEM_CLASS}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      Session Setup
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowLayerSelectorOpen((current) => !current)}>
-                      <Layers3 className="mr-2 h-4 w-4" /> {showLayerSelectorOpen ? 'Hide Layers' : 'Show Layers'}
+                    <DropdownMenuCheckboxItem
+                      checked={showLayerSelectorOpen}
+                      onCheckedChange={(checked) => setShowLayerSelectorOpen(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      <Layers3 className="h-4 w-4" />
+                      Layers
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={showLayerLevelsOpen}
+                      onCheckedChange={(checked) => setShowLayerLevelsOpen(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Map Zoom
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuItem onClick={handleCentreMap} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
+                      <LocateFixed className="h-4 w-4" />
+                      Centre Map
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowLayerLevelsOpen((current) => !current)}>
-                      <SlidersHorizontal className="mr-2 h-4 w-4" /> {showLayerLevelsOpen ? 'Hide Map Zoom' : 'Show Map Zoom'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/operations/fleet-tracker">
-                        <PlaneTakeoff className="mr-2 h-4 w-4" /> Fleet Tracker
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    <DropdownMenuSeparator className="my-1 bg-slate-200" />
+                    <DropdownMenuRadioGroup
+                      value={followOwnship ? 'nose' : 'north'}
+                      onValueChange={(value) => setFollowOwnship(value === 'nose')}
+                    >
+                      <DropdownMenuRadioItem
+                        value="north"
+                        className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                      >
+                        North Up
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem
+                        value="nose"
+                        className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                      >
+                        Nose Up
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator className="my-1 bg-slate-200" />
+                    <DropdownMenuLabel className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                      Quick Declutter
+                    </DropdownMenuLabel>
+                    <DropdownMenuCheckboxItem
+                      checked={airportsVisible}
+                      onCheckedChange={(checked) => setAirportsVisible(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      Airports
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={airportLabelsVisible}
+                      onCheckedChange={(checked) => setAirportLabelsVisible(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      Airport Labels
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={navaidsVisible}
+                      onCheckedChange={(checked) => setNavaidsVisible(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      Navaids
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={navaidLabelsVisible}
+                      onCheckedChange={(checked) => setNavaidLabelsVisible(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      Navaid Labels
+                    </DropdownMenuCheckboxItem>
+                  </MobileActionDropdown>
+                </div>
               </div>
             </div>
+            <ActiveFlightTelemetryStrip
+              booking={selectedBooking}
+              legs={selectedLegs}
+              position={position}
+              activeLegIndex={activeLegState?.activeLegIndex}
+              activeLegState={activeLegState}
+              className="border-b border-slate-200 bg-background/95"
+            />
             <div className="relative min-h-0 flex-1 overflow-hidden">
               <div className="absolute inset-0">
                 <ActiveFlightLiveMap
@@ -751,6 +949,17 @@ export default function ActiveFlightPage() {
                   layerLevelsOpen={showLayerLevelsOpen}
                   onLayerSelectorOpenChange={setShowLayerSelectorOpen}
                   onLayerLevelsOpenChange={setShowLayerLevelsOpen}
+                  airportsVisible={airportsVisible}
+                  onAirportsVisibleChange={setAirportsVisible}
+                  airportLabelsVisible={airportLabelsVisible}
+                  onAirportLabelsVisibleChange={setAirportLabelsVisible}
+                  navaidsVisible={navaidsVisible}
+                  onNavaidsVisibleChange={setNavaidsVisible}
+                  navaidLabelsVisible={navaidLabelsVisible}
+                  onNavaidLabelsVisibleChange={setNavaidLabelsVisible}
+                  followOwnship={followOwnship}
+                  onFollowOwnshipChange={setFollowOwnship}
+                  centreMapNonce={centreMapNonce}
                 />
               </div>
             </div>
@@ -811,16 +1020,16 @@ export default function ActiveFlightPage() {
                 onChange={(event) => handleBookingSelectionChange(event.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-semibold ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <option value="">Select a booking with a navlog</option>
-                {candidateBookings.map((booking) => (
-                  <option key={booking.id} value={booking.id}>
-                    #{booking.bookingNumber} - {booking.date} - {(booking.navlog?.legs?.length || 0)} legs
-                  </option>
-                ))}
-              </select>
+                    <option value="">Select a booking</option>
+                    {candidateBookings.map((booking) => (
+                      <option key={booking.id} value={booking.id}>
+                        #{booking.bookingNumber} - {booking.date} - {(booking.navlog?.legs?.length || 0)} legs{!(booking.navlog?.legs?.length || 0) ? ' (no navlog yet)' : ''}
+                      </option>
+                    ))}
+                  </select>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <Button className={HEADER_ACTION_BUTTON_CLASS} disabled={!selectedAircraft || !!conflictingAircraftSession} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
+              <Button className={HEADER_ACTION_BUTTON_CLASS} disabled={!selectedAircraft} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
               <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} disabled={!isTrackingActive} onClick={stopTrackingSession}>Stop Tracking</Button>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/10 px-4 py-3 text-xs">

@@ -382,6 +382,7 @@ export default function SchedulePage() {
         <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
             <MainPageHeader 
                 title="Daily Schedule"
+                description=""
                 actions={
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>

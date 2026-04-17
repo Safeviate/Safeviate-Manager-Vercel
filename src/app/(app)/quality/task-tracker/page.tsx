@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -226,11 +225,20 @@ export default function TaskTrackerPage() {
 
   const renderOrgCard = (orgId: string | 'internal') => {
     const filteredTasks = allTasks.filter((task) => (orgId === 'internal' ? !task.organizationId : task.organizationId === orgId));
+    const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };
 
     return (
       <Card className="min-h-[400px] flex flex-col shadow-none border">
-        <MainPageHeader title="Task Tracker" description="Centralized oversight of all corrective actions and mitigation tasks across the organization." />
-        {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+        {shouldShowOrganizationTabs && (
+          <div className="w-full border-b border-border px-4 py-3" style={headerBandBorderStyle}>
+            <OrganizationTabsRow
+              organizations={organizations || []}
+              activeTab={activeOrgTab}
+              onTabChange={setActiveOrgTab}
+              className="border-0 bg-transparent px-0 py-0 shrink-0"
+            />
+          </div>
+        )}
         <CardContent className={cn('p-0', isMobile ? 'overflow-y-auto' : 'overflow-auto')}>
           {renderTasksTable(filteredTasks)}
         </CardContent>

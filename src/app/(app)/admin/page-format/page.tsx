@@ -51,7 +51,7 @@ export default function PageFormatPage() {
             value={activeTab}
             onValueChange={setActiveTab}
             placeholder="Select Section"
-            className="border-b bg-muted/5 px-6 py-3 shrink-0"
+            className="border-b bg-muted/5 px-3 py-2 shrink-0"
             options={[
               { value: 'branding', label: 'Branding & Colors', icon: Palette },
               { value: 'visibility', label: 'Access & Visibility', icon: Layers },

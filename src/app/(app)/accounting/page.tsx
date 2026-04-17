@@ -203,7 +203,7 @@ export default function AccountingPage() {
             value={activeTab}
             onValueChange={setActiveTab}
             placeholder="Filter View"
-            className="border-b bg-muted/5 px-6 py-3 shrink-0"
+            className="border-b bg-muted/5 px-3 py-2 shrink-0"
             options={[
               { value: 'unbilled', label: `Unbilled Flights (${enrichedData.unbilled.length})`, icon: ListFilter },
               { value: 'exported', label: `Export History (${enrichedData.exported.length})`, icon: ListFilter },

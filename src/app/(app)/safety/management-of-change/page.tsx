@@ -15,7 +15,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { MocActions } from './moc-actions';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
@@ -94,55 +94,62 @@ export default function ManagementOfChangePage() {
         const filteredMocs = (mocs || []).filter(moc =>
             orgId === 'internal' ? !moc.organizationId : moc.organizationId === orgId
         );
+        const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };
+
+        const proposeChangeAction = canViewAll && (
+            isMobile ? (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="h-11 w-auto min-w-[160px] flex justify-between items-center px-4 border-slate-200 bg-white font-black uppercase text-[11px] tracking-tight shadow-sm"
+                        >
+                            <div className="flex items-center gap-2">
+                                <PlusCircle className="h-4 w-4" />
+                                <span>Propose</span>
+                            </div>
+                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                        <DropdownMenuItem asChild>
+                            <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Propose New Change
+                            </Link>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ) : (
+                <Button
+                    asChild
+                    className={HEADER_ACTION_BUTTON_CLASS}
+                >
+                    <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
+                        <PlusCircle className="h-4 w-4" />
+                        Propose Change
+                    </Link>
+                </Button>
+            )
+        );
 
         return (
             <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-                <MainPageHeader
-                    title="Management of Change"
-                    description="Formal process for evaluating and managing changes to operations or procedures."
-                    actions={
-                        canViewAll && (
-                            isMobile ? (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="w-full h-11 flex justify-between items-center px-4 border-slate-200 bg-white font-black uppercase text-[11px] tracking-tight shadow-sm"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <PlusCircle className="h-4 w-4" />
-                                                <span>Propose</span>
-                                            </div>
-                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                                        <DropdownMenuItem asChild>
-                                            <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
-                                                <PlusCircle className="mr-2 h-4 w-4" />
-                                                Propose New Change
-                                            </Link>
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            ) : (
-                                <Button
-                                    asChild
-                                    className={HEADER_ACTION_BUTTON_CLASS}
-                                >
-                                    <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
-                                        <PlusCircle className="h-4 w-4" />
-                                        Propose Change
-                                    </Link>
-                                </Button>
-                            )
-                        )
-                    }
-                />
-
-                {shouldShowOrganizationTabs && (
-                    <OrganizationTabsRow organizations={organizations || []} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />
-                )}
+                <div className="flex flex-col bg-muted/5">
+                    <div className="w-full border-b border-border px-4 py-3" style={headerBandBorderStyle}>
+                        {shouldShowOrganizationTabs && (
+                            <OrganizationTabsRow
+                                organizations={organizations || []}
+                                activeTab={activeOrgTab}
+                                onTabChange={setActiveOrgTab}
+                                className="border-0 bg-transparent px-0 py-0 shrink-0"
+                            />
+                        )}
+                    </div>
+                    <div className="w-full border-b border-border px-4 py-3 flex justify-end" style={headerBandBorderStyle}>
+                        {proposeChangeAction}
+                    </div>
+                </div>
 
                 <CardContent className="flex-1 p-0 overflow-auto bg-background">
                     <Table>

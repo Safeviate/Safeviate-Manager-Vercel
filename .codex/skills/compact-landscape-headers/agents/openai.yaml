@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compact Landscape Headers"
+  short_description: "Compact shared headers on short mobile landscape screens"
+  default_prompt: "Use this skill to reduce shared app header and page-header density on short-height mobile landscape viewports across Safeviate pages, keeping desktop unchanged."

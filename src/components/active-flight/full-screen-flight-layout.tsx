@@ -1,6 +1,7 @@
 'use client';
 
 import { ActiveFlightLiveMap } from '@/components/active-flight/active-flight-live-map';
+import { ActiveFlightTelemetryStrip } from '@/components/active-flight/active-flight-telemetry-strip';
 import { Button } from '@/components/ui/button';
 import { DialogClose } from '@/components/ui/dialog';
 import type { Booking, NavlogLeg } from '@/types/booking';
@@ -14,6 +15,17 @@ type FullScreenFlightLayoutProps = {
   aircraftRegistration?: string;
   activeLegIndex?: number;
   activeLegState?: ActiveLegState | null;
+  followOwnship: boolean;
+  onFollowOwnshipChange: (followOwnship: boolean) => void;
+  centreMapNonce: number;
+  airportsVisible: boolean;
+  onAirportsVisibleChange: (open: boolean) => void;
+  airportLabelsVisible: boolean;
+  onAirportLabelsVisibleChange: (open: boolean) => void;
+  navaidsVisible: boolean;
+  onNavaidsVisibleChange: (open: boolean) => void;
+  navaidLabelsVisible: boolean;
+  onNavaidLabelsVisibleChange: (open: boolean) => void;
   heading: number | null;
   speed: number | null;
   altitude: number | null;
@@ -41,6 +53,17 @@ export function FullScreenFlightLayout({
   aircraftRegistration,
   activeLegIndex,
   activeLegState,
+  followOwnship,
+  onFollowOwnshipChange,
+  centreMapNonce,
+  airportsVisible,
+  onAirportsVisibleChange,
+  airportLabelsVisible,
+  onAirportLabelsVisibleChange,
+  navaidsVisible,
+  onNavaidsVisibleChange,
+  navaidLabelsVisible,
+  onNavaidLabelsVisibleChange,
   heading,
   speed,
   altitude,
@@ -63,6 +86,15 @@ export function FullScreenFlightLayout({
           </DialogClose>
         </div>
 
+        <ActiveFlightTelemetryStrip
+          booking={booking}
+          legs={legs}
+          position={position}
+          activeLegIndex={activeLegIndex}
+          activeLegState={activeLegState}
+          className="rounded-3xl border border-slate-200 bg-white shadow-sm"
+        />
+
         <div className="grid flex-1 gap-3 xl:min-h-[calc(100dvh-8.5rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.6fr)]">
           <div className="flex min-h-0 flex-col gap-3">
             <div className="fullscreen-lite-map flex-1 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm md:p-4 xl:min-h-0">
@@ -74,6 +106,17 @@ export function FullScreenFlightLayout({
                 activeLegIndex={activeLegIndex}
                 activeLegState={activeLegState}
                 compactLayout
+                followOwnship={followOwnship}
+                onFollowOwnshipChange={onFollowOwnshipChange}
+                centreMapNonce={centreMapNonce}
+                airportsVisible={airportsVisible}
+                onAirportsVisibleChange={onAirportsVisibleChange}
+                airportLabelsVisible={airportLabelsVisible}
+                onAirportLabelsVisibleChange={onAirportLabelsVisibleChange}
+                navaidsVisible={navaidsVisible}
+                onNavaidsVisibleChange={onNavaidsVisibleChange}
+                navaidLabelsVisible={navaidLabelsVisible}
+                onNavaidLabelsVisibleChange={onNavaidLabelsVisibleChange}
               />
             </div>
           </div>

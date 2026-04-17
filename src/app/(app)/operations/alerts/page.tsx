@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Alert } from '@/types/alert';
 import { AlertForm } from './alert-form';
@@ -126,16 +125,12 @@ export default function AlertsPage() {
     <div className="max-w-[1350px] mx-auto w-full flex flex-col h-full overflow-hidden px-1">
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-          <MainPageHeader
-            title="Operations Alerts"
-            actions={canCreateAlerts && <AlertForm onCreate={handleCreateAlert} />}
-          />
-
           <ResponsiveTabRow
             value={activeTab}
             onValueChange={setActiveTab}
             placeholder="Select Filter"
-            className="border-b bg-muted/5 px-6 py-3 shrink-0"
+            className="border-b bg-muted/5 px-3 py-2 shrink-0"
+            action={canCreateAlerts ? <AlertForm onCreate={handleCreateAlert} /> : null}
             options={tabs.map((tab) => ({
               value: tab.value,
               label: `${tab.label} (${tab.count})`,

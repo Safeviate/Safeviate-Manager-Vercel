@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parse } from 'date-fns';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -320,12 +319,11 @@ export default function BookingsHistoryPage() {
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full min-h-0 px-1">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
-          <MainPageHeader title="Bookings History" />
           <ResponsiveTabRow
             value={activeTab}
             onValueChange={setActiveTab}
             placeholder="Filter by Type"
-            className="border-b bg-muted/5 px-4 py-3 shrink-0"
+            className="border-b bg-muted/5 px-3 py-2 shrink-0"
             options={tabs.map((tab) => ({
               value: tab.value,
               label: tab.label,

@@ -41,16 +41,16 @@ export function BookingDetailHeader({
   return (
     <>
       {/* Primary Header Section (White background like Bookings History) */}
-      <div className="border-b px-4 py-4 md:px-6 overflow-x-hidden">
-        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div className="border-b px-3 py-3 md:px-4 overflow-x-hidden">
+        <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 space-y-1">
             <div className="flex min-w-0 items-start justify-between gap-3">
-              <h1 className="min-w-0 text-lg font-medium tracking-tight text-foreground uppercase break-words md:text-xl">
+              <h1 className="min-w-0 break-words text-base font-medium tracking-tight text-foreground uppercase md:text-lg">
                 {title}
               </h1>
               {status ? (
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <div className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-[10px] font-medium uppercase tracking-widest text-foreground shadow-sm">
+                  <div className="inline-flex h-7 items-center rounded-md border border-input bg-background px-2.5 text-[9px] font-medium uppercase tracking-widest text-foreground shadow-sm">
                     {status}
                   </div>
                   {approvalMeta ? (
@@ -64,7 +64,7 @@ export function BookingDetailHeader({
             {subtitleParts.map((part, index) => (
               <span
                 key={`${part}-${index}`}
-                className="block max-w-[72ch] break-words text-[9px] font-medium uppercase leading-4 tracking-[0.12em] text-muted-foreground md:text-[10px]"
+                className="block max-w-[72ch] break-words text-[8px] font-medium uppercase leading-4 tracking-[0.12em] text-muted-foreground md:text-[9px]"
               >
                 {part}
               </span>
@@ -72,9 +72,9 @@ export function BookingDetailHeader({
           </div>
           {flightHours ? (
             <div className="flex items-center gap-2 self-start md:self-auto">
-              <p className="text-[10px] font-medium uppercase text-muted-foreground">Flight Time</p>
-              <p className="flex items-center gap-2 text-sm md:text-base font-medium text-primary">
-                <Clock className="h-4 w-4 md:h-5 md:w-5" />
+              <p className="text-[9px] font-medium uppercase text-muted-foreground">Flight Time</p>
+              <p className="flex items-center gap-2 text-xs md:text-sm font-medium text-primary">
+                <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 {flightHours}h
               </p>
             </div>
@@ -86,7 +86,7 @@ export function BookingDetailHeader({
       {/* Navigation Sub-header (Muted background strip like Filter pins) */}
       <div className="sticky top-0 z-20 backdrop-blur-sm bg-transparent">
         <ResponsiveTabRow
-          className="relative shrink-0 border-b bg-muted/5 px-4 py-3 md:px-6"
+          className="relative shrink-0 border-b bg-muted/5 px-3 py-2 md:px-4"
           value={activeTab}
           onValueChange={onTabChange}
           placeholder="Select Section"

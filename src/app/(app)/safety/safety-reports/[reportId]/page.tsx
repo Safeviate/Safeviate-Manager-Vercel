@@ -137,13 +137,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         <div className="flex-1 overflow-hidden pb-10 no-print pt-0">
           <div className="rounded-xl border overflow-hidden flex flex-col bg-card shadow-none h-full">
             <div className="sticky top-0 z-30 bg-card">
-              <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 shrink-0">
+              <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3 shrink-0">
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
-                    <ShieldAlert className="h-6 w-6 text-primary shrink-0" />
+                  <CardTitle className="flex items-center gap-2 truncate text-xl font-black uppercase md:text-2xl">
+                    <ShieldAlert className="h-5 w-5 shrink-0 text-primary" />
                     Report {report.reportNumber}
                   </CardTitle>
-                  <CardDescription className="text-sm font-medium mt-1">
+                  <CardDescription className="mt-1 text-xs font-medium">
                     Filed on {format(new Date(report.submittedAt), 'PPP')} by <span className="text-foreground font-semibold">{report.submittedByName}</span>
                   </CardDescription>
                 </div>
@@ -152,13 +152,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                     report={report} 
                     tenantId={tenantId} 
                     trigger={
-                      <Button variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
+                      <Button variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
                           <Pencil className="h-3.5 w-3.5" />
                           Edit Report
                       </Button>
                     }
                   />
-                  <Button onClick={handlePrint} variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
+                  <Button onClick={handlePrint} variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
                       <Printer className="h-4 w-4" />
                       Print Report
                   </Button>

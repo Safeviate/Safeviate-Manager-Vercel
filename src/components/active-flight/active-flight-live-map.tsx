@@ -40,16 +40,16 @@ type OpenAipPointFeature = {
 
 const airportPointIcon = L.divIcon({
   className: '',
-  html: '<div style="width:12px;height:12px;border-radius:9999px;background:#2563eb;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(37,99,235,0.25);"></div>',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
+  html: '<div style="width:10px;height:10px;border-radius:9999px;background:#2563eb;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(37,99,235,0.22);"></div>',
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
 });
 
 const navaidPointIcon = L.divIcon({
   className: '',
-  html: '<div style="width:12px;height:12px;border-radius:4px;background:#7c3aed;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(124,58,237,0.22);"></div>',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
+  html: '<div style="width:10px;height:10px;clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);background:#7c3aed;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(124,58,237,0.18);"></div>',
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
 });
 
 const reportingPointIcon = L.divIcon({
@@ -59,7 +59,7 @@ const reportingPointIcon = L.divIcon({
   iconAnchor: [7, 10],
 });
 
-const openAipLabelClassName = 'active-flight-openaip-label';
+const openAipLabelClassName = 'openaip-layer-label';
 
 async function fetchOpenAipJson<T>(url: string): Promise<T | null> {
   try {
@@ -140,48 +140,24 @@ function MapInteractionWatcher({
 }
 
 function MapRecenterController({
-  routePoints,
   position,
-  recenterNonce,
-  recenterMode,
-  onDone,
+  centreMapNonce,
 }: {
-  routePoints: [number, number][];
   position: FlightPosition | null;
-  recenterNonce: number;
-  recenterMode: 'route' | 'position';
-  onDone: () => void;
+  centreMapNonce: number;
 }) {
   const map = useMap();
+  const lastHandledNonceRef = useRef(0);
 
   useEffect(() => {
-    if (recenterNonce === 0) return;
+    if (centreMapNonce === 0 || centreMapNonce === lastHandledNonceRef.current) return;
 
-    if (recenterMode === 'position') {
-      if (position) {
-        map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
-      }
-      onDone();
-      return;
-    }
-
-    if (routePoints.length > 1) {
-      map.fitBounds(L.latLngBounds(routePoints).pad(0.25), { animate: false });
-      onDone();
-      return;
-    }
-
-    if (routePoints.length === 1) {
-      map.setView(routePoints[0], map.getZoom(), { animate: false });
-      onDone();
-      return;
-    }
+    lastHandledNonceRef.current = centreMapNonce;
 
     if (position) {
       map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
-      onDone();
     }
-  }, [map, onDone, position, recenterMode, recenterNonce, routePoints]);
+  }, [centreMapNonce, map, position]);
 
   return null;
 }
@@ -855,10 +831,21 @@ export function ActiveFlightLiveMap({
   activeLegState,
   fullscreen = false,
   compactLayout = false,
+  followOwnship,
+  onFollowOwnshipChange,
+  centreMapNonce,
   layerSelectorOpen,
   layerLevelsOpen,
   onLayerSelectorOpenChange,
   onLayerLevelsOpenChange,
+  airportsVisible: airportsVisibleProp,
+  onAirportsVisibleChange,
+  airportLabelsVisible: airportLabelsVisibleProp,
+  onAirportLabelsVisibleChange,
+  navaidsVisible: navaidsVisibleProp,
+  onNavaidsVisibleChange,
+  navaidLabelsVisible: navaidLabelsVisibleProp,
+  onNavaidLabelsVisibleChange,
 }: {
   booking: Booking | null;
   legs: NavlogLeg[];
@@ -868,10 +855,21 @@ export function ActiveFlightLiveMap({
   activeLegState?: ActiveLegState | null;
   fullscreen?: boolean;
   compactLayout?: boolean;
+  followOwnship: boolean;
+  onFollowOwnshipChange: (followOwnship: boolean) => void;
+  centreMapNonce: number;
   layerSelectorOpen?: boolean;
   layerLevelsOpen?: boolean;
   onLayerSelectorOpenChange?: (open: boolean) => void;
   onLayerLevelsOpenChange?: (open: boolean) => void;
+  airportsVisible?: boolean;
+  onAirportsVisibleChange?: (open: boolean) => void;
+  airportLabelsVisible?: boolean;
+  onAirportLabelsVisibleChange?: (open: boolean) => void;
+  navaidsVisible?: boolean;
+  onNavaidsVisibleChange?: (open: boolean) => void;
+  navaidLabelsVisible?: boolean;
+  onNavaidLabelsVisibleChange?: (open: boolean) => void;
 }) {
   const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
     storageKey: 'safeviate.active-flight-map-zoom',
@@ -909,9 +907,6 @@ export function ActiveFlightLiveMap({
     [routePoints]
   );
   const [trackHistory, setTrackHistory] = useState<[number, number][]>([]);
-  const [followOwnship, setFollowOwnship] = useState(true);
-  const [recenterNonce, setRecenterNonce] = useState(0);
-  const [recenterMode, setRecenterMode] = useState<'route' | 'position'>('position');
   const [cacheNonce, setCacheNonce] = useState(0);
   const [cacheStatus, setCacheStatus] = useState('Ready to cache current view.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
@@ -936,10 +931,10 @@ export function ActiveFlightLiveMap({
   const [compactFullscreenOpen, setCompactFullscreenOpen] = useState(false);
   const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>('light');
   const [showOpenAipChart, setShowOpenAipChart] = useState(true);
-  const [airportsVisible, setAirportsVisible] = useState(true);
-  const [airportLabelsVisible, setAirportLabelsVisible] = useState(true);
-  const [navaidsVisible, setNavaidsVisible] = useState(true);
-  const [navaidLabelsVisible, setNavaidLabelsVisible] = useState(true);
+  const [internalAirportsVisible, setInternalAirportsVisible] = useState(true);
+  const [internalAirportLabelsVisible, setInternalAirportLabelsVisible] = useState(true);
+  const [internalNavaidsVisible, setInternalNavaidsVisible] = useState(true);
+  const [internalNavaidLabelsVisible, setInternalNavaidLabelsVisible] = useState(true);
   const [reportingVisible, setReportingVisible] = useState(true);
   const [reportingLabelsVisible, setReportingLabelsVisible] = useState(true);
   const [airspacesVisible, setAirspacesVisible] = useState(true);
@@ -966,6 +961,14 @@ export function ActiveFlightLiveMap({
   const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(false);
   const layerSelectorPanelOpen = layerSelectorOpen ?? showLayerSelectorPanel;
   const layerLevelsPanelOpen = layerLevelsOpen ?? showLayerLevelsPanel;
+  const airportsVisible = airportsVisibleProp ?? internalAirportsVisible;
+  const setAirportsVisible = onAirportsVisibleChange ?? setInternalAirportsVisible;
+  const airportLabelsVisible = airportLabelsVisibleProp ?? internalAirportLabelsVisible;
+  const setAirportLabelsVisible = onAirportLabelsVisibleChange ?? setInternalAirportLabelsVisible;
+  const navaidsVisible = navaidsVisibleProp ?? internalNavaidsVisible;
+  const setNavaidsVisible = onNavaidsVisibleChange ?? setInternalNavaidsVisible;
+  const navaidLabelsVisible = navaidLabelsVisibleProp ?? internalNavaidLabelsVisible;
+  const setNavaidLabelsVisible = onNavaidLabelsVisibleChange ?? setInternalNavaidLabelsVisible;
 
   useEffect(() => {
     try {
@@ -1114,10 +1117,6 @@ export function ActiveFlightLiveMap({
   ]);
 
   useEffect(() => {
-    setFollowOwnship(true);
-  }, [routeSignature]);
-
-  useEffect(() => {
     setRouteDownloadStatus(
       routePoints.length > 1 ? `Cache ${flightCacheLabel} route on this device.` : 'Load a flight route to cache it on this device.'
     );
@@ -1193,20 +1192,6 @@ export function ActiveFlightLiveMap({
     }
   }, [areaDownloadState, cacheState, refreshOfflineSummary, routeDownloadState]);
 
-  const handleFollowOwnship = () => {
-    setFollowOwnship(true);
-    setRecenterMode('position');
-    setRecenterNonce((current) => current + 1);
-  };
-  const handleNorthUp = () => {
-    setFollowOwnship(false);
-    setRecenterMode('route');
-    setRecenterNonce((current) => current + 1);
-  };
-  const handleCentre = () => {
-    setRecenterMode('position');
-    setRecenterNonce((current) => current + 1);
-  };
   const handleClearOpenAipCache = () => {
     setCacheStatus('Cache cleared.');
   };
@@ -1505,15 +1490,9 @@ export function ActiveFlightLiveMap({
               viewportFeatures={viewportFeatures}
               onViewportFeaturesLoaded={setViewportFeatures}
             />
-            <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
+            <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
             <MapResizeController />
-            <MapRecenterController
-              routePoints={routePoints}
-              position={position}
-              recenterNonce={recenterNonce}
-              recenterMode={recenterMode}
-              onDone={() => setRecenterNonce(0)}
-            />
+            <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
             <MapAreaCacheController
               cacheNonce={cacheNonce}
               areaDownloadNonce={areaDownloadNonce}
@@ -1634,6 +1613,17 @@ export function ActiveFlightLiveMap({
                 aircraftRegistration={aircraftRegistration}
                 activeLegIndex={activeLegIndex}
                 activeLegState={activeLegState}
+                followOwnship={followOwnship}
+                onFollowOwnshipChange={onFollowOwnshipChange}
+                centreMapNonce={centreMapNonce}
+                airportsVisible={airportsVisible}
+                onAirportsVisibleChange={setAirportsVisible}
+                airportLabelsVisible={airportLabelsVisible}
+                onAirportLabelsVisibleChange={setAirportLabelsVisible}
+                navaidsVisible={navaidsVisible}
+                onNavaidsVisibleChange={setNavaidsVisible}
+                navaidLabelsVisible={navaidLabelsVisible}
+                onNavaidLabelsVisibleChange={setNavaidLabelsVisible}
                 heading={position?.headingTrue ?? null}
                 speed={position?.speedKt ?? null}
                 altitude={position?.altitude ?? null}
@@ -1646,33 +1636,6 @@ export function ActiveFlightLiveMap({
               />
             </DialogContent>
           </Dialog>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
-            onClick={handleFollowOwnship}
-          >
-            Nose Up
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
-            onClick={handleNorthUp}
-          >
-            North Up
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
-            onClick={handleCentre}
-          >
-            Centre
-          </Button>
         </div>
         <style jsx global>{`
           .fullscreen-map-shell .leaflet-top.leaflet-left {
@@ -1693,15 +1656,20 @@ export function ActiveFlightLiveMap({
           }
 
           .fullscreen-map-shell .nose-up-map .${openAipLabelClassName} {
-            background: transparent;
+            display: inline-block;
+            width: max-content;
+            height: max-content;
+            background: #ffffff;
             border: 0;
-            border-radius: 0;
+            border-radius: 2px;
             box-shadow: none;
             color: #1d4ed8;
             font-size: 7px;
             font-weight: 800;
             letter-spacing: 0.04em;
-            padding: 0;
+            line-height: 1;
+            padding: 1px 4px;
+            white-space: nowrap;
             text-transform: uppercase;
           }
 
@@ -1761,15 +1729,9 @@ export function ActiveFlightLiveMap({
                 viewportFeatures={viewportFeatures}
                 onViewportFeaturesLoaded={setViewportFeatures}
               />
-              <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
+              <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
               <MapResizeController />
-            <MapRecenterController
-              routePoints={routePoints}
-              position={position}
-              recenterNonce={recenterNonce}
-              recenterMode={recenterMode}
-              onDone={() => setRecenterNonce(0)}
-            />
+              <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
               <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
 
               {routePoints.length > 1 && (
@@ -2018,15 +1980,20 @@ export function ActiveFlightLiveMap({
           }
 
           .nose-up-map :global(.${openAipLabelClassName}) {
-            background: transparent;
+            display: inline-block;
+            width: max-content;
+            height: max-content;
+            background: #ffffff;
             border: 0;
-            border-radius: 0;
+            border-radius: 2px;
             box-shadow: none;
             color: #1d4ed8;
             font-size: 7px;
             font-weight: 800;
             letter-spacing: 0.04em;
-            padding: 0;
+            line-height: 1;
+            padding: 1px 4px;
+            white-space: nowrap;
             text-transform: uppercase;
           }
 
@@ -2095,35 +2062,6 @@ export function ActiveFlightLiveMap({
             </Button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={handleNorthUp}
-          >
-            North Up
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={handleFollowOwnship}
-          >
-            Nose Up
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={handleCentre}
-          >
-            Centre
-          </Button>
-        </div>
       </div>
 
       <div className="relative overflow-hidden rounded-2xl">
@@ -2162,15 +2100,9 @@ export function ActiveFlightLiveMap({
             viewportFeatures={viewportFeatures}
             onViewportFeaturesLoaded={setViewportFeatures}
           />
-          <MapInteractionWatcher onUserInteracted={() => setFollowOwnship(false)} />
+          <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
           <MapResizeController />
-          <MapRecenterController
-            routePoints={routePoints}
-            position={position}
-            recenterNonce={recenterNonce}
-            recenterMode={recenterMode}
-            onDone={() => setRecenterNonce(0)}
-          />
+          <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
           <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
 
           {routePoints.length > 1 && (

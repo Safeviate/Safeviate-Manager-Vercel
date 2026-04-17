@@ -14,7 +14,6 @@ import { ImplementationForm, type ImplementationFormHandle } from './implementat
 import { ApprovalForm } from './approval-form';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,39 +151,39 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
         
         {/* --- STICKY HEADER SECTION --- */}
         <div className="sticky top-0 z-30 bg-card rounded-xl border overflow-hidden flex flex-col shadow-none mb-6 no-print shrink-0">
-            <CardHeader className="bg-muted/5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 shrink-0">
+            <CardHeader className="bg-muted/5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3 shrink-0">
                 <div className="flex-1 min-w-0">
-                    <CardTitle className="text-2xl flex items-center gap-2 font-black uppercase truncate">
+                    <CardTitle className="flex items-center gap-2 truncate text-xl font-black uppercase md:text-2xl">
                         {moc.mocNumber}: {moc.title}
                     </CardTitle>
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
                         <DetailItem label="Status" value={moc.status} />
-                        <Separator orientation="vertical" className="h-8 hidden md:block" />
+                        <Separator orientation="vertical" className="hidden h-6 md:block" />
                         <DetailItem label="Department" value={departmentMap.get(moc.proposingDepartmentId)} />
-                        <Separator orientation="vertical" className="h-8 hidden md:block" />
+                        <Separator orientation="vertical" className="hidden h-6 md:block" />
                         <DetailItem label="Responsible" value={personnelMap.get(moc.responsiblePersonId)} />
-                        <Separator orientation="vertical" className="h-8 hidden md:block" />
+                        <Separator orientation="vertical" className="hidden h-6 md:block" />
                         <DetailItem label="Proposed" value={format(parseLocalDate(moc.proposalDate), 'dd MMM yyyy')} />
                     </div>
                 </div>
             </CardHeader>
 
-                    <div className="border-b bg-muted/5 px-6 py-3 shrink-0">
-                <div className="flex flex-col gap-4">
+                    <div className="border-b bg-muted/5 px-4 py-2 shrink-0 md:px-5">
+                <div className="flex flex-col gap-3">
                     {/* UNIFIED MOBILE TACTICAL DROPDOWN */}
                     {isMobile ? (
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                                <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
                                     size="default"
-                                    className="w-full justify-between"
+                                    className="h-8 w-full justify-between px-3 text-[10px]"
                                 >
                                     <div className="flex items-center gap-2">
-                                        <MoreHorizontal className="h-4 w-4" />
+                                        <MoreHorizontal className="h-3.5 w-3.5" />
                                         <span>Tactical Actions & Navigation</span>
                                     </div>
-                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)]">
@@ -224,12 +223,12 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <div className="flex flex-row items-center justify-between gap-4">
-                            <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center shrink-0">
-                                <TabsTrigger value="implementation" className="h-10 rounded-md px-4 text-sm font-medium border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground transition-all shrink-0">
+                        <div className="flex flex-row items-center justify-between gap-3">
+                            <TabsList className="bg-transparent h-auto p-0 gap-1.5 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center shrink-0">
+                                <TabsTrigger value="implementation" className="h-8 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground transition-all shrink-0">
                                     Implementation & Strategy
                                 </TabsTrigger>
-                                <TabsTrigger value="approval" className="h-10 rounded-md px-4 text-sm font-medium border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground transition-all shrink-0">
+                                <TabsTrigger value="approval" className="h-8 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground transition-all shrink-0">
                                     Approval & Sign-off
                                 </TabsTrigger>
                             </TabsList>
@@ -242,7 +241,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                             variant="outline" 
                                             size="default" 
                                             onClick={() => implementationFormRef.current?.analyze()} 
-                                            className="gap-2"
+                                            className="h-8 gap-1.5 px-3 text-[9px] font-black uppercase tracking-[0.16em]"
                                         >
                                             <WandSparkles className="h-3.5 w-3.5 text-primary" />
                                             AI Analyze
@@ -252,7 +251,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                             variant="outline" 
                                             size="default" 
                                             onClick={() => implementationFormRef.current?.addPhase()} 
-                                            className="gap-2"
+                                            className="h-8 gap-1.5 px-3 text-[9px] font-black uppercase tracking-[0.16em]"
                                         >
                                             <PlusCircle className="h-3.5 w-3.5 text-emerald-600" />
                                             Add Phase
@@ -261,14 +260,14 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
                                             type="button" 
                                             size="default" 
                                             onClick={() => implementationFormRef.current?.submit()} 
-                                            className={HEADER_ACTION_BUTTON_CLASS}
+                                            className="h-8 gap-1.5 rounded-md bg-primary px-3 text-[9px] font-black uppercase tracking-[0.16em] text-primary-foreground shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
                                         >
                                             <ShieldCheck className="h-3.5 w-3.5" />
                                             Save Strategy
                                         </Button>
                                     </>
                                 )}
-                                <Button onClick={handlePrint} variant="outline" size="default" className="gap-2">
+                                <Button onClick={handlePrint} variant="outline" size="default" className="h-8 gap-1.5 px-3 text-[9px] font-black uppercase tracking-[0.16em]">
                                     <Printer className="h-4 w-4" />
                                     Print
                                 </Button>

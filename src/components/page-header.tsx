@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from 'react';
-import { CardHeader, CardTitle } from '@/components/ui/card';
+import { CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 export const HEADER_ACTION_BUTTON_CLASS =
@@ -12,10 +12,10 @@ export const HEADER_MOBILE_ACTION_BUTTON_CLASS =
   "h-10 w-full justify-between border-[hsl(var(--header-button-border))] bg-[hsl(var(--header-button-background))] px-4 py-2 text-sm font-medium text-[hsl(var(--header-button-foreground))] shadow-sm hover:bg-[hsl(var(--header-button-hover))]";
 
 export const HEADER_TAB_LIST_CLASS =
-  "bg-transparent h-auto p-0 gap-2 border-0 rounded-md justify-start flex min-w-max flex-nowrap shadow-none";
+  "bg-transparent h-auto p-0 gap-1.5 border-0 rounded-md justify-start flex min-w-max flex-nowrap shadow-none";
 
 export const HEADER_TAB_TRIGGER_CLASS =
-  "h-10 rounded-md px-4 text-sm font-medium transition-all shadow-none border border-input gap-2 shrink-0 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
+  "h-8 rounded-md px-3 text-[9px] font-medium uppercase tracking-[0.08em] transition-all shadow-none border border-input gap-1.5 shrink-0 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
 const DEFAULT_HEADER_DESCRIPTIONS: Record<string, string> = {
   'Flight Billing': 'Review completed flights ready for billing and export.',
@@ -54,10 +54,8 @@ interface MainPageHeaderProps {
 }
 
 /**
- * Standardized MainPageHeader as per UI Source of Truth.
- * Layout: flex flex-col lg:flex-row lg:items-center lg:justify-between
- * Title: text-xl sm:text-2xl font-black uppercase truncate font-headline
- * Description: text-xs sm:text-sm font-medium text-muted-foreground
+ * Shared supporting header for pages that already expose the title in the app top bar.
+ * Keep this strip slim and use it for secondary description text and in-page actions.
  */
 export const MainPageHeader: FC<MainPageHeaderProps> = ({
   title,
@@ -65,26 +63,24 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
   actions,
   className
 }) => {
-  const resolvedDescription = description?.trim() || DEFAULT_HEADER_DESCRIPTIONS[title] || 'Overview of this section.';
+  const hasExplicitDescription = description !== undefined;
+  const resolvedDescription = hasExplicitDescription
+    ? description?.trim()
+    : DEFAULT_HEADER_DESCRIPTIONS[title] || 'Overview of this section.';
 
   return (
-    <div className={cn("flex flex-col w-full shrink-0 border-b bg-muted/5", className)}>
-      <CardHeader
-        className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-4 md:p-6 gap-4"
-      >
+    <div className={cn("main-page-header flex w-full shrink-0 flex-col border-b bg-muted/5", className)}>
+      <CardHeader className="main-page-header__header flex flex-col gap-2 px-3 py-2 md:px-4 md:py-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
-          <CardTitle className="text-xl sm:text-2xl font-black uppercase truncate font-headline tracking-tight">
-            {title}
-          </CardTitle>
           {resolvedDescription ? (
-            <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+            <p className="main-page-header__description text-[10px] font-medium text-muted-foreground sm:text-xs">
               {resolvedDescription}
             </p>
           ) : null}
         </div>
 
         {actions && (
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto mt-2 lg:mt-0">
+          <div className="flex w-full flex-wrap items-center gap-1.5 lg:w-auto [&_button]:h-8 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-[9px] [&_button]:tracking-[0.08em] [&_a]:h-8 [&_a]:gap-1.5 [&_a]:px-3 [&_a]:text-[9px] [&_a]:tracking-[0.08em]">
             {actions}
           </div>
         )}

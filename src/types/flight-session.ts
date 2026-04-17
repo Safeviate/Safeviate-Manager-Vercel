@@ -34,7 +34,7 @@ export interface FlightSession {
   breadcrumb?: FlightPosition[];
   distanceToNextNm?: number;
   bearingToNext?: number;
-  etaToNextMinutes?: number;
+  etaToNextWaypointMinutes?: number;
   groundSpeedKt?: number;
   crossTrackErrorNm?: number;
   onCourse?: boolean;
@@ -46,7 +46,7 @@ export interface ActiveLegState {
   toWaypoint?: string;
   distanceToNextNm?: number;
   bearingToNext?: number;
-  etaToNextMinutes?: number;
+  etaToNextWaypointMinutes?: number;
   groundSpeedKt?: number;
   crossTrackErrorNm?: number;
   onCourse?: boolean;

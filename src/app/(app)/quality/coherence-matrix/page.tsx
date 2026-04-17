@@ -969,15 +969,15 @@ export default function CoherenceMatrixPage() {
                     activeTab={activeOrgTab}
                     onTabChange={setActiveOrgTab}
                     buttonLikeTabs
-                    className="px-4 py-3 border-b bg-muted/5 shrink-0 md:px-6"
+                    className="px-3 py-2 border-b bg-muted/5 shrink-0 md:px-4"
                 />
             )}
 
-            <div className="border-b bg-muted/5 px-4 py-3 shrink-0 md:px-6">
+            <div className="border-b bg-muted/5 px-3 py-2 shrink-0 md:px-4">
                 <Tabs value={regulationTabToUiValue(activeRegulationTab)} onValueChange={(value) => setActiveRegulationTab(uiValueToRegulationTab(value))} className="w-full">
-                    <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center gap-2">
+                    <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center gap-1.5">
                         {REGULATION_TABS.map((tab) => (
-                            <TabsTrigger key={tab.value} value={regulationTabToUiValue(tab.value)} className="rounded-md h-10 px-4 py-2 border text-sm font-medium data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
+                            <TabsTrigger key={tab.value} value={regulationTabToUiValue(tab.value)} className="rounded-md h-8 px-3 text-[9px] font-black uppercase tracking-[0.08em] border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
                                 {tab.label}
                             </TabsTrigger>
                         ))}

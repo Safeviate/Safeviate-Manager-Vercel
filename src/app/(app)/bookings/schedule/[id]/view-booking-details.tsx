@@ -2,13 +2,14 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import type { Booking, BookingWorkflowCompletion, NavlogLeg, ChecklistPhoto } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Map as MapIcon, Loader2, X, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, ClipboardCheck, CheckCircle2 } from 'lucide-react';
+import { Save, AlertTriangle, Map as MapIcon, Loader2, X, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, ClipboardCheck, CheckCircle2, PlaneTakeoff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -141,6 +142,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         const student = personnel.find((person) => person.id === booking.studentId);
         return student ? `${student.firstName} ${student.lastName}` : booking.studentId;
     }, [personnel, booking.studentId]);
+    const canTrackFlight = (booking.navlog?.legs?.length || 0) > 0
+        && booking.status !== 'Completed'
+        && booking.status !== 'Cancelled'
+        && booking.status !== 'Cancelled with Reason';
     const isAssignedInstructor = !!userProfile && booking.instructorId === userProfile.id;
     const canManuallyApprove = isAssignedInstructor || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.role?.toLowerCase() === 'dev';
     const [graphConfig, setGraphConfig] = useState(DEFAULT_GRAPH_CONFIG);
@@ -574,6 +579,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     headerAction={<BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
                     tabRowAction={
                         <div className="flex items-center gap-2">
+                            {canTrackFlight && (
+                                <Button asChild size="sm" className="h-8 bg-sky-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-sky-800">
+                                    <Link href={`/operations/active-flight?bookingId=${encodeURIComponent(booking.id)}&aircraftId=${encodeURIComponent(booking.aircraftId)}&setup=1`}>
+                                        <PlaneTakeoff className="mr-2 h-3.5 w-3.5" />
+                                        Track Flight
+                                    </Link>
+                                </Button>
+                            )}
                             {activeTab === 'planning' && (
                                 <>
                                     <Button

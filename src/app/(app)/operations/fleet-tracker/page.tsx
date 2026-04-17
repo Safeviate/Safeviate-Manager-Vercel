@@ -2,19 +2,20 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Layers3, Loader2, RadioTower, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { Layers3, Loader2, RadioTower, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenuCheckboxItem, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { FlightSession } from '@/types/flight-session';
 import { getFlightSessionFreshnessLabel, isFlightSessionStale } from '@/lib/flight-session-status';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
-import { MainPageHeader, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { MOBILE_ACTION_MENU_ITEM_CLASS, MOBILE_ACTION_MENU_STATE_ITEM_CLASS, MobileActionDropdown } from '@/components/mobile-action-dropdown';
 
 const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-tracker-map').then((module) => module.FleetTrackerMap), {
   ssr: false,
@@ -186,67 +187,75 @@ export default function FleetTrackerPage() {
     <>
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
         <Card className="flex h-full flex-col overflow-hidden border shadow-none">
-          <div className="sticky top-0 z-30 border-b bg-card">
-            <MainPageHeader title="Fleet Tracker" />
-          </div>
           <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
-            <div className="sticky top-0 z-20 border-b bg-background px-4 py-3 md:px-6">
-              <div className="flex flex-wrap items-end justify-end gap-2" aria-label="Fleet tracker action bar">
-                <div className="hidden flex-wrap items-end justify-end gap-2 md:flex">
-                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => void loadSessions()} disabled={isRefreshing}>
+            <div className="sticky top-0 z-20 border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
+              <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Fleet tracker action bar">
+                <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
+                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => void loadSessions()} disabled={isRefreshing}>
                     <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                     {isRefreshing ? 'Refreshing' : 'Refresh'}
                   </Button>
-                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setShowLayerSelectorOpen((current) => !current)}>
+                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerSelectorOpen((current) => !current)}>
                     <Layers3 className="h-4 w-4" />
                     Layers
                   </Button>
-                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setShowLayerLevelsOpen((current) => !current)}>
+                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerLevelsOpen((current) => !current)}>
                     <SlidersHorizontal className="h-4 w-4" />
                     Map Zoom
                   </Button>
-                  <Button type="button" variant="outline" className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur" onClick={() => setActiveBroadcastsOpen(true)}>
+                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setActiveBroadcastsOpen(true)}>
                     <RadioTower className="h-4 w-4" />
                     Active Broadcasts
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-10 gap-2 border bg-background/90 px-4 text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur"
+                    className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
                     onClick={() => void clearAllStaleSessions()}
                     disabled={staleSessionCount === 0 || isEndingStaleSessions}
                   >
                     {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
                   </Button>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-sm font-medium shadow-sm hover:bg-muted md:hidden">
-                      <span className="flex items-center gap-2">
-                        <RadioTower className="h-4 w-4" />
-                        Actions
-                      </span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
-                    <DropdownMenuItem onClick={() => void loadSessions()} disabled={isRefreshing}>
-                      <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} /> {isRefreshing ? 'Refreshing' : 'Refresh'}
+                <div className="w-full md:hidden">
+                  <MobileActionDropdown icon={RadioTower} label="Actions">
+                    <DropdownMenuItem
+                      onClick={() => void loadSessions()}
+                      disabled={isRefreshing}
+                      className={MOBILE_ACTION_MENU_ITEM_CLASS}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      {isRefreshing ? 'Refreshing' : 'Refresh'}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowLayerSelectorOpen((current) => !current)}>
-                      <Layers3 className="mr-2 h-4 w-4" /> {showLayerSelectorOpen ? 'Hide Layers' : 'Show Layers'}
+                    <DropdownMenuCheckboxItem
+                      checked={showLayerSelectorOpen}
+                      onCheckedChange={(checked) => setShowLayerSelectorOpen(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      <Layers3 className="h-4 w-4" />
+                      Layers
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={showLayerLevelsOpen}
+                      onCheckedChange={(checked) => setShowLayerLevelsOpen(Boolean(checked))}
+                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Map Zoom
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuItem onClick={() => setActiveBroadcastsOpen(true)} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
+                      <RadioTower className="h-4 w-4" />
+                      Active Broadcasts
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowLayerLevelsOpen((current) => !current)}>
-                      <SlidersHorizontal className="mr-2 h-4 w-4" /> {showLayerLevelsOpen ? 'Hide Map Zoom' : 'Show Map Zoom'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setActiveBroadcastsOpen(true)}>
-                      <RadioTower className="mr-2 h-4 w-4" /> Active Broadcasts
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void clearAllStaleSessions()} disabled={staleSessionCount === 0 || isEndingStaleSessions}>
+                    <DropdownMenuItem
+                      onClick={() => void clearAllStaleSessions()}
+                      disabled={staleSessionCount === 0 || isEndingStaleSessions}
+                      className={MOBILE_ACTION_MENU_ITEM_CLASS}
+                    >
                       {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
                     </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </MobileActionDropdown>
+                </div>
               </div>
             </div>
             <div className="relative min-h-0 flex-1 overflow-hidden">

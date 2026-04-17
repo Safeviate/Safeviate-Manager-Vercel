@@ -1384,8 +1384,8 @@ export default function AeronauticalMap({
   const airportPointIcon = useMemo(() => featurePointIcon('#2563eb'), [featurePointIcon]);
   const navaidPointIcon = useMemo(() => featurePointIcon('#7c3aed'), [featurePointIcon]);
   const reportingPointIcon = useMemo(() => featurePointIcon('#d97706'), [featurePointIcon]);
-  const labelClassName = 'rounded-md border border-slate-200 bg-white/95 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-900 shadow-sm';
-  const airspaceLabelClassName = 'rounded-md border border-slate-300 bg-white/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-900 shadow-sm';
+  const labelClassName = 'openaip-layer-label';
+  const airspaceLabelClassName = 'openaip-layer-label';
   const obstaclePointToLayer = useCallback((feature: any, latlng: L.LatLngExpression) => {
     const height = feature?.properties?.height;
     return L.circleMarker(latlng, {
