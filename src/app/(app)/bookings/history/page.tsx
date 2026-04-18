@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parse } from 'date-fns';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import {
@@ -30,6 +29,8 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type EnrichedBooking = Booking & {
   aircraftTailNumber?: string;
@@ -59,6 +60,8 @@ const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondar
         default: return 'secondary';
     }
 }
+
+const getStatusLabel = (status: Booking['status']) => (status === 'Completed' ? 'Complete' : status);
 
 type BookingBuckets = {
   all: EnrichedBooking[];
@@ -132,13 +135,15 @@ const BookingsTable = ({
   tenantId,
   canDeleteBookings,
   canDeleteCompletedBookings,
+  isLoading,
 }: {
   bookings: EnrichedBooking[];
   tenantId: string;
   canDeleteBookings: boolean;
   canDeleteCompletedBookings: boolean;
+  isLoading: boolean;
 }) => {
-    if (bookings.length === 0) {
+    if (!isLoading && bookings.length === 0) {
         return (
             <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">
               No bookings found for this category.
@@ -147,76 +152,105 @@ const BookingsTable = ({
     }
     
     return (
-         <div className="w-full overflow-x-auto">
-            <Table className="min-w-[760px]">
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">#</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Aircraft</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Creator</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Instructor</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Student</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Start Time</TableHead>
-                      <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Flight Time</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
-                      <TableHead className='text-right text-[10px] uppercase font-bold tracking-wider'>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {bookings.map(b => {
-                        const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
-                            ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
-                            : null;
+        <ResponsiveCardGrid
+            items={bookings}
+            isLoading={isLoading}
+            loadingCount={4}
+            className="p-4"
+            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+            renderItem={(b) => {
+                const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
+                    ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
+                    : null;
+                const isMuted = b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed';
 
-                        return (
-                            <TableRow key={b.id} className={cn((b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed') && 'text-muted-foreground')}>
-                                <TableCell className="font-mono text-sm font-medium text-primary whitespace-nowrap">{getBookingTypeAbbreviation(b.type)}{b.bookingNumber}</TableCell>
-                                <TableCell className="text-sm font-medium text-foreground uppercase">{b.aircraftTailNumber}</TableCell>
-                                <TableCell className="text-sm font-medium text-foreground">{b.creatorName}</TableCell>
-                                <TableCell className="text-sm font-medium text-foreground">{b.instructorName || 'N/A'}</TableCell>
-                                <TableCell className="text-sm font-medium text-foreground">{b.studentName || 'N/A'}</TableCell>
-                                <TableCell className="text-sm font-medium text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</TableCell>
-                                <TableCell className="text-right text-sm font-medium text-foreground whitespace-nowrap">
-                                    {flightHours !== null ? (
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Clock className="h-3 w-3" />
-                                            {flightHours}h
-                                        </div>
-                                    ) : '-'}
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap">
-                                    <Badge variant={getStatusBadgeVariant(b.status)} className="text-[10px] font-black uppercase py-0.5">{b.status}</Badge>
-                                </TableCell>
-                                <TableCell className='text-right whitespace-nowrap'>
-                                    <div className="flex justify-end gap-2">
-                                        <Button asChild variant="outline" size="compact" className="border-slate-300">
-                                            <Link href={`/bookings/history/${b.id}`}>
-                                                <Eye className="h-4 w-4" />
-                                                View
-                                            </Link>
-                                        </Button>
-                                        {b.type === 'Training Flight' && b.status === 'Completed' && (
-                                            <Button asChild variant="secondary" size="icon" className="h-8 w-8">
-                                                <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
-                                                    <FilePlus className="h-4 w-4" />
-                                                    <span className="sr-only">Debrief</span>
-                                                </Link>
-                                            </Button>
-                                        )}
-                                        <DeleteBookingButton
-                                          booking={b}
-                                          tenantId={tenantId}
-                                          canDelete={canDeleteBookings}
-                                          canDeleteCompleted={canDeleteCompletedBookings}
-                                        />
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
-         </div>
+                return (
+                    <Card key={b.id} className={cn("overflow-hidden border shadow-none transition-shadow hover:shadow-sm", isMuted && "text-muted-foreground")}>
+                        <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                            <div className="min-w-0 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
+                                        {getBookingTypeAbbreviation(b.type)}{b.bookingNumber}
+                                    </p>
+                                    <Badge variant="outline" className="h-6 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.08em]">
+                                        {b.type}
+                                    </Badge>
+                                </div>
+                                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                    {b.aircraftTailNumber}
+                                </p>
+                            </div>
+                            <Badge variant={getStatusBadgeVariant(b.status)} className="text-[10px] font-black uppercase py-0.5">
+                                {getStatusLabel(b.status)}
+                            </Badge>
+                        </CardHeader>
+                        <CardContent className="space-y-4 px-4 py-4">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-lg border bg-background px-3 py-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Creator</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.creatorName}</p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-3 py-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Instructor</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.instructorName || 'N/A'}</p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-3 py-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Student</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.studentName || 'N/A'}</p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-3 py-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Start Time</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-lg border bg-background px-3 py-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Flight Time</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground">
+                                        {flightHours !== null ? (
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                {flightHours}h
+                                            </span>
+                                        ) : '-'}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-3 py-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground uppercase">{b.aircraftTailNumber}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                                <Button asChild variant="outline" size="compact" className="border-slate-300">
+                                    <Link href={`/bookings/history/${b.id}`}>
+                                        <Eye className="h-4 w-4" />
+                                        View
+                                    </Link>
+                                </Button>
+                                {b.type === 'Training Flight' && b.status === 'Completed' && (
+                                    <Button asChild variant="secondary" size="icon" className="h-8 w-8">
+                                        <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                            <FilePlus className="h-4 w-4" />
+                                            <span className="sr-only">Debrief</span>
+                                        </Link>
+                                    </Button>
+                                )}
+                                <DeleteBookingButton
+                                  booking={b}
+                                  tenantId={tenantId}
+                                  canDelete={canDeleteBookings}
+                                  canDeleteCompleted={canDeleteCompletedBookings}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                );
+            }}
+            renderLoadingItem={(index) => <Skeleton key={index} className="h-56 w-full rounded-lg" />}
+            emptyState={<div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">No bookings found for this category.</div>}
+        />
     )
 }
 
@@ -279,7 +313,7 @@ export default function BookingsHistoryPage() {
         return {
         ...b,
         aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
-        creatorName: userMap.get(b.createdById || '') || 'Unknown Creator',
+        creatorName: (b as Booking & { createdByName?: string }).createdByName || userMap.get(b.createdById || '') || 'Unknown Creator',
         instructorName: userMap.get(b.instructorId || '') || (b.instructorId ? b.instructorId : undefined),
         studentName: userMap.get(b.studentId || '') || (b.studentId ? b.studentId : undefined),
         fullStartTime: fullStartTime,
@@ -333,11 +367,11 @@ export default function BookingsHistoryPage() {
           />
           <CardContent className='p-0 flex-1 min-h-0'>
                 <div className={cn("overflow-auto", isMobile ? "h-full min-h-0" : "h-[calc(100vh-21rem)]")}>
-                    <TabsContent value="all" className='m-0'><BookingsTable bookings={bookingBuckets.all} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
-                    <TabsContent value="training" className='m-0'><BookingsTable bookings={bookingBuckets.training} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
-                    <TabsContent value="private" className='m-0'><BookingsTable bookings={bookingBuckets.private} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
-                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={bookingBuckets.maintenance} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
-                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={bookingBuckets.cancelled} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} /></TabsContent>
+                    <TabsContent value="all" className='m-0'><BookingsTable bookings={bookingBuckets.all} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="training" className='m-0'><BookingsTable bookings={bookingBuckets.training} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="private" className='m-0'><BookingsTable bookings={bookingBuckets.private} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={bookingBuckets.maintenance} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={bookingBuckets.cancelled} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
                 </div>
             </CardContent>
         </Tabs>

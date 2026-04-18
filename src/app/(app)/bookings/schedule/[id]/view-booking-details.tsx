@@ -9,7 +9,7 @@ import type { Booking, BookingWorkflowCompletion, NavlogLeg, ChecklistPhoto } fr
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Map as MapIcon, Loader2, X, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, ClipboardCheck, CheckCircle2, PlaneTakeoff } from 'lucide-react';
+import { Save, AlertTriangle, Map as MapIcon, Loader2, X, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, ClipboardCheck, CheckCircle2, PlaneTakeoff, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
+import { isBookingEligibleForTracking } from '@/lib/booking-tracking';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -115,6 +116,8 @@ function stripUndefinedDeep<T>(value: T): T {
     return value;
 }
 
+const getStatusLabel = (status: Booking['status']) => (status === 'Completed' ? 'Complete' : status);
+
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const isMobile = useIsMobile();
     const { toast } = useToast();
@@ -126,6 +129,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [personnel, setPersonnel] = useState<BookingPerson[]>([]);
     const [loadingAc, setLoadingAc] = useState(true);
     const [loadingPeople, setLoadingPeople] = useState(true);
+    const [loadingBookings, setLoadingBookings] = useState(true);
+    const [allBookingsForAircraft, setAllBookingsForAircraft] = useState<Booking[] | null>(null);
     const [initialDetailsLoaded, setInitialDetailsLoaded] = useState(false);
     const [checkApprovals, setCheckApprovals] = useState(booking.checkApprovals || {});
     const [workflowCompletion, setWorkflowCompletion] = useState<BookingWorkflowCompletion>(booking.workflowCompletion || {});
@@ -143,9 +148,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         return student ? `${student.firstName} ${student.lastName}` : booking.studentId;
     }, [personnel, booking.studentId]);
     const canTrackFlight = (booking.navlog?.legs?.length || 0) > 0
-        && booking.status !== 'Completed'
-        && booking.status !== 'Cancelled'
-        && booking.status !== 'Cancelled with Reason';
+        && !loadingBookings
+        && allBookingsForAircraft !== null
+        && isBookingEligibleForTracking(allBookingsForAircraft, booking);
+    const blockingBooking = !loadingBookings && allBookingsForAircraft !== null
+        ? allBookingsForAircraft
+            .filter((otherBooking) => otherBooking.id !== booking.id)
+            .filter((otherBooking) => otherBooking.aircraftId === booking.aircraftId)
+            .filter((otherBooking) => new Date(otherBooking.start).getTime() <= new Date(booking.start).getTime())
+            .filter((otherBooking) => !['Completed', 'Cancelled', 'Cancelled with Reason'].includes(otherBooking.status))
+            .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())[0] || null
+        : null;
     const isAssignedInstructor = !!userProfile && booking.instructorId === userProfile.id;
     const canManuallyApprove = isAssignedInstructor || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.role?.toLowerCase() === 'dev';
     const [graphConfig, setGraphConfig] = useState(DEFAULT_GRAPH_CONFIG);
@@ -201,30 +214,40 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             }
 
             try {
-                const [aircraftRes, usersRes] = await Promise.all([
+                const [aircraftRes, usersRes, bookingsRes] = await Promise.all([
                     fetch(`/api/aircraft/${booking.aircraftId}`),
                     fetch('/api/users'),
+                    fetch('/api/bookings'),
                 ]);
 
                 if (!aircraftRes.ok) throw new Error('Failed to load aircraft data.');
                 if (!usersRes.ok) throw new Error('Failed to load personnel data.');
+                if (!bookingsRes.ok) throw new Error('Failed to load bookings data.');
 
                 const aircraftData = await aircraftRes.json();
                 const peopleData = await usersRes.json();
+                const bookingsData = await bookingsRes.json();
 
                 if (!cancelled) {
                     setAircrafts(aircraftData?.aircraft ? [aircraftData.aircraft] : []);
                     setPersonnel(peopleData.users || peopleData.personnel || []);
+                    setAllBookingsForAircraft(
+                        Array.isArray(bookingsData.bookings)
+                            ? bookingsData.bookings.filter((entry: Booking) => entry.aircraftId === booking.aircraftId)
+                            : []
+                    );
                 }
             } catch {
                 if (!cancelled) {
                     setAircrafts([]);
                     setPersonnel([]);
+                    setAllBookingsForAircraft(null);
                 }
             } finally {
                 if (!cancelled) {
                     setLoadingAc(false);
                     setLoadingPeople(false);
+                    setLoadingBookings(false);
                     setInitialDetailsLoaded(true);
                 }
             }
@@ -587,6 +610,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </Link>
                                 </Button>
                             )}
+                            {!canTrackFlight && blockingBooking && (
+                                <Badge variant="outline" className="h-8 rounded-xl border-amber-200 bg-amber-50 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">
+                                    <Lock className="mr-1.5 h-3.5 w-3.5" />
+                                    Locked by #{blockingBooking.bookingNumber}
+                                </Badge>
+                            )}
                             {activeTab === 'planning' && (
                                 <>
                                     <Button
@@ -635,7 +664,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         <Badge variant="outline" className="text-[9px] font-black uppercase">Visible in Scroll</Badge>
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-4">
-                                        <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
+                                        <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{getStatusLabel(booking.status)}</Badge></DetailItem>
                                         <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
                                         <DetailItem label="Instructor" value={instructorLabel} />
                                         <DetailItem label="Student" value={studentLabel} />

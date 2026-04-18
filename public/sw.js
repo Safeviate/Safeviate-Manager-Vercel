@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `safeviate-static-${CACHE_VERSION}`;
 const DATA_CACHE = `safeviate-data-${CACHE_VERSION}`;
 const NAV_CACHE = `safeviate-nav-${CACHE_VERSION}`;
@@ -10,6 +10,7 @@ const PRECACHE_URLS = ['/offline.html', '/manifest.webmanifest', '/safeviate-ico
 const isCacheableGetRequest = (request) => request.method === 'GET';
 const isNavigationRequest = (request) => request.mode === 'navigate' || request.destination === 'document';
 const isDataRequest = (request) => request.url.includes('/api/');
+const isAuthRequest = (request) => request.url.includes('/api/auth/');
 const isTileRequest = (request) => request.url.includes('tile.openstreetmap.org');
 
 const cacheResponse = async (cacheName, request, response) => {
@@ -69,6 +70,8 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
+
+  if (isAuthRequest(request)) return;
 
   if (isDataRequest(request)) {
     event.respondWith(

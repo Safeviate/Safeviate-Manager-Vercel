@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureBookingsSchema } from '@/lib/server/bootstrap-db';
+import { allocateNextBookingNumber } from '@/lib/server/booking-sequence';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -71,25 +72,27 @@ export async function POST(request: Request) {
 
     await ensureBookingsSchema();
 
-    const count = await prisma.bookingRecord.count({ where: { tenantId } });
-    const bookingNumber = String(count + 1).padStart(5, '0');
-
-    const data = {
-      ...incoming,
-      id,
-      bookingNumber,
-    };
-
-    await prisma.bookingRecord.upsert({
-      where: { id },
-      create: {
+    const data = await prisma.$transaction(async (tx) => {
+      const sequence = await allocateNextBookingNumber(tx, tenantId);
+      const nextData = {
+        ...incoming,
         id,
-        tenantId,
-        data,
-      },
-      update: {
-        data,
-      },
+        bookingNumber: sequence.bookingNumber,
+      };
+
+      await tx.bookingRecord.upsert({
+        where: { id },
+        create: {
+          id,
+          tenantId,
+          data: nextData,
+        },
+        update: {
+          data: nextData,
+        },
+      });
+
+      return nextData;
     });
 
     return NextResponse.json({ booking: data }, { status: 201 });
@@ -140,7 +143,7 @@ export async function PUT(request: Request) {
         .filter((booking) => booking.status !== 'Cancelled' && booking.status !== 'Cancelled with Reason')
         .find((booking) => booking.status !== 'Completed');
 
-      if (blockingBooking) {
+    if (blockingBooking) {
         return NextResponse.json(
           {
             error: 'This flight cannot be marked completed until all earlier non-cancelled bookings for the same aircraft are completed.',
@@ -150,19 +153,24 @@ export async function PUT(request: Request) {
       }
     }
 
+    const mergedData = {
+      ...existingData,
+      ...incoming,
+    };
+
     await prisma.bookingRecord.upsert({
       where: { id: bookingId },
       create: {
         id: bookingId,
         tenantId,
-        data: incoming,
+        data: mergedData,
       },
       update: {
-        data: incoming,
+        data: mergedData,
       },
     });
 
-    return NextResponse.json({ booking: incoming }, { status: 200 });
+    return NextResponse.json({ booking: mergedData }, { status: 200 });
   } catch (error) {
     console.error('[bookings] failed to update booking:', error);
     return NextResponse.json({ error: 'Failed to update booking.' }, { status: 500 });

@@ -1199,10 +1199,10 @@ export function ActiveFlightLiveMap({
   if (fullscreen) {
     return (
       <div
-        className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black"
-        style={{ ...mapShellStyle, touchAction: 'none', overscrollBehavior: 'none' }}
+        className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black pointer-events-none"
+        style={{ ...mapShellStyle, overscrollBehavior: 'none' }}
       >
-        <div className="absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
+        <div className="pointer-events-auto absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Full Flight Tracking View</p>
             <MenuCloseButton />
@@ -1456,8 +1456,8 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
 
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="nose-up-map absolute inset-[-24%]">
+        <div className="pointer-events-auto absolute inset-0 overflow-hidden">
+          <div className="nose-up-map pointer-events-auto absolute inset-[-24%]">
           <LeafletMapFrame
             center={center}
             zoom={8}
@@ -1593,7 +1593,7 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
 
-        <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-4 gap-2">
+        <div className="pointer-events-auto absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-4 gap-2">
           <Dialog open={compactFullscreenOpen} onOpenChange={setCompactFullscreenOpen}>
             <DialogTrigger asChild>
               <Button
@@ -1652,6 +1652,17 @@ export function ActiveFlightLiveMap({
             transition: transform 180ms ease-out;
           }
 
+          @media (max-width: 639px) and (orientation: portrait) {
+            .fullscreen-map-shell .nose-up-map {
+              left: 50%;
+              top: 50%;
+              width: 175vh;
+              height: 175vh;
+              inset: auto;
+              transform: translate(-50%, -50%) rotate(var(--map-rotation)) scale(1.08);
+            }
+          }
+
           .fullscreen-map-shell .nose-up-map .leaflet-top,
           .fullscreen-map-shell .nose-up-map .leaflet-bottom {
             transform: rotate(var(--map-counter-rotation));
@@ -1697,10 +1708,11 @@ export function ActiveFlightLiveMap({
   if (compactLayout) {
       return (
         <div
-          className="relative h-full min-h-[360px] overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm"
-          style={{ ...mapShellStyle, touchAction: 'none', overscrollBehavior: 'none' }}
+          className="relative h-full min-h-[360px] overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm pointer-events-none"
+          style={{ ...mapShellStyle, overscrollBehavior: 'none' }}
         >
-          <div className="nose-up-map relative h-full min-h-[360px] bg-slate-950/5">
+          <div className="pointer-events-auto absolute inset-0 overflow-hidden">
+            <div className="nose-up-map pointer-events-auto absolute inset-[-22%] bg-slate-950/5">
             <LeafletMapFrame
               center={center}
               zoom={8}
@@ -1800,6 +1812,7 @@ export function ActiveFlightLiveMap({
                 </Marker>
               )}
             </LeafletMapFrame>
+            </div>
           </div>
           {layerSelectorPanelOpen ? (
             <div className="pointer-events-auto absolute bottom-4 left-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
@@ -1973,11 +1986,22 @@ export function ActiveFlightLiveMap({
             </div>
           ) : null}
           <style jsx>{`
+          .nose-up-map {
+            transform: rotate(var(--map-rotation)) scale(1.38);
+            transform-origin: 50% 50%;
+            transition: transform 180ms ease-out;
+          }
+
+          @media (max-width: 639px) and (orientation: portrait) {
             .nose-up-map {
-              transform: rotate(var(--map-rotation)) scale(1.38);
-              transform-origin: 50% 50%;
-              transition: transform 180ms ease-out;
+              left: 50%;
+              top: 50%;
+              width: 175vh;
+              height: 175vh;
+              inset: auto;
+              transform: translate(-50%, -50%) rotate(var(--map-rotation)) scale(1.08);
             }
+          }
 
             .nose-up-map :global(.leaflet-top),
           .nose-up-map :global(.leaflet-bottom) {
@@ -2012,7 +2036,7 @@ export function ActiveFlightLiveMap({
   }
 
   return (
-    <div className="space-y-3" style={mapShellStyle}>
+    <div className="space-y-3 pointer-events-auto" style={mapShellStyle}>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <CompassDial headingTrue={position?.headingTrue} />

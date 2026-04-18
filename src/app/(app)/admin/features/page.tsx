@@ -63,7 +63,6 @@ export default function FeaturesPage() {
 
         const defFeatures = { id: 'features', preFlightChecklistRequired: true, enableExternalCompanyTabs: true };
         const defLevels = { id: 'finding-levels', levels: defaultFindingLevels };
-
         const featureConfig = (config['feature-settings'] && typeof config['feature-settings'] === 'object' ? config['feature-settings'] : defFeatures) as typeof defFeatures;
         const levelsConfig = (config['finding-levels-settings'] && typeof config['finding-levels-settings'] === 'object' ? config['finding-levels-settings'] : defLevels) as typeof defLevels;
 
@@ -212,7 +211,7 @@ export default function FeaturesPage() {
       <Card className="flex flex-col shadow-none border overflow-hidden">
         <MainPageHeader title="Feature Management" />
         <CardContent className="p-4 lg:p-6 space-y-8 bg-muted/5">
-          
+
           <section className="space-y-4">
             <div className="space-y-1">
                 <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">

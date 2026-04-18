@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -53,11 +53,11 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 import type { Aircraft, AircraftComponent } from '@/types/aircraft';
 import type { MaintenanceLog } from '@/types/maintenance';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import { getContrastingTextColor, getDocumentExpiryBadgeStyle, getInspectionWarningStyle } from '@/lib/document-expiry';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 const toNoonUtcIso = (date: Date) =>
   new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
@@ -233,52 +233,60 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
             <div className="flex-1 min-h-0">
               <TabsContent value="overview" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
-                <CardContent className="p-8 space-y-12">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                    <div className="space-y-6 bg-muted/5 p-6 rounded-2xl border shadow-inner">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <Info className="h-3.5 w-3.5" />
-                        Specifications
-                      </h3>
-                      <div className="grid grid-cols-1 gap-6">
+                <CardContent className="p-4 sm:p-6 space-y-6">
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    <Card className="shadow-none border overflow-hidden">
+                      <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <Info className="h-3.5 w-3.5" />
+                          Specifications
+                        </h3>
+                      </CardHeader>
+                      <CardContent className="space-y-3 px-4 py-4">
                         <DetailItem label="Manufacturer" value={aircraft.make} />
                         <DetailItem label="Model" value={aircraft.model} />
                         <DetailItem label="Engine Type" value={aircraft.type || 'N/A'} />
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
 
-                    <div className="space-y-6 bg-muted/5 p-6 rounded-2xl border shadow-inner">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5" />
-                        Hobbs Meter
-                      </h3>
-                      <div className="grid grid-cols-1 gap-6">
+                    <Card className="shadow-none border overflow-hidden">
+                      <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5" />
+                          Hobbs Meter
+                        </h3>
+                      </CardHeader>
+                      <CardContent className="space-y-3 px-4 py-4">
                         <DetailItem label="Initial Hobbs" value={(aircraft.initialHobbs || 0).toFixed(1)} />
                         <DetailItem label="Current Hobbs" value={(aircraft.currentHobbs || 0).toFixed(1)} />
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
 
-                    <div className="space-y-6 bg-muted/5 p-6 rounded-2xl border shadow-inner">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <Gauge className="h-3.5 w-3.5" />
-                        Tacho Meter
-                      </h3>
-                      <div className="grid grid-cols-1 gap-6">
+                    <Card className="shadow-none border overflow-hidden">
+                      <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <Gauge className="h-3.5 w-3.5" />
+                          Tacho Meter
+                        </h3>
+                      </CardHeader>
+                      <CardContent className="space-y-3 px-4 py-4">
                         <DetailItem label="Initial Tacho" value={(aircraft.initialTacho || 0).toFixed(1)} />
                         <DetailItem label="Current Tacho" value={(aircraft.currentTacho || 0).toFixed(1)} />
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   </div>
 
-                  <div className="space-y-6 p-8 border rounded-3xl bg-primary/5 shadow-sm">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2 flex items-center gap-2">
-                        <ArrowLeft className="h-4 w-4 rotate-180" />
-                        Inspection Service Targets
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12">
+                  <Card className="shadow-none border overflow-hidden">
+                    <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <ArrowLeft className="h-4 w-4 rotate-180" />
+                          Inspection Service Targets
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
                       <DetailItem label="Next 50h Tacho" value={(aircraft.tachoAtNext50Inspection || 0).toFixed(1)} />
                       <DetailItem label="Next 100h Tacho" value={(aircraft.tachoAtNext100Inspection || 0).toFixed(1)} />
-                      <div className="pt-2">
+                      <div className="rounded-lg border bg-background px-3 py-3">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">To 50h Inspection</p>
                         <Badge
                           variant="outline"
@@ -288,7 +296,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                           {timeTo50.toFixed(1)}h
                         </Badge>
                       </div>
-                      <div className="pt-2">
+                      <div className="rounded-lg border bg-background px-3 py-3">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">To 100h Inspection</p>
                         <Badge
                           variant="outline"
@@ -298,8 +306,8 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                           {timeTo100.toFixed(1)}h
                         </Badge>
                       </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </TabsContent>
 
@@ -342,44 +350,60 @@ function MaintenanceTab({ aircraftId, tenantId, logs, isLoading }: { aircraftId:
         <AddMaintenanceLogDialog aircraftId={aircraftId} tenantId={tenantId} />
       </div>
       <div className="flex-1 overflow-auto bg-background">
-        <Table>
-          <TableHeader className="bg-muted/30 sticky top-0 z-10">
-            <TableRow>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Date</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Event Type</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Reference</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Details</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">AME/AMO Credentials</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {logs.length > 0 ? (
-              logs.map((log) => (
-                <TableRow key={log.id} className="hover:bg-muted/5 transition-colors group">
-                  <TableCell className="whitespace-nowrap font-black text-[11px] uppercase tracking-tighter px-8">{format(parseLocalDate(log.date) || new Date(log.date), 'dd MMM yyyy')}</TableCell>
-                  <TableCell><Badge variant="outline" className="text-[10px] font-black uppercase border-slate-300 bg-background">{log.maintenanceType}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs font-black text-muted-foreground">{log.reference || 'N/A'}</TableCell>
-                  <TableCell className="max-w-md truncate text-sm font-medium italic text-foreground opacity-80 opacity-100 transition-opacity">"{log.details}"</TableCell>
-                  <TableCell className="text-[10px] font-black uppercase tracking-tight">
-                    {log.ameNo && <div className="text-primary">AME-LIC: {log.ameNo}</div>}
-                    {log.amoNo && <div className="text-muted-foreground font-bold">AMO-CERT: {log.amoNo}</div>}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="h-64 text-center">
-                  <div className="flex flex-col items-center gap-3 opacity-30">
-                    <History className="h-10 w-10" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">
-                        {isLoading ? 'Decrypting maintenance logs...' : 'No maintenance history recorded for this asset.'}
+        <ResponsiveCardGrid
+          items={logs}
+          isLoading={isLoading}
+          className="p-4"
+          gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+          renderItem={(log) => (
+            <Card key={log.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+              <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                <div className="min-w-0 space-y-1">
+                  <CardTitle className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
+                    {format(parseLocalDate(log.date) || new Date(log.date), 'dd MMM yyyy')}
+                  </CardTitle>
+                  <CardDescription className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    {log.reference || 'No reference recorded'}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="rounded-full text-[10px] font-black uppercase border-slate-300 bg-background">
+                  {log.maintenanceType}
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-4 px-4 py-4">
+                <div className="rounded-lg border bg-background px-3 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Details</p>
+                  <p className="mt-1 text-sm italic text-foreground">"{log.details}"</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">AME Credentials</p>
+                    <p className={cn("mt-1 text-sm font-semibold", log.ameNo ? "text-foreground" : "text-muted-foreground italic")}>
+                      {log.ameNo || 'Not recorded'}
                     </p>
                   </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  <div className="rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">AMO Credentials</p>
+                    <p className={cn("mt-1 text-sm font-semibold", log.amoNo ? "text-foreground" : "text-muted-foreground italic")}>
+                      {log.amoNo || 'Not recorded'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          emptyState={(
+            <div className="flex min-h-[360px] flex-col items-center justify-center border-b bg-muted/5 p-8 text-center text-muted-foreground">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md border bg-background">
+                <History className="h-6 w-6 text-muted-foreground/60" />
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-sm font-bold uppercase tracking-wider text-foreground">No maintenance history recorded for this asset.</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest italic">{isLoading ? 'Decrypting maintenance logs...' : 'Add the first maintenance event to begin the log.'}</p>
+              </div>
+            </div>
+          )}
+        />
       </div>
     </div>
   );
@@ -396,48 +420,65 @@ function ComponentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: s
         <AddComponentDialog aircraftId={aircraft.id} tenantId={tenantId} />
       </div>
       <div className="flex-1 overflow-auto bg-background">
-        <Table>
-          <TableHeader className="bg-muted/30 sticky top-0 z-10">
-            <TableRow>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Component Name</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Serial Number</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest">TSN</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest">TSO</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest">Remaining</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest pr-8">Limit</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {aircraft.components && aircraft.components.length > 0 ? (
-              aircraft.components.map((comp) => {
-                const remaining = comp.maxHours - comp.totalTime;
-                return (
-                  <TableRow key={comp.id} className="hover:bg-muted/5 transition-colors group">
-                    <TableCell className="font-black text-sm uppercase px-8">{comp.name}</TableCell>
-                    <TableCell className="font-mono text-xs font-black text-muted-foreground uppercase">{comp.serialNumber}</TableCell>
-                    <TableCell className="text-right font-mono font-black text-xs">{(comp.tsn || 0).toFixed(1)}h</TableCell>
-                    <TableCell className="text-right font-mono font-black text-xs">{(comp.tso || 0).toFixed(1)}h</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant={remaining < 50 ? "destructive" : "outline"} className="font-mono font-black text-[11px] h-8 px-4 border-2 shadow-sm uppercase">
-                        {remaining.toFixed(1)}h
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground pr-8">{comp.maxHours.toFixed(1)}h</TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-64 text-center">
-                    <div className="flex flex-col items-center gap-3 opacity-30">
-                        <Settings2 className="h-10 w-10" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">No serialized components tracked for this session.</p>
+        <ResponsiveCardGrid
+          items={aircraft.components || []}
+          isLoading={false}
+          className="p-4"
+          gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+          renderItem={(comp) => {
+            const remaining = comp.maxHours - comp.totalTime;
+            return (
+              <Card key={comp.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+                <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                  <div className="min-w-0 space-y-1">
+                    <CardTitle className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
+                      {comp.name}
+                    </CardTitle>
+                    <CardDescription className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Serial {comp.serialNumber}
+                    </CardDescription>
+                  </div>
+                  <Badge variant={remaining < 50 ? "destructive" : "outline"} className="rounded-full font-mono font-black text-[10px] h-8 px-3 border-2 shadow-sm uppercase">
+                    {remaining.toFixed(1)}h left
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4 px-4 py-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">TSN</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{(comp.tsn || 0).toFixed(1)}h</p>
                     </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">TSO</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{(comp.tso || 0).toFixed(1)}h</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Remaining</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{remaining.toFixed(1)}h</p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Limit</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{comp.maxHours.toFixed(1)}h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }}
+          emptyState={(
+            <div className="flex min-h-[360px] flex-col items-center justify-center border-b bg-muted/5 p-8 text-center text-muted-foreground">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md border bg-background">
+                <Settings2 className="h-6 w-6 text-muted-foreground/60" />
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-sm font-bold uppercase tracking-wider text-foreground">No serialized components tracked for this session.</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest italic">Add the first part to start tracking lifecycle usage.</p>
+              </div>
+            </div>
+          )}
+        />
       </div>
     </div>
   );
@@ -553,30 +594,49 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
         />
       </div>
       <div className="flex-1 overflow-auto bg-background">
-        <Table>
-          <TableHeader className="bg-muted/30 sticky top-0 z-10">
-            <TableRow>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Document Name</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Upload Date</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Expiration</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest pr-8">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {aircraft.documents && aircraft.documents.length > 0 ? (
-              aircraft.documents.map((doc) => {
-                const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
-                return (
-                <TableRow key={doc.name} className="hover:bg-muted/5 transition-colors group">
-                  <TableCell className="font-black text-sm uppercase px-8">{doc.name}</TableCell>
-                  <TableCell className="text-[11px] font-black uppercase tracking-tight opacity-70">{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</TableCell>
-                  <TableCell className="text-xs">
+        <ResponsiveCardGrid
+          items={aircraft.documents || []}
+          isLoading={false}
+          className="p-4"
+          gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+          renderItem={(doc) => {
+            const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
+            return (
+              <Card key={doc.name} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+                <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                  <div className="min-w-0 space-y-1">
+                    <CardTitle className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
+                      {doc.name}
+                    </CardTitle>
+                    <CardDescription className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Uploaded {format(new Date(doc.uploadDate), 'dd MMM yyyy')}
+                    </CardDescription>
+                  </div>
+                  <div className="rounded-full border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-primary">
+                    Document
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 px-4 py-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Uploaded</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{format(new Date(doc.uploadDate), 'dd MMM yyyy')}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Expiration</p>
+                      <p className={cn("mt-1 text-sm font-semibold", !doc.expirationDate && "text-muted-foreground italic")}>
+                        {doc.expirationDate ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'dd MMM yyyy') : 'No expiry set'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
-                            "h-10 min-w-[180px] justify-start gap-2 border-2 shadow-sm uppercase text-[10px] font-black",
+                            "h-10 w-full justify-start gap-2 border-2 shadow-sm uppercase text-[10px] font-black",
                             !doc.expirationDate && "text-muted-foreground italic border-dashed"
                           )}
                           style={doc.expirationDate && expiryStyle ? {
@@ -598,31 +658,31 @@ function DocumentsTab({ aircraft, tenantId }: { aircraft: Aircraft; tenantId: st
                         />
                       </PopoverContent>
                     </Popover>
-                  </TableCell>
-                  <TableCell className="text-right pr-8">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="icon" className="h-9 w-9 hover:bg-primary hover:text-primary-foreground border-slate-300 shadow-sm transition-all" onClick={() => setViewingDoc({ name: doc.name, url: doc.url })}>
+                      <Button variant="outline" size="icon" className="h-10 w-10 hover:bg-primary hover:text-primary-foreground border-slate-300 shadow-sm transition-all" onClick={() => setViewingDoc({ name: doc.name, url: doc.url })}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive hover:text-destructive-foreground border-slate-300 shadow-sm transition-all" onClick={() => handleDeleteDoc(doc.name)}>
+                      <Button variant="outline" size="icon" className="h-10 w-10 text-destructive hover:bg-destructive hover:text-destructive-foreground border-slate-300 shadow-sm transition-all" onClick={() => handleDeleteDoc(doc.name)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              )})
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="h-64 text-center">
-                    <div className="flex flex-col items-center gap-3 opacity-30">
-                        <FileText className="h-10 w-10" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">No technical certifications uploaded.</p>
-                    </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }}
+          emptyState={(
+            <div className="flex min-h-[360px] flex-col items-center justify-center border-b bg-muted/5 p-8 text-center text-muted-foreground">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md border bg-background">
+                <FileText className="h-6 w-6 text-muted-foreground/60" />
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-sm font-bold uppercase tracking-wider text-foreground">No technical certifications uploaded.</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest italic">Add the first document to start the aircraft library.</p>
+              </div>
+            </div>
+          )}
+        />
       </div>
 
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>

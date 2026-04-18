@@ -1,10 +1,9 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, ListFilter, ChevronDown } from 'lucide-react';
@@ -20,6 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 import type { QualityAudit, ExternalOrganization } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
@@ -89,30 +89,38 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
     }
 
     return (
-        <div className="flex flex-col gap-4">
-            <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader className="bg-muted/30">
-                        <TableRow>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">ID</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Date</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Title</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider hidden sm:table-cell">Auditee</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-center">Score</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {audits.map(audit => (
-                            <TableRow key={audit.id} className="hover:bg-muted/5 transition-colors">
-                                <TableCell className="font-bold text-xs text-primary">
-                                    <Link href={`/quality/audits/${audit.id}`} className="hover:underline">{audit.auditNumber}</Link>
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap text-xs font-medium">{format(parseLocalDate(audit.auditDate), 'dd MMM yy')}</TableCell>
-                                <TableCell className="text-xs font-bold max-w-[150px] truncate">{audit.title}</TableCell>
-                                <TableCell className="text-xs font-medium hidden sm:table-cell">{audit.auditeeName || audit.auditeeId}</TableCell>
-                                <TableCell className="text-center">
+        <ResponsiveCardGrid
+            items={audits}
+            isLoading={false}
+            className="p-4"
+            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+            renderItem={(audit) => (
+                <Card key={audit.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+                    <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                        <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Link href={`/quality/audits/${audit.id}`} className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground hover:underline">{audit.auditNumber}</Link>
+                                <Badge variant="outline" className="h-6 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.08em]">
+                                    Audit
+                                </Badge>
+                            </div>
+                            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{format(parseLocalDate(audit.auditDate), 'dd MMM yyyy')}</p>
+                        </div>
+                        <Badge variant={getStatusBadgeVariant(audit.status)} className="text-[9px] font-black uppercase py-0.5 px-2">{audit.status}</Badge>
+                    </CardHeader>
+                    <CardContent className="space-y-4 px-4 py-4">
+                        <div className="rounded-lg border bg-background px-3 py-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Title</p>
+                            <p className="mt-1 text-sm font-semibold text-foreground">{audit.title}</p>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border bg-background px-3 py-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Auditee</p>
+                                <p className="mt-1 text-sm font-semibold text-foreground">{audit.auditeeName || audit.auditeeId}</p>
+                            </div>
+                            <div className="rounded-lg border bg-background px-3 py-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Score</p>
+                                <p className="mt-1 text-sm font-semibold text-foreground">
                                     {audit.complianceScore !== undefined ? (
                                         <Badge variant="outline" className={cn(
                                             "font-black text-[9px] uppercase py-0.5 px-2",
@@ -123,17 +131,17 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                                             {audit.complianceScore}%
                                         </Badge>
                                     ) : '-'}
-                                </TableCell>
-                                <TableCell><Badge variant={getStatusBadgeVariant(audit.status)} className="text-[9px] font-black uppercase py-0.5 px-2">{audit.status}</Badge></TableCell>
-                                <TableCell className="text-right">
-                                    <AuditActions audit={audit} tenantId={tenantId} />
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-        </div>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-end">
+                            <AuditActions audit={audit} tenantId={tenantId} />
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+            emptyState={<div className="text-center p-8 text-muted-foreground text-sm italic uppercase font-bold tracking-widest bg-muted/5">No audits found for this context.</div>}
+        />
     );
 }
 

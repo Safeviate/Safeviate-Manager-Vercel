@@ -398,6 +398,12 @@ export const menuConfig: MenuItem[] = [
     permissionId: 'development-view',
     subItems: [
       {
+        href: '/development',
+        label: 'Development Home',
+        description: 'Access development utilities and booking sequence controls.',
+        permissionId: 'development-view',
+      },
+      {
         href: '/development/database',
         label: 'Tenant Setup',
         description: 'Manage master tenant configuration and seeder logic.',

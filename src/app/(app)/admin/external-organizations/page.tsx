@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +14,8 @@ import { ChevronsUpDown } from 'lucide-react';
 import type { ExternalOrganization } from '@/types/quality';
 import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ExternalOrganizationsPage() {
   const { toast } = useToast();
@@ -96,6 +97,43 @@ export default function ExternalOrganizationsPage() {
     }
   };
 
+  const renderOrgCard = (org: ExternalOrganization) => (
+    <Card key={org.id} className="group overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+        <div className="min-w-0 space-y-1">
+          <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{org.name}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            External Organization
+          </p>
+        </div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border bg-background text-[10px] font-black uppercase text-muted-foreground">
+          Org
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 px-4 py-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border bg-background px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Contact Email</p>
+            <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.contactEmail || 'N/A'}</p>
+          </div>
+          <div className="rounded-2xl border bg-background px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Address</p>
+            <p className="mt-1 break-words text-sm font-semibold text-foreground">{org.address || 'N/A'}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <EditActionButton onClick={() => handleOpenForm(org)} label="Edit organization" />
+          <DeleteActionButton
+            description={`This will permanently delete external organization "${org.name}".`}
+            onDelete={() => handleDelete(org.id)}
+            srLabel="Delete organization"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="flex flex-col gap-6 h-full p-6">
       <Card className="shadow-none border overflow-hidden">
@@ -115,44 +153,25 @@ export default function ExternalOrganizationsPage() {
           </div>
         )}
         <CardContent className="p-0">
-          <div className="border-b border-border bg-muted/30" style={{ borderBottomColor: 'hsl(var(--card-border))' }}>
-            <Table>
-              <TableHeader className="bg-transparent [&_tr]:border-0">
-                <TableRow>
-                  <TableHead className="text-[10px] font-black uppercase tracking-wider">Organization Name</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-wider">Contact Email</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-wider">Address</TableHead>
-                  <TableHead className="text-right text-[10px] font-black uppercase tracking-wider">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-            </Table>
-          </div>
-          <Table>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center p-8 text-[10px] font-black uppercase tracking-widest italic text-muted-foreground">Loading...</TableCell></TableRow>
-              ) : (organizations || []).map(org => (
-                <TableRow key={org.id} className="hover:bg-muted/5 transition-colors">
-                  <TableCell className="font-bold text-sm uppercase tracking-tight">{org.name}</TableCell>
-                  <TableCell className="text-xs font-medium">{org.contactEmail || 'N/A'}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{org.address || 'N/A'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <EditActionButton onClick={() => handleOpenForm(org)} label="Edit organization" />
-                      <DeleteActionButton
-                        description={`This will permanently delete external organization "${org.name}".`}
-                        onDelete={() => handleDelete(org.id)}
-                        srLabel="Delete organization"
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!organizations || organizations.length === 0) && !isLoading && (
-                <TableRow><TableCell colSpan={4} className="text-center h-48 text-[10px] font-black uppercase tracking-widest italic text-muted-foreground bg-muted/5">No external organizations found.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <ResponsiveCardGrid
+            items={organizations}
+            isLoading={isLoading}
+            loadingCount={3}
+            className="p-4"
+            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+            renderItem={(org) => renderOrgCard(org)}
+            renderLoadingItem={(index) => <Skeleton key={index} className="h-48 w-full rounded-2xl" />}
+            emptyState={(
+              <div className="p-4">
+                <Card className="border-dashed shadow-none">
+                  <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                    <p className="text-lg font-semibold text-foreground">No external organizations found.</p>
+                    <p className="text-sm text-foreground/80">Add a company record to begin tracking partners and contacts.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          />
         </CardContent>
       </Card>
 

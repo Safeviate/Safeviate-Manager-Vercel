@@ -204,10 +204,7 @@ export function FleetTrackerMap({
   const mapMaxZoom = zoomPreferences.maxZoom;
 
   return (
-      <div
-        className="relative h-full overflow-hidden rounded-2xl"
-        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
-      >
+      <div className="relative h-full overflow-hidden rounded-2xl" style={{ overscrollBehavior: 'none' }}>
         <LeafletMapFrame
           center={center}
           zoom={6}

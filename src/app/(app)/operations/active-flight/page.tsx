@@ -26,6 +26,8 @@ import { cn } from '@/lib/utils';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { ActiveFlightTelemetryStrip } from '@/components/active-flight/active-flight-telemetry-strip';
 import { MOBILE_ACTION_MENU_ITEM_CLASS, MOBILE_ACTION_MENU_STATE_ITEM_CLASS, MobileActionDropdown } from '@/components/mobile-action-dropdown';
+import { BOOKING_UPDATES_STORAGE_KEY } from '@/lib/booking-updates';
+import { getTrackableBookings, isBookingEligibleForTracking } from '@/lib/booking-tracking';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -43,6 +45,7 @@ interface ActiveTrackingState {
 interface ActiveTrackingSelection {
   aircraftId: string;
   bookingId: string;
+  aircraftRegistration?: string;
 }
 
 const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/active-flight-live-map').then((module) => module.ActiveFlightLiveMap), {
@@ -60,17 +63,6 @@ const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/act
 const getFlightSessionOutboxKey = (deviceId: string) => `${FLIGHT_SESSION_OUTBOX_PREFIX}${deviceId}`;
 const getActiveTrackingStateKey = (deviceId: string) => `${ACTIVE_TRACKING_STATE_PREFIX}${deviceId}`;
 const getActiveTrackingSelectionKey = (deviceId: string) => `${ACTIVE_TRACKING_SELECTION_PREFIX}${deviceId}`;
-
-const isTrackableBooking = (booking: Booking) =>
-  booking.status !== 'Completed' &&
-  booking.status !== 'Cancelled' &&
-  booking.status !== 'Cancelled with Reason';
-
-const getTrackableBookings = (bookings: Booking[], aircraftId?: string) =>
-  bookings
-    .filter((booking) => !aircraftId || booking.aircraftId === aircraftId)
-    .filter(isTrackableBooking)
-    .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
 
 const readQueuedFlightSession = (deviceId: string) => {
   if (typeof window === 'undefined') return null;
@@ -166,11 +158,14 @@ export default function ActiveFlightPage() {
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState('');
+  const [selectedAircraftRegistration, setSelectedAircraftRegistration] = useState('');
   const [deviceLabelInput, setDeviceLabelInput] = useState('');
   const [savedDeviceLabel, setSavedDeviceLabel] = useState('');
   const [isTrackingActive, setIsTrackingActive] = useState(false);
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [hasLoadedAircrafts, setHasLoadedAircrafts] = useState(false);
+  const [hasLoadedBookings, setHasLoadedBookings] = useState(false);
   const [flightSessions, setFlightSessions] = useState<FlightSession[]>([]);
   const [sessionSetupOpen, setSessionSetupOpen] = useState(false);
   const [showLayerSelectorOpen, setShowLayerSelectorOpen] = useState(false);
@@ -206,10 +201,12 @@ export default function ActiveFlightPage() {
         const data = await aircraftRes.json().catch(() => ({ aircraft: [] }));
         setAircrafts(Array.isArray(data.aircraft) ? data.aircraft : []);
       }
+      setHasLoadedAircrafts(true);
       if (bookingsRes.ok) {
         const data = await bookingsRes.json().catch(() => ({ bookings: [] }));
         setBookings(Array.isArray(data.bookings) ? data.bookings : []);
       }
+      setHasLoadedBookings(true);
       if (sessionsRes.ok) {
         const data = await sessionsRes.json();
         setFlightSessions(Array.isArray(data.sessions) ? data.sessions : []);
@@ -223,6 +220,13 @@ export default function ActiveFlightPage() {
     if (!response.ok) return;
     const data = await response.json();
     setFlightSessions(Array.isArray(data.sessions) ? data.sessions : []);
+  };
+
+  const reloadBookings = async () => {
+    const response = await fetch('/api/bookings', { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json().catch(() => ({ bookings: [] }));
+    setBookings(Array.isArray(data.bookings) ? data.bookings : []);
   };
 
   useEffect(() => {
@@ -247,13 +251,31 @@ export default function ActiveFlightPage() {
 
     window.addEventListener('online', syncConnectivityState);
     window.addEventListener('offline', syncConnectivityState);
-    window.addEventListener('storage', syncQueuedSessionState);
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === BOOKING_UPDATES_STORAGE_KEY) {
+        void reloadBookings();
+      }
+      syncQueuedSessionState();
+    };
+    window.addEventListener('storage', handleStorage);
 
     return () => {
       window.removeEventListener('online', syncConnectivityState);
       window.removeEventListener('offline', syncConnectivityState);
-      window.removeEventListener('storage', syncQueuedSessionState);
+      window.removeEventListener('storage', handleStorage);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleBookingsUpdated = () => {
+      void reloadBookings();
+      void reloadFlightSessions();
+    };
+
+    window.addEventListener('safeviate-bookings-updated', handleBookingsUpdated);
+    return () => window.removeEventListener('safeviate-bookings-updated', handleBookingsUpdated);
   }, []);
 
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
@@ -261,8 +283,17 @@ export default function ActiveFlightPage() {
   const selectedAircraft = useMemo(() => sortedAircraft.find((aircraft) => aircraft.id === selectedAircraftId) || null, [selectedAircraftId, sortedAircraft]);
   const candidateBookings = useMemo(() => getTrackableBookings(bookings, selectedAircraftId), [bookings, selectedAircraftId]);
   const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
+  const activeSessionForDevice = useMemo(
+    () => flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId && session.status === 'active') || null,
+    [deviceBinding?.deviceId, flightSessions]
+  );
+  const activeSessionBookingRecord = useMemo(() => {
+    const bookingId = activeSessionForDevice?.bookingId || selectedBookingId;
+    return bookingId ? bookings.find((booking) => booking.id === bookingId) || null : null;
+  }, [activeSessionForDevice?.bookingId, bookings, selectedBookingId]);
   const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
   const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
+  const selectedAircraftRegistrationValue = selectedAircraft?.tailNumber || selectedAircraftRegistration || undefined;
   const selectedLegs = selectedBooking?.navlog?.legs || [];
   const selectedRouteSignature = useMemo(
     () =>
@@ -301,24 +332,42 @@ export default function ActiveFlightPage() {
 
   const handleAircraftSelectionChange = (aircraftId: string) => {
     setSelectedAircraftId(aircraftId);
+    const nextAircraft = sortedAircraft.find((aircraft) => aircraft.id === aircraftId) || null;
+    setSelectedAircraftRegistration(nextAircraft?.tailNumber || '');
     if (!deviceBinding?.deviceId) return;
     const nextBooking = getTrackableBookings(bookings, aircraftId)[0] || null;
     const bookingId = nextBooking?.id || '';
     setSelectedBookingId(bookingId);
-    saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId });
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId,
+      bookingId,
+      aircraftRegistration: nextAircraft?.tailNumber || '',
+    });
   };
 
   const handleBookingSelectionChange = (bookingId: string) => {
-    const nextBooking = bookings.find((booking) => booking.id === bookingId) || null;
+    const nextBooking = candidateBookings.find((booking) => booking.id === bookingId) || null;
+    if (!nextBooking) {
+      toast({
+        variant: 'destructive',
+        title: 'Booking Not Available',
+        description: 'Complete or cancel the earlier booking on this aircraft before starting this one.',
+      });
+      return;
+    }
+
     const nextAircraftId = nextBooking?.aircraftId || selectedAircraftId;
     if (nextAircraftId !== selectedAircraftId) {
       setSelectedAircraftId(nextAircraftId);
     }
+    const nextAircraft = sortedAircraft.find((aircraft) => aircraft.id === nextAircraftId) || null;
+    setSelectedAircraftRegistration(nextAircraft?.tailNumber || selectedAircraftRegistration);
     setSelectedBookingId(bookingId);
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: nextAircraftId,
       bookingId,
+      aircraftRegistration: nextAircraft?.tailNumber || selectedAircraftRegistration || '',
     });
   };
 
@@ -337,6 +386,10 @@ export default function ActiveFlightPage() {
     if (savedSelection.bookingId) {
       setSelectedBookingId(savedSelection.bookingId);
     }
+
+    if (savedSelection.aircraftRegistration) {
+      setSelectedAircraftRegistration(savedSelection.aircraftRegistration);
+    }
   }, [deviceBinding?.deviceId]);
 
   useEffect(() => {
@@ -350,9 +403,23 @@ export default function ActiveFlightPage() {
     if (!requestedBookingId && !requestedAircraftId) return;
     if (handoffHydratedRef.current === handoffKey) return;
 
-    const requestedBooking = requestedBookingId
-      ? getTrackableBookings(bookings).find((booking) => booking.id === requestedBookingId) || null
+    const requestedBookingRecord = requestedBookingId
+      ? bookings.find((booking) => booking.id === requestedBookingId) || null
       : null;
+    const requestedBooking = requestedBookingRecord && isBookingEligibleForTracking(bookings, requestedBookingRecord)
+      ? requestedBookingRecord
+      : null;
+
+    if (requestedBookingRecord && !requestedBooking) {
+      toast({
+        variant: 'destructive',
+        title: 'Booking Locked',
+        description: 'Complete or cancel the earlier booking on this aircraft before continuing this one.',
+      });
+      handoffHydratedRef.current = handoffKey;
+      return;
+    }
+
     const nextAircraftId = requestedBooking?.aircraftId || requestedAircraftId;
     const nextAircraft = nextAircraftId
       ? sortedAircraft.find((aircraft) => aircraft.id === nextAircraftId) || null
@@ -369,6 +436,7 @@ export default function ActiveFlightPage() {
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: nextAircraft?.id || nextAircraftId,
       bookingId: nextBookingId,
+      aircraftRegistration: nextAircraft?.tailNumber || '',
     });
 
     if (requestedSetup === '1') {
@@ -379,16 +447,25 @@ export default function ActiveFlightPage() {
   }, [bookings, deviceBinding?.deviceId, searchParams, sortedAircraft]);
 
   useEffect(() => {
+    if (!hasLoadedAircrafts) return;
     if (!selectedAircraftId) return;
     if (selectedAircraft) return;
     setSelectedAircraftId('');
-  }, [selectedAircraft, selectedAircraftId]);
+    setSelectedAircraftRegistration('');
+  }, [hasLoadedAircrafts, selectedAircraft, selectedAircraftId]);
 
   useEffect(() => {
+    if (!hasLoadedBookings) return;
     if (!selectedBookingId) return;
     if (selectedBooking) return;
     setSelectedBookingId('');
-  }, [selectedBooking, selectedBookingId]);
+  }, [hasLoadedBookings, selectedBooking, selectedBookingId]);
+
+  useEffect(() => {
+    if (!selectedAircraft) return;
+    if (selectedAircraft.tailNumber === selectedAircraftRegistration) return;
+    setSelectedAircraftRegistration(selectedAircraft.tailNumber);
+  }, [selectedAircraft, selectedAircraftRegistration]);
 
   useEffect(() => {
     if (!deviceBinding?.deviceId) return;
@@ -410,11 +487,15 @@ export default function ActiveFlightPage() {
       setSelectedBookingId(resumeSource.bookingId);
     }
 
+    if ('aircraftRegistration' in resumeSource && resumeSource.aircraftRegistration && resumeSource.aircraftRegistration !== selectedAircraftRegistration) {
+      setSelectedAircraftRegistration(resumeSource.aircraftRegistration);
+    }
+
     if (!isTrackingActive) {
       setIsTrackingActive(true);
       startWatching();
     }
-  }, [deviceBinding?.deviceId, flightSessions, isTrackingActive, selectedAircraftId, selectedBookingId, startWatching]);
+  }, [deviceBinding?.deviceId, flightSessions, isTrackingActive, selectedAircraftId, selectedAircraftRegistration, selectedBookingId, startWatching]);
 
   const buildBreadcrumb = (existing: FlightPosition[] | undefined, nextPosition: FlightPosition | null) => {
     if (!nextPosition) return existing || [];
@@ -469,7 +550,7 @@ export default function ActiveFlightPage() {
   }, [deviceBinding?.deviceId]);
 
   useEffect(() => {
-    if (!isTrackingActive || !position || !selectedAircraft || !deviceBinding) return;
+    if (!isTrackingActive || !position || !selectedAircraftId || !selectedAircraftRegistrationValue || !deviceBinding) return;
     const now = Date.now();
     if (now - lastWriteRef.current < 5000) return;
     lastWriteRef.current = now;
@@ -479,8 +560,8 @@ export default function ActiveFlightPage() {
       id: deviceBinding.deviceId,
       pilotId: userProfile?.id || 'unknown',
       pilotName,
-      aircraftId: selectedAircraft.id,
-      aircraftRegistration: selectedAircraft.tailNumber,
+      aircraftId: selectedAircraftId,
+      aircraftRegistration: selectedAircraftRegistrationValue,
       bookingId: selectedBooking?.id || '',
       status: 'active',
       deviceId: deviceBinding.deviceId,
@@ -499,7 +580,7 @@ export default function ActiveFlightPage() {
     };
     const next = [...flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId), nextSession];
     void persistSessions(next);
-  }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraft, selectedBooking?.id, userProfile?.id]);
+  }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraftId, selectedAircraftRegistrationValue, selectedBooking?.id, userProfile?.id]);
 
   const persistSessions = async (next: FlightSession[]) => {
     setFlightSessions(next);
@@ -538,30 +619,40 @@ export default function ActiveFlightPage() {
   };
 
   const startTracking = () => {
-    if (!selectedAircraft || !deviceBinding) return;
+    if (!selectedAircraftId || !selectedAircraftRegistrationValue || !deviceBinding || !selectedBooking) {
+      toast({
+        variant: 'destructive',
+        title: 'Booking Not Available',
+        description: 'Complete or cancel the earlier booking on this aircraft before starting this one.',
+      });
+      return;
+    }
+    const aircraftLabel = selectedAircraft?.tailNumber || selectedAircraftRegistrationValue;
     if (conflictingAircraftSession) {
-      toast({ variant: 'destructive', title: 'Aircraft Already In Use', description: `${selectedAircraft.tailNumber} is already active on another device.` });
+      toast({ variant: 'destructive', title: 'Aircraft Already In Use', description: `${aircraftLabel} is already active on another device.` });
       return;
     }
     void fetch(`/api/flight-sessions?id=${deviceBinding.deviceId}&mode=unblock`, { method: 'DELETE' });
     saveActiveTrackingState(deviceBinding.deviceId, {
       active: true,
-      aircraftId: selectedAircraft.id,
+      aircraftId: selectedAircraftId,
       bookingId: selectedBooking?.id,
       savedAt: new Date().toISOString(),
     });
     saveActiveTrackingSelection(deviceBinding.deviceId, {
-      aircraftId: selectedAircraft.id,
+      aircraftId: selectedAircraftId,
       bookingId: selectedBooking?.id || '',
+      aircraftRegistration: selectedAircraftRegistrationValue,
     });
     setIsTrackingActive(true);
+    setSessionSetupOpen(false);
     lastWriteRef.current = 0;
     void persistSessions(flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId).concat({
       id: deviceBinding.deviceId,
       pilotId: userProfile?.id || 'unknown',
       pilotName,
-      aircraftId: selectedAircraft.id,
-      aircraftRegistration: selectedAircraft.tailNumber,
+      aircraftId: selectedAircraftId,
+      aircraftRegistration: selectedAircraftRegistrationValue,
       bookingId: selectedBooking?.id || '',
       status: 'active',
       deviceId: deviceBinding.deviceId,
@@ -600,6 +691,18 @@ export default function ActiveFlightPage() {
       });
     }
   };
+
+  useEffect(() => {
+    if (!hasLoadedBookings || !deviceBinding?.deviceId || !activeSessionForDevice || !activeSessionBookingRecord) {
+      if (hasLoadedBookings && deviceBinding?.deviceId && activeSessionForDevice && !activeSessionBookingRecord) {
+        void stopTrackingSession();
+      }
+      return;
+    }
+    if (activeSessionForDevice.bookingId && activeSessionForDevice.bookingId !== activeSessionBookingRecord.id) return;
+    if (isBookingEligibleForTracking(bookings, activeSessionBookingRecord)) return;
+    void stopTrackingSession();
+  }, [activeSessionBookingRecord, activeSessionForDevice, bookings, deviceBinding?.deviceId, hasLoadedBookings, stopTrackingSession]);
 
   function LegacyFullscreenFlightLayout({ children: _children }: { children?: unknown }) {
     /*
@@ -647,7 +750,7 @@ export default function ActiveFlightPage() {
             booking={selectedBooking}
             legs={selectedLegs}
             position={position}
-            aircraftRegistration={selectedAircraft?.tailNumber}
+            aircraftRegistration={selectedAircraftRegistrationValue}
             activeLegIndex={activeLegState?.activeLegIndex}
             activeLegState={activeLegState}
             followOwnship={followOwnship}
@@ -747,7 +850,7 @@ export default function ActiveFlightPage() {
           booking={selectedBooking}
           legs={selectedLegs}
           position={position}
-          aircraftRegistration={selectedAircraft?.tailNumber}
+          aircraftRegistration={selectedAircraftRegistrationValue}
           activeLegIndex={activeLegState?.activeLegIndex}
           activeLegState={activeLegState}
           fullscreen
@@ -803,7 +906,7 @@ export default function ActiveFlightPage() {
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
         <Card className="flex h-full flex-col overflow-hidden border shadow-none">
           <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
-            <div className="sticky top-0 z-[1350] border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
+            <div className="sticky top-0 z-[2500] border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
               <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Active flight action bar">
                 <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
                   <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setSessionSetupOpen(true)}>
@@ -936,12 +1039,12 @@ export default function ActiveFlightPage() {
               className="border-b border-slate-200 bg-background/95"
             />
             <div className="relative min-h-0 flex-1 overflow-hidden">
-              <div className="absolute inset-0">
+              <div className="absolute inset-0 z-0 pointer-events-none">
                 <ActiveFlightLiveMap
                   booking={selectedBooking}
                   legs={selectedLegs}
                   position={position}
-                  aircraftRegistration={selectedAircraft?.tailNumber}
+                  aircraftRegistration={selectedAircraftRegistrationValue}
                   activeLegIndex={activeLegState?.activeLegIndex}
                   activeLegState={activeLegState}
                   compactLayout
@@ -1029,7 +1132,7 @@ export default function ActiveFlightPage() {
                   </select>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <Button className={HEADER_ACTION_BUTTON_CLASS} disabled={!selectedAircraft} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
+                <Button className={HEADER_ACTION_BUTTON_CLASS} disabled={!selectedAircraft || !selectedBooking} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
               <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} disabled={!isTrackingActive} onClick={stopTrackingSession}>Stop Tracking</Button>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/10 px-4 py-3 text-xs">

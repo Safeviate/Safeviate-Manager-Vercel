@@ -61,7 +61,7 @@ export default function PageFormatPage() {
           <CardContent className="flex-1 p-0 overflow-hidden bg-background">
             <TabsContent value="branding" className="m-0 h-full">
               <ScrollArea className="h-full">
-                <div className="p-0">
+                <div className="p-4 lg:p-6">
                   <ColorThemeForm showHeader={false} />
                 </div>
               </ScrollArea>

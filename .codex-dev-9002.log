@@ -1,5 +1,1252 @@
 
 > nextn@0.1.0 dev
-> next dev --turbopack -p 9002
+> next dev
 
-[?25h
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:9002
+   - Network:      http://192.168.40.117:9002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4s
+ ○ Compiling /login ...
+ ✓ Compiled /login in 10.2s (770 modules)
+ GET /login 200 in 12261ms
+ ✓ Compiled in 2s (320 modules)
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 4.2s (996 modules)
+ GET /api/auth/providers 200 in 5768ms
+ GET /api/auth/session 200 in 5900ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 3.3s (1010 modules)
+ GET /api/me 200 i ✓ Compiled in 992ms (321 modules)
+ ✓ Compiled in 399ms (321 modules)
+ ✓ Compiled in 624ms (321 modules)
+ ✓ Compiled in 650ms (321 modules)
+ ✓ Compiled in 318ms (321 modules)
+ ✓ Compiled in 310ms (321 modules)
+ ✓ Compiled in 466ms (321 modules)
+ ✓ Compiled in 309ms (321 modules)
+ ✓ Compiled in 320ms (321 modules)
+ ✓ Compiled in 388ms (321 modules)
+ ✓ Compiled in 474ms (321 modules)
+ ✓ Compiled in 443ms (321 modules)
+ ✓ Compiled in 482ms (321 modules)
+ ✓ Compiled in 461ms (321 modules)
+ ✓ Compiled in 507ms (321 modules)
+ ✓ Compiled in 617ms (321 modules)
+ ✓ Compiled in 581ms (321 modules)
+ ✓ Compiled in 798ms (321 modules)
+ ✓ Compiled in 626ms (321 modules)
+ ✓ Compiled in 584ms (321 modules)
+ ✓ Compiled in 449ms (321 modules)
+ ✓ Compiled in 512ms (321 modules)
+ ✓ Compiled in 446ms (321 modules)
+ ✓ Compiled in 554ms (321 modules)
+ ✓ Compiled in 452ms (321 modules)
+ ✓ Compiled in 438ms (321 modules)
+ ✓ Compiled in 495ms (321 modules)
+ ✓ Compiled in 567ms (321 modules)
+ ✓ Compiled in 487ms (321 modules)
+ ✓ Compiled in 375ms (321 modules)
+ ✓ Compiled in 261ms (321 modules)
+ ✓ Compiled in 354ms (321 modules)
+ ✓ Compiled in 482ms (321 modules)
+ ✓ Compiled in 370ms (321 modules)
+ ✓ Compiled in 411ms (321 modules)
+ ✓ Compiled in 449ms (321 modules)
+ ✓ Compiled in 393ms (321 modules)
+ ✓ Compiled in 438ms (321 modules)
+ ✓ Compiled in 497ms (321 modules)
+ ✓ Compiled in 457ms (321 modules)
+ ✓ Compiled in 466ms (321 modules)
+ ✓ Compiled in 434ms (321 modules)
+ ✓ Compiled in 278ms (321 modules)
+ ✓ Compiled in 327ms (321 modules)
+ ✓ Compiled in 311ms (321 modules)
+ ✓ Compiled in 369ms (321 modules)
+ ✓ Compiled in 569ms (321 modules)
+ ✓ Compiled in 357ms (321 modules)
+ ✓ Compiled in 430ms (321 modules)
+ ✓ Compiled in 390ms (321 modules)
+ ✓ Compiled in 373ms (321 modules)
+ ✓ Compiled in 361ms (321 modules)
+ ✓ Compiled in 439ms (321 modules)
+ ✓ Compiled in 317ms (321 modules)
+ ✓ Compiled in 535ms (321 modules)
+ ✓ Compiled in 336ms (321 modules)
+ ✓ Compiled in 577ms (321 modules)
+ ✓ Compiled in 320ms (321 modules)
+ ✓ Compiled in 299ms (321 modules)
+ ✓ Compiled in 319ms (321 modules)
+ ✓ Compiled in 323ms (321 modules)
+ ✓ Compiled in 287ms (321 modules)
+ ✓ Compiled in 312ms (321 modules)
+ ✓ Compiled in 327ms (321 modules)
+ ✓ Compiled in 236ms (321 modules)
+ ✓ Compiled in 499ms (321 modules)
+ ✓ Compiled in 454ms (321 modules)
+ ✓ Compiled in 282ms (321 modules)
+ ✓ Compiled in 313ms (321 modules)
+ ✓ Compiled in 418ms (321 modules)
+ ✓ Compiled in 315ms (321 modules)
+ ✓ Compiled in 275ms (321 modules)
+ ✓ Compiled in 621ms (321 modules)
+ ✓ Compiled in 436ms (321 modules)
+ ✓ Compiled in 401ms (321 modules)
+ ✓ Compiled in 341ms (321 modules)
+ ✓ Compiled in 457ms (321 modules)
+ ✓ Compiled in 589ms (321 modules)
+ ✓ Compiled in 376ms (321 modules)
+ ✓ Compiled in 395ms (321 modules)
+ ✓ Compiled in 364ms (321 modules)
+ ✓ Compiled in 629ms (321 modules)
+ ✓ Compiled in 351ms (321 modules)
+ ✓ Compiled in 481ms (321 modules)
+thUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5470ms
+ GET /api/auth/session 200 in 132ms
+ GET /api/me 200 in 237ms
+ GET /api/me 200 in 346ms
+ GET /api/me 200 in 185ms
+ GET /dashboard 200 in 471ms
+ ○ Compiling /api/roles ...
+ GET /api/me 200 in 3025ms
+ GET /api/me 200 in 3041ms
+ GET /api/tenant-config 200 in 3875ms
+ GET /api/tenant-config 200 in 3034ms
+ GET /api/tenant-config 200 in 4238ms
+ ✓ Compiled /api/roles in 3.8s (2631 modules)
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /login 200 in 739ms
+ GET /api/auth/session 200 in 182ms
+ GET /api/auth/providers 200 in 155ms
+ GET /api/auth/csrf 200 in 319ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5549ms
+ GET /api/auth/session 200 in 199ms
+ GET /dashboard 200 in 302ms
+ ○ Compiling /api/dashboard-summary ...
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /api/roles 200 in 5597ms
+ ✓ Compiled /operations/active-flight in 10.2s (2790 modules)
+ GET /api/dashboard-summary 200 in 12006ms
+ GET /api/dashboard-summary 200 in 11957ms
+ GET /api/roles 200 in 11959ms
+ GET /operations/active-flight 200 in 11724ms
+ GET /api/auth/session 200 in 207ms
+ ○ Compiling /api/openaip/tiles/[layer]/[z]/[x]/[y] ...
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ ✓ Compiled /api/openaip/tiles/[layer]/[z]/[x]/[y] in 3.2s (2794 modules)
+ GET /api/openaip?resource=reporting-points&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 4465ms
+ GET /api/openaip?resource=navaids&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 4487ms
+ GET /api/openaip?resource=airports&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 4627ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 4743ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 4751ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 4749ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 741ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 822ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 677ms
+ GET /login 200 in 578ms
+ GET /api/auth/session 200 in 247ms
+ GET /api/auth/providers 200 in 146ms
+ GET /api/auth/csrf 200 in 134ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5449ms
+ GET /api/auth/session 200 in 157ms
+ GET /dashboard 200 in 265ms
+ GET /api/roles 200 in 912ms
+ GET /api/roles 200 in 926ms
+ GET /api/dashboard-summary 200 in 927ms
+ GET /api/dashboard-summary 200 in 917ms
+ GET /operations/active-flight 200 in 627ms
+ GET /api/auth/session 200 in 157ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 472ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 473ms
+ GET /api/openaip?resource=reporting-points&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 711ms
+ GET /api/openaip?resource=navaids&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 743ms
+ GET /api/openaip?resource=airports&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 816ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 756ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 136ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 507ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 592ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /login 200 in 283ms
+ GET /api/auth/session 200 in 149ms
+ GET /api/auth/providers 200 in 147ms
+ GET /api/auth/csrf 200 in 151ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5505ms
+ GET /api/auth/session 200 in 171ms
+ GET /dashboard 200 in 139ms
+ GET /api/dashboard-summary 200 in 703ms
+ GET /api/dashboard-summary 200 in 740ms
+ GET /api/roles 200 in 707ms
+ GET /api/roles 200 in 753ms
+ GET /operations/active-flight 200 in 371ms
+ GET /api/auth/session 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 456ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 458ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 546ms
+ GET /api/openaip?resource=airports&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 909ms
+ GET /api/openaip?resource=navaids&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 1027ms
+ GET /api/openaip?resource=reporting-points&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 1048ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 316ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 366ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 279ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /api/openaip?resource=airports&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 439ms
+ GET /api/openaip?resource=navaids&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 432ms
+ GET /api/openaip?resource=reporting-points&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 430ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 3.6s (2797 modules)
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /login 200 in 792ms
+ GET /api/auth/session 200 in 142ms
+ GET /api/auth/providers 200 in 151ms
+ GET /api/auth/csrf 200 in 110ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5483ms
+ GET /api/auth/session 200 in 180ms
+ GET /dashboard 200 in 157ms
+ GET /api/roles 200 in 941ms
+ GET /api/roles 200 in 1006ms
+ GET /api/dashboard-summary 200 in 959ms
+ GET /api/dashboard-summary 200 in 996ms
+ GET /operations/active-flight 200 in 651ms
+ GET /api/auth/session 200 in 149ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 471ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 475ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 479ms
+ GET /api/openaip?resource=airports&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 643ms
+ GET /api/openaip?resource=reporting-points&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 729ms
+ GET /api/openaip?resource=navaids&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 746ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 231ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 282ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 282ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /api/openaip?resource=reporting-points&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 730ms
+ GET /api/openaip?resource=navaids&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 749ms
+ GET /api/openaip?resource=airports&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 799ms
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ DELETE /api/flight-sessions?id=88b2f759-43cd-4d19-97d4-2b045d068419&mode=unblock 500 in 5562ms
+ GET /login 200 in 286ms
+ GET /api/auth/session 200 in 160ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 2.4s (1629 modules)
+ GET /api/me 200 in 3006ms
+ GET /api/auth/providers 200 in 155ms
+ GET /api/auth/csrf 200 in 128ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5489ms
+ GET /api/auth/session 200 in 178ms
+ GET /api/me 200 in 287ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 1520ms (1632 modules)
+ GET /api/me 200 in 2805ms
+ GET /api/me 200 in 434ms
+ GET /dashboard 200 in 3201ms
+ GET /api/me 200 in 276ms
+ GET /api/me 200 in 476ms
+ GET /api/dashboard-summary 200 in 935ms
+ GET /api/tenant-config 200 in 2144ms
+ GET /api/roles 200 in 1286ms
+ GET /api/tenant-config 200 in 1286ms
+ GET /api/tenant-config 200 in 4989ms
+ GET /operations/active-flight 200 in 783ms
+ GET /api/auth/session 200 in 173ms
+ GET /api/me 200 in 239ms
+ GET /api/me 200 in 401ms
+ GET /api/me 200 in 405ms
+ GET /api/me 200 in 402ms
+ GET /api/me 200 in 246ms
+ GET /api/me 200 in 238ms
+ GET /api/me 200 in 262ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /api/tenant-config 200 in 10233ms
+ GET /api/tenant-config 200 in 10232ms
+ GET /api/tenant-config 200 in 9948ms
+ GET /api/tenant-config 200 in 9780ms
+ GET /api/tenant-config 200 in 9531ms
+ GET /api/tenant-config 200 in 9245ms
+ GET /api/me 200 in 309ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 6.3s (3105 modules)
+ GET /api/me 200 in 7146ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.bookingRecord.findMany()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.aircraftRecord.findMany()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.aircraftRecord.findMany()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /api/tenant-config 200 in 18492ms
+ GET /api/bookings 200 in 18821ms
+ GET /api/aircraft 200 in 11616ms
+ GET /api/aircraft 200 in 18835ms
+ GET /api/flight-sessions 200 in 18802ms
+ GET /api/tenant-config 200 in 18843ms
+ GET /login 200 in 943ms
+ GET /login? 200 in 541ms
+ GET /api/auth/session 200 in 173ms
+ GET /api/me 200 in 96ms
+ GET /operations/active-flight 200 in 1358ms
+ GET /api/auth/session 200 in 602ms
+ GET /api/me 200 in 1678ms
+ GET /login 200 in 2237ms
+ GET /login 200 in 1019ms
+ GET /login 200 in 292ms
+ GET /api/auth/session 200 in 161ms
+ GET /api/auth/providers 200 in 173ms
+ GET /api/auth/csrf 200 in 164ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5650ms
+ GET /api/auth/session 200 in 173ms
+ GET /dashboard 200 in 183ms
+ GET /api/roles 200 in 761ms
+ GET /api/roles 200 in 843ms
+ GET /api/dashboard-summary 200 in 774ms
+ GET /api/dashboard-summary 200 in 830ms
+ GET /operations/active-flight 200 in 764ms
+ GET /api/auth/session 200 in 181ms
+ ○ Compiling /api/openaip/tiles/[layer]/[z]/[x]/[y] ...
+ ✓ Compiled /api/openaip/tiles/[layer]/[z]/[x]/[y] in 1909ms (1622 modules)
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ ✓ Compiled (1624 modules)
+ GET /api/openaip?resource=reporting-points&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 4550ms
+ GET /api/openaip?resource=reporting-points&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 1597ms
+ GET /api/openaip?resource=navaids&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 4589ms
+ GET /api/openaip?resource=navaids&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 1663ms
+ GET /api/openaip?resource=airports&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 4692ms
+ GET /api/openaip?resource=airports&bbox=17.589111,-36.807120,29.256592,-23.003741 200 in 1818ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 978ms (1627 modules)
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ DELETE /api/flight-sessions?id=54eff402-46db-41ae-b52c-a78e3fdf9bbd&mode=unblock 500 in 12049ms
+ GET /login 200 in 725ms
+ GET /api/auth/session 200 in 155ms
+ GET /api/auth/providers 200 in 172ms
+ GET /api/auth/csrf 200 in 146ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5443ms
+ GET /api/auth/session 200 in 102ms
+ GET /dashboard 200 in 148ms
+ GET /api/dashboard-summary 200 in 687ms
+ GET /api/roles 200 in 705ms
+ GET /api/roles 200 in 755ms
+ GET /api/dashboard-summary 200 in 711ms
+ GET /operations/active-flight 200 in 445ms
+ GET /api/auth/session 200 in 214ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /login 200 in 289ms
+ GET /login? 200 in 277ms
+ GET /api/auth/session 200 in 172ms
+ GET /operations/active-flight 200 in 214ms
+ GET /api/auth/session 200 in 137ms
+ GET /login 200 in 154ms
+ GET /login 200 in 314ms
+ GET /login? 200 in 343ms
+ GET /api/auth/session 200 in 181ms
+ GET /operations/active-flight 200 in 367ms
+ GET /api/auth/session 200 in 131ms
+ GET /login 200 in 134ms
+ GET /login 200 in 284ms
+ GET /login? 200 in 316ms
+ GET /api/auth/session 200 in 141ms
+ GET /operations/active-flight 200 in 227ms
+ GET /api/auth/session 200 in 132ms
+ GET /login 200 in 155ms
+ GET /login 200 in 287ms
+ GET /login? 200 in 309ms
+ GET /api/auth/session 200 in 157ms
+ GET /operations/active-flight 200 in 237ms
+ GET /api/auth/session 200 in 127ms
+ GET /login 200 in 128ms
+ GET /login 200 in 209ms
+ GET /login? 200 in 330ms
+ GET /api/auth/session 200 in 171ms
+ GET /operations/active-flight 200 in 178ms
+ GET /api/auth/session 200 in 143ms
+ GET /login 200 in 125ms
+ GET /login 200 in 961ms
+ GET /api/auth/session 200 in 147ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 1594ms (976 modules)
+ GET /api/me 200 in 2192ms
+ GET /api/auth/providers 200 in 179ms
+ GET /api/auth/csrf 200 in 625ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 5548ms
+ GET /api/auth/session 200 in 151ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 890ms (1617 modules)
+ ✓ Compiled (1621 modules)
+ GET /api/me 200 in 3310ms
+ GET /api/me 200 in 3317ms
+ GET /dashboard 200 in 4309ms
+ GET /api/me 200 in 970ms
+ GET /api/tenant-config 200 in 1472ms
+ GET /api/tenant-config 200 in 4816ms
+ ○ Compiling /api/roles ...
+ ✓ Compiled /api/roles in 1030ms (1623 modules)
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ GET /operations/active-flight 200 in 1451ms
+ GET /api/auth/session 200 in 202ms
+ ○ Compiling /api/openaip/tiles/[layer]/[z]/[x]/[y] ...
+ ✓ Compiled /api/openaip/tiles/[layer]/[z]/[x]/[y] in 2.3s (1625 modules)
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ ✓ Compiled (1627 modules)
+ GET /api/openaip?resource=reporting-points&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 5587ms
+ GET /api/openaip?resource=reporting-points&bbox=27.508392,-26.791660,28.966827,-24.997893 200 in 3862ms
+ GET /api/openaip?resource=navaids&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 5637ms
+ GET /api/openaip?resource=navaids&bbox=27.508392,-26.791660,28.966827,-24.997893 200 in 3896ms
+ GET /api/openaip?resource=airports&bbox=27.508392,-26.791660,28.966827,-24.997893 200 in 3996ms
+ GET /api/openaip?resource=airports&bbox=26.441345,-27.686358,29.358215,-24.099049 200 in 5822ms
+ GET /api/openaip/tiles/openaip/9/295/294 200 in 649ms
+ GET /api/openaip/tiles/openaip/9/296/293 200 in 723ms
+ GET /api/openaip/tiles/openaip/9/296/294 200 in 1015ms
+ GET /api/openaip/tiles/openaip/9/295/295 200 in 909ms
+ GET /api/openaip/tiles/openaip/9/296/295 200 in 891ms
+ GET /api/openaip/tiles/openaip/9/295/293 200 in 1122ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 2.8s (1630 modules)
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+prisma:error 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+ DELETE /api/flight-sessions?id=814a4bef-e407-4a47-9626-99d4bd2e52fc&mode=unblock 500 in 13686ms
+ ✓ Compiled in 2.9s (1907 modules)
+ GET /login 200 in 507ms
+ GET /login? 200 in 139ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 513ms (962 modules)
+ GET /api/auth/session 200 in 815ms
+ GET /operations/active-flight 200 in 503ms
+ GET /api/auth/session 200 in 66ms
+ GET /login 200 in 105ms
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 167ms
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 131ms
+ ✓ Compiled in 2.2s (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 552ms
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 144ms
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 137ms
+ ✓ Compiled in 2.3s (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 483ms
+ ✓ Compiled in 968ms (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 443ms
+ ✓ Compiled in 877ms (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 333ms
+ ✓ Compiled in 1251ms (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 412ms
+ ✓ Compiled in 1142ms (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 404ms
+ ✓ Compiled in 1151ms (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 441ms
+ ✓ Compiled in 1299ms (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 443ms
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 148ms
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 122ms
+ ✓ Compiled in 1319ms (1907 modules)
+ GET /operations/active-flight?setup=1&aircraftId=a1&bookingId=b1 200 in 342ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1799ms (1364 modules)
+ GET /dashboard 200 in 2833ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 944ms (1616 modules)
+ GET /api/dashboard-summary 200 in 1274ms
+ GET /api/dashboard-summary 200 in 1251ms
+ GET /api/dashboard-summary 200 in 1254ms
+ GET /api/dashboard-summary 200 in 1303ms
+ GET /dashboard 200 in 947ms
+ GET /api/dashboard-summary 200 in 110ms
+ GET /api/dashboard-summary 200 in 119ms
+ GET /api/dashboard-summary 200 in 120ms
+ GET /api/dashboard-summary 200 in 153ms
+ GET /dashboard 200 in 134ms
+ GET /api/dashboard-summary 200 in 122ms
+ GET /api/dashboard-summary 200 in 130ms
+ GET /api/dashboard-summary 200 in 120ms
+ GET /api/dashboard-summary 200 in 122ms
+ GET /dashboard 200 in 123ms
+ GET /api/dashboard-summary 200 in 120ms
+ GET /api/dashboard-summary 200 in 146ms
+ GET /api/dashboard-summary 200 in 151ms
+ GET /api/dashboard-summary 200 in 154ms
+ GET /dashboard 200 in 125ms
+ GET /api/dashboard-summary 200 in 85ms
+ GET /api/dashboard-summary 200 in 113ms
+ GET /api/dashboard-summary 200 in 112ms
+ GET /api/dashboard-summary 200 in 115ms
+ ✓ Compiled in 1826ms (2548 modules)
+ GET /dashboard 200 in 819ms
+ ✓ Compiled /api/dashboard-summary in 377ms (1616 modules)
+ GET /api/dashboard-summary 200 in 756ms
+ GET /api/dashboard-summary 200 in 750ms
+ GET /api/dashboard-summary 200 in 756ms
+ GET /api/dashboard-summary 200 in 795ms
+ ✓ Compiled in 1281ms (2548 modules)
+ GET /dashboard 200 in 592ms
+ ✓ Compiled /api/dashboard-summary in 399ms (1616 modules)
+ GET /api/dashboard-summary 200 in 766ms
+ GET /api/dashboard-summary 200 in 728ms
+ GET /api/dashboard-summary 200 in 730ms
+ GET /api/dashboard-summary 200 in 776ms
+ ✓ Compiled in 1220ms (2548 modules)
+ GET /dashboard 200 in 608ms
+ ✓ Compiled /api/dashboard-summary in 354ms (1616 modules)
+ GET /api/dashboard-summary 200 in 688ms
+ GET /api/dashboard-summary 200 in 670ms
+ GET /api/dashboard-summary 200 in 673ms
+ GET /api/dashboard-summary 200 in 706ms
+ GET /dashboard 200 in 649ms
+ GET /api/dashboard-summary 200 in 170ms
+ GET /api/dashboard-summary 200 in 153ms
+ GET /api/dashboard-summary 200 in 153ms
+ GET /api/dashboard-summary 200 in 145ms
+ GET /dashboard 200 in 113ms
+ GET /api/dashboard-summary 200 in 96ms
+ GET /api/dashboard-summary 200 in 138ms
+ GET /api/dashboard-summary 200 in 148ms
+ GET /api/dashboard-summary 200 in 150ms
+ ✓ Compiled in 958ms (1184 modules)
+ ○ Compiling /operations/company-documents ...
+ ✓ Compiled /operations/company-documents in 3.2s (2668 modules)
+ GET /operations/company-documents 200 in 3918ms
+ GET /operations/company-documents 200 in 120ms
+ GET /operations/company-documents 200 in 146ms
+ GET /operations/company-documents 200 in 137ms
+ GET /operations/company-documents 200 in 123ms
+ GET /login 200 in 188ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1245ms (1672 modules)
+ GET /api/auth/providers 200 in 595ms
+ GET /api/auth/session 200 in 1862ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 679ms (1686 modules)
+ GET /api/me 200 in 1499ms
+ GET /api/auth/csrf 200 in 1504ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 299ms
+ GET /api/auth/session 200 in 68ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 716ms (1690 modules)
+ GET /api/me 200 in 1404ms
+ GET /api/me 200 in 1411ms
+ GET /api/tenant-config 200 in 2843ms
+ GET /api/me 200 in 1896ms
+ ○ Compiling /_error ...
+ GET /api/tenant-config 200 in 1922ms
+ ✓ Compiled /_error in 3.7s (3278 modules)
+ GET /dashboard 500 in 7216ms
+ GET /operations/company-documents 500 in 2749ms
+ ✓ Compiled in 1131ms (1399 modules)
+ ✓ Compiled in 2.1s (2953 modules)
+ ✓ Compiled in 823ms (1400 modules)
+ ✓ Compiled in 684ms (1400 modules)
+ ✓ Compiled in 742ms (1400 modules)
+ ✓ Compiled in 639ms (1400 modules)
+ ✓ Compiled in 653ms (1400 modules)
+ ✓ Compiled in 625ms (1400 modules)
+ ✓ Compiled in 736ms (1400 modules)
+ ✓ Compiled in 837ms (1400 modules)
+ ✓ Compiled in 678ms (1400 modules)
+ ✓ Compiled in 989ms (1400 modules)
+ ✓ Compiled in 619ms (1400 modules)
+ ✓ Compiled in 1124ms (1400 modules)
+ ✓ Compiled in 605ms (1400 modules)
+ ✓ Compiled in 433ms (1400 modules)
+ ✓ Compiled in 546ms (1400 modules)
+ ✓ Compiled in 854ms (1384 modules)
+ ✓ Compiled in 575ms (1384 modules)
+ ✓ Compiled in 678ms (1384 modules)
+ ✓ Compiled in 761ms (1384 modules)
+ ✓ Compiled in 620ms (1384 modules)
+ ✓ Compiled in 704ms (1384 modules)
+ ✓ Compiled in 1502ms (1384 modules)
+ ✓ Compiled in 723ms (1384 modules)
+ ✓ Compiled in 607ms (1384 modules)
+ ✓ Compiled in 809ms (1384 modules)
+ ✓ Compiled in 426ms (1384 modules)
+ ✓ Compiled in 563ms (1384 modules)
+ ✓ Compiled in 564ms (1384 modules)
+ ✓ Compiled in 553ms (1384 modules)
+ ✓ Compiled in 1489ms (1384 modules)
+ ✓ Compiled in 544ms (1384 modules)
+ ✓ Compiled in 826ms (1384 modules)
+ ✓ Compiled in 708ms (1384 modules)
+ ✓ Compiled in 607ms (1384 modules)
+ ✓ Compiled in 550ms (1384 modules)
+ ✓ Compiled in 761ms (1384 modules)
+ ✓ Compiled in 572ms (1384 modules)
+ ✓ Compiled in 1652ms (1384 modules)
+ ✓ Compiled in 696ms (1384 modules)
+ ✓ Compiled in 1407ms (1384 modules)
+ ✓ Compiled in 565ms (1384 modules)
+ ✓ Compiled in 453ms (1384 modules)
+ ✓ Compiled in 404ms (1384 modules)
+ ✓ Compiled in 610ms (1384 modules)
+ ✓ Compiled in 445ms (1384 modules)
+ ✓ Compiled in 441ms (1384 modules)
+ ✓ Compiled in 534ms (1384 modules)
+ ✓ Compiled in 422ms (1384 modules)
+ ✓ Compiled in 693ms (1384 modules)
+ ✓ Compiled in 639ms (1384 modules)
+ ✓ Compiled in 450ms (1384 modules)
+ ✓ Compiled in 510ms (1384 modules)
+ ✓ Compiled in 572ms (1384 modules)
+ ✓ Compiled in 554ms (1384 modules)
+ ✓ Compiled in 432ms (1384 modules)
+ ✓ Compiled in 1375ms (1384 modules)
+ ✓ Compiled in 828ms (1384 modules)
+ ✓ Compiled in 725ms (1384 modules)
+ ✓ Compiled in 442ms (1384 modules)
+ ✓ Compiled in 793ms (1384 modules)
+ ✓ Compiled in 867ms (1384 modules)
+ ✓ Compiled in 1276ms (1384 modules)
+ ✓ Compiled in 673ms (1384 modules)
+ ✓ Compiled in 680ms (1384 modules)
+ ✓ Compiled in 897ms (1384 modules)
+ ✓ Compiled in 672ms (1384 modules)
+ ✓ Compiled in 713ms (1384 modules)

@@ -39,6 +39,12 @@ export function LeafletMapFrame({
     return null;
   }
 
+  const mergedStyle: CSSProperties = {
+    ...style,
+    touchAction: 'none',
+    overscrollBehavior: 'none',
+  };
+
   return (
     <MapContainer
       key={mapKey}
@@ -51,7 +57,7 @@ export function LeafletMapFrame({
       zoomAnimation={zoomAnimation}
       preferCanvas={preferCanvas}
       className={className}
-      style={style}
+      style={mergedStyle}
     >
       {children}
     </MapContainer>

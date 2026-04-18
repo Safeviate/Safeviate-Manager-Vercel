@@ -1,0 +1,34 @@
+ ⨯ The requested resource isn't a valid image for /api/uploads/view?path=uploads%2F2026-04-15%2F556567-1776284734537-556567.jpg received null
+ ⨯ The requested resource isn't a valid image for /api/uploads/view?path=uploads%2F2026-04-15%2F556567-1776284734537-556567.jpg received null
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\14.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\14.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz'
+ ⨯ The requested resource isn't a valid image for /api/uploads/view?path=uploads%2F2026-04-15%2F556567-1776284734537-556567.jpg received null
+ ⨯ The requested resource isn't a valid image for /api/uploads/view?path=uploads%2F2026-04-15%2F556567-1776284734537-556567.jpg received null
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\2.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\2.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\1.pack.gz'
+ ⨯ ./src/app/(app)/assets/aircraft/aircraft-list.tsx
+Error:   [31mx[0m Expected ',', got '{'
+   ,-[[36;1;4mC:\Safeviate\Safeviate-Manager-Vercel\src\app\(app)\assets\aircraft\aircraft-list.tsx[0m:4:1]
+ [2m1[0m | 'use client';
+ [2m2[0m | 
+ [2m3[0m | import {
+ [2m4[0m | import { Plane } from 'lucide-react';
+   : [35;1m       ^[0m
+ [2m5[0m | import Link from 'next/link';
+ [2m6[0m | import type { Aircraft } from '@/types/aircraft';
+ [2m7[0m | import { Card, CardContent, CardHeader } from '@/components/ui/card';
+   `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/(app)/assets/aircraft/aircraft-list.tsx
+./src/app/(app)/assets/aircraft/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\5.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\5.pack.gz'
+ ⨯ SyntaxError: Unexpected non-whitespace character after JSON at position 388 (line 20 column 2)
+    at JSON.parse (<anonymous>) {
+  page: '/assets/vehicles'
+}

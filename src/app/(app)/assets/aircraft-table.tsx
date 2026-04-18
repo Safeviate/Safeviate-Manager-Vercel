@@ -1,16 +1,9 @@
 'use client';
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Aircraft } from '@/types/aircraft';
 import { AircraftActions } from './aircraft-actions';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 interface AircraftTableProps {
   data: Aircraft[];
@@ -19,48 +12,44 @@ interface AircraftTableProps {
 }
 
 export function AircraftTable({ data, isLoading, tenantId }: AircraftTableProps) {
-  if (isLoading) {
-    return (
-      <div className="p-4 space-y-2">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-        No aircraft found in the fleet.
-      </div>
-    );
-  }
-
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Tail Number</TableHead>
-          <TableHead>Make & Model</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Airframe Hours</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((aircraft) => (
-          <TableRow key={aircraft.id}>
-            <TableCell className="font-bold">{aircraft.tailNumber}</TableCell>
-            <TableCell>{aircraft.make} {aircraft.model}</TableCell>
-            <TableCell className="font-black uppercase tracking-widest">{aircraft.type || 'N/A'}</TableCell>
-            <TableCell>{aircraft.frameHours?.toFixed(1) || '0.0'} hrs</TableCell>
-            <TableCell className="text-right">
+    <ResponsiveCardGrid
+      items={data}
+      isLoading={isLoading}
+      className="p-4"
+      gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+      renderItem={(aircraft) => (
+        <Card key={aircraft.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+          <CardHeader className="border-b bg-muted/20 px-4 py-3">
+            <div className="space-y-1">
+              <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{aircraft.tailNumber}</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                {aircraft.make} {aircraft.model}
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 px-4 py-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border bg-background px-3 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Type</p>
+                <p className="mt-1 text-sm font-semibold text-foreground uppercase">{aircraft.type || 'N/A'}</p>
+              </div>
+              <div className="rounded-lg border bg-background px-3 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Airframe Hours</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{aircraft.frameHours?.toFixed(1) || '0.0'} hrs</p>
+              </div>
+            </div>
+            <div className="flex justify-end">
               <AircraftActions tenantId={tenantId} aircraft={aircraft} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      emptyState={(
+        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
+          No aircraft found in the fleet.
+        </div>
+      )}
+    />
   );
 }

@@ -1,10 +1,1039 @@
- ⨯ Failed to start server
-Error: listen EADDRINUSE: address already in use :::9002
-    at <unknown> (Error: listen EADDRINUSE: address already in use :::9002)
-    at new Promise (<anonymous>) {
-  code: 'EADDRINUSE',
-  errno: -4091,
-  syscall: 'listen',
-  address: '::',
-  port: 9002
+[AUTH] Database lookup failed, falling back to seed credentials when possible<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: invalid block type
+^Cn't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
 }
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[flight-sessions] delete failed: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\flight-sessions\route.ts:14:23)
+    at async DELETE (src\app\api\flight-sessions\route.ts:93:22)
+  12 |     return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  13 |   }
+> 14 |   const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
+     |                       ^
+  15 |   return currentUser?.tenantId || 'safeviate';
+  16 | }
+  17 | {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[flight-sessions] delete failed: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\flight-sessions\route.ts:14:23)
+    at async DELETE (src\app\api\flight-sessions\route.ts:93:22)
+  12 |     return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  13 |   }
+> 14 |   const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
+     |                       ^
+  15 |   return currentUser?.tenantId || 'safeviate';
+  16 | }
+  17 | {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[bookings] failed to load bookings: Error [PrismaClientInitializationError]: 
+Invalid `prisma.bookingRecord.findMany()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\bookings\route.ts:45:22)
+  43 |
+  44 |     await ensureBookingsSchema();
+> 45 |     const bookings = await prisma.bookingRecord.findMany({
+     |                      ^
+  46 |       where: { tenantId },
+  47 |       orderBy: { createdAt: 'asc' },
+  48 |       select: { data: true }, {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[aircraft] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.aircraftRecord.findMany()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\aircraft\route.ts:55:22)
+  53 |     if (!tenantId) return NextResponse.json({ aircraft: [] }, { status: 200 });
+  54 |
+> 55 |     const aircraft = await prisma.aircraftRecord.findMany({
+     |                      ^
+  56 |       where: { tenantId },
+  57 |       orderBy: { createdAt: 'asc' },
+  58 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[aircraft] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.aircraftRecord.findMany()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\aircraft\route.ts:55:22)
+  53 |     if (!tenantId) return NextResponse.json({ aircraft: [] }, { status: 200 });
+  54 |
+> 55 |     const aircraft = await prisma.aircraftRecord.findMany({
+     |                      ^
+  56 |       where: { tenantId },
+  57 |       orderBy: { createdAt: 'asc' },
+  58 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[flight-sessions] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\flight-sessions\route.ts:14:23)
+    at async GET (src\app\api\flight-sessions\route.ts:22:22)
+  12 |     return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  13 |   }
+> 14 |   const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
+     |                       ^
+  15 |   return currentUser?.tenantId || 'safeviate';
+  16 | }
+  17 | {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[flight-sessions] delete failed: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\flight-sessions\route.ts:14:23)
+    at async DELETE (src\app\api\flight-sessions\route.ts:93:22)
+  12 |     return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  13 |   }
+> 14 |   const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
+     |                       ^
+  15 |   return currentUser?.tenantId || 'safeviate';
+  16 | }
+  17 | {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[AUTH] Database lookup failed, falling back to seed credentials when possible. Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async Object.authorize (src\auth.ts:62:20)
+  60 |         let dbUser = null;
+  61 |         try {
+> 62 |           dbUser = await prisma.user.findUnique({ where: { email } });
+     |                    ^
+  63 |         } catch (error) {
+  64 |           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
+  65 |         } {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[roles] fallback to empty list: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\roles\route.ts:11:23)
+    at async GET (src\app\api\roles\route.ts:21:22)
+   9 |   if (!email) return null;
+  10 |
+> 11 |   const currentUser = await prisma.user.findUnique({
+     |                       ^
+  12 |     where: { email },
+  13 |     select: { tenantId: true },
+  14 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[tenant-config] fallback to empty config: Error [PrismaClientInitializationError]: 
+Invalid `prisma.tenantConfig.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async GET (src\app\api\tenant-config\route.ts:14:23)
+  12 |
+  13 |     await ensureTenantConfigSchema();
+> 14 |     const configRow = await prisma.tenantConfig.findUnique({
+     |                       ^
+  15 |       where: { tenantId: auth.tenantId },
+  16 |       select: { data: true },
+  17 |     }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[flight-sessions] delete failed: Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Can't reach database server at `safeviate-postgres.postgres.database.azure.com:5432`
+
+Please make sure your database server is running at `safeviate-postgres.postgres.database.azure.com:5432`.
+    at async getTenantId (src\app\api\flight-sessions\route.ts:14:23)
+    at async DELETE (src\app\api\flight-sessions\route.ts:93:22)
+  12 |     return process.env.NODE_ENV === 'development' ? 'safeviate' : null;
+  13 |   }
+> 14 |   const currentUser = await prisma.user.findUnique({ where: { email }, select: { tenantId: true } });
+     |                       ^
+  15 |   return currentUser?.tenantId || 'safeviate';
+  16 | }
+  17 | {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\37.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\37.pack.gz'
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.]
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/dashboard'
+}
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.]
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/operations/company-documents'
+}
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\5.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\5.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\2.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\2.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\4.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\4.pack.gz'
+^C

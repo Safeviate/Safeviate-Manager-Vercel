@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, ChevronDown } from 'lucide-react';
@@ -33,6 +32,7 @@ import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 const parseLocalDate = (value: string) => {
     const [year, month, day] = value.split('-').map(Number);
@@ -87,92 +87,58 @@ interface ReportsTableProps {
 }
 
 function ReportsTable({ reports, tenantId, canManage }: ReportsTableProps) {
-    if (reports.length === 0) {
-        return <div className="text-center p-12 text-muted-foreground text-sm italic">No safety reports found for this context.</div>;
-    }
-
     return (
-        <div className="flex flex-col h-full">
-            <div className="hidden lg:block overflow-auto">
-                <Table>
-                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                        <TableRow>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Report #</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Type</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Event Date</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Submitted By</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
-                            <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {reports.map(report => (
-                            <TableRow key={report.id}>
-                                <TableCell className="font-bold text-sm text-primary">{report.reportNumber}</TableCell>
-                                <TableCell className="text-sm font-medium">{report.reportType}</TableCell>
-                                <TableCell className="text-sm whitespace-nowrap">{format(parseLocalDate(report.eventDate), 'dd MMM yy')}</TableCell>
-                                <TableCell className="text-sm">{report.submittedByName}</TableCell>
-                                <TableCell><Badge variant={getStatusBadgeVariant(report.status)} className="text-[10px] font-bold uppercase">{report.status}</Badge></TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <ViewActionButton href={`/safety/safety-reports/${report.id}`} />
-                                        {canManage && <EditReportDialog report={report} tenantId={tenantId} />}
-                                        <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} />
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden p-4">
-                {reports.map(report => (
-                    <Card key={report.id} className="shadow-none border-slate-200 overflow-hidden">
-                        <div className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{report.reportNumber}</span>
-                                <span className="text-sm font-black mt-1">{report.reportType}</span>
-                            </div>
-                            <Badge variant={getStatusBadgeVariant(report.status)} className="h-5 text-[9px] font-black uppercase">
-                                {report.status}
-                            </Badge>
+        <ResponsiveCardGrid
+            items={reports}
+            isLoading={false}
+            className="p-4"
+            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+            renderItem={(report) => (
+                <Card key={report.id} className="shadow-none border-slate-200 overflow-hidden">
+                    <CardHeader className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">{report.reportNumber}</span>
+                            <span className="text-sm font-black mt-1">{report.reportType}</span>
                         </div>
-                        <CardContent className="p-4 py-3 space-y-3">
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    {format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                    <MapPin className="h-3.5 w-3.5" />
-                                    {report.location}
-                                </div>
+                        <Badge variant={getStatusBadgeVariant(report.status)} className="h-5 text-[9px] font-black uppercase">
+                            {report.status}
+                        </Badge>
+                    </CardHeader>
+                    <CardContent className="p-4 py-3 space-y-3">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                <Clock className="h-3.5 w-3.5" />
+                                {format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}
                             </div>
-                            <div className="flex items-center gap-2 text-xs font-bold">
-                                <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                Filed by: {report.submittedByName}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {report.location}
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2 italic font-medium">&quot;{report.description}&quot;</p>
-                        </CardContent>
-                        <div className="p-2 border-t bg-muted/5 flex gap-2">
-                            <Button asChild variant="ghost" size="sm" className="flex-1 justify-between text-xs font-black uppercase h-8 px-4">
-                                <Link href={`/safety/safety-reports/${report.id}`}>
-                                    View Detailed Investigation
-                                    <ArrowRight className="h-3.5 w-3.5 ml-2" />
-                                </Link>
-                            </Button>
-                            {canManage && (
-                                <div className="flex gap-1">
-                                    <EditReportDialog report={report} tenantId={tenantId} />
-                                    <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} />
-                                </div>
-                            )}
                         </div>
-                    </Card>
-                ))}
-            </div>
-        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            Filed by: {report.submittedByName}
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 italic font-medium">&quot;{report.description}&quot;</p>
+                    </CardContent>
+                    <div className="p-2 border-t bg-muted/5 flex gap-2">
+                        <Button asChild variant="ghost" size="sm" className="flex-1 justify-between text-xs font-black uppercase h-8 px-4">
+                            <Link href={`/safety/safety-reports/${report.id}`}>
+                                View Detailed Investigation
+                                <ArrowRight className="h-3.5 w-3.5 ml-2" />
+                            </Link>
+                        </Button>
+                        {canManage && (
+                            <div className="flex gap-1">
+                                <EditReportDialog report={report} tenantId={tenantId} />
+                                <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} />
+                            </div>
+                        )}
+                    </div>
+                </Card>
+            )}
+            emptyState={<div className="text-center p-12 text-muted-foreground text-sm italic">No safety reports found for this context.</div>}
+        />
     );
 }
 

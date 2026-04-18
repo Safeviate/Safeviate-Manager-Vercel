@@ -1,14 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
@@ -19,6 +11,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, User, Plane } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -61,115 +54,98 @@ export function BillingTable({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* --- DESKTOP TABLE VIEW --- */}
-      <div className="hidden lg:block rounded-md border bg-card overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead className="w-12">
-                <Checkbox 
-                  checked={isAllSelected}
-                  onCheckedChange={() => onToggleAll(allIds)}
-                />
-              </TableHead>
-              <TableHead className="text-[10px] uppercase font-bold">Ref #</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold">Date</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold">Aircraft</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold">Client / Student</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold text-right">Hours (Hobbs)</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold text-right">Rate</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold text-right">Total</TableHead>
-              <TableHead className="text-[10px] uppercase font-bold">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bookings.map((booking) => {
-              const ac = aircraftMap.get(booking.aircraftId);
-              const duration = (booking.postFlightData?.hobbs || 0) - (booking.preFlightData?.hobbs || 0);
-              const rate = ac?.hourlyRate || 0;
-              const total = duration * rate;
+      <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/5 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Checkbox
+            checked={isAllSelected}
+            onCheckedChange={() => onToggleAll(allIds)}
+          />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select all</p>
+            <p className="text-sm font-semibold text-foreground">{bookings.length} billable flights</p>
+          </div>
+        </div>
+        <Badge variant={bookings.some((booking) => booking.accountingStatus === 'Exported') ? 'default' : 'secondary'} className="text-[9px] h-5">
+          {bookings.some((booking) => booking.accountingStatus === 'Exported') ? 'Exported mix' : 'Unbilled'}
+        </Badge>
+      </div>
 
-              return (
-                <TableRow key={booking.id}>
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedIds.has(booking.id)}
-                      onCheckedChange={() => onToggleSelection(booking.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{booking.bookingNumber}</TableCell>
-                  <TableCell className="text-xs whitespace-nowrap">{format(parseLocalDate(booking.date), 'dd MMM yyyy')}</TableCell>
-                  <TableCell className="font-bold">{ac?.tailNumber || 'Unknown'}</TableCell>
-                  <TableCell className="text-xs">{userMap.get(booking.studentId || '') || 'Private / External'}</TableCell>
-                  <TableCell className="text-right font-mono font-bold">{duration.toFixed(1)}h</TableCell>
-                  <TableCell className="text-right text-muted-foreground">${rate.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-bold text-primary">${total.toFixed(2)}</TableCell>
-                  <TableCell>
+      <ScrollArea className="h-full">
+        <ResponsiveCardGrid
+          items={bookings}
+          isLoading={false}
+          className="pb-4"
+          gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+          renderItem={(booking) => {
+            const ac = aircraftMap.get(booking.aircraftId);
+            const duration = (booking.postFlightData?.hobbs || 0) - (booking.preFlightData?.hobbs || 0);
+            const rate = ac?.hourlyRate || 0;
+            const total = duration * rate;
+            const isSelected = selectedIds.has(booking.id);
+
+            return (
+              <Card
+                key={booking.id}
+                className={cn(
+                  "overflow-hidden border-l-4 shadow-none transition-shadow hover:shadow-sm",
+                  isSelected ? "border-l-primary bg-primary/5" : "border-l-transparent"
+                )}
+                onClick={() => onToggleSelection(booking.id)}
+              >
+                <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="truncate text-[10px] font-black uppercase tracking-widest text-muted-foreground">#{booking.bookingNumber}</p>
+                    <p className="flex items-center gap-2 text-sm font-black text-foreground">
+                      <Plane className="h-3.5 w-3.5 text-primary" />
+                      {ac?.tailNumber || 'Unknown'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
                     <Badge variant={booking.accountingStatus === 'Exported' ? 'default' : 'secondary'} className="text-[9px] h-5">
                       {booking.accountingStatus || 'Unbilled'}
                     </Badge>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* --- MOBILE CARD VIEW --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
-        {bookings.map((booking) => {
-          const ac = aircraftMap.get(booking.aircraftId);
-          const duration = (booking.postFlightData?.hobbs || 0) - (booking.preFlightData?.hobbs || 0);
-          const rate = ac?.hourlyRate || 0;
-          const total = duration * rate;
-          const isSelected = selectedIds.has(booking.id);
-
-          return (
-            <Card 
-              key={booking.id} 
-              className={cn(
-                "shadow-sm transition-colors border-l-4",
-                isSelected ? "border-l-primary bg-primary/5" : "border-l-transparent"
-              )}
-              onClick={() => onToggleSelection(booking.id)}
-            >
-              <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">#{booking.bookingNumber}</span>
-                  <span className="text-sm font-black flex items-center gap-2">
-                    <Plane className="h-3.5 w-3.5 text-primary" />
-                    {ac?.tailNumber || 'Unknown'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={booking.accountingStatus === 'Exported' ? 'default' : 'secondary'} className="text-[9px] h-5">
-                    {booking.accountingStatus || 'Unbilled'}
-                  </Badge>
-                  <Checkbox checked={isSelected} className="rounded-full" />
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 py-3 space-y-3">
-                <div className="flex justify-between items-center text-xs">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    {format(parseLocalDate(booking.date), 'dd MMM yyyy')}
+                    <Checkbox checked={isSelected} className="rounded-full" />
                   </div>
-                  <div className="font-mono font-bold">{duration.toFixed(1)}h</div>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  {userMap.get(booking.studentId || '') || 'Private / External'}
-                </div>
-                <div className="flex justify-between items-end border-t pt-2 mt-2">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Amount Due</span>
-                  <div className="text-lg font-black text-primary">${total.toFixed(2)}</div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </CardHeader>
+                <CardContent className="space-y-4 px-4 py-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Date</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{format(parseLocalDate(booking.date), 'dd MMM yyyy')}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Hours</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{duration.toFixed(1)}h</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Client / Student</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                      {userMap.get(booking.studentId || '') || 'Private / External'}
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Rate</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">${rate.toFixed(2)}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Total</p>
+                      <p className="mt-1 text-sm font-semibold text-primary">${total.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }}
+          emptyState={(
+            <div className="h-32 text-center flex items-center justify-center text-muted-foreground italic bg-card rounded-lg border">
+              No completed flights found for this selection.
+            </div>
+          )}
+        />
+      </ScrollArea>
     </div>
   );
 }

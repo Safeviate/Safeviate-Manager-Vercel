@@ -1639,7 +1639,7 @@ export default function AeronauticalMap({
     : [-25.9, 27.9];
 
   return (
-    <div className="relative h-full w-full" style={{ touchAction: 'none', overscrollBehavior: 'none' }}>
+    <div className="relative h-full w-full" style={{ overscrollBehavior: 'none' }}>
     <LeafletMapFrame
       center={center}
       zoom={8}

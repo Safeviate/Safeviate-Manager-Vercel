@@ -131,6 +131,8 @@ function stripUndefinedDeep<T>(value: T): T {
     return value;
 }
 
+const getStatusLabel = (status: Booking['status']) => (status === 'Completed' ? 'Complete' : status);
+
 const CHECK_APPROVAL_KEYS = ['massAndBalance', 'navlog', 'preFlight', 'photos', 'fuelUplift', 'postFlight'] as const;
 type CheckApprovalKey = typeof CHECK_APPROVAL_KEYS[number];
 
@@ -990,7 +992,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-4">
-                                        <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{booking.status}</Badge></DetailItem>
+                                        <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{getStatusLabel(booking.status)}</Badge></DetailItem>
                                         <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
                                         <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
                                         <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />

@@ -11,12 +11,12 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { cn } from '@/lib/utils';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 type VehicleLite = {
   id: string;
@@ -364,14 +364,18 @@ export default function VehicleUsagePage() {
               </Card>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              {vehicles.length > 0 ? vehicles.map((vehicle) => {
+            <ResponsiveCardGrid
+              items={vehicles}
+              isLoading={false}
+              className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3"
+              gridClassName="lg:grid-cols-2 xl:grid-cols-3"
+              renderItem={(vehicle) => {
                 const activeRecord = activeUsageByVehicleId.get(vehicle.id);
                 const isBookedOut = Boolean(activeRecord);
 
                 return (
-                  <Card key={vehicle.id} className={cn('shadow-none border transition-colors', isBookedOut ? 'border-border bg-muted/40' : 'border-border bg-muted/20')}>
-                    <CardHeader className="space-y-3">
+                  <Card key={vehicle.id} className={cn('shadow-none border transition-colors overflow-hidden', isBookedOut ? 'border-border bg-muted/40' : 'border-border bg-muted/20')}>
+                    <CardHeader className="space-y-3 border-b bg-muted/10 px-4 py-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <CardTitle className="text-base">{vehicle.registrationNumber}</CardTitle>
@@ -380,7 +384,7 @@ export default function VehicleUsagePage() {
                         <Badge variant={isBookedOut ? 'secondary' : 'default'}>{isBookedOut ? 'Booked Out' : 'Available'}</Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
+                    <CardContent className="space-y-3 px-4 py-4 text-sm">
                       <div className="flex items-center gap-2 text-foreground/80">
                         <CarFront className="h-4 w-4" />
                         <span>{vehicle.type || 'Vehicle'}</span>
@@ -409,14 +413,16 @@ export default function VehicleUsagePage() {
                     </CardContent>
                   </Card>
                 );
-              }) : (
+              }}
+              emptyState={(
                 <Card className="shadow-none border lg:col-span-2 xl:col-span-3">
                   <CardContent className="flex h-40 items-center justify-center">
                     <p className="text-sm text-muted-foreground italic">No vehicles configured yet.</p>
                   </CardContent>
                 </Card>
               )}
-            </div>
+            />
+            
 
             <Card className="shadow-none border">
               <CardHeader>
@@ -431,50 +437,60 @@ export default function VehicleUsagePage() {
                   </div>
                 ) : (
                   <ScrollArea className="w-full">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Vehicle</TableHead>
-                          <TableHead>Booked Out</TableHead>
-                          <TableHead>Purpose</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Booked In</TableHead>
-                          <TableHead className="text-right">Distance</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedUsageRecords.map((record) => {
-                          const distanceTravelled = record.bookedInOdometer != null ? record.bookedInOdometer - record.bookedOutOdometer : null;
-                          return (
-                            <TableRow key={record.id}>
-                              <TableCell>
-                                <div className="font-medium">{record.vehicleRegistrationNumber}</div>
-                                <div className="text-xs text-muted-foreground">{record.vehicleLabel}</div>
-                              </TableCell>
-                              <TableCell>
-                                <div>{format(new Date(record.bookedOutAt), 'dd MMM yyyy HH:mm')}</div>
-                                <div className="text-xs text-muted-foreground">{record.bookedOutByName}</div>
-                              </TableCell>
-                              <TableCell>{record.purpose || 'Not specified'}</TableCell>
-                              <TableCell>
+                    <ResponsiveCardGrid
+                      items={sortedUsageRecords}
+                      isLoading={false}
+                      className="p-4"
+                      gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+                      renderItem={(record) => {
+                        const distanceTravelled = record.bookedInOdometer != null ? record.bookedInOdometer - record.bookedOutOdometer : null;
+                        return (
+                          <Card key={record.id} className="shadow-none border overflow-hidden">
+                            <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <CardTitle className="text-base">{record.vehicleRegistrationNumber}</CardTitle>
+                                  <CardDescription className="text-foreground/80">{record.vehicleLabel}</CardDescription>
+                                </div>
                                 <Badge variant={record.status === 'Booked Out' ? 'secondary' : 'default'}>{record.status}</Badge>
-                              </TableCell>
-                              <TableCell>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3 px-4 py-4 text-sm">
+                              <div className="rounded-lg border bg-background px-3 py-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booked Out</p>
+                                <p className="mt-1 font-semibold text-foreground">{format(new Date(record.bookedOutAt), 'dd MMM yyyy HH:mm')}</p>
+                                <p className="text-xs text-muted-foreground">{record.bookedOutByName}</p>
+                              </div>
+                              <div className="rounded-lg border bg-background px-3 py-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Purpose</p>
+                                <p className="mt-1 font-semibold text-foreground">{record.purpose || 'Not specified'}</p>
+                              </div>
+                              <div className="rounded-lg border bg-background px-3 py-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booked In</p>
                                 {record.bookedInAt ? (
                                   <>
-                                    <div>{format(new Date(record.bookedInAt), 'dd MMM yyyy HH:mm')}</div>
-                                    <div className="text-xs text-muted-foreground">{record.bookedInByName || 'Returned'}</div>
+                                    <p className="mt-1 font-semibold text-foreground">{format(new Date(record.bookedInAt), 'dd MMM yyyy HH:mm')}</p>
+                                    <p className="text-xs text-muted-foreground">{record.bookedInByName || 'Returned'}</p>
                                   </>
                                 ) : (
-                                  <span className="text-muted-foreground">Still out</span>
+                                  <p className="mt-1 font-semibold text-muted-foreground">Still out</p>
                                 )}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">{distanceTravelled != null ? `${distanceTravelled.toFixed(0)} km` : '-'}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                              </div>
+                              <div className="rounded-lg border bg-background px-3 py-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Distance</p>
+                                <p className="mt-1 font-mono text-sm font-semibold text-foreground">{distanceTravelled != null ? `${distanceTravelled.toFixed(0)} km` : '-'}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      }}
+                      emptyState={(
+                        <div className="h-40 flex flex-col items-center justify-center text-muted-foreground gap-2">
+                          <Plus className="h-5 w-5" />
+                          No vehicle usage has been recorded yet.
+                        </div>
+                      )}
+                    />
                   </ScrollArea>
                 )}
               </CardContent>

@@ -11,12 +11,13 @@ import { format } from 'date-fns';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { broadcastBookingUpdate } from '@/lib/booking-updates';
 
 export default function NewBookingPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { hasPermission } = usePermissions();
-  const { tenantId } = useUserProfile();
+  const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
+  const { tenantId, userProfile } = useUserProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [instructors, setInstructors] = useState<PilotProfile[]>([]);
@@ -26,11 +27,12 @@ export default function NewBookingPage() {
   const canManageSchedule = hasPermission('bookings-schedule-manage');
 
   useEffect(() => {
+    if (isPermissionsLoading) return;
     if (!canManageSchedule) {
         toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to create aircraft bookings.' });
         router.push('/bookings/schedule');
     }
-  }, [canManageSchedule, router, toast]);
+  }, [canManageSchedule, isPermissionsLoading, router, toast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,13 +75,14 @@ export default function NewBookingPage() {
     
     setIsSubmitting(true);
 
-    const { date, startTime, endTime, ...rest } = values;
+    const { date, startTime, endTime, resourceId, ...rest } = values;
     const startDateTime = new Date(`${format(date, 'yyyy-MM-dd')}T${startTime}`);
     const endDateTime = new Date(`${format(date, 'yyyy-MM-dd')}T${endTime}`);
 
     // Clean data to avoid undefined values in Firestore
     const bookingData: any = {
         ...rest,
+        aircraftId: resourceId,
         start: startDateTime.toISOString(),
         end: endDateTime.toISOString(),
         date: format(date, 'yyyy-MM-dd'),
@@ -91,7 +94,8 @@ export default function NewBookingPage() {
         instructorId: rest.instructorId || null,
         studentId: rest.studentId || null,
         notes: rest.notes || null,
-        createdById: tenantId || null,
+        createdById: userProfile?.id || null,
+        createdByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : null,
     };
 
     try {
@@ -107,6 +111,7 @@ export default function NewBookingPage() {
             title: 'Booking Created',
             description: 'The new booking has been added to the schedule.',
         });
+        broadcastBookingUpdate();
         
         router.push('/bookings/schedule');
 

@@ -2,20 +2,14 @@
 
 import Link from 'next/link';
 import { ArrowRight, Building2, Mail, ShieldAlert } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Personnel } from './personnel-directory-page';
 import { PersonnelActions } from './personnel-actions';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 interface PersonnelTableProps {
   data: Personnel[];
@@ -36,100 +30,89 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
   return (
     <TooltipProvider>
       <ScrollArea className="h-full">
-        <div className="hidden lg:block">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow className="h-8">
-                <TableHead className="text-[10px] font-bold uppercase">User #</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase">Name</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase">Email</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase">Department</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase">Role</TableHead>
-                <TableHead className="text-right text-[10px] font-bold uppercase">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((person) => (
-                <TableRow key={person.id} className="group h-10">
-                  <TableCell className="px-3 py-2 font-mono text-sm font-medium text-primary">
-                    {person.userNumber || '-'}
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
-                    <div className="flex items-center gap-2">
-                      {person.firstName} {person.lastName}
-                      <div className="flex gap-1">
-                        {person.isErpIncerfaContact && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
-                            </TooltipTrigger>
-                            <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {person.isErpAlerfaContact && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
-                            </TooltipTrigger>
-                            <TooltipContent>Designated ERP ALERFA Contact</TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-sm font-medium text-foreground">{person.email}</TableCell>
-                  <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
-                    {departmentsMap.get(person.department || '') || 'N/A'}
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
-                    {rolesMap.get(person.role) || person.role}
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-right">
-                    <PersonnelActions tenantId={tenantId} user={person} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 pb-20 sm:grid-cols-2 lg:hidden">
-          {data.map((person) => (
-            <Card key={person.id} className="overflow-hidden border-slate-200 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b bg-muted/5 p-4 pb-2">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+        <ResponsiveCardGrid
+          items={data}
+          isLoading={false}
+          className="p-4 pb-20"
+          gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+          renderItem={(person) => (
+            <Card key={person.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+              <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                <div className="min-w-0 space-y-1">
+                  <p className="truncate text-[10px] font-black uppercase tracking-widest text-primary">
                     {person.userNumber || 'NO ID'}
-                  </span>
-                  <span className="mt-1 text-sm font-black">
+                  </p>
+                  <p className="truncate text-sm font-black text-foreground">
                     {person.firstName} {person.lastName}
-                  </span>
+                  </p>
                 </div>
                 <div className="flex gap-1">
-                  {person.isErpIncerfaContact && <ShieldAlert className="h-4 w-4 text-red-600" />}
-                  {person.isErpAlerfaContact && <ShieldAlert className="h-4 w-4 text-amber-600" />}
+                  {person.isErpIncerfaContact && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ShieldAlert className="h-4 w-4 text-red-600" />
+                      </TooltipTrigger>
+                      <TooltipContent>Designated ERP INCERFA Contact</TooltipContent>
+                    </Tooltip>
+                  )}
+                  {person.isErpAlerfaContact && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ShieldAlert className="h-4 w-4 text-amber-600" />
+                      </TooltipTrigger>
+                      <TooltipContent>Designated ERP ALERFA Contact</TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 p-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" /> {person.email}
+              <CardContent className="space-y-4 px-4 py-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Email</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      {person.email}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Department</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {departmentsMap.get(person.department || '') || 'N/A'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  {departmentsMap.get(person.department || '') || 'No Dept'} • {rolesMap.get(person.role) || person.role}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Role</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {rolesMap.get(person.role) || person.role}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Organization</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      {person.organizationId || 'Internal'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  <PersonnelActions tenantId={tenantId} user={person} />
+                  <Button asChild variant="ghost" size="sm" className="h-8 w-8 px-0">
+                    <Link href={`/users/personnel/${person.id}?type=${person.userType}`}>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
-              <CardFooter className="border-t bg-muted/5 p-2">
-                <Button asChild variant="ghost" size="sm" className="h-8 w-full justify-between text-xs font-bold">
-                  <Link href={`/users/personnel/${person.id}?type=${person.userType}`}>
-                    View Profile
-                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </CardFooter>
             </Card>
-          ))}
-        </div>
+          )}
+          emptyState={(
+            <div className="flex h-24 items-center justify-center text-center text-foreground/80">
+              No personnel found.
+            </div>
+          )}
+        />
       </ScrollArea>
     </TooltipProvider>
   );

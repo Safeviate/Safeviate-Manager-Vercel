@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -13,6 +12,7 @@ import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { ViewActionButton } from '@/components/record-action-buttons';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
@@ -183,44 +183,45 @@ export default function TaskTrackerPage() {
   };
 
   const renderTasksTable = (tasks: UnifiedTask[]) => (
-    <Table>
-      <TableHeader className="bg-muted/30 sticky top-0 z-10">
-        <TableRow>
-          <TableHead className="w-[40%] text-[10px] uppercase font-bold tracking-wider">Task</TableHead>
-          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Source</TableHead>
-          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Assignee</TableHead>
-          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Due Date</TableHead>
-          <TableHead className="text-[10px] uppercase font-bold tracking-wider">Status</TableHead>
-          <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {tasks.length > 0 ? (
-          tasks.map((task) => (
-            <TableRow key={task.id}>
-              <TableCell className="font-bold text-sm text-foreground">{task.description}</TableCell>
-              <TableCell>
-                <span className="text-sm font-black uppercase text-foreground tracking-tight">{task.sourceIdentifier}</span>
-              </TableCell>
-              <TableCell className="text-sm font-bold text-foreground">{task.assigneeName}</TableCell>
-              <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{format(parseLocalDate(task.dueDate), 'dd MMM yy')}</TableCell>
-              <TableCell>
-                <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">{task.status}</Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <ViewActionButton href={task.link} />
-              </TableCell>
-            </TableRow>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic text-sm uppercase font-bold tracking-widest bg-muted/5">
-              No outstanding tasks for this organization.
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+    <ResponsiveCardGrid
+      items={tasks}
+      isLoading={false}
+      className="p-4"
+      gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+      renderItem={(task) => (
+        <Card key={task.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+          <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+            <div className="min-w-0 space-y-1">
+              <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{task.description}</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{task.sourceType} - {task.sourceIdentifier}</p>
+            </div>
+            <Badge variant={getStatusBadgeVariant(task.status)} className="text-[10px] font-black uppercase py-0.5 px-3">
+              {task.status}
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-4 px-4 py-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border bg-background px-3 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{task.assigneeName}</p>
+              </div>
+              <div className="rounded-lg border bg-background px-3 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Due Date</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{format(parseLocalDate(task.dueDate), 'dd MMM yy')}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end">
+              <ViewActionButton href={task.link} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      emptyState={(
+        <div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">
+          No outstanding tasks for this organization.
+        </div>
+      )}
+    />
   );
 
   const renderOrgCard = (orgId: string | 'internal') => {

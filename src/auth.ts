@@ -11,8 +11,11 @@ const cleanEnvValue = (value: string | undefined) =>
 
 const normalizeNextAuthUrl = () => {
   const current = cleanEnvValue(process.env.NEXTAUTH_URL);
-  if (process.env.NODE_ENV === 'development' && (!current || current.includes('vercel.app'))) {
-    return 'http://localhost:9002';
+  if (process.env.NODE_ENV === 'development') {
+    const devPort = cleanEnvValue(process.env.PORT) || '9002';
+    if (!current || current.includes('vercel.app') || current.includes('localhost:') || current.includes('127.0.0.1:')) {
+      return `http://localhost:${devPort}`;
+    }
   }
   return current;
 };

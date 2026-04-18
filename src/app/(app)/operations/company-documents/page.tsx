@@ -6,7 +6,6 @@ import { FileText, Search, CalendarIcon, PlusCircle, FileType, ImageIcon, Chevro
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -17,12 +16,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
 import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/page';
 import { getContrastingTextColor, getDocumentExpiryBadgeStyle } from '@/lib/document-expiry';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 const parseLocalDate = (value?: string | null) => {
   if (!value) return null;
@@ -51,10 +50,15 @@ export default function CompanyDocumentsPage() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingDoc, setViewingDoc] = useState<CompanyDocument | null>(null);
+  const [viewingImageError, setViewingImageError] = useState(false);
 
   const [documents, setDocuments] = useState<CompanyDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
+
+  useEffect(() => {
+    setViewingImageError(false);
+  }, [viewingDoc?.id]);
 
   useEffect(() => {
     const load = async () => {
@@ -184,6 +188,98 @@ export default function CompanyDocumentsPage() {
     }
   };
 
+  const renderDocumentCard = (doc: CompanyDocument) => {
+    const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
+    const uploadedLabel = format(new Date(doc.uploadDate), 'dd MMM yyyy');
+    const expiryLabel = doc.expirationDate
+      ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'dd MMM yyyy')
+      : 'Set expiry';
+
+    return (
+      <Card key={doc.id} className="group overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+        <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-background">
+              {doc.type === 'image' ? (
+                <ImageIcon className="h-4 w-4 text-primary" />
+              ) : (
+                <FileType className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">{doc.name}</p>
+                <Badge variant="outline" className="h-6 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.08em]">
+                  {doc.type === 'image' ? 'Image' : 'File'}
+                </Badge>
+              </div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Uploaded {uploadedLabel}
+              </p>
+            </div>
+          </div>
+          <ViewActionButton onClick={() => setViewingDoc(doc)} />
+        </CardHeader>
+        <CardContent className="space-y-4 px-4 py-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border bg-background px-3 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Uploaded</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{uploadedLabel}</p>
+            </div>
+            <div className="rounded-lg border bg-background px-3 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Expiration</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {doc.expirationDate ? expiryLabel : 'No expiry set'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className={cn(
+                      "h-9 w-full justify-between gap-2 px-3 text-xs font-bold shadow-none",
+                      !doc.expirationDate && "border border-dashed text-muted-foreground italic"
+                    )}
+                    style={doc.expirationDate && expiryStyle ? {
+                      backgroundColor: expiryStyle.borderColor || '#ffffff',
+                      borderColor: expiryStyle.borderColor || '#ffffff',
+                      color: getContrastingTextColor(expiryStyle.borderColor || '#ffffff'),
+                    } : undefined}
+                  >
+                    <span className="flex items-center gap-2">
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                      {doc.expirationDate ? expiryLabel : 'Set Expiry'}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CustomCalendar
+                    selectedDate={parseLocalDate(doc.expirationDate || undefined) || undefined}
+                    onDateSelect={(date) => handleUpdateExpiry(doc.id, date)}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              {canManage && (
+                <DeleteActionButton
+                  description={`This will permanently delete "${doc.name}".`}
+                  onDelete={() => handleDelete(doc.id)}
+                  srLabel="Delete document"
+                />
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
@@ -226,97 +322,41 @@ export default function CompanyDocumentsPage() {
         </CardHeader>
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
-            {isLoading ? (
-              <div className="p-8 space-y-4">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+            <ResponsiveCardGrid
+              items={filteredDocs}
+              isLoading={isLoading}
+              loadingCount={3}
+              className="p-4"
+              gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+              renderItem={(doc) => renderDocumentCard(doc)}
+              renderLoadingItem={(index) => <Skeleton key={index} className="h-56 w-full rounded-lg" />}
+              emptyState={(
+              <div className="p-4">
+                <Card className="border-dashed shadow-none">
+                  <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                    <FileText className="h-16 w-16 text-foreground/70" />
+                    <div className="space-y-1">
+                      <p className="text-lg font-semibold text-foreground">No documents found.</p>
+                      <p className="text-sm text-foreground/80">Controlled manuals and procedures will appear here once added.</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            ) : filteredDocs.length > 0 ? (
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="h-8">
-                    <TableHead className="w-10 text-center">Type</TableHead>
-                    <TableHead>Document Name</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead>Expiration Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                      {filteredDocs.map((doc) => {
-                    const expiryStyle = getDocumentExpiryBadgeStyle(doc.expirationDate, expirySettings);
-                    return (
-                    <TableRow key={doc.id} className="group h-10">
-                      <TableCell className="px-3 py-2 text-center text-sm font-medium text-foreground">
-                        {doc.type === 'image' ? (
-                          <ImageIcon className="h-4 w-4 text-primary mx-auto" />
-                        ) : (
-                          <FileType className="h-4 w-4 text-muted-foreground mx-auto" />
-                        )}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-sm font-medium text-foreground">{doc.name}</TableCell>
-                      <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
-                        {format(new Date(doc.uploadDate), 'dd MMM yyyy')}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
-                        <div className="flex items-center gap-2">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                                <Button 
-                                variant="default" 
-                                size="sm" 
-                                className={cn(
-                                  "h-8 text-xs gap-2 font-bold px-3 border shadow-none",
-                                  !doc.expirationDate && "text-muted-foreground italic border-dashed"
-                                )}
-                                style={doc.expirationDate && expiryStyle ? {
-                                  backgroundColor: expiryStyle.borderColor || '#ffffff',
-                                  borderColor: expiryStyle.borderColor || '#ffffff',
-                                  color: getContrastingTextColor(expiryStyle.borderColor || '#ffffff'),
-                                } : undefined}
-                              >
-                                <CalendarIcon className="h-3.5 w-3.5" />
-                                {doc.expirationDate ? format(parseLocalDate(doc.expirationDate) || new Date(doc.expirationDate), 'dd MMM yyyy') : 'Set Expiry'}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CustomCalendar 
-                                selectedDate={parseLocalDate(doc.expirationDate || undefined) || undefined}
-                                onDateSelect={(date) => handleUpdateExpiry(doc.id, date)}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-right text-sm font-medium text-foreground">
-                        <div className="flex justify-end gap-2">
-                          <ViewActionButton onClick={() => setViewingDoc(doc)} />
-                          {canManage && (
-                            <div className="opacity-0 transition-opacity group-hover:opacity-100">
-                              <DeleteActionButton
-                                description={`This will permanently delete "${doc.name}".`}
-                                onDelete={() => handleDelete(doc.id)}
-                                srLabel="Delete document"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )})}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-24">
-                <FileText className="h-16 w-16 mx-auto mb-4 text-foreground/70" />
-                <p className="text-lg font-medium text-foreground">No documents found.</p>
-                <p className="text-sm text-foreground/80">Controlled manuals and procedures will appear here once added.</p>
-              </div>
-            )}
+              )}
+            />
           </ScrollArea>
         </CardContent>
       </Card>
 
-      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>
+      <Dialog
+        open={!!viewingDoc}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingDoc(null);
+            setViewingImageError(false);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[85vh] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-black uppercase tracking-tight">{viewingDoc?.name}</DialogTitle>
@@ -324,14 +364,33 @@ export default function CompanyDocumentsPage() {
               Preview the selected company document.
             </DialogDescription>
           </DialogHeader>
-          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border bg-muted/20">
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg border bg-muted/20">
             {viewingDoc?.type === 'image' || viewingDoc?.url.startsWith('default_api:image/') ? (
-              <Image
-                src={viewingDoc.url}
-                alt={viewingDoc.name}
-                fill
-                className="object-contain"
-              />
+              viewingImageError ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <FileText className="h-14 w-14 text-muted-foreground" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">Image preview unavailable.</p>
+                    <p className="text-sm text-muted-foreground">
+                      The stored file could not be fetched from the current environment.
+                    </p>
+                  </div>
+                  {viewingDoc?.url && (
+                    <Button asChild variant="outline">
+                      <a href={viewingDoc.url} target="_blank" rel="noreferrer">
+                        Open Source
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <img
+                  src={viewingDoc.url}
+                  alt={viewingDoc.name}
+                  className="h-full w-full object-contain"
+                  onError={() => setViewingImageError(true)}
+                />
+              )
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
                 <FileText className="h-14 w-14 text-muted-foreground" />

@@ -1,0 +1,4523 @@
+
+> nextn@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:9002
+   - Network:      http://192.168.1.58:9002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1972ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 4.2s (770 modules)
+ GET /login 200 in 5118ms
+ ✓ Compiled in 911ms (320 modules)
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1402ms (996 modules)
+ GET /api/auth/session 200 in 2321ms
+ ✓ Compiled /api/me in 378ms (1010 modules)
+ GET /api/me 200 in 634ms
+ GET /api/auth/providers 200 in 103ms
+ GET /api/auth/csrf 200 in 80ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 259ms
+ GET /api/auth/session 200 in 71ms
+ GET /api/me 200 in 217ms
+ GET /api/me 200 in 247ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 934ms (1173 modules)
+ GET /api/me 200 in 788ms
+ GET /api/tenant-config 200 in 1261ms
+ GET /api/tenant-config 200 in 1054ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 3s (2629 modules)
+ GET /dashboard 200 in 3394ms
+ GET /api/me 200 in 243ms
+ ○ Compiling /bookings/schedule ...
+ ✓ Compiled /bookings/schedule in 3s (2898 modules)
+ GET /api/me 200 in 3366ms
+ GET /api/tenant-config 200 in 3448ms
+ GET /api/me 200 in 3287ms
+ GET /api/roles 200 in 4094ms
+ GET /api/dashboard-summary 200 in 4930ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.2s (2903 modules)
+ GET /api/dashboard-summary 404 in 3076ms
+ GET /api/tenant-config 404 in 3829ms
+ GET /api/me 404 in 3841ms
+ GET /api/roles 404 in 4534ms
+ GET /bookings/schedule 404 in 7903ms
+ GET /api/auth/session 200 in 231ms
+ GET /api/me 200 in 154ms
+ GET /api/me 200 in 203ms
+ GET /api/tenant-config 200 in 277ms
+ GET /api/me 200 in 130ms
+ GET /api/tenant-config 200 in 170ms
+ GET /login 200 in 177ms
+ GET /api/auth/session 200 in 95ms
+ GET /api/me 200 in 100ms
+ GET /api/auth/providers 200 in 71ms
+ GET /api/auth/csrf 200 in 56ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 92ms
+ GET /api/auth/session 200 in 74ms
+ GET /api/me 200 in 132ms
+ GET /api/me 200 in 193ms
+ GET /api/tenant-config 200 in 264ms
+ GET /dashboard 200 in 340ms
+ GET /api/me 200 in 183ms
+ GET /api/tenant-config 200 in 202ms
+ GET /api/me 200 in 167ms
+ GET /api/me 200 in 277ms
+ GET /api/tenant-config 200 in 320ms
+ GET /api/roles 200 in 350ms
+ GET /api/me 200 in 225ms
+ GET /api/dashboard-summary 200 in 438ms
+ GET /api/me 200 in 197ms
+ GET /api/roles 200 in 285ms
+ GET /api/tenant-config 200 in 228ms
+ GET /api/dashboard-summary 200 in 249ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 2.5s (3242 modules)
+ GET /login 200 in 164ms
+ GET /login? 200 in 139ms
+ GET /api/auth/session 200 in 142ms
+ GET /api/me 200 in 87ms
+ GET /login 200 in 122ms
+ GET /login? 200 in 138ms
+ GET /api/auth/session 200 in 107ms
+ GET /api/me 200 in 71ms
+ GET /login 200 in 143ms
+ GET /login? 200 in 159ms
+ GET /api/auth/session 200 in 120ms
+ GET /api/me 200 in 87ms
+ GET /login 200 in 128ms
+ GET /api/auth/session 200 in 93ms
+ GET /api/me 200 in 87ms
+ GET /api/auth/providers 200 in 236ms
+ GET /api/auth/csrf 200 in 118ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 363ms
+ GET /api/auth/session 200 in 102ms
+ GET /api/me 200 in 205ms
+ GET /api/me 200 in 216ms
+ GET /api/tenant-config 200 in 317ms
+ GET /dashboard 200 in 351ms
+ GET /api/me 200 in 152ms
+ GET /api/tenant-config 200 in 169ms
+ GET /api/me 200 in 122ms
+ GET /api/me 200 in 212ms
+ GET /api/me 200 in 197ms
+ GET /api/roles 200 in 251ms
+ GET /api/tenant-config 200 in 322ms
+ GET /api/roles 200 in 253ms
+ GET /api/me 200 in 180ms
+ GET /api/tenant-config 200 in 205ms
+ GET /api/dashboard-summary 200 in 618ms
+ GET /api/dashboard-summary 200 in 393ms
+ GET /login 200 in 132ms
+ GET /api/auth/session 200 in 98ms
+ GET /api/me 200 in 83ms
+ GET /api/auth/providers 200 in 72ms
+ GET /api/auth/csrf 200 in 86ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 99ms
+ GET /api/auth/session 200 in 70ms
+ GET /api/me 200 in 148ms
+ GET /api/me 200 in 150ms
+ GET /api/tenant-config 200 in 209ms
+ GET /dashboard 200 in 268ms
+ GET /api/me 200 in 124ms
+ GET /api/tenant-config 200 in 145ms
+ GET /api/me 200 in 191ms
+ GET /api/me 200 in 292ms
+ GET /api/tenant-config 200 in 310ms
+ GET /api/roles 200 in 346ms
+ GET /api/me 200 in 313ms
+ GET /api/dashboard-summary 200 in 537ms
+ GET /api/tenant-config 200 in 353ms
+ GET /api/me 200 in 354ms
+ GET /api/roles 200 in 408ms
+ GET /bookings/schedule 200 in 772ms
+ GET /login 200 in 131ms
+ GET /api/auth/session 200 in 90ms
+ GET /api/me 200 in 89ms
+ GET /api/auth/providers 200 in 80ms
+ GET /api/auth/csrf 200 in 66ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 114ms
+ GET /api/auth/session 200 in 96ms
+ GET /api/me 200 in 204ms
+ GET /api/me 200 in 206ms
+ GET /api/tenant-config 200 in 260ms
+ GET /dashboard 200 in 398ms
+ GET /api/me 200 in 231ms
+ GET /api/tenant-config 200 in 253ms
+ GET /api/me 200 in 469ms
+ GET /api/me 200 in 621ms
+ GET /api/tenant-config 200 in 676ms
+ GET /api/roles 200 in 688ms
+ GET /api/dashboard-summary 200 in 741ms
+ GET /api/me 200 in 396ms
+ GET /api/tenant-config 200 in 383ms
+ GET /api/me 200 in 394ms
+ GET /api/dashboard-summary 200 in 331ms
+ GET /api/roles 200 in 403ms
+ GET /bookings/schedule 200 in 1096ms
+ GET /api/auth/session 200 in 122ms
+ GET /api/me 200 in 159ms
+ GET /api/me 200 in 242ms
+ GET /api/me 200 in 225ms
+ GET /api/tenant-config 200 in 243ms
+ GET /api/tenant-config 200 in 241ms
+ GET /api/roles 200 in 300ms
+ GET /api/me 200 in 209ms
+ GET /api/me 200 in 261ms
+ GET /api/me 200 in 321ms
+ GET /api/roles 200 in 390ms
+ GET /api/tenant-config 200 in 375ms
+ GET /api/me 200 in 275ms
+ GET /api/roles 200 in 322ms
+ GET /api/me 200 in 222ms
+ GET /api/tenant-config 200 in 223ms
+ GET /api/me 200 in 234ms
+ GET /api/me 200 in 227ms
+ GET /api/tenant-config 200 in 258ms
+ GET /api/roles 200 in 255ms
+ GET /api/me 200 in 257ms
+ GET /api/tenant-config 200 in 201ms
+ GET /api/me 200 in 128ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 1942ms (3160 modules)
+ GET /api/me 200 in 2259ms
+ GET /api/dashboard-summary 200 in 2335ms
+ GET /api/schedule-data 200 in 2360ms
+ GET /api/dashboard-summary 200 in 2362ms
+ GET /api/schedule-data 200 in 2352ms
+ GET /bookings/schedule 200 in 161ms
+ GET /login 200 in 299ms
+ GET /api/auth/session 200 in 111ms
+ GET /api/me 200 in 86ms
+ GET /api/auth/providers 200 in 83ms
+ GET /api/auth/csrf 200 in 78ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 90ms
+ GET /api/auth/session 200 in 87ms
+ GET /api/me 200 in 161ms
+ GET /api/me 200 in 166ms
+ GET /api/tenant-config 200 in 246ms
+ GET /dashboard 200 in 328ms
+ GET /api/me 200 in 203ms
+ GET /api/tenant-config 200 in 223ms
+ GET /api/me 200 in 253ms
+ GET /api/me 200 in 380ms
+ GET /api/tenant-config 200 in 403ms
+ GET /api/dashboard-summary 200 in 465ms
+ GET /api/me 200 in 303ms
+ GET /api/roles 200 in 420ms
+ GET /api/roles 404 in 834ms
+ ○ Compiling /_not-found ...
+ GET /bookings/schedule 200 in 937ms
+ ✓ Compiled /_not-found in 1489ms (3151 modules)
+ GET /api/auth/session 200 in 181ms
+ GET /api/me 200 in 163ms
+ GET /api/me 200 in 217ms
+ GET /api/me 200 in 219ms
+ GET /api/tenant-config 200 in 326ms
+ GET /api/tenant-config 200 in 333ms
+ GET /api/me 200 in 234ms
+ GET /api/me 200 in 248ms
+ GET /api/roles 404 in 495ms
+ GET /api/me 200 in 316ms
+ GET /api/tenant-config 200 in 315ms
+ GET /api/me 200 in 304ms
+ GET /api/me 200 in 319ms
+ GET /api/roles 404 in 615ms
+ GET /api/tenant-config 200 in 299ms
+ GET /api/me 200 in 304ms
+ GET /api/tenant-config 200 in 294ms
+ GET /api/roles 404 in 579ms
+ GET /api/me 200 in 233ms
+ GET /api/me 200 in 207ms
+ GET /api/roles 404 in 296ms
+ GET /api/tenant-config 200 in 208ms
+ GET /api/me 200 in 144ms
+ GET /api/me 200 in 179ms
+ GET /api/schedule-data 200 in 234ms
+ GET /api/dashboard-summary 200 in 299ms
+prisma:error 
+Invalid `prisma.bookingRecord.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/schedule-data 200 in 553ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 591ms
+ GET /login 200 in 161ms
+ GET /api/auth/session 200 in 101ms
+ GET /api/me 200 in 72ms
+ GET /api/auth/providers 200 in 94ms
+ GET /api/auth/csrf 200 in 114ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 103ms
+ GET /api/auth/session 200 in 73ms
+ GET /api/me 200 in 162ms
+ GET /api/me 200 in 165ms
+ GET /api/tenant-config 200 in 246ms
+ GET /dashboard 200 in 359ms
+ GET /api/me 200 in 219ms
+ GET /api/tenant-config 200 in 173ms
+ GET /api/me 200 in 164ms
+ GET /api/me 200 in 346ms
+ GET /api/tenant-config 200 in 371ms
+ GET /api/dashboard-summary 200 in 468ms
+ ○ Compiling /bookings/schedule/new ...
+ ✓ Compiled /bookings/schedule/new in 2.9s (3164 modules)
+ GET /api/me 200 in 3129ms
+ GET /api/me 200 in 3234ms
+ GET /api/roles 200 in 3375ms
+ GET /bookings/schedule/new 200 in 3705ms
+ GET /api/tenant-config 200 in 3267ms
+ GET /api/roles 404 in 3750ms
+ GET /api/dashboard-summary 200 in 303ms
+ GET /dashboard 200 in 32ms
+ GET /login 200 in 129ms
+ GET /api/auth/session 200 in 115ms
+ GET /api/me 200 in 70ms
+ GET /api/auth/providers 200 in 82ms
+ GET /api/auth/csrf 200 in 72ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 89ms
+ GET /api/auth/session 200 in 60ms
+ GET /api/me 200 in 143ms
+ GET /api/me 200 in 145ms
+ GET /api/tenant-config 200 in 177ms
+ GET /dashboard 200 in 232ms
+ GET /api/me 200 in 99ms
+ GET /api/tenant-config 200 in 120ms
+ GET /api/me 200 in 195ms
+ GET /api/me 200 in 281ms
+ GET /api/tenant-config 200 in 298ms
+ GET /api/roles 200 in 312ms
+ GET /api/dashboard-summary 200 in 417ms
+ GET /api/me 200 in 228ms
+ GET /api/roles 200 in 169ms
+ GET /bookings/schedule/new 200 in 489ms
+ GET /api/auth/session 200 in 83ms
+ GET /api/me 200 in 133ms
+ GET /api/me 200 in 198ms
+ GET /api/me 200 in 184ms
+ GET /api/tenant-config 200 in 220ms
+ GET /api/roles 200 in 244ms
+ GET /api/tenant-config 200 in 235ms
+ GET /api/me 200 in 203ms
+ GET /api/me 200 in 199ms
+ GET /api/me 200 in 218ms
+ GET /api/tenant-config 200 in 237ms
+ GET /api/roles 200 in 298ms
+ GET /api/me 200 in 174ms
+ GET /api/me 200 in 165ms
+ GET /api/roles 200 in 216ms
+ GET /api/tenant-config 200 in 195ms
+ GET /api/me 200 in 212ms
+ GET /api/tenant-config 200 in 245ms
+ GET /api/me 200 in 257ms
+ GET /api/me 200 in 546ms
+ GET /api/roles 200 in 662ms
+ GET /api/tenant-config 200 in 600ms
+ GET /api/me 200 in 239ms
+ GET /api/me 200 in 274ms
+ GET /api/schedule-data 200 in 330ms
+ GET /api/schedule-data 200 in 314ms
+ GET /api/dashboard-summary 200 in 342ms
+ GET /api/dashboard-summary 200 in 379ms
+ GET /bookings/schedule 200 in 144ms
+ GET /api/me 200 in 109ms
+ GET /api/me 200 in 163ms
+ GET /api/schedule-data 200 in 188ms
+ GET /api/schedule-data 200 in 203ms
+ GET /api/dashboard-summary 200 in 212ms
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 586ms
+ GET /login 200 in 118ms
+ GET /api/auth/session 200 in 102ms
+ GET /api/me 200 in 87ms
+ GET /api/auth/providers 200 in 83ms
+ GET /api/auth/csrf 200 in 68ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 83ms
+ GET /api/auth/session 200 in 81ms
+ GET /api/me 200 in 142ms
+ GET /api/me 200 in 145ms
+ GET /api/tenant-config 200 in 176ms
+ GET /dashboard 200 in 254ms
+ GET /api/me 200 in 130ms
+ GET /api/tenant-config 200 in 147ms
+ GET /api/me 200 in 152ms
+ GET /api/me 200 in 358ms
+ GET /api/me 200 in 344ms
+ GET /api/me 200 in 346ms
+ GET /api/tenant-config 200 in 365ms
+ GET /api/roles 200 in 386ms
+ GET /api/dashboard-summary 200 in 367ms
+ ✓ Compiled in 1496ms (2902 modules)
+ GET /login 200 in 472ms
+ ✓ Compiled /api/auth/[...nextauth] in 362ms (1752 modules)
+ GET /api/auth/session 200 in 673ms
+ ✓ Compiled /api/me in 453ms (1766 modules)
+ GET /api/me 200 in 732ms
+ GET /api/auth/providers 200 in 85ms
+ GET /api/auth/csrf 200 in 75ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 95ms
+ GET /api/auth/session 200 in 81ms
+ ✓ Compiled /api/tenant-config in 429ms (1770 modules)
+ GET /api/me 200 in 1040ms
+ GET /api/me 200 in 1047ms
+ GET /dashboard 200 in 1129ms
+ GET /api/tenant-config 200 in 1158ms
+ GET /api/me 200 in 118ms
+ GET /api/tenant-config 200 in 129ms
+ ○ Compiling /bookings/schedule/new ...
+ ✓ Compiled /bookings/schedule/new in 678ms (1772 modules)
+ ✓ Compiled (1782 modules)
+ GET /api/me 200 in 2079ms
+ GET /api/me 200 in 2093ms
+ GET /api/tenant-config 200 in 2130ms
+ GET /api/roles 200 in 2195ms
+ GET /api/dashboard-summary 200 in 2582ms
+ GET /api/roles 200 in 514ms
+ GET /api/me 200 in 515ms
+ GET /bookings/schedule/new 200 in 2765ms
+ GET /api/auth/session 200 in 93ms
+ GET /api/me 200 in 122ms
+ GET /api/me 200 in 191ms
+ GET /api/me 200 in 193ms
+ GET /api/tenant-config 200 in 210ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/roles 200 in 243ms
+ GET /api/me 200 in 210ms
+ GET /api/me 200 in 206ms
+ GET /api/me 200 in 227ms
+ GET /api/tenant-config 200 in 246ms
+ GET /api/roles 200 in 301ms
+ GET /api/me 200 in 221ms
+ GET /api/me 200 in 202ms
+ GET /api/roles 200 in 281ms
+ GET /api/tenant-config 200 in 227ms
+ GET /api/me 200 in 229ms
+ GET /api/tenant-config 200 in 244ms
+ GET /api/me 200 in 205ms
+ GET /api/roles 200 in 255ms
+ GET /api/me 200 in 184ms
+ GET /api/tenant-config 200 in 215ms
+ GET /api/me 200 in 214ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 598ms (1784 modules)
+ GET /api/me 200 in 1493ms
+ GET /api/schedule-data 200 in 1583ms
+ GET /api/dashboard-summary 200 in 1620ms
+ GET /api/dashboard-summary 200 in 1583ms
+ GET /api/schedule-data 200 in 1640ms
+ GET /login 200 in 373ms
+ GET /api/auth/session 200 in 115ms
+ GET /api/me 200 in 86ms
+ GET /api/auth/providers 200 in 106ms
+ GET /api/auth/csrf 200 in 233ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 149ms
+ GET /api/auth/session 200 in 135ms
+ GET /api/me 200 in 210ms
+ GET /api/me 200 in 198ms
+ GET /api/tenant-config 200 in 308ms
+ GET /dashboard 200 in 371ms
+ GET /api/me 200 in 181ms
+ GET /api/tenant-config 200 in 200ms
+ GET /api/me 200 in 155ms
+ GET /api/me 200 in 289ms
+ GET /api/tenant-config 200 in 389ms
+ GET /api/roles 200 in 399ms
+ GET /api/dashboard-summary 200 in 471ms
+ GET /api/me 200 in 467ms
+ GET /api/tenant-config 200 in 332ms
+ GET /api/roles 200 in 372ms
+ GET /api/me 200 in 369ms
+ GET /bookings/schedule/new 200 in 821ms
+ GET /api/auth/session 200 in 90ms
+ GET /api/me 200 in 139ms
+ GET /api/me 200 in 201ms
+ GET /api/me 200 in 192ms
+ GET /api/tenant-config 200 in 213ms
+ GET /api/tenant-config 200 in 207ms
+ GET /api/roles 200 in 237ms
+ GET /api/me 200 in 198ms
+ GET /api/me 200 in 235ms
+ GET /api/me 200 in 312ms
+ GET /api/tenant-config 200 in 298ms
+ GET /api/roles 200 in 361ms
+ GET /api/me 200 in 248ms
+ GET /api/roles 200 in 329ms
+ GET /api/me 200 in 262ms
+ GET /api/tenant-config 200 in 281ms
+ GET /api/me 200 in 336ms
+ GET /api/me 200 in 287ms
+ GET /api/tenant-config 200 in 329ms
+ GET /api/me 200 in 272ms
+ GET /api/roles 200 in 283ms
+ GET /api/tenant-config 200 in 192ms
+ GET /api/me 200 in 173ms
+ GET /api/me 200 in 262ms
+ GET /api/schedule-data 200 in 281ms
+ GET /api/schedule-data 200 in 319ms
+ GET /api/dashboard-summary 200 in 319ms
+ GET /api/dashboard-summary 200 in 309ms
+ GET /login 200 in 118ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 74ms
+ GET /api/auth/providers 200 in 80ms
+ GET /api/auth/csrf 200 in 80ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 88ms
+ GET /api/auth/session 200 in 77ms
+ GET /api/me 200 in 137ms
+ GET /api/me 200 in 140ms
+ GET /api/tenant-config 200 in 175ms
+ GET /dashboard 200 in 250ms
+ GET /api/me 200 in 139ms
+ GET /api/tenant-config 200 in 157ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 267ms
+ GET /api/tenant-config 200 in 286ms
+ GET /api/roles 200 in 311ms
+ GET /api/dashboard-summary 200 in 352ms
+ GET /api/me 200 in 210ms
+ GET /api/tenant-config 200 in 238ms
+ GET /api/me 200 in 245ms
+ GET /api/roles 200 in 308ms
+ GET /bookings/schedule/new 200 in 622ms
+ GET /api/auth/session 200 in 99ms
+ GET /api/me 200 in 158ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 210ms
+ GET /api/tenant-config 200 in 247ms
+ GET /api/roles 200 in 288ms
+ GET /api/tenant-config 200 in 261ms
+ GET /api/me 200 in 216ms
+ GET /api/me 200 in 233ms
+ GET /api/me 200 in 239ms
+ GET /api/tenant-config 200 in 253ms
+ GET /api/roles 200 in 331ms
+ GET /api/me 200 in 258ms
+ GET /api/me 200 in 211ms
+ GET /api/roles 200 in 293ms
+ GET /api/tenant-config 200 in 232ms
+ GET /api/me 200 in 236ms
+ GET /api/tenant-config 200 in 255ms
+ GET /api/me 200 in 233ms
+ GET /api/me 200 in 234ms
+ GET /api/roles 200 in 320ms
+ GET /api/tenant-config 200 in 237ms
+ GET /api/me 200 in 129ms
+ GET /api/me 200 in 159ms
+ GET /api/schedule-data 200 in 173ms
+ GET /api/schedule-data 200 in 198ms
+ GET /api/dashboard-summary 200 in 206ms
+ GET /api/dashboard-summary 200 in 196ms
+ ○ Compiling /api/bookings ...
+ ✓ Compiled /api/bookings in 1194ms (3162 modules)
+ POST /api/bookings 201 in 1387ms
+ GET /bookings/schedule 200 in 114ms
+ GET /api/me 200 in 223ms
+ GET /api/me 200 in 305ms
+ GET /api/bookings 200 in 277ms
+ GET /api/schedule-data 200 in 351ms
+ GET /api/schedule-data 200 in 312ms
+ GET /api/dashboard-summary 200 in 349ms
+ GET /api/dashboard-summary 200 in 314ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /login 200 in 279ms
+ GET /api/auth/session 200 in 129ms
+ GET /api/me 200 in 110ms
+ GET /api/auth/providers 200 in 95ms
+ GET /api/auth/csrf 200 in 130ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 224ms
+ GET /api/auth/session 200 in 104ms
+ GET /api/me 200 in 188ms
+ GET /api/me 200 in 188ms
+ GET /api/tenant-config 200 in 307ms
+ GET /dashboard 200 in 382ms
+ GET /api/me 200 in 157ms
+ GET /api/tenant-config 200 in 183ms
+ GET /api/me 200 in 183ms
+ GET /api/me 200 in 316ms
+ GET /api/roles 200 in 390ms
+ GET /api/tenant-config 200 in 430ms
+ GET /api/dashboard-summary 200 in 666ms
+ ○ Compiling /bookings/history ...
+ ✓ Compiled /bookings/history in 6.1s (3187 modules)
+ GET /api/me 200 in 6300ms
+ GET /api/me 200 in 6468ms
+ GET /api/tenant-config 200 in 6820ms
+ GET /api/dashboard-summary 200 in 6605ms
+ GET /api/roles 200 in 6960ms
+ GET /bookings/history 200 in 7306ms
+ GET /api/auth/session 200 in 145ms
+ GET /api/me 200 in 162ms
+ GET /api/me 200 in 252ms
+ GET /api/me 200 in 249ms
+ GET /api/tenant-config 200 in 270ms
+ GET /api/roles 200 in 311ms
+ GET /api/tenant-config 200 in 288ms
+ GET /api/me 200 in 286ms
+ GET /api/me 200 in 287ms
+ GET /api/me 200 in 325ms
+ GET /api/tenant-config 200 in 335ms
+ GET /api/roles 200 in 402ms
+ GET /api/me 200 in 303ms
+ GET /api/me 200 in 263ms
+ GET /api/roles 200 in 361ms
+ GET /api/tenant-config 200 in 342ms
+ GET /api/me 200 in 366ms
+ GET /api/tenant-config 200 in 400ms
+ GET /api/me 200 in 353ms
+ GET /api/me 200 in 321ms
+ GET /api/roles 200 in 435ms
+ GET /api/tenant-config 200 in 314ms
+ GET /api/me 200 in 192ms
+ ○ Compiling /api/users ...
+ ✓ Compiled /api/users in 1991ms (3189 modules)
+ GET /api/me 200 in 2212ms
+ GET /api/schedule-data 200 in 2311ms
+ GET /api/schedule-data 200 in 2278ms
+ GET /api/users 200 in 2332ms
+ GET /api/users 200 in 2346ms
+ ✓ Compiled in 1620ms (3203 modules)
+ GET /login 200 in 272ms
+ GET /api/auth/session 200 in 147ms
+ GET /api/me 200 in 85ms
+ GET /api/auth/providers 200 in 79ms
+ GET /api/auth/csrf 200 in 84ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 108ms
+ GET /api/auth/session 200 in 95ms
+ GET /api/me 200 in 156ms
+ GET /api/me 200 in 158ms
+ GET /api/tenant-config 200 in 286ms
+ GET /dashboard 200 in 302ms
+ GET /api/me 200 in 172ms
+ GET /api/tenant-config 200 in 192ms
+ GET /api/me 200 in 163ms
+ GET /api/me 200 in 248ms
+ GET /api/tenant-config 200 in 280ms
+ GET /api/roles 200 in 298ms
+ GET /api/dashboard-summary 200 in 392ms
+ GET /api/me 200 in 213ms
+ GET /api/roles 200 in 535ms
+ GET /api/tenant-config 200 in 463ms
+ GET /api/me 200 in 472ms
+ GET /bookings/schedule/new 200 in 846ms
+ GET /api/auth/session 200 in 91ms
+ GET /api/me 200 in 124ms
+ GET /api/me 200 in 195ms
+ GET /api/me 200 in 184ms
+ GET /api/tenant-config 200 in 212ms
+ GET /api/roles 200 in 235ms
+ GET /api/tenant-config 200 in 215ms
+ GET /api/me 200 in 210ms
+ GET /api/me 200 in 240ms
+ GET /api/me 200 in 300ms
+ GET /api/tenant-config 200 in 311ms
+ GET /api/roles 200 in 381ms
+ GET /api/me 200 in 265ms
+ GET /api/roles 200 in 333ms
+ GET /api/me 200 in 236ms
+ GET /api/tenant-config 200 in 212ms
+ GET /api/me 200 in 213ms
+ GET /api/me 200 in 191ms
+ GET /api/tenant-config 200 in 239ms
+ GET /api/roles 200 in 219ms
+ GET /api/me 200 in 219ms
+ GET /api/tenant-config 200 in 191ms
+ GET /api/me 200 in 159ms
+ GET /api/me 200 in 210ms
+ GET /api/schedule-data 200 in 244ms
+ GET /api/schedule-data 200 in 254ms
+ GET /api/dashboard-summary 200 in 251ms
+ GET /api/dashboard-summary 200 in 460ms
+ POST /api/bookings 201 in 145ms
+ GET /bookings/schedule 200 in 97ms
+ GET /api/me 200 in 162ms
+ GET /api/me 200 in 206ms
+ GET /api/bookings 200 in 212ms
+ GET /api/schedule-data 200 in 231ms
+ GET /api/dashboard-summary 200 in 244ms
+ GET /api/dashboard-summary 200 in 227ms
+ GET /api/schedule-data 200 in 252ms
+ GET /login 200 in 131ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 83ms
+ GET /api/auth/providers 200 in 110ms
+ GET /api/auth/csrf 200 in 94ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 92ms
+ GET /api/auth/session 200 in 234ms
+ GET /api/me 200 in 157ms
+ GET /api/me 200 in 159ms
+ GET /api/tenant-config 200 in 196ms
+ GET /dashboard 200 in 252ms
+ GET /api/me 200 in 110ms
+ GET /api/tenant-config 200 in 130ms
+ GET /api/me 200 in 161ms
+ GET /api/me 200 in 244ms
+ GET /api/tenant-config 200 in 261ms
+ GET /api/roles 200 in 284ms
+ GET /api/dashboard-summary 200 in 356ms
+ GET /api/me 200 in 192ms
+ GET /api/roles 200 in 332ms
+ GET /api/tenant-config 200 in 262ms
+ GET /api/me 200 in 268ms
+ GET /bookings/history 200 in 635ms
+ GET /api/auth/session 200 in 91ms
+ GET /api/me 200 in 134ms
+ GET /api/me 200 in 200ms
+ GET /api/me 200 in 194ms
+ GET /api/tenant-config 200 in 224ms
+ GET /api/tenant-config 200 in 235ms
+ GET /api/roles 200 in 278ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 199ms
+ GET /api/me 200 in 237ms
+ GET /api/tenant-config 200 in 244ms
+ GET /api/roles 200 in 306ms
+ GET /api/me 200 in 236ms
+ GET /api/me 200 in 211ms
+ GET /api/roles 200 in 263ms
+ GET /api/tenant-config 200 in 230ms
+ GET /api/me 200 in 232ms
+ GET /api/tenant-config 200 in 271ms
+ GET /api/me 200 in 209ms
+ GET /api/me 200 in 186ms
+ GET /api/roles 200 in 251ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/me 200 in 167ms
+ GET /api/me 200 in 197ms
+ GET /api/schedule-data 200 in 252ms
+ GET /api/schedule-data 200 in 224ms
+ GET /api/users 200 in 243ms
+ GET /api/users 200 in 242ms
+ ✓ Compiled in 1817ms (3200 modules)
+ ✓ Compiled in 1751ms (2935 modules)
+ ✓ Compiled in 1503ms (2935 modules)
+ ✓ Compiled in 1383ms (2935 modules)
+ GET /login 200 in 502ms
+ ✓ Compiled /api/auth/[...nextauth] in 494ms (1774 modules)
+ GET /api/auth/session 200 in 871ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 1475ms (1788 modules)
+ GET /api/me 200 in 1946ms
+ GET /api/auth/providers 200 in 95ms
+ GET /api/auth/csrf 200 in 79ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 245ms
+ GET /api/auth/session 200 in 91ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 835ms (1792 modules)
+ GET /api/me 200 in 1557ms
+ GET /api/me 200 in 1565ms
+ GET /dashboard 200 in 1649ms
+ GET /api/tenant-config 200 in 1682ms
+ GET /api/me 200 in 113ms
+ GET /api/tenant-config 200 in 124ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 534ms (1794 modules)
+ ✓ Compiled (1796 modules)
+ GET /api/me 200 in 1779ms
+ GET /api/dashboard-summary 200 in 1773ms
+ GET /api/tenant-config 200 in 1779ms
+ GET /api/roles 200 in 1798ms
+ GET /api/me 200 in 1799ms
+ GET /bookings/schedule/new 200 in 1870ms
+ GET /api/auth/session 200 in 77ms
+ GET /api/me 200 in 127ms
+ GET /api/me 200 in 208ms
+ GET /api/me 200 in 191ms
+ GET /api/tenant-config 200 in 207ms
+ GET /api/tenant-config 200 in 218ms
+ GET /api/roles 200 in 261ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 182ms
+ GET /api/me 200 in 217ms
+ GET /api/tenant-config 200 in 238ms
+ GET /api/roles 200 in 321ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 196ms
+ GET /api/roles 200 in 263ms
+ GET /api/tenant-config 200 in 221ms
+ GET /api/me 200 in 195ms
+ GET /api/tenant-config 200 in 224ms
+ GET /api/me 200 in 190ms
+ GET /api/roles 200 in 263ms
+ GET /api/me 200 in 195ms
+ GET /api/tenant-config 200 in 197ms
+ GET /api/me 200 in 127ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 571ms (1798 modules)
+ GET /api/me 200 in 1520ms
+ GET /api/schedule-data 200 in 1628ms
+ GET /api/schedule-data 200 in 1618ms
+ GET /api/dashboard-summary 200 in 1680ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 1746ms
+ ✓ Compiled /api/bookings in 491ms (1801 modules)
+ POST /api/bookings 201 in 734ms
+ GET /bookings/schedule 200 in 131ms
+ GET /api/me 200 in 167ms
+ GET /api/me 200 in 257ms
+ GET /api/bookings 200 in 256ms
+ GET /api/schedule-data 200 in 275ms
+ GET /api/dashboard-summary 200 in 292ms
+ GET /api/dashboard-summary 200 in 279ms
+ GET /api/schedule-data 200 in 301ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /login 200 in 331ms
+ GET /api/auth/session 200 in 102ms
+ GET /api/me 200 in 86ms
+ GET /api/auth/providers 200 in 81ms
+ GET /api/auth/csrf 200 in 88ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 94ms
+ GET /api/auth/session 200 in 86ms
+ GET /api/me 200 in 145ms
+ GET /api/me 200 in 148ms
+ GET /api/tenant-config 200 in 225ms
+ GET /dashboard 200 in 281ms
+ GET /api/me 200 in 122ms
+ GET /api/tenant-config 200 in 141ms
+ GET /api/me 200 in 190ms
+ GET /api/me 200 in 259ms
+ GET /api/tenant-config 200 in 291ms
+ GET /api/roles 200 in 295ms
+ GET /api/dashboard-summary 200 in 368ms
+ GET /api/me 200 in 206ms
+ GET /api/tenant-config 200 in 380ms
+ GET /api/me 200 in 386ms
+ GET /api/roles 200 in 455ms
+ GET /bookings/history 200 in 778ms
+ GET /api/auth/session 200 in 78ms
+ GET /api/me 200 in 126ms
+ GET /api/me 200 in 193ms
+ GET /api/me 200 in 180ms
+ GET /api/tenant-config 200 in 198ms
+ GET /api/tenant-config 200 in 218ms
+ GET /api/roles 200 in 251ms
+ GET /api/me 200 in 191ms
+ GET /api/me 200 in 210ms
+ GET /api/me 200 in 214ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/roles 200 in 300ms
+ GET /api/me 200 in 234ms
+ GET /api/me 200 in 225ms
+ GET /api/roles 200 in 287ms
+ GET /api/tenant-config 200 in 288ms
+ GET /api/me 200 in 368ms
+ GET /api/tenant-config 200 in 396ms
+ GET /api/me 200 in 381ms
+ GET /api/me 200 in 348ms
+ GET /api/roles 200 in 456ms
+ GET /api/tenant-config 200 in 367ms
+ GET /api/me 200 in 121ms
+ ○ Compiling /api/users ...
+ ✓ Compiled /api/users in 910ms (1803 modules)
+ GET /api/me 200 in 1682ms
+ GET /api/schedule-data 200 in 1741ms
+ GET /api/schedule-data 200 in 1762ms
+ GET /api/users 200 in 1765ms
+ GET /api/users 200 in 1762ms
+ ✓ Compiled in 1768ms (3200 modules)
+ ✓ Compiled in 636ms (1400 modules)
+ ✓ Compiled in 856ms (1400 modules)
+ GET /login 200 in 376ms
+ GET /api/auth/session 200 in 162ms
+ GET /api/me 200 in 70ms
+ GET /api/auth/providers 200 in 76ms
+ GET /api/auth/csrf 200 in 84ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 108ms
+ GET /api/auth/session 200 in 62ms
+ GET /api/me 200 in 163ms
+ GET /api/me 200 in 166ms
+ GET /api/tenant-config 200 in 258ms
+ GET /dashboard 200 in 295ms
+ GET /api/me 200 in 114ms
+ GET /api/tenant-config 200 in 131ms
+ GET /api/me 200 in 235ms
+ GET /api/me 200 in 317ms
+ GET /api/tenant-config 200 in 337ms
+ GET /api/me 200 in 344ms
+ GET /api/roles 200 in 623ms
+ GET /api/me 200 in 513ms
+ GET /api/dashboard-summary 200 in 866ms
+ GET /api/roles 200 in 533ms
+ GET /bookings/schedule 200 in 947ms
+ GET /api/auth/session 200 in 93ms
+ GET /api/me 200 in 147ms
+ GET /api/me 200 in 185ms
+ GET /api/me 200 in 186ms
+ GET /api/tenant-config 200 in 209ms
+ GET /api/tenant-config 200 in 211ms
+ GET /api/roles 200 in 245ms
+ GET /api/me 200 in 179ms
+ GET /api/me 200 in 211ms
+ GET /api/me 200 in 227ms
+ GET /api/roles 200 in 309ms
+ GET /api/tenant-config 200 in 268ms
+ GET /api/me 200 in 232ms
+ GET /api/me 200 in 178ms
+ GET /api/roles 200 in 270ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/me 200 in 202ms
+ GET /api/tenant-config 200 in 249ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 189ms
+ GET /api/roles 200 in 267ms
+ GET /api/tenant-config 200 in 214ms
+ GET /api/me 200 in 139ms
+ GET /api/me 200 in 158ms
+ GET /api/schedule-data 200 in 299ms
+ GET /api/schedule-data 200 in 345ms
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.safetyReport.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 861ms
+ GET /api/dashboard-summary 200 in 894ms
+ GET /login 200 in 119ms
+ GET /api/auth/session 200 in 88ms
+ GET /api/me 200 in 83ms
+ GET /api/auth/providers 200 in 125ms
+ GET /api/auth/csrf 200 in 123ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 148ms
+ GET /api/auth/session 200 in 53ms
+ GET /api/me 200 in 128ms
+ GET /api/me 200 in 120ms
+ GET /api/tenant-config 200 in 178ms
+ GET /dashboard 200 in 229ms
+ GET /api/me 200 in 115ms
+ GET /api/tenant-config 200 in 134ms
+ GET /api/me 200 in 144ms
+ GET /api/me 200 in 240ms
+ GET /api/tenant-config 200 in 348ms
+ GET /api/me 200 in 208ms
+ GET /api/roles 200 in 389ms
+ GET /api/dashboard-summary 200 in 451ms
+ GET /api/roles 200 in 248ms
+ GET /api/tenant-config 200 in 100ms
+ GET /api/me 200 in 101ms
+ GET /bookings/schedule 200 in 551ms
+ GET /api/auth/session 200 in 91ms
+ GET /api/me 200 in 125ms
+ GET /api/me 200 in 201ms
+ GET /api/me 200 in 196ms
+ GET /api/tenant-config 200 in 211ms
+ GET /api/tenant-config 200 in 220ms
+ GET /api/roles 200 in 249ms
+ GET /api/me 200 in 175ms
+ GET /api/me 200 in 173ms
+ GET /api/me 200 in 207ms
+ GET /api/tenant-config 200 in 260ms
+ GET /api/roles 200 in 381ms
+ GET /api/me 200 in 226ms
+ GET /api/me 200 in 203ms
+ GET /api/tenant-config 200 in 244ms
+ GET /api/roles 200 in 313ms
+ GET /api/me 200 in 174ms
+ GET /api/me 200 in 214ms
+ GET /api/tenant-config 200 in 220ms
+ GET /api/roles 200 in 264ms
+ GET /api/me 200 in 163ms
+ GET /api/tenant-config 200 in 174ms
+ GET /api/me 200 in 133ms
+ GET /api/me 200 in 161ms
+ GET /api/schedule-data 200 in 200ms
+ GET /api/schedule-data 200 in 191ms
+ GET /api/dashboard-summary 200 in 203ms
+ GET /api/dashboard-summary 200 in 218ms
+ GET /api/me 200 in 99ms
+ ○ Compiling /api/uploads/status ...
+ GET /api/me 200 in 2229ms
+ ✓ Compiled /api/uploads/status in 3.2s (3189 modules)
+ GET /login 200 in 407ms
+ GET /api/auth/session 200 in 107ms
+ GET /api/me 200 in 72ms
+ GET /api/auth/providers 200 in 64ms
+ GET /api/auth/csrf 200 in 72ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 90ms
+ GET /api/auth/session 200 in 85ms
+ GET /api/me 200 in 153ms
+ GET /api/me 200 in 156ms
+ GET /api/tenant-config 200 in 259ms
+ GET /dashboard 200 in 280ms
+ GET /api/me 200 in 112ms
+ GET /api/tenant-config 200 in 133ms
+ GET /api/me 200 in 174ms
+ GET /api/me 200 in 271ms
+ GET /api/roles 200 in 307ms
+ GET /api/tenant-config 200 in 309ms
+ GET /api/dashboard-summary 200 in 412ms
+ GET /api/me 200 in 212ms
+ GET /api/tenant-config 200 in 311ms
+ GET /api/me 200 in 311ms
+ GET /api/roles 200 in 380ms
+ GET /bookings/schedule 200 in 707ms
+ GET /api/auth/session 200 in 91ms
+ GET /api/me 200 in 124ms
+ GET /api/me 200 in 173ms
+ GET /api/me 200 in 171ms
+ GET /api/tenant-config 200 in 181ms
+ GET /api/tenant-config 200 in 198ms
+ GET /api/roles 200 in 230ms
+ GET /api/me 200 in 193ms
+ GET /api/me 200 in 245ms
+ GET /api/me 200 in 295ms
+ GET /api/tenant-config 200 in 291ms
+ GET /api/roles 200 in 355ms
+ GET /api/me 200 in 231ms
+ GET /api/me 200 in 210ms
+ GET /api/roles 200 in 282ms
+ GET /api/tenant-config 200 in 218ms
+ GET /api/me 200 in 229ms
+ GET /api/tenant-config 200 in 260ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 177ms
+ GET /api/roles 200 in 266ms
+ GET /api/tenant-config 200 in 231ms
+ GET /api/me 200 in 111ms
+ GET /api/me 200 in 135ms
+ GET /api/schedule-data 200 in 166ms
+ GET /api/schedule-data 200 in 189ms
+ GET /api/dashboard-summary 200 in 225ms
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 672ms
+ GET /api/me 200 in 146ms
+ GET /api/me 200 in 216ms
+ GET /api/uploads/status 200 in 194ms
+ GET /api/uploads/status 200 in 194ms
+ GET /api/training-routes 200 in 283ms
+prisma:error 
+Invalid `prisma.tenant.upsert()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/training-routes 200 in 417ms
+ GET /api/uploads/status 200 in 290ms
+ GET /api/uploads/status 200 in 274ms
+ ○ Compiling /api/bookings ...
+ ✓ Compiled /api/bookings in 530ms (1805 modules)
+ PUT /api/bookings 200 in 791ms
+ GET /api/schedule-data 200 in 136ms
+ GET /api/dashboard-summary 200 in 243ms
+ GET /api/me 200 in 111ms
+ GET /api/me 200 in 142ms
+ GET /api/training-routes 200 in 246ms
+ GET /api/training-routes 200 in 260ms
+ GET /api/bookings 200 in 86ms
+ GET /login 200 in 262ms
+ GET /api/auth/session 200 in 74ms
+ GET /api/me 200 in 71ms
+ GET /api/auth/providers 200 in 269ms
+ GET /api/auth/csrf 200 in 136ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 91ms
+ GET /api/auth/session 200 in 70ms
+ GET /api/me 200 in 131ms
+ GET /api/me 200 in 133ms
+ GET /api/tenant-config 200 in 204ms
+ GET /dashboard 200 in 274ms
+ GET /api/me 200 in 150ms
+ GET /api/tenant-config 200 in 167ms
+ GET /api/me 200 in 138ms
+ GET /api/me 200 in 234ms
+ GET /api/tenant-config 200 in 250ms
+ GET /api/roles 200 in 278ms
+ GET /api/dashboard-summary 200 in 512ms
+ GET /api/me 200 in 398ms
+ GET /api/roles 200 in 338ms
+ GET /bookings/history 200 in 697ms
+ GET /api/auth/session 200 in 104ms
+ GET /api/me 200 in 141ms
+ GET /api/me 200 in 223ms
+ GET /api/me 200 in 203ms
+ GET /api/tenant-config 200 in 219ms
+ GET /api/tenant-config 200 in 219ms
+ GET /api/roles 200 in 282ms
+ GET /api/me 200 in 174ms
+ GET /api/me 200 in 177ms
+ GET /api/me 200 in 196ms
+ GET /api/tenant-config 200 in 218ms
+ GET /api/roles 200 in 263ms
+ GET /api/me 200 in 243ms
+ GET /api/me 200 in 205ms
+ GET /api/roles 200 in 269ms
+ GET /api/tenant-config 200 in 234ms
+ GET /api/me 200 in 235ms
+ GET /api/tenant-config 200 in 273ms
+ GET /api/me 200 in 208ms
+ GET /api/roles 200 in 255ms
+ GET /api/me 200 in 188ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/me 200 in 140ms
+ ○ Compiling /api/users ...
+ ✓ Compiled /api/users in 661ms (1807 modules)
+ GET /api/me 200 in 1468ms
+ GET /api/schedule-data 200 in 1525ms
+ GET /api/schedule-data 200 in 1566ms
+ GET /api/users 200 in 1581ms
+ GET /api/users 200 in 1552ms
+ GET /login 200 in 299ms
+ GET /api/auth/session 200 in 98ms
+ GET /api/me 200 in 88ms
+ GET /api/auth/providers 200 in 184ms
+ GET /api/auth/csrf 200 in 69ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 87ms
+ GET /api/auth/session 200 in 58ms
+ GET /api/me 200 in 137ms
+ GET /api/me 200 in 140ms
+ GET /api/tenant-config 200 in 218ms
+ GET /dashboard 200 in 270ms
+ GET /api/me 200 in 115ms
+ GET /api/tenant-config 200 in 131ms
+ GET /api/me 200 in 154ms
+ GET /api/me 200 in 238ms
+ GET /api/tenant-config 200 in 268ms
+ GET /api/roles 200 in 271ms
+ GET /api/dashboard-summary 200 in 343ms
+ GET /api/me 200 in 190ms
+ GET /api/tenant-config 200 in 324ms
+ GET /api/roles 200 in 388ms
+ GET /api/me 200 in 327ms
+ GET /bookings/schedule/new 200 in 682ms
+ GET /api/auth/session 200 in 93ms
+ GET /api/me 200 in 122ms
+ GET /api/me 200 in 197ms
+ GET /api/me 200 in 184ms
+ GET /api/tenant-config 200 in 200ms
+ GET /api/tenant-config 200 in 203ms
+ GET /api/roles 200 in 228ms
+ GET /api/me 200 in 202ms
+ GET /api/me 200 in 216ms
+ GET /api/me 200 in 233ms
+ GET /api/tenant-config 200 in 243ms
+ GET /api/roles 200 in 319ms
+ GET /api/me 200 in 261ms
+ GET /api/me 200 in 219ms
+ GET /api/roles 200 in 322ms
+ GET /api/tenant-config 200 in 232ms
+ GET /api/me 200 in 240ms
+ GET /api/tenant-config 200 in 252ms
+ GET /api/me 200 in 203ms
+ GET /api/me 200 in 181ms
+ GET /api/roles 200 in 269ms
+ GET /api/tenant-config 200 in 210ms
+ GET /api/me 200 in 128ms
+ GET /api/me 200 in 154ms
+ GET /api/schedule-data 200 in 198ms
+ GET /api/schedule-data 200 in 178ms
+ GET /api/dashboard-summary 200 in 203ms
+ GET /api/dashboard-summary 200 in 348ms
+ POST /api/bookings 201 in 97ms
+ GET /bookings/schedule 200 in 85ms
+ GET /api/me 200 in 172ms
+ GET /api/me 200 in 252ms
+ GET /api/bookings 200 in 274ms
+ GET /api/schedule-data 200 in 300ms
+ GET /api/schedule-data 200 in 331ms
+ GET /api/dashboard-summary 200 in 335ms
+ GET /api/dashboard-summary 200 in 318ms
+ GET /bookings/schedule 200 in 162ms
+ GET /api/auth/session 200 in 83ms
+ GET /api/me 200 in 136ms
+ GET /api/me 200 in 197ms
+ GET /api/me 200 in 189ms
+ GET /api/tenant-config 200 in 208ms
+ GET /api/roles 200 in 228ms
+ GET /api/tenant-config 200 in 222ms
+ GET /api/me 200 in 176ms
+ GET /api/me 200 in 198ms
+ GET /api/me 200 in 246ms
+ GET /api/tenant-config 200 in 240ms
+ GET /api/roles 200 in 305ms
+ GET /api/me 200 in 273ms
+ GET /api/me 200 in 213ms
+ GET /api/roles 200 in 348ms
+ GET /api/tenant-config 200 in 258ms
+ GET /api/me 200 in 267ms
+ GET /api/tenant-config 200 in 294ms
+ GET /api/me 200 in 241ms
+ GET /api/roles 200 in 293ms
+ GET /api/me 200 in 215ms
+ GET /api/tenant-config 200 in 254ms
+ GET /api/me 200 in 144ms
+ GET /api/me 200 in 171ms
+ GET /api/schedule-data 200 in 259ms
+ GET /api/schedule-data 200 in 286ms
+ GET /api/dashboard-summary 200 in 310ms
+ GET /api/dashboard-summary 200 in 347ms
+ GET /api/me 200 in 174ms
+ GET /api/me 200 in 268ms
+ GET /api/uploads/status 200 in 262ms
+ GET /api/uploads/status 200 in 287ms
+ GET /api/uploads/status 200 in 199ms
+ GET /api/training-routes 200 in 393ms
+ GET /api/training-routes 200 in 373ms
+ GET /api/uploads/status 200 in 123ms
+ PUT /api/bookings 200 in 131ms
+ GET /api/schedule-data 200 in 119ms
+ GET /api/dashboard-summary 200 in 146ms
+ GET /api/me 200 in 135ms
+ GET /api/me 200 in 177ms
+ GET /api/training-routes 200 in 211ms
+ GET /api/training-routes 200 in 261ms
+ GET /api/bookings 200 in 81ms
+ GET /bookings/history 200 in 189ms
+ GET /api/auth/session 200 in 124ms
+ GET /api/me 200 in 183ms
+ GET /api/me 200 in 230ms
+ GET /api/me 200 in 233ms
+ GET /api/tenant-config 200 in 270ms
+ GET /api/tenant-config 200 in 265ms
+ GET /api/roles 200 in 319ms
+ GET /api/me 200 in 204ms
+ GET /api/me 200 in 176ms
+ GET /api/me 200 in 242ms
+ GET /api/tenant-config 200 in 252ms
+ GET /api/roles 200 in 272ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 211ms
+ GET /api/roles 200 in 286ms
+ GET /api/tenant-config 200 in 232ms
+ GET /api/me 200 in 242ms
+ GET /api/tenant-config 200 in 279ms
+ GET /api/me 200 in 232ms
+ GET /api/me 200 in 201ms
+ GET /api/roles 200 in 287ms
+ GET /api/tenant-config 200 in 224ms
+ GET /api/me 200 in 154ms
+ GET /api/me 200 in 174ms
+ GET /api/schedule-data 200 in 192ms
+ GET /api/schedule-data 200 in 216ms
+ GET /api/users 200 in 211ms
+ GET /api/users 200 in 205ms
+ GET /login 200 in 135ms
+ GET /api/auth/session 200 in 97ms
+ GET /api/me 200 in 86ms
+ GET /api/auth/providers 200 in 83ms
+ GET /api/auth/csrf 200 in 123ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 176ms
+ GET /api/auth/session 200 in 119ms
+ GET /api/me 200 in 157ms
+ GET /api/me 200 in 159ms
+ GET /api/tenant-config 200 in 219ms
+ GET /dashboard 200 in 283ms
+ GET /api/me 200 in 136ms
+ GET /api/tenant-config 200 in 156ms
+ GET /api/me 200 in 201ms
+ GET /api/me 200 in 239ms
+ GET /api/me 200 in 235ms
+ GET /api/tenant-config 200 in 273ms
+ GET /api/roles 200 in 293ms
+ GET /api/schedule-data 200 in 311ms
+ GET /api/roles 200 in 142ms
+ GET /api/dashboard-summary 200 in 328ms
+ ✓ Compiled in 2.3s (3207 modules)
+ GET /login 200 in 404ms
+ GET /api/auth/session 200 in 240ms
+ GET /api/me 200 in 82ms
+ GET /api/auth/providers 200 in 85ms
+ GET /api/auth/csrf 200 in 72ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 141ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 142ms
+ GET /api/me 200 in 145ms
+ GET /api/tenant-config 200 in 244ms
+ GET /dashboard 200 in 263ms
+ GET /api/me 200 in 104ms
+ GET /api/tenant-config 200 in 135ms
+ GET /api/me 200 in 162ms
+ GET /api/me 200 in 227ms
+ GET /api/tenant-config 200 in 249ms
+ GET /api/roles 200 in 270ms
+ GET /api/me 200 in 186ms
+ GET /api/dashboard-summary 200 in 363ms
+ GET /api/me 200 in 382ms
+ GET /api/roles 200 in 445ms
+ GET /api/tenant-config 200 in 385ms
+ GET /bookings/schedule/new 200 in 700ms
+ GET /api/auth/session 200 in 95ms
+ GET /api/me 200 in 145ms
+ GET /api/me 200 in 216ms
+ GET /api/me 200 in 201ms
+ GET /api/tenant-config 200 in 216ms
+ GET /api/tenant-config 200 in 224ms
+ GET /api/roles 200 in 255ms
+ GET /api/me 200 in 186ms
+ GET /api/me 200 in 197ms
+ GET /api/me 200 in 213ms
+ GET /api/tenant-config 200 in 235ms
+ GET /api/roles 200 in 284ms
+ GET /api/me 200 in 246ms
+ GET /api/me 200 in 196ms
+ GET /api/roles 200 in 316ms
+ GET /api/tenant-config 200 in 234ms
+ GET /api/me 200 in 265ms
+ GET /api/tenant-config 200 in 287ms
+ GET /api/me 200 in 251ms
+ GET /api/me 200 in 227ms
+ GET /api/roles 200 in 498ms
+ GET /api/tenant-config 200 in 421ms
+ GET /api/me 200 in 157ms
+ GET /api/me 200 in 216ms
+ GET /api/schedule-data 200 in 238ms
+ GET /api/schedule-data 200 in 270ms
+ GET /api/dashboard-summary 200 in 273ms
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.safetyReport.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 671ms
+ POST /api/bookings 201 in 100ms
+ GET /bookings/schedule 200 in 91ms
+ GET /api/me 200 in 159ms
+ GET /api/me 200 in 209ms
+ GET /api/bookings 200 in 215ms
+ GET /api/schedule-data 200 in 219ms
+ GET /api/schedule-data 200 in 262ms
+ GET /api/dashboard-summary 200 in 269ms
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 609ms
+ GET /bookings/schedule 200 in 377ms
+ GET /api/auth/session 200 in 109ms
+ GET /api/me 200 in 223ms
+ GET /api/me 200 in 276ms
+ GET /api/me 200 in 279ms
+ GET /api/tenant-config 200 in 299ms
+ GET /api/roles 200 in 343ms
+ GET /api/tenant-config 200 in 318ms
+ GET /api/me 200 in 227ms
+ GET /api/me 200 in 387ms
+ GET /api/me 200 in 557ms
+ GET /api/roles 200 in 622ms
+ GET /api/tenant-config 200 in 574ms
+ GET /api/me 200 in 653ms
+ GET /api/me 200 in 400ms
+ GET /api/roles 200 in 711ms
+ GET /api/tenant-config 200 in 354ms
+ GET /api/me 200 in 453ms
+ GET /api/tenant-config 200 in 477ms
+ GET /api/me 200 in 307ms
+ GET /api/me 200 in 265ms
+ GET /api/roles 200 in 376ms
+ GET /api/tenant-config 200 in 277ms
+ GET /api/me 200 in 130ms
+ GET /api/me 200 in 159ms
+ GET /api/schedule-data 200 in 195ms
+ GET /api/schedule-data 200 in 179ms
+ GET /api/dashboard-summary 200 in 195ms
+ GET /api/dashboard-summary 200 in 215ms
+ GET /api/me 200 in 144ms
+ GET /api/me 200 in 236ms
+ GET /api/uploads/status 200 in 196ms
+ GET /api/uploads/status 200 in 196ms
+ GET /api/uploads/status 200 in 161ms
+ GET /api/uploads/status 200 in 105ms
+ GET /api/training-routes 200 in 433ms
+ GET /api/training-routes 200 in 429ms
+ PUT /api/bookings 200 in 198ms
+ GET /api/schedule-data 200 in 127ms
+ GET /api/dashboard-summary 200 in 220ms
+ GET /api/me 200 in 112ms
+ GET /api/me 200 in 138ms
+ GET /api/training-routes 200 in 177ms
+ GET /api/training-routes 200 in 187ms
+ GET /api/bookings 200 in 65ms
+ GET /bookings/history 200 in 189ms
+ GET /api/auth/session 200 in 86ms
+ GET /api/me 200 in 139ms
+ GET /api/me 200 in 223ms
+ GET /api/me 200 in 216ms
+ GET /api/tenant-config 200 in 227ms
+ GET /api/tenant-config 200 in 230ms
+ GET /api/roles 200 in 359ms
+ GET /api/me 200 in 236ms
+ GET /api/me 200 in 230ms
+ GET /api/me 200 in 273ms
+ GET /api/tenant-config 200 in 254ms
+ GET /api/roles 200 in 353ms
+ GET /api/me 200 in 211ms
+ GET /api/me 200 in 189ms
+ GET /api/roles 200 in 265ms
+ GET /api/tenant-config 200 in 214ms
+ GET /api/me 200 in 219ms
+ GET /api/tenant-config 200 in 247ms
+ GET /api/me 200 in 206ms
+ GET /api/me 200 in 186ms
+ GET /api/roles 200 in 263ms
+ GET /api/tenant-config 200 in 191ms
+ GET /api/me 200 in 143ms
+ GET /api/me 200 in 194ms
+ GET /api/schedule-data 200 in 222ms
+ GET /api/schedule-data 200 in 209ms
+ GET /api/users 200 in 232ms
+ GET /api/users 200 in 212ms
+ GET /api/uploads/status 200 in 71ms
+ GET /api/training-routes 200 in 111ms
+ GET /login 200 in 272ms
+ GET /api/auth/session 200 in 87ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1757ms (3193 modules)
+ GET /api/me 404 in 2231ms
+ GET /login 200 in 455ms
+ GET /api/auth/providers 200 in 179ms
+ GET /api/auth/csrf 200 in 88ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 266ms
+ GET /api/auth/session 200 in 68ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 548ms (1793 modules)
+ GET /api/me 200 in 1565ms
+ GET /api/me 200 in 1568ms
+ GET /dashboard 200 in 1651ms
+ GET /api/tenant-config 200 in 1678ms
+ GET /api/me 200 in 105ms
+ GET /api/tenant-config 200 in 116ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 541ms (1795 modules)
+ ✓ Compiled (1797 modules)
+ GET /api/tenant-config 200 in 1921ms
+ GET /api/me 200 in 1942ms
+ GET /api/roles 200 in 1948ms
+ GET /api/dashboard-summary 200 in 1948ms
+ GET /api/me 200 in 1950ms
+ GET /bookings/schedule/new 200 in 2058ms
+ GET /api/auth/session 200 in 105ms
+ GET /api/me 200 in 134ms
+ GET /api/me 200 in 202ms
+ GET /api/me 200 in 198ms
+ GET /api/tenant-config 200 in 227ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/roles 200 in 260ms
+ GET /api/me 200 in 205ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 203ms
+ GET /api/tenant-config 200 in 215ms
+ GET /api/roles 200 in 273ms
+ GET /api/me 200 in 218ms
+ GET /api/me 200 in 210ms
+ GET /api/roles 200 in 295ms
+ GET /api/tenant-config 200 in 253ms
+ GET /api/me 200 in 251ms
+ GET /api/tenant-config 200 in 295ms
+ GET /api/me 200 in 217ms
+ GET /api/me 200 in 193ms
+ GET /api/roles 200 in 343ms
+ GET /api/tenant-config 200 in 220ms
+ GET /api/me 200 in 124ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 878ms (1799 modules)
+ GET /api/me 200 in 1598ms
+ GET /api/schedule-data 200 in 1746ms
+ GET /api/schedule-data 200 in 1722ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 1963ms
+ GET /api/dashboard-summary 200 in 1969ms
+ ○ Compiling /api/bookings ...
+ ✓ Compiled /api/bookings in 706ms (1802 modules)
+ POST /api/bookings 201 in 999ms
+ GET /bookings/schedule 200 in 145ms
+ GET /api/me 200 in 159ms
+ GET /api/me 200 in 234ms
+ GET /api/schedule-data 200 in 295ms
+ GET /api/schedule-data 200 in 648ms
+ GET /api/dashboard-summary 200 in 658ms
+ GET /api/dashboard-summary 200 in 487ms
+ GET /bookings/schedule/new 200 in 676ms
+ GET /api/auth/session 200 in 108ms
+ GET /api/me 200 in 129ms
+ GET /api/me 200 in 199ms
+ GET /api/me 200 in 193ms
+ GET /api/roles 200 in 254ms
+ GET /api/tenant-config 200 in 245ms
+ GET /api/tenant-config 200 in 249ms
+ GET /api/me 200 in 204ms
+ GET /api/me 200 in 226ms
+ GET /api/me 200 in 254ms
+ GET /api/roles 200 in 346ms
+ GET /api/tenant-config 200 in 331ms
+ GET /api/me 200 in 259ms
+ GET /api/me 200 in 226ms
+ GET /api/roles 200 in 332ms
+ GET /api/me 200 in 220ms
+ GET /api/tenant-config 200 in 229ms
+ GET /api/me 200 in 225ms
+ GET /api/tenant-config 200 in 268ms
+ GET /api/me 200 in 198ms
+ GET /api/roles 200 in 211ms
+ GET /api/tenant-config 200 in 146ms
+ GET /api/me 200 in 169ms
+ GET /api/me 200 in 227ms
+ GET /api/schedule-data 200 in 268ms
+ GET /api/schedule-data 200 in 248ms
+ GET /api/dashboard-summary 200 in 279ms
+ GET /api/dashboard-summary 200 in 265ms
+ POST /api/bookings 201 in 113ms
+ GET /bookings/schedule 200 in 65ms
+ GET /api/me 200 in 149ms
+ GET /api/me 200 in 239ms
+ GET /api/bookings 200 in 237ms
+ GET /api/schedule-data 200 in 269ms
+ GET /api/schedule-data 200 in 254ms
+ GET /api/dashboard-summary 200 in 288ms
+ GET /api/dashboard-summary 200 in 279ms
+ ○ Compiling /operations/active-flight ...
+ ✓ Compiled /operations/active-flight in 3.6s (3344 modules)
+ GET /operations/active-flight?bookingId=07306df3-40d1-4538-835b-878eb4896582&aircraftId=ZSTEST-bc7a&setup=1 200 in 4704ms
+ GET /api/auth/session 200 in 156ms
+ GET /api/me 200 in 188ms
+ GET /api/me 200 in 284ms
+ GET /api/me 200 in 265ms
+ GET /api/roles 200 in 343ms
+ GET /api/tenant-config 200 in 348ms
+ GET /api/tenant-config 200 in 360ms
+ GET /api/me 200 in 274ms
+ GET /api/me 200 in 262ms
+ GET /api/me 200 in 270ms
+ GET /api/roles 200 in 414ms
+ GET /api/tenant-config 200 in 346ms
+ GET /api/me 200 in 278ms
+ GET /api/me 200 in 279ms
+ GET /api/roles 200 in 336ms
+ GET /api/tenant-config 200 in 257ms
+ GET /api/me 200 in 223ms
+ GET /api/tenant-config 200 in 257ms
+ GET /api/me 200 in 192ms
+ GET /api/me 200 in 220ms
+ GET /api/roles 200 in 240ms
+ GET /api/tenant-config 200 in 173ms
+ GET /api/me 200 in 155ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 3.4s (3651 modules)
+ GET /api/me 200 in 3630ms
+ GET /api/tenant-config 200 in 4020ms
+ GET /api/bookings 200 in 4019ms
+ GET /api/aircraft 200 in 4034ms
+ GET /api/tenant-config 200 in 3886ms
+ GET /api/aircraft 200 in 425ms
+ GET /api/bookings 200 in 136ms
+ GET /api/flight-sessions 200 in 4157ms
+ GET /api/flight-sessions 200 in 165ms
+ ○ Compiling /api/openaip/tiles/[layer]/[z]/[x]/[y] ...
+ ✓ Compiled /api/openaip/tiles/[layer]/[z]/[x]/[y] in 1880ms (3655 modules)
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 2453ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 2797ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 2849ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 507ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 2883ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 3280ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 426ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 3425ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 463ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 436ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 478ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 402ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 471ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 476ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 462ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 499ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 481ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 393ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 346ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 374ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 412ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 458ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 502ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 439ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 384ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 343ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 410ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 463ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 535ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 551ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 492ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 508ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 364ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 421ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 548ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 531ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 567ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 557ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 559ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 396ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 372ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 399ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 435ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 463ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 488ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 526ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 435ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 386ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 351ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 386ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 466ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 471ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 505ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 501ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 474ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 389ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 373ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 404ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 378ms
+ ✓ Compiled in 3.3s (2486 modules)
+ ✓ Compiled in 3.5s (2486 modules)
+ ✓ Compiled in 1064ms (2486 modules)
+ ✓ Compiled in 1468ms (2486 modules)
+ ✓ Compiled in 1258ms (2488 modules)
+ ✓ Compiled in 937ms (2488 modules)
+ ✓ Compiled in 1563ms (2488 modules)
+ GET /login 200 in 663ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 2.1s (1252 modules)
+ GET /api/auth/session 200 in 2460ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 845ms (1266 modules)
+ GET /api/me 200 in 1172ms
+ GET /api/auth/providers 200 in 97ms
+ GET /api/auth/csrf 200 in 69ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 109ms
+ GET /api/auth/session 200 in 90ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 2.2s (1867 modules)
+ ✓ Compiled (1871 modules)
+ GET /api/me 200 in 3396ms
+ GET /api/me 200 in 3401ms
+ GET /api/tenant-config 200 in 3645ms
+ GET /dashboard 200 in 3712ms
+ GET /api/me 200 in 269ms
+ GET /api/tenant-config 200 in 279ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 632ms (1873 modules)
+ ✓ Compiled (1875 modules)
+ GET /api/me 200 in 1946ms
+ GET /api/dashboard-summary 200 in 1928ms
+ GET /api/roles 200 in 1954ms
+ GET /api/tenant-config 200 in 1949ms
+ GET /api/me 200 in 1956ms
+ GET /operations/active-flight?bookingId=3b98b2a2-cdad-4532-a701-6b5c80dba223&aircraftId=ZSTEST-bc7a&setup=1 200 in 2045ms
+ GET /api/auth/session 200 in 604ms
+ GET /api/me 200 in 150ms
+ GET /api/me 200 in 192ms
+ GET /api/me 200 in 193ms
+ GET /api/tenant-config 200 in 219ms
+ GET /api/tenant-config 200 in 224ms
+ GET /api/roles 200 in 265ms
+ GET /api/me 200 in 196ms
+ GET /api/me 200 in 229ms
+ GET /api/me 200 in 280ms
+ GET /api/tenant-config 200 in 338ms
+ GET /api/roles 200 in 459ms
+ GET /api/me 200 in 265ms
+ GET /api/me 200 in 236ms
+ GET /api/roles 200 in 341ms
+ GET /api/tenant-config 200 in 271ms
+ GET /api/me 200 in 253ms
+ GET /api/me 200 in 253ms
+ GET /api/tenant-config 200 in 283ms
+ GET /api/roles 200 in 293ms
+ GET /api/me 200 in 227ms
+ GET /api/tenant-config 200 in 148ms
+ GET /api/me 200 in 145ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 2.8s (2181 modules)
+ ✓ Compiled (2185 modules)
+ GET /api/me 200 in 3680ms
+ GET /api/tenant-config 200 in 3995ms
+ GET /api/tenant-config 200 in 3861ms
+ GET /api/aircraft 200 in 4006ms
+ GET /api/bookings 200 in 4033ms
+ GET /api/flight-sessions 200 in 4092ms
+ GET /api/aircraft 200 in 437ms
+ GET /api/bookings 200 in 160ms
+ GET /api/flight-sessions 200 in 139ms
+ ○ Compiling /api/openaip/tiles/[layer]/[z]/[x]/[y] ...
+ ✓ Compiled /api/openaip/tiles/[layer]/[z]/[x]/[y] in 773ms (2187 modules)
+ ✓ Compiled (2189 modules)
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 1479ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 1479ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 1479ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 94ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 137ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 1858ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 153ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 1953ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 236ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 150ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 219ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 168ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 195ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 199ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 2303ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 186ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 186ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 191ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 191ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 168ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 168ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 209ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 374ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 374ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 366ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 365ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 338ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 341ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 411ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 534ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 443ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 445ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 320ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 320ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 360ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 233ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 233ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 232ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 205ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 265ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 240ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 240ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 239ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 257ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 258ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 778ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 847ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 848ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 849ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 358ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 357ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 217ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 143ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 144ms
+ DELETE /api/flight-sessions?id=4f47d4c8-909e-4c49-a471-3271e14cb0d6&mode=unblock 200 in 230ms
+ POST /api/flight-sessions 200 in 247ms
+ GET /bookings/schedule 200 in 533ms
+ GET /api/auth/session 200 in 103ms
+ GET /api/auth/session 200 in 87ms
+ GET /api/me 200 in 204ms
+ GET /api/me 200 in 206ms
+ GET /api/me 200 in 208ms
+ GET /api/tenant-config 200 in 214ms
+ GET /api/roles 200 in 263ms
+ GET /api/tenant-config 200 in 259ms
+ GET /api/me 200 in 160ms
+ GET /api/me 200 in 248ms
+ GET /api/me 200 in 252ms
+ GET /api/tenant-config 200 in 218ms
+ GET /api/roles 200 in 316ms
+ GET /api/me 200 in 212ms
+ GET /api/roles 200 in 263ms
+ GET /api/me 200 in 226ms
+ GET /api/me 200 in 221ms
+ GET /api/tenant-config 200 in 303ms
+ GET /api/tenant-config 200 in 235ms
+ GET /api/me 200 in 202ms
+ GET /api/me 200 in 175ms
+ GET /api/roles 200 in 200ms
+ GET /api/tenant-config 200 in 142ms
+ GET /api/me 200 in 142ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 734ms (2191 modules)
+ GET /api/me 200 in 1551ms
+ GET /api/schedule-data 200 in 1735ms
+ GET /api/schedule-data 200 in 1764ms
+ GET /api/dashboard-summary 200 in 1755ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 1875ms
+ GET /api/me 200 in 833ms
+ ○ Compiling /api/uploads/status ...
+ ✓ Compiled /api/uploads/status in 845ms (2193 modules)
+ ✓ Compiled (2195 modules)
+ GET /api/me 200 in 2434ms
+ GET /api/uploads/status 200 in 2205ms
+ GET /api/uploads/status 200 in 2204ms
+ GET /api/uploads/status 200 in 1660ms
+ GET /api/uploads/status 200 in 98ms
+ GET /api/training-routes 200 in 2566ms
+ GET /api/training-routes 200 in 2563ms
+ PUT /api/bookings 200 in 142ms
+ GET /api/bookings 200 in 89ms
+ GET /api/schedule-data 200 in 139ms
+ GET /api/dashboard-summary 200 in 175ms
+ GET /api/me 200 in 110ms
+ GET /api/me 200 in 137ms
+ GET /api/training-routes 200 in 173ms
+ GET /api/training-routes 200 in 161ms
+ GET /login 200 in 244ms
+ GET /api/auth/session 200 in 97ms
+ GET /api/me 200 in 86ms
+ GET /api/auth/providers 200 in 68ms
+ GET /api/auth/csrf 200 in 71ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 290ms
+ GET /api/auth/session 200 in 77ms
+ GET /api/me 200 in 115ms
+ GET /api/me 200 in 183ms
+ GET /api/tenant-config 200 in 292ms
+ GET /dashboard 200 in 317ms
+ GET /api/me 200 in 170ms
+ GET /api/tenant-config 200 in 190ms
+ GET /api/me 200 in 198ms
+ GET /api/me 200 in 295ms
+ GET /api/roles 200 in 357ms
+ GET /api/tenant-config 200 in 411ms
+ GET /api/me 200 in 214ms
+ GET /api/dashboard-summary 200 in 651ms
+ GET /api/roles 200 in 366ms
+ GET /api/me 200 in 294ms
+ GET /operations/active-flight 200 in 768ms
+ GET /api/auth/session 200 in 71ms
+ GET /api/me 200 in 137ms
+ GET /api/me 200 in 200ms
+ GET /api/me 200 in 197ms
+ GET /api/roles 200 in 252ms
+ GET /api/tenant-config 200 in 234ms
+ GET /api/tenant-config 200 in 306ms
+ GET /api/me 200 in 218ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 233ms
+ GET /api/tenant-config 200 in 241ms
+ GET /api/roles 200 in 321ms
+ GET /api/me 200 in 225ms
+ GET /api/me 200 in 190ms
+ GET /api/roles 200 in 275ms
+ GET /api/tenant-config 200 in 231ms
+ GET /api/me 200 in 248ms
+ GET /api/tenant-config 200 in 266ms
+ GET /api/me 200 in 233ms
+ GET /api/roles 200 in 267ms
+ GET /api/me 200 in 193ms
+ GET /api/tenant-config 200 in 221ms
+ GET /api/me 200 in 175ms
+ GET /api/me 200 in 418ms
+ GET /api/tenant-config 200 in 451ms
+ GET /api/bookings 200 in 437ms
+ GET /api/aircraft 200 in 450ms
+ GET /api/flight-sessions 200 in 495ms
+ GET /api/tenant-config 200 in 715ms
+ GET /api/aircraft 200 in 804ms
+ GET /api/bookings 200 in 829ms
+ GET /api/flight-sessions 200 in 824ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 136ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 140ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 141ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 97ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 120ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 120ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 440ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 138ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 505ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 166ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 138ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 157ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 216ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 216ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 829ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 209ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 144ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 145ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 182ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 182ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 175ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 174ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 175ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 150ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 150ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 153ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 161ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 205ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 185ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 185ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 237ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 261ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 261ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 201ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 202ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 202ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 174ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 248ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 178ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 142ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 109ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 109ms
+ POST /api/flight-sessions 200 in 102ms
+ GET /operations/active-flight 200 in 145ms
+ GET /api/auth/session 200 in 90ms
+ GET /api/me 200 in 137ms
+ GET /api/me 200 in 203ms
+ GET /api/me 200 in 195ms
+ GET /api/tenant-config 200 in 222ms
+ GET /api/tenant-config 200 in 218ms
+ GET /api/roles 200 in 266ms
+ GET /api/me 200 in 216ms
+ GET /api/me 200 in 184ms
+ GET /api/me 200 in 250ms
+ GET /api/tenant-config 200 in 262ms
+ GET /api/roles 200 in 276ms
+ GET /api/me 200 in 245ms
+ GET /api/me 200 in 218ms
+ GET /api/roles 200 in 270ms
+ GET /api/tenant-config 200 in 243ms
+ GET /api/me 200 in 247ms
+ GET /api/tenant-config 200 in 269ms
+ GET /api/me 200 in 210ms
+ GET /api/roles 200 in 253ms
+ GET /api/me 200 in 192ms
+ GET /api/tenant-config 200 in 228ms
+ GET /api/me 200 in 199ms
+ GET /api/me 200 in 245ms
+ GET /api/tenant-config 200 in 279ms
+ GET /api/bookings 200 in 260ms
+ GET /api/aircraft 200 in 273ms
+ GET /api/flight-sessions 200 in 292ms
+ GET /api/tenant-config 200 in 216ms
+ GET /api/bookings 200 in 246ms
+ GET /api/aircraft 200 in 255ms
+ GET /api/flight-sessions 200 in 278ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 371ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 359ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 451ms
+ GET /bookings/schedule 200 in 183ms
+ GET /api/auth/session 200 in 109ms
+ GET /api/auth/session 200 in 150ms
+ GET /api/me 200 in 846ms
+ GET /api/me 200 in 851ms
+ GET /api/me 200 in 859ms
+ GET /api/tenant-config 200 in 874ms
+ GET /api/roles 200 in 917ms
+ GET /api/tenant-config 200 in 875ms
+ GET /api/me 200 in 267ms
+ GET /api/me 200 in 269ms
+ GET /api/me 200 in 287ms
+ GET /api/tenant-config 200 in 302ms
+ GET /api/roles 200 in 389ms
+ GET /api/me 200 in 193ms
+ GET /api/me 200 in 286ms
+ GET /api/me 200 in 239ms
+ GET /api/tenant-config 200 in 255ms
+ GET /api/roles 200 in 338ms
+ GET /api/tenant-config 200 in 303ms
+ GET /api/me 200 in 229ms
+ GET /api/me 200 in 278ms
+ GET /api/roles 200 in 294ms
+ GET /api/tenant-config 200 in 303ms
+ GET /api/me 200 in 161ms
+ GET /api/me 200 in 201ms
+ GET /api/schedule-data 200 in 247ms
+ GET /api/schedule-data 200 in 227ms
+ GET /api/dashboard-summary 200 in 373ms
+ GET /api/dashboard-summary 200 in 450ms
+ GET /api/me 200 in 127ms
+ GET /api/me 200 in 180ms
+ GET /api/uploads/status 200 in 122ms
+ GET /api/uploads/status 200 in 122ms
+ GET /api/uploads/status 200 in 119ms
+ GET /api/training-routes 200 in 244ms
+ GET /api/training-routes 200 in 261ms
+ GET /api/uploads/status 200 in 104ms
+ GET /api/flight-sessions 200 in 85ms
+ ✓ Compiled in 2.7s (3670 modules)
+ ✓ Compiled in 1610ms (3670 modules)
+ GET /login 200 in 244ms
+ GET /api/auth/session 200 in 140ms
+ GET /api/me 200 in 100ms
+ GET /api/auth/providers 200 in 83ms
+ GET /api/auth/csrf 200 in 70ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 93ms
+ GET /api/auth/session 200 in 82ms
+ GET /api/me 200 in 135ms
+ GET /api/me 200 in 139ms
+ GET /api/tenant-config 200 in 234ms
+ GET /dashboard 200 in 263ms
+ GET /api/me 200 in 159ms
+ GET /api/tenant-config 200 in 178ms
+ GET /api/me 200 in 146ms
+ GET /api/me 200 in 232ms
+ GET /api/tenant-config 200 in 277ms
+ GET /api/roles 200 in 282ms
+ GET /api/dashboard-summary 200 in 370ms
+ GET /api/me 200 in 211ms
+ GET /api/tenant-config 200 in 271ms
+ GET /api/roles 200 in 359ms
+ GET /api/me 200 in 290ms
+ GET /operations/active-flight 200 in 641ms
+ GET /api/auth/session 200 in 94ms
+ GET /api/me 200 in 120ms
+ GET /api/me 200 in 167ms
+ GET /api/me 200 in 168ms
+ GET /api/tenant-config 200 in 183ms
+ GET /api/tenant-config 200 in 185ms
+ GET /api/roles 200 in 217ms
+ GET /api/me 200 in 184ms
+ GET /api/me 200 in 223ms
+ GET /api/me 200 in 252ms
+ GET /api/tenant-config 200 in 290ms
+ GET /api/roles 200 in 375ms
+ GET /api/me 200 in 247ms
+ GET /api/me 200 in 208ms
+ GET /api/roles 200 in 298ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/me 200 in 215ms
+ GET /api/tenant-config 200 in 297ms
+ GET /api/me 200 in 242ms
+ GET /api/roles 200 in 285ms
+ GET /api/me 200 in 241ms
+ GET /api/tenant-config 200 in 197ms
+ GET /api/me 200 in 152ms
+ GET /api/me 200 in 285ms
+ GET /api/tenant-config 200 in 307ms
+ GET /api/bookings 200 in 307ms
+ GET /api/aircraft 200 in 313ms
+ GET /api/flight-sessions 200 in 370ms
+ GET /api/tenant-config 200 in 252ms
+ GET /api/aircraft 200 in 158ms
+ GET /api/bookings 200 in 148ms
+ GET /api/flight-sessions 200 in 135ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 80ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 133ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 134ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 132ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 131ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 604ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 236ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 640ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 180ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 163ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 148ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 240ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 190ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 171ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 1044ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 178ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 159ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 158ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 159ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 158ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 175ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 167ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 133ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 132ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 133ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 147ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 148ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 166ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 203ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 202ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 188ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 192ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 192ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 193ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 200ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 201ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 195ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 162ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 139ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 140ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 140ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 110ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 110ms
+ POST /api/flight-sessions 200 in 108ms
+ GET /operations/active-flight 200 in 160ms
+ GET /api/auth/session 200 in 90ms
+ GET /api/me 200 in 135ms
+ GET /api/me 200 in 202ms
+ GET /api/me 200 in 190ms
+ GET /api/tenant-config 200 in 230ms
+ GET /api/roles 200 in 242ms
+ GET /api/tenant-config 200 in 221ms
+ GET /api/me 200 in 200ms
+ GET /api/me 200 in 181ms
+ GET /api/me 200 in 242ms
+ GET /api/tenant-config 200 in 255ms
+ GET /api/roles 200 in 297ms
+ GET /api/me 200 in 213ms
+ GET /api/me 200 in 193ms
+ GET /api/roles 200 in 238ms
+ GET /api/tenant-config 200 in 214ms
+ GET /api/me 200 in 218ms
+ GET /api/tenant-config 200 in 244ms
+ GET /api/me 200 in 191ms
+ GET /api/roles 200 in 231ms
+ GET /api/me 200 in 170ms
+ GET /api/tenant-config 200 in 208ms
+ GET /api/me 200 in 163ms
+ GET /api/me 200 in 211ms
+ GET /api/tenant-config 200 in 243ms
+ GET /api/aircraft 200 in 245ms
+ GET /api/bookings 200 in 243ms
+ GET /api/flight-sessions 200 in 236ms
+ GET /api/tenant-config 200 in 163ms
+ GET /api/aircraft 200 in 174ms
+ GET /api/bookings 200 in 177ms
+ GET /api/flight-sessions 200 in 171ms
+ DELETE /api/flight-sessions?id=ea82887f-3913-46c0-92be-d2f108b2c194 200 in 165ms
+ GET /api/flight-sessions 200 in 68ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 361ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 373ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 386ms
+ GET /api/flight-sessions 200 in 90ms
+ GET /bookings/schedule 200 in 183ms
+ GET /api/auth/session 200 in 104ms
+ GET /api/auth/session 200 in 95ms
+ GET /api/me 200 in 188ms
+ GET /api/me 200 in 191ms
+ GET /api/me 200 in 195ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/roles 200 in 252ms
+ GET /api/tenant-config 200 in 236ms
+ GET /api/me 200 in 176ms
+ GET /api/me 200 in 179ms
+ GET /api/me 200 in 212ms
+ GET /api/roles 200 in 302ms
+ GET /api/tenant-config 200 in 299ms
+ GET /api/me 200 in 218ms
+ GET /api/roles 200 in 300ms
+ GET /api/me 200 in 317ms
+ GET /api/me 200 in 268ms
+ GET /api/tenant-config 200 in 336ms
+ GET /api/me 200 in 257ms
+ GET /api/tenant-config 200 in 340ms
+ GET /api/me 200 in 243ms
+ GET /api/roles 200 in 263ms
+ GET /api/tenant-config 200 in 175ms
+ GET /api/me 200 in 153ms
+ GET /api/me 200 in 185ms
+ GET /api/schedule-data 200 in 231ms
+ GET /api/schedule-data 200 in 218ms
+ GET /api/dashboard-summary 200 in 263ms
+prisma:error 
+Invalid `prisma.managementOfChange.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.personnel.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 845ms
+ GET /api/me 200 in 185ms
+ GET /api/me 200 in 250ms
+ GET /api/uploads/status 200 in 231ms
+ GET /api/uploads/status 200 in 232ms
+ GET /api/uploads/status 200 in 171ms
+ GET /api/training-routes 200 in 352ms
+ GET /api/training-routes 200 in 372ms
+ GET /api/uploads/status 200 in 123ms
+ GET /api/flight-sessions 200 in 64ms
+ ✓ Compiled in 3.1s (3670 modules)
+ ✓ Compiled in 1464ms (3670 modules)
+ GET /login 200 in 383ms
+ GET /api/auth/session 200 in 167ms
+ GET /api/me 200 in 78ms
+ GET /api/auth/providers 200 in 103ms
+ GET /api/auth/csrf 200 in 77ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 107ms
+ GET /api/auth/session 200 in 66ms
+ GET /api/me 200 in 151ms
+ GET /api/me 200 in 154ms
+ GET /api/tenant-config 200 in 267ms
+ GET /dashboard 200 in 294ms
+ GET /api/me 200 in 118ms
+ GET /api/tenant-config 200 in 136ms
+ GET /api/me 200 in 194ms
+ GET /api/me 200 in 267ms
+ GET /api/me 200 in 255ms
+ GET /api/tenant-config 200 in 288ms
+ GET /api/roles 200 in 297ms
+ GET /api/dashboard-summary 200 in 384ms
+ GET /api/me 200 in 165ms
+ GET /api/roles 200 in 268ms
+ POST /api/flight-sessions 200 in 421ms
+ GET /api/tenant-config 200 in 180ms
+ GET /api/dashboard-summary 200 in 202ms
+ GET /api/flight-sessions 200 in 99ms
+ GET /bookings/schedule 200 in 334ms
+ GET /api/auth/session 200 in 72ms
+ GET /api/me 200 in 126ms
+ GET /api/me 200 in 211ms
+ GET /api/me 200 in 204ms
+ GET /api/tenant-config 200 in 254ms
+ GET /api/tenant-config 200 in 257ms
+ GET /api/roles 200 in 282ms
+ GET /api/me 200 in 173ms
+ GET /api/me 200 in 175ms
+ GET /api/me 200 in 248ms
+ GET /api/roles 200 in 331ms
+ GET /api/tenant-config 200 in 304ms
+ GET /api/me 200 in 269ms
+ GET /api/roles 200 in 492ms
+ GET /api/me 200 in 894ms
+ GET /api/me 200 in 822ms
+ GET /api/tenant-config 200 in 837ms
+ GET /api/me 200 in 833ms
+ GET /api/tenant-config 200 in 860ms
+ GET /api/me 200 in 223ms
+ GET /api/roles 200 in 243ms
+ GET /api/tenant-config 200 in 160ms
+ GET /api/me 200 in 126ms
+ GET /api/me 200 in 185ms
+ GET /api/schedule-data 200 in 208ms
+ GET /api/schedule-data 200 in 221ms
+ GET /api/dashboard-summary 200 in 230ms
+ GET /api/dashboard-summary 200 in 226ms
+ GET /api/me 200 in 130ms
+ GET /api/me 200 in 199ms
+ GET /api/uploads/status 200 in 179ms
+ GET /api/uploads/status 200 in 179ms
+ GET /api/uploads/status 200 in 149ms
+ GET /api/training-routes 200 in 289ms
+ GET /api/training-routes 200 in 276ms
+ GET /api/uploads/status 200 in 99ms
+ GET /api/flight-sessions 200 in 105ms
+ GET /api/bookings 200 in 85ms
+ GET /login 200 in 129ms
+ GET /api/auth/session 200 in 120ms
+ GET /api/me 200 in 97ms
+ GET /api/auth/providers 200 in 195ms
+ GET /api/auth/csrf 200 in 144ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 114ms
+ GET /api/auth/session 200 in 64ms
+ GET /api/me 200 in 153ms
+ GET /api/me 200 in 158ms
+ GET /api/tenant-config 200 in 211ms
+ GET /dashboard 200 in 266ms
+ GET /api/me 200 in 133ms
+ GET /api/tenant-config 200 in 149ms
+ GET /api/me 200 in 148ms
+ GET /api/me 200 in 258ms
+ GET /api/me 200 in 234ms
+ GET /api/tenant-config 200 in 269ms
+ GET /api/roles 200 in 288ms
+ GET /api/bookings 200 in 269ms
+ GET /api/dashboard-summary 200 in 364ms
+ GET /api/roles 200 in 311ms
+ GET /api/me 200 in 284ms
+ GET /api/tenant-config 200 in 338ms
+ GET /api/dashboard-summary 200 in 327ms
+ POST /api/flight-sessions 200 in 228ms
+ GET /api/flight-sessions 200 in 149ms
+ GET /bookings/schedule 200 in 189ms
+ GET /api/auth/session 200 in 82ms
+ GET /api/me 200 in 134ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 182ms
+ GET /api/tenant-config 200 in 212ms
+ GET /api/tenant-config 200 in 223ms
+ GET /api/roles 200 in 247ms
+ GET /api/me 200 in 201ms
+ GET /api/me 200 in 194ms
+ GET /api/me 200 in 212ms
+ GET /api/tenant-config 200 in 240ms
+ GET /api/roles 200 in 294ms
+ GET /api/me 200 in 235ms
+ GET /api/me 200 in 217ms
+ GET /api/roles 200 in 298ms
+ GET /api/tenant-config 200 in 264ms
+ GET /api/me 200 in 223ms
+ GET /api/tenant-config 200 in 269ms
+ GET /api/me 200 in 217ms
+ GET /api/me 200 in 189ms
+ GET /api/roles 200 in 278ms
+ GET /api/tenant-config 200 in 162ms
+ GET /api/me 200 in 125ms
+ GET /api/me 200 in 172ms
+ GET /api/schedule-data 200 in 186ms
+ GET /api/schedule-data 200 in 212ms
+ GET /api/dashboard-summary 200 in 220ms
+prisma:error 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 682ms
+ GET /api/me 200 in 137ms
+ GET /api/me 200 in 211ms
+ GET /api/uploads/status 200 in 151ms
+ GET /api/uploads/status 200 in 152ms
+ GET /api/uploads/status 200 in 148ms
+ GET /api/training-routes 200 in 290ms
+ GET /api/training-routes 200 in 301ms
+ GET /api/uploads/status 200 in 109ms
+ PUT /api/bookings 200 in 110ms
+ GET /api/flight-sessions 200 in 92ms
+ DELETE /api/flight-sessions?id=test-device-e4js72y1 200 in 120ms
+ GET /api/schedule-data 200 in 108ms
+ GET /api/dashboard-summary 200 in 129ms
+ GET /api/me 200 in 94ms
+ GET /api/me 200 in 116ms
+ GET /api/training-routes 200 in 139ms
+ GET /api/training-routes 200 in 127ms
+ GET /api/flight-sessions 200 in 90ms
+ GET /api/bookings 200 in 79ms
+ GET /login 200 in 129ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 71ms
+ GET /api/auth/providers 200 in 86ms
+ GET /api/auth/csrf 200 in 106ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 102ms
+ GET /api/auth/session 200 in 96ms
+ GET /api/me 200 in 135ms
+ GET /api/me 200 in 136ms
+ GET /api/tenant-config 200 in 194ms
+ GET /dashboard 200 in 264ms
+ GET /api/me 200 in 156ms
+ GET /api/tenant-config 200 in 175ms
+ GET /api/me 200 in 148ms
+ GET /api/me 200 in 257ms
+ GET /api/me 200 in 231ms
+ GET /api/tenant-config 200 in 266ms
+ GET /api/bookings 200 in 266ms
+ GET /api/roles 200 in 303ms
+ GET /api/dashboard-summary 200 in 358ms
+ GET /api/roles 200 in 345ms
+ GET /api/me 200 in 299ms
+ GET /api/tenant-config 200 in 351ms
+ GET /api/dashboard-summary 200 in 486ms
+ GET /operations/active-flight?bookingId=07306df3-40d1-4538-835b-878eb4896582&aircraftId=ZSTEST-bc7a&setup=1 200 in 237ms
+ GET /api/auth/session 200 in 106ms
+ GET /api/me 200 in 129ms
+ GET /api/me 200 in 179ms
+ GET /api/me 200 in 178ms
+ GET /api/tenant-config 200 in 188ms
+ GET /api/tenant-config 200 in 191ms
+ GET /api/roles 200 in 229ms
+ GET /api/me 200 in 200ms
+ GET /api/me 200 in 243ms
+ GET /api/me 200 in 276ms
+ GET /api/tenant-config 200 in 276ms
+ GET /api/roles 200 in 342ms
+ GET /api/me 200 in 257ms
+ GET /api/me 200 in 189ms
+ GET /api/roles 200 in 307ms
+ GET /api/tenant-config 200 in 260ms
+ GET /api/me 200 in 373ms
+ GET /api/tenant-config 200 in 423ms
+ GET /api/me 200 in 409ms
+ GET /api/me 200 in 386ms
+ GET /api/roles 200 in 513ms
+ GET /api/tenant-config 200 in 287ms
+ GET /api/me 200 in 195ms
+ GET /api/me 200 in 437ms
+ GET /api/tenant-config 200 in 504ms
+ GET /api/bookings 200 in 495ms
+ GET /api/aircraft 200 in 518ms
+ GET /api/flight-sessions 200 in 519ms
+ GET /api/tenant-config 200 in 390ms
+ GET /api/aircraft 200 in 219ms
+ GET /api/bookings 200 in 170ms
+ GET /api/flight-sessions 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 135ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 135ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 136ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 81ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 129ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 129ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 127ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 121ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 573ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 215ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 628ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 176ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 777ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 203ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 165ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 266ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 217ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 453ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 1035ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 955ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 957ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 735ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 734ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 144ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 145ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 145ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 156ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 156ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 149ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 173ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 174ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 174ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 195ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 158ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 185ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 185ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 200ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 245ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 173ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 143ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 157ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 157ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 146ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 146ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 146ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 163ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 148ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 148ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 149ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 104ms
+ GET /api/flight-sessions 200 in 98ms
+ GET /login 200 in 129ms
+ GET /api/auth/session 200 in 86ms
+ GET /api/me 200 in 99ms
+ GET /api/auth/providers 200 in 80ms
+ GET /api/auth/csrf 200 in 81ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 249ms
+ GET /api/auth/session 200 in 93ms
+ GET /api/me 200 in 147ms
+ GET /api/me 200 in 150ms
+ GET /api/tenant-config 200 in 202ms
+ GET /dashboard 200 in 238ms
+ GET /api/me 200 in 134ms
+ GET /api/tenant-config 200 in 130ms
+ GET /api/me 200 in 178ms
+ GET /api/me 200 in 269ms
+ GET /api/roles 200 in 334ms
+ GET /api/tenant-config 200 in 376ms
+ GET /api/me 200 in 190ms
+ GET /api/dashboard-summary 200 in 558ms
+ GET /api/me 200 in 247ms
+ GET /api/roles 200 in 313ms
+ GET /bookings/schedule/new 200 in 672ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 118ms
+ GET /api/me 200 in 210ms
+ GET /api/me 200 in 207ms
+ GET /api/tenant-config 200 in 239ms
+ GET /api/roles 200 in 260ms
+ GET /api/tenant-config 200 in 247ms
+ GET /api/me 200 in 239ms
+ GET /api/me 200 in 237ms
+ GET /api/me 200 in 238ms
+ GET /api/tenant-config 200 in 264ms
+ GET /api/roles 200 in 359ms
+ GET /api/me 200 in 341ms
+ GET /api/me 200 in 342ms
+ GET /api/roles 200 in 458ms
+ GET /api/tenant-config 200 in 1122ms
+ GET /api/me 200 in 1111ms
+ GET /api/tenant-config 200 in 1139ms
+ GET /api/me 200 in 898ms
+ GET /api/me 200 in 679ms
+ GET /api/roles 200 in 946ms
+ GET /api/tenant-config 200 in 201ms
+ GET /api/me 200 in 126ms
+ GET /api/me 200 in 152ms
+ GET /api/schedule-data 200 in 177ms
+ GET /api/schedule-data 200 in 205ms
+ GET /api/dashboard-summary 200 in 223ms
+ GET /api/dashboard-summary 200 in 339ms
+ POST /api/bookings 201 in 78ms
+ GET /bookings/schedule 200 in 74ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 308ms
+ GET /api/dashboard-summary 200 in 228ms
+ GET /api/dashboard-summary 200 in 426ms
+ GET /api/schedule-data 200 in 427ms
+ GET /api/schedule-data 200 in 421ms
+ GET /bookings/schedule/new 200 in 435ms
+ GET /api/auth/session 200 in 97ms
+ GET /api/me 200 in 128ms
+ GET /api/me 200 in 221ms
+ GET /api/me 200 in 207ms
+ GET /api/tenant-config 200 in 229ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/roles 200 in 273ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 211ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/roles 200 in 299ms
+ GET /api/me 200 in 229ms
+ GET /api/me 200 in 203ms
+ GET /api/roles 200 in 281ms
+ GET /api/tenant-config 200 in 218ms
+ GET /api/me 200 in 209ms
+ GET /api/tenant-config 200 in 227ms
+ GET /api/me 200 in 181ms
+ GET /api/roles 200 in 217ms
+ GET /api/me 200 in 157ms
+ GET /api/tenant-config 200 in 189ms
+ GET /api/me 200 in 148ms
+ GET /api/me 200 in 158ms
+ GET /api/schedule-data 200 in 221ms
+ GET /api/schedule-data 200 in 186ms
+ GET /api/dashboard-summary 200 in 234ms
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 718ms
+ POST /api/bookings 201 in 104ms
+ GET /bookings/schedule 200 in 66ms
+ GET /api/me 200 in 157ms
+ GET /api/me 200 in 198ms
+ GET /api/bookings 200 in 252ms
+ GET /api/schedule-data 200 in 299ms
+ GET /api/schedule-data 200 in 336ms
+ GET /api/dashboard-summary 200 in 335ms
+ GET /api/dashboard-summary 200 in 337ms
+ GET /operations/active-flight?bookingId=cd41a3bf-f88c-4205-b81c-6da2b485e2f4&aircraftId=ZSTEST-bc7a&setup=1 200 in 177ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 143ms
+ GET /api/me 200 in 201ms
+ GET /api/me 200 in 173ms
+ GET /api/tenant-config 200 in 183ms
+ GET /api/tenant-config 200 in 231ms
+ GET /api/roles 200 in 257ms
+ GET /api/me 200 in 170ms
+ GET /api/me 200 in 175ms
+ GET /api/me 200 in 219ms
+ GET /api/tenant-config 200 in 234ms
+ GET /api/roles 200 in 322ms
+ GET /api/me 200 in 218ms
+ GET /api/me 200 in 184ms
+ GET /api/roles 200 in 281ms
+ GET /api/tenant-config 200 in 213ms
+ GET /api/me 200 in 197ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/me 200 in 208ms
+ GET /api/me 200 in 181ms
+ GET /api/roles 200 in 254ms
+ GET /api/tenant-config 200 in 176ms
+ GET /api/me 200 in 167ms
+ GET /api/me 200 in 236ms
+ GET /api/tenant-config 200 in 266ms
+ GET /api/aircraft 200 in 249ms
+ GET /api/bookings 200 in 250ms
+ GET /api/flight-sessions 200 in 271ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/aircraft 200 in 191ms
+ GET /api/bookings 200 in 187ms
+ GET /api/flight-sessions 200 in 190ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 148ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 147ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 147ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 88ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 146ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 146ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 118ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 111ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 558ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 215ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 634ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 211ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 212ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 132ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 963ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 193ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 205ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 182ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 237ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 226ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 211ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 212ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 220ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 220ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 232ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 225ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 203ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 237ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 237ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 271ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 247ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 163ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 245ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 180ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 156ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 157ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 197ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 182ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 182ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 193ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 194ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 148ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 149ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 149ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 121ms
+ ✓ Compiled in 3.6s (2490 modules)
+ ✓ Compiled in 2.4s (2490 modules)
+ ✓ Compiled in 1138ms (2490 modules)
+ ✓ Compiled in 2s (1476 modules)
+ ✓ Compiled in 2.8s (2490 modules)
+ ✓ Compiled in 999ms (1476 modules)
+ GET /bookings/schedule 200 in 617ms
+ ○ Compiling /api/bookings ...
+ ✓ Compiled /api/bookings in 2.5s (1267 modules)
+ GET /api/bookings 200 in 2899ms
+ ○ Compiling /bookings/schedule/[id] ...
+ ✓ Compiled /bookings/schedule/[id] in 1697ms (2836 modules)
+ GET /bookings/schedule/39340dde-b0c6-46f4-bccb-e602ed28ecf1 200 in 2709ms
+ ✓ Compiled /api/auth/[...nextauth] in 476ms (1317 modules)
+ GET /api/auth/session 200 in 688ms
+ ○ Compiling /api/roles ...
+ ✓ Compiled /api/roles in 599ms (1319 modules)
+ ✓ Compiled (1321 modules)
+ GET /api/me 200 in 2219ms
+ GET /api/me 200 in 2228ms
+ GET /api/me 200 in 2263ms
+ GET /api/roles 200 in 2265ms
+ GET /bookings/schedule/39340dde-b0c6-46f4-bccb-e602ed28ecf1 200 in 2362ms
+ GET /login 200 in 2320ms
+ GET /api/roles 200 in 127ms
+ GET /api/roles 200 in 200ms
+ GET /api/me 200 in 240ms
+ GET /api/me 200 in 242ms
+ GET /api/roles 200 in 226ms
+ GET /login 200 in 220ms
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 346ms
+ GET /api/auth/session 200 in 94ms
+ GET /api/me 200 in 107ms
+ GET /api/roles 200 in 187ms
+ GET /api/roles 200 in 160ms
+ GET /api/me 200 in 165ms
+ GET /api/me 200 in 168ms
+ GET /login 200 in 228ms
+ GET /api/me 200 in 135ms
+ GET /api/roles 200 in 172ms
+ GET /api/roles 200 in 173ms
+ GET /api/me 200 in 176ms
+ GET /login 200 in 201ms
+ GET /operations/active-flight?bookingId=cd41a3bf-f88c-4205-b81c-6da2b485e2f4&aircraftId=ZSTEST-bc7a&setup=1 200 in 158ms
+ GET /api/auth/session 200 in 92ms
+ GET /api/me 200 in 104ms
+ GET /api/roles 200 in 171ms
+ GET /api/roles 200 in 149ms
+ GET /api/me 200 in 152ms
+ GET /api/me 200 in 156ms
+ GET /login 200 in 235ms
+ GET /api/me 200 in 93ms
+ GET /api/roles 200 in 168ms
+ GET /api/roles 200 in 170ms
+ GET /api/me 200 in 174ms
+ GET /login 200 in 202ms
+ GET /operations/active-flight 200 in 119ms
+ GET /api/auth/session 200 in 148ms
+ GET /api/me 200 in 140ms
+ GET /api/roles 200 in 276ms
+ GET /api/roles 200 in 240ms
+ GET /api/me 200 in 245ms
+ GET /api/me 200 in 249ms
+ GET /login 200 in 342ms
+ GET /api/me 200 in 131ms
+ GET /api/roles 200 in 261ms
+ GET /api/roles 200 in 264ms
+ GET /api/me 200 in 271ms
+ GET /login 200 in 300ms
+ GET /operations/active-flight 200 in 640ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 121ms
+ GET /api/roles 200 in 197ms
+ GET /api/roles 200 in 163ms
+ GET /api/me 200 in 165ms
+ GET /api/me 200 in 169ms
+ GET /login 200 in 233ms
+ GET /api/me 200 in 108ms
+ GET /api/roles 200 in 206ms
+ GET /api/roles 200 in 208ms
+ GET /api/me 200 in 211ms
+ GET /login 200 in 231ms
+ GET /login 200 in 120ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.5s (2795 modules)
+ GET /login 200 in 726ms
+ GET /api/auth/session 404 in 3337ms
+ GET /login 200 in 2084ms
+ POST /api/auth/_log 200 in 103ms
+ GET /api/auth/session 200 in 90ms
+ GET /api/me 200 in 88ms
+ GET /api/auth/providers 200 in 162ms
+ ○ Compiling /bookings/schedule/[id] ...
+ ✓ Compiled /bookings/schedule/[id] in 1541ms (1318 modules)
+ GET /api/auth/csrf 200 in 2213ms
+ POST /api/auth/callback/credentials 200 in 397ms
+ GET /bookings/schedule/39340dde-b0c6-46f4-bccb-e602ed28ecf1 200 in 2736ms
+ GET /api/auth/session 200 in 88ms
+ GET /api/me 200 in 103ms
+ GET /api/roles 200 in 189ms
+ GET /api/roles 200 in 164ms
+ GET /api/me 200 in 166ms
+ GET /api/me 200 in 169ms
+ GET /login 200 in 251ms
+ GET /api/me 200 in 142ms
+ GET /api/roles 200 in 189ms
+ GET /api/roles 200 in 192ms
+ GET /api/me 200 in 194ms
+ GET /login 200 in 219ms
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 169ms
+ GET /api/auth/session 200 in 96ms
+ GET /api/me 200 in 116ms
+ GET /api/roles 200 in 222ms
+ GET /api/roles 200 in 191ms
+ GET /api/me 200 in 199ms
+ GET /api/me 200 in 201ms
+ GET /login 200 in 285ms
+ GET /api/me 200 in 97ms
+ GET /api/roles 200 in 205ms
+ GET /api/roles 200 in 207ms
+ GET /api/me 200 in 210ms
+ GET /login 200 in 233ms
+ GET /operations/active-flight 200 in 158ms
+ GET /api/auth/session 200 in 91ms
+ GET /api/me 200 in 98ms
+ GET /api/roles 200 in 202ms
+ GET /api/roles 200 in 171ms
+ GET /api/me 200 in 178ms
+ GET /api/me 200 in 179ms
+ GET /login 200 in 253ms
+ GET /api/me 200 in 92ms
+ GET /api/roles 200 in 181ms
+ GET /api/roles 200 in 184ms
+ GET /api/me 200 in 187ms
+ GET /login 200 in 213ms
+ GET /login 200 in 124ms
+ GET /api/auth/session 200 in 106ms
+ GET /api/me 200 in 87ms
+ GET /api/auth/providers 200 in 68ms
+ GET /api/auth/csrf 200 in 84ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 113ms
+ GET /api/auth/session 200 in 84ms
+ ○ Compiling /api/tenant-config ...
+ GET /api/me 200 in 3635ms
+ GET /api/me 200 in 3630ms
+ ✓ Compiled /api/tenant-config in 4.8s (1919 modules)
+ ✓ Compiled (1923 modules)
+ GET /login 200 in 220ms
+ GET /api/auth/session 200 in 84ms
+ GET /api/me 200 in 86ms
+ GET /api/auth/providers 200 in 75ms
+ GET /api/auth/csrf 200 in 87ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 107ms
+ GET /api/auth/session 200 in 74ms
+ GET /api/me 200 in 147ms
+ GET /api/me 200 in 150ms
+ GET /api/tenant-config 200 in 188ms
+ GET /dashboard 200 in 250ms
+ GET /api/me 200 in 181ms
+ GET /api/tenant-config 200 in 180ms
+ GET /api/me 200 in 140ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 1789ms (1924 modules)
+ GET /api/me 200 in 2628ms
+ GET /api/me 200 in 2662ms
+ GET /api/roles 200 in 2721ms
+ GET /api/roles 200 in 2607ms
+ GET /api/me 200 in 182ms
+ GET /api/tenant-config 200 in 2870ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/dashboard-summary 200 in 525ms
+ GET /api/dashboard-summary 200 in 3302ms
+ GET /operations/active-flight 200 in 624ms
+prisma:error 
+Invalid `prisma.personnel.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/auth/session 200 in 91ms
+ GET /api/me 200 in 137ms
+ GET /api/me 200 in 193ms
+ GET /api/me 200 in 197ms
+ GET /api/tenant-config 200 in 229ms
+ GET /api/tenant-config 200 in 231ms
+ GET /api/roles 200 in 261ms
+ GET /api/me 200 in 193ms
+ GET /api/me 200 in 185ms
+ GET /api/me 200 in 200ms
+ GET /api/tenant-config 200 in 223ms
+ GET /api/roles 200 in 301ms
+ GET /api/me 200 in 224ms
+ GET /api/me 200 in 198ms
+ GET /api/roles 200 in 292ms
+ GET /api/tenant-config 200 in 224ms
+ GET /api/me 200 in 229ms
+ GET /api/tenant-config 200 in 251ms
+ GET /api/me 200 in 213ms
+ GET /api/me 200 in 184ms
+ GET /api/roles 200 in 277ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/me 200 in 148ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 2.7s (2230 modules)
+ ✓ Compiled (2234 modules)
+ GET /api/me 200 in 4460ms
+ GET /api/tenant-config 200 in 4732ms
+ GET /api/tenant-config 200 in 4583ms
+ GET /api/aircraft 200 in 4745ms
+ GET /api/bookings 200 in 4766ms
+ GET /api/flight-sessions 200 in 4806ms
+ GET /api/aircraft 200 in 381ms
+ GET /api/bookings 200 in 161ms
+ GET /api/flight-sessions 200 in 221ms
+ GET /operations/active-flight 200 in 141ms
+ GET /operations/active-flight 200 in 87ms
+ ○ Compiling /api/openaip/tiles/[layer]/[z]/[x]/[y] ...
+ ✓ Compiled /api/openaip/tiles/[layer]/[z]/[x]/[y] in 863ms (2236 modules)
+ ✓ Compiled (2238 modules)
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 1648ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 1647ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 1648ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 97ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 149ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 150ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 120ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 147ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 176ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 2133ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 162ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 2211ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 198ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 227ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 250ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 260ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 223ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 2541ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 226ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 2092ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 2082ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 4069ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 4175ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 4117ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 2554ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 191ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 192ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 188ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 194ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 195ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 195ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 178ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 179ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 228ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 217ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 311ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 312ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 228ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 229ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 213ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 230ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 236ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 179ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 150ms
+ GET /login 200 in 301ms
+ GET /api/auth/session 200 in 141ms
+ GET /api/me 200 in 771ms
+ GET /api/auth/providers 200 in 101ms
+ GET /api/auth/csrf 200 in 74ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 108ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 169ms
+ GET /api/me 200 in 171ms
+ GET /api/tenant-config 200 in 265ms
+ GET /dashboard 200 in 293ms
+ GET /api/me 200 in 110ms
+ GET /api/tenant-config 200 in 131ms
+ GET /api/me 200 in 130ms
+ GET /api/me 200 in 243ms
+ GET /api/me 200 in 218ms
+ GET /api/tenant-config 200 in 263ms
+ GET /api/roles 200 in 294ms
+ GET /api/dashboard-summary 200 in 363ms
+ GET /api/roles 200 in 281ms
+ GET /api/me 200 in 203ms
+ GET /api/tenant-config 200 in 240ms
+ GET /api/dashboard-summary 200 in 220ms
+ GET /operations/active-flight 200 in 273ms
+ GET /api/auth/session 200 in 88ms
+ GET /api/me 200 in 155ms
+ GET /api/me 200 in 218ms
+ GET /api/me 200 in 212ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/tenant-config 200 in 230ms
+ GET /api/roles 200 in 275ms
+ GET /api/me 200 in 219ms
+ GET /api/me 200 in 218ms
+ GET /api/me 200 in 257ms
+ GET /api/tenant-config 200 in 269ms
+ GET /api/roles 200 in 353ms
+ GET /api/me 200 in 229ms
+ GET /api/me 200 in 202ms
+ GET /api/roles 200 in 268ms
+ GET /api/tenant-config 200 in 247ms
+ GET /api/me 200 in 255ms
+ GET /api/tenant-config 200 in 275ms
+ GET /api/me 200 in 246ms
+ GET /api/me 200 in 198ms
+ GET /api/roles 200 in 306ms
+ GET /api/tenant-config 200 in 214ms
+ GET /api/me 200 in 150ms
+ GET /api/me 200 in 374ms
+ GET /api/tenant-config 200 in 409ms
+ GET /api/aircraft 200 in 394ms
+ GET /api/bookings 200 in 391ms
+ GET /api/flight-sessions 200 in 452ms
+ GET /api/tenant-config 200 in 316ms
+ GET /api/aircraft 200 in 172ms
+ GET /api/bookings 200 in 186ms
+ GET /api/flight-sessions 200 in 192ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 150ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 113ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 134ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 133ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 113ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 125ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 126ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 557ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 631ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 257ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 247ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 904ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 223ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 191ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 147ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 146ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 165ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 166ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 192ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 186ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 175ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 180ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 158ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 186ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 186ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 1226ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 1276ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 1275ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 1222ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 890ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 890ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 173ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 187ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 173ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 192ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 157ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 158ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 158ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 201ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 200ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 124ms
+ GET /login 200 in 159ms
+ GET /api/auth/session 200 in 92ms
+ GET /api/me 200 in 83ms
+ GET /api/auth/providers 200 in 79ms
+ GET /api/auth/csrf 200 in 82ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 88ms
+ GET /api/auth/session 200 in 80ms
+ GET /api/me 200 in 152ms
+ GET /api/me 200 in 154ms
+ GET /api/tenant-config 200 in 213ms
+ GET /dashboard 200 in 248ms
+ GET /api/me 200 in 123ms
+ GET /api/tenant-config 200 in 149ms
+ GET /api/me 200 in 153ms
+ GET /api/me 200 in 223ms
+ GET /api/me 200 in 207ms
+ GET /api/roles 200 in 273ms
+ GET /api/tenant-config 200 in 255ms
+ GET /api/dashboard-summary 200 in 314ms
+ GET /api/roles 200 in 265ms
+ GET /api/me 200 in 202ms
+ GET /api/tenant-config 200 in 242ms
+ GET /api/dashboard-summary 200 in 216ms
+ GET /operations/active-flight 200 in 142ms
+ GET /api/auth/session 200 in 83ms
+ GET /api/me 200 in 139ms
+ GET /api/me 200 in 191ms
+ GET /api/me 200 in 191ms
+ GET /api/tenant-config 200 in 214ms
+ GET /api/tenant-config 200 in 216ms
+ GET /api/roles 200 in 261ms
+ GET /api/me 200 in 199ms
+ GET /api/me 200 in 203ms
+ GET /api/me 200 in 211ms
+ GET /api/tenant-config 200 in 243ms
+ GET /api/roles 200 in 298ms
+ GET /api/me 200 in 228ms
+ GET /api/me 200 in 187ms
+ GET /api/roles 200 in 259ms
+ GET /api/tenant-config 200 in 212ms
+ GET /api/me 200 in 217ms
+ GET /api/tenant-config 200 in 263ms
+ GET /api/me 200 in 229ms
+ GET /api/me 200 in 208ms
+ GET /api/roles 200 in 289ms
+ GET /api/tenant-config 200 in 224ms
+ GET /api/me 200 in 166ms
+ GET /api/me 200 in 228ms
+ GET /api/tenant-config 200 in 261ms
+ GET /api/aircraft 200 in 257ms
+ GET /api/bookings 200 in 250ms
+ GET /api/flight-sessions 200 in 271ms
+ GET /api/tenant-config 200 in 210ms
+ GET /api/aircraft 200 in 176ms
+ GET /api/bookings 200 in 184ms
+ GET /api/flight-sessions 200 in 188ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 151ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 152ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 152ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 87ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 149ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 149ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 490ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 159ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 571ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 161ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 279ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 244ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 226ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 219ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 923ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 224ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 245ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 245ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 254ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 254ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 293ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 231ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 205ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 201ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 298ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 222ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 222ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 200ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 201ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 220ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 213ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 213ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 213ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 205ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 296ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 1328ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 1328ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 1257ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 1256ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 1208ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 543ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 140ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 140ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 141ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 141ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 152ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 166ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 113ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 114ms
+ GET /login 200 in 124ms
+ GET /api/auth/session 200 in 122ms
+ GET /api/me 200 in 103ms
+ GET /api/auth/providers 200 in 79ms
+ GET /api/auth/csrf 200 in 54ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 68ms
+ GET /api/auth/session 200 in 72ms
+ GET /api/me 200 in 140ms
+ GET /api/me 200 in 141ms
+ GET /api/tenant-config 200 in 190ms
+ GET /dashboard 200 in 280ms
+ GET /api/me 200 in 146ms
+ GET /api/tenant-config 200 in 166ms
+ GET /api/me 200 in 143ms
+ GET /api/me 200 in 237ms
+ GET /api/me 200 in 223ms
+ GET /api/tenant-config 200 in 249ms
+ GET /api/roles 200 in 276ms
+ GET /api/dashboard-summary 200 in 352ms
+ GET /api/roles 200 in 263ms
+ GET /api/me 200 in 190ms
+ GET /api/tenant-config 200 in 220ms
+ GET /api/dashboard-summary 200 in 232ms
+ GET /operations/active-flight 200 in 132ms
+ GET /api/auth/session 200 in 104ms
+ GET /api/me 200 in 157ms
+ GET /api/me 200 in 216ms
+ GET /api/me 200 in 211ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/tenant-config 200 in 226ms
+ GET /api/roles 200 in 275ms
+ GET /api/me 200 in 287ms
+ GET /api/me 200 in 327ms
+ GET /api/me 200 in 377ms
+ GET /api/roles 200 in 438ms
+ GET /api/tenant-config 200 in 392ms
+ GET /api/me 200 in 287ms
+ GET /api/me 200 in 241ms
+ GET /api/roles 200 in 331ms
+ GET /api/tenant-config 200 in 289ms
+ GET /api/me 200 in 310ms
+ GET /api/tenant-config 200 in 342ms
+ GET /api/me 200 in 271ms
+ GET /api/me 200 in 201ms
+ GET /api/roles 200 in 306ms
+ GET /api/tenant-config 200 in 215ms
+ GET /api/me 200 in 159ms
+ GET /api/me 200 in 239ms
+ GET /api/tenant-config 200 in 272ms
+ GET /api/bookings 200 in 266ms
+ GET /api/aircraft 200 in 271ms
+ GET /api/flight-sessions 200 in 298ms
+ GET /api/tenant-config 200 in 210ms
+ GET /api/aircraft 200 in 175ms
+ GET /api/bookings 200 in 201ms
+ GET /api/flight-sessions 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 136ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 141ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 142ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 88ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 143ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 144ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 106ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 108ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 525ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 216ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 647ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 186ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 240ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 223ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 188ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 220ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 993ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 224ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 222ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 244ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 243ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 228ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 198ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 278ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 226ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 213ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 214ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 217ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 217ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 213ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 192ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 162ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 163ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 241ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 289ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 223ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 223ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 223ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 223ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 179ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 163ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 163ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 240ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 241ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 228ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 244ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 245ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 245ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 247ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 286ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 149ms
+ GET /login 200 in 120ms
+ GET /api/auth/session 200 in 88ms
+ GET /api/me 200 in 73ms
+ GET /api/auth/providers 200 in 84ms
+ GET /api/auth/csrf 200 in 68ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 88ms
+ GET /api/auth/session 200 in 81ms
+ GET /api/me 200 in 136ms
+ GET /api/me 200 in 210ms
+ GET /api/tenant-config 200 in 264ms
+ GET /dashboard 200 in 319ms
+ GET /api/me 200 in 137ms
+ GET /api/tenant-config 200 in 157ms
+ GET /api/me 200 in 157ms
+ GET /api/me 200 in 234ms
+ GET /api/me 200 in 225ms
+ GET /api/tenant-config 200 in 252ms
+ GET /api/roles 200 in 277ms
+ GET /api/dashboard-summary 200 in 336ms
+ GET /api/roles 200 in 237ms
+ GET /api/me 200 in 180ms
+ GET /api/tenant-config 200 in 223ms
+ GET /api/dashboard-summary 200 in 214ms
+ GET /operations/active-flight?bookingId=cd41a3bf-f88c-4205-b81c-6da2b485e2f4&aircraftId=ZSTEST-bc7a&setup=1 200 in 157ms
+ GET /api/auth/session 200 in 75ms
+ GET /api/me 200 in 139ms
+ GET /api/me 200 in 182ms
+ GET /api/me 200 in 186ms
+ GET /api/tenant-config 200 in 210ms
+ GET /api/tenant-config 200 in 214ms
+ GET /api/roles 200 in 241ms
+ GET /api/me 200 in 211ms
+ GET /api/me 200 in 225ms
+ GET /api/me 200 in 223ms
+ GET /api/tenant-config 200 in 244ms
+ GET /api/roles 200 in 337ms
+ GET /api/me 200 in 201ms
+ GET /api/me 200 in 188ms
+ GET /api/roles 200 in 243ms
+ GET /api/tenant-config 200 in 248ms
+ GET /api/me 200 in 249ms
+ GET /api/tenant-config 200 in 264ms
+ GET /api/me 200 in 225ms
+ GET /api/roles 200 in 267ms
+ GET /api/me 200 in 192ms
+ GET /api/tenant-config 200 in 192ms
+ GET /api/me 200 in 178ms
+ GET /api/me 200 in 230ms
+ GET /api/tenant-config 200 in 258ms
+ GET /api/aircraft 200 in 242ms
+ GET /api/bookings 200 in 240ms
+ GET /api/flight-sessions 200 in 258ms
+ GET /api/tenant-config 200 in 181ms
+ GET /api/aircraft 200 in 155ms
+ GET /api/bookings 200 in 169ms
+ GET /api/flight-sessions 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 123ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 124ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 125ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 93ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 152ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 152ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 114ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 541ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 147ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 622ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 244ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 196ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 191ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 190ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 165ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 196ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 1004ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 204ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 161ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 194ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 161ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 161ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 189ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 190ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 181ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 205ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 214ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 240ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 161ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 160ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 173ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 198ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 197ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 232ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 270ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 270ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 203ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 202ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 188ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 131ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 131ms
+ GET /login 200 in 140ms
+ GET /api/auth/session 200 in 100ms
+ GET /api/me 200 in 86ms
+ GET /api/auth/providers 200 in 81ms
+ GET /api/auth/csrf 200 in 83ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 102ms
+ GET /api/auth/session 200 in 84ms
+ GET /api/me 200 in 160ms
+ GET /api/me 200 in 196ms
+ GET /api/tenant-config 200 in 226ms
+ GET /api/me 200 in 131ms
+ GET /dashboard 200 in 312ms
+ GET /api/tenant-config 200 in 140ms
+ GET /api/me 200 in 145ms
+ GET /api/me 200 in 234ms
+ GET /api/me 200 in 231ms
+ GET /api/roles 200 in 267ms
+ GET /api/tenant-config 200 in 273ms
+ GET /api/dashboard-summary 200 in 400ms
+ GET /api/roles 200 in 1393ms
+ GET /api/me 200 in 1350ms
+ GET /api/tenant-config 200 in 1372ms
+ GET /api/dashboard-summary 200 in 1456ms
+ GET /operations/active-flight?bookingId=cd41a3bf-f88c-4205-b81c-6da2b485e2f4&aircraftId=ZSTEST-bc7a&setup=1 200 in 132ms
+ GET /api/auth/session 200 in 94ms
+ GET /api/me 200 in 144ms
+ GET /api/me 200 in 212ms
+ GET /api/me 200 in 216ms
+ GET /api/tenant-config 200 in 239ms
+ GET /api/tenant-config 200 in 241ms
+ GET /api/roles 200 in 264ms
+ GET /api/me 200 in 188ms
+ GET /api/me 200 in 197ms
+ GET /api/me 200 in 218ms
+ GET /api/tenant-config 200 in 225ms
+ GET /api/roles 200 in 284ms
+ GET /api/me 200 in 219ms
+ GET /api/me 200 in 205ms
+ GET /api/roles 200 in 239ms
+ GET /api/tenant-config 200 in 215ms
+ GET /api/me 200 in 285ms
+ GET /api/tenant-config 200 in 241ms
+ GET /api/me 200 in 214ms
+ GET /api/me 200 in 211ms
+ GET /api/roles 200 in 284ms
+ GET /api/tenant-config 200 in 210ms
+ GET /api/me 200 in 165ms
+ GET /api/me 200 in 215ms
+ GET /api/tenant-config 200 in 245ms
+ GET /api/bookings 200 in 229ms
+ GET /api/aircraft 200 in 246ms
+ GET /api/flight-sessions 200 in 254ms
+ GET /api/tenant-config 200 in 238ms
+ GET /api/aircraft 200 in 204ms
+ GET /api/bookings 200 in 220ms
+ GET /api/flight-sessions 200 in 227ms
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 127ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 127ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 127ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 113ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 171ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 486ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 138ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 148ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 565ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 233ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 151ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 151ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 199ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 899ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 240ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 179ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 179ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 188ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 218ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 229ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 230ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 220ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 221ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 182ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 159ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 184ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 185ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 175ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 174ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 175ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 167ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 168ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 206ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 207ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 177ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 165ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 162ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 161ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 151ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 152ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 156ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 156ms
+ ✓ Compiled in 4.3s (3099 modules)
+ GET /login 200 in 486ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1352ms (1817 modules)
+ GET /api/auth/session 200 in 1656ms
+ ✓ Compiled /api/me in 470ms (1831 modules)
+ GET /api/me 200 in 769ms
+ GET /api/auth/providers 200 in 88ms
+ GET /api/auth/csrf 200 in 57ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 89ms
+ GET /api/auth/session 200 in 79ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 1432ms (1835 modules)
+ ✓ Compiled in 0ms (1835 modules)
+ GET /api/me 200 in 2323ms
+ GET /api/me 200 in 2332ms
+ GET /dashboard 200 in 2401ms
+ ✓ Compiled in 1ms (1835 modules)
+ ✓ Compiled in 0ms (1835 modules)
+ GET /api/tenant-config 200 in 3511ms
+ ✓ Compiled /api/roles in 0ms (1835 modules)
+ GET /api/tenant-config 200 in 1987ms
+ GET /api/me 200 in 2030ms
+ GET /operations/active-flight 200 in 2665ms
+ ✓ Compiled (1837 modules)
+ GET /api/auth/session 200 in 95ms
+ GET /api/me 200 in 129ms
+ GET /api/me 200 in 188ms
+ GET /api/me 200 in 184ms
+ GET /api/tenant-config 200 in 200ms
+ GET /api/tenant-config 200 in 206ms
+ GET /api/roles 200 in 248ms
+ GET /api/me 200 in 201ms
+ GET /api/me 200 in 203ms
+ GET /api/me 200 in 234ms
+ GET /api/tenant-config 200 in 234ms
+ GET /api/roles 200 in 314ms
+ GET /api/me 200 in 206ms
+ GET /api/me 200 in 182ms
+ GET /api/roles 200 in 247ms
+ GET /api/tenant-config 200 in 220ms
+ GET /api/me 200 in 237ms
+ GET /api/tenant-config 200 in 262ms
+ GET /api/me 200 in 224ms
+ GET /api/me 200 in 202ms
+ GET /api/roles 200 in 289ms
+ GET /api/tenant-config 200 in 221ms
+ GET /api/me 200 in 143ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 2.6s (2143 modules)
+ ✓ Compiled (2147 modules)
+ GET /api/me 200 in 3409ms
+ GET /api/tenant-config 200 in 3692ms
+ GET /api/tenant-config 200 in 3560ms
+ GET /api/aircraft 200 in 3707ms
+ GET /api/bookings 200 in 3722ms
+ GET /api/flight-sessions 200 in 3767ms
+ GET /api/aircraft 200 in 384ms
+ GET /api/bookings 200 in 156ms
+ GET /api/flight-sessions 200 in 128ms
+ ○ Compiling /api/openaip/tiles/[layer]/[z]/[x]/[y] ...
+ ✓ Compiled /api/openaip/tiles/[layer]/[z]/[x]/[y] in 663ms (2149 modules)
+ ✓ Compiled (2151 modules)
+ GET /api/openaip/tiles/openaip/8/147/147 200 in 1395ms
+ GET /api/openaip/tiles/openaip/8/148/147 200 in 1395ms
+ GET /api/openaip/tiles/openaip/8/147/146 200 in 1395ms
+ GET /api/openaip/tiles/openaip/8/150/148 200 in 122ms
+ GET /api/openaip/tiles/openaip/8/151/148 200 in 137ms
+ GET /api/openaip/tiles/openaip/8/144/150 200 in 138ms
+ GET /api/openaip/tiles/openaip/8/145/144 200 in 97ms
+ GET /api/openaip/tiles/openaip/8/146/145 200 in 116ms
+ GET /api/openaip/tiles/openaip/8/148/148 200 in 117ms
+ GET /api/openaip?resource=reporting-points&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 1774ms
+ GET /api/openaip?resource=navaids&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 1799ms
+ GET /api/openaip/tiles/openaip/8/145/146 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/151/149 200 in 178ms
+ GET /api/openaip/tiles/openaip/8/144/144 200 in 264ms
+ GET /api/openaip/tiles/openaip/8/145/145 200 in 242ms
+ GET /api/openaip/tiles/openaip/8/150/144 200 in 200ms
+ GET /api/openaip/tiles/openaip/8/148/146 200 in 159ms
+ GET /api/openaip?resource=airports&bbox=20.863037,-31.388334,34.936523,-20.298383 200 in 2191ms
+ GET /api/openaip/tiles/openaip/8/147/149 200 in 176ms
+ GET /api/openaip/tiles/openaip/8/148/149 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/148/145 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/148/150 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/146/144 200 in 183ms
+ GET /api/openaip/tiles/openaip/8/147/148 200 in 156ms
+ GET /api/openaip/tiles/openaip/8/151/147 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/149/150 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/149/149 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/146/148 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/145/147 200 in 172ms
+ GET /api/openaip/tiles/openaip/8/149/148 200 in 202ms
+ GET /api/openaip/tiles/openaip/8/149/144 200 in 202ms
+ GET /api/openaip/tiles/openaip/8/149/146 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/146/146 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/150/149 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/149/145 200 in 168ms
+ GET /api/openaip/tiles/openaip/8/151/145 200 in 163ms
+ GET /api/openaip/tiles/openaip/8/145/150 200 in 164ms
+ GET /api/openaip/tiles/openaip/8/151/144 200 in 156ms
+ GET /api/openaip/tiles/openaip/8/150/150 200 in 155ms
+ GET /api/openaip/tiles/openaip/8/144/149 200 in 154ms
+ GET /api/openaip/tiles/openaip/8/147/144 200 in 174ms
+ GET /api/openaip/tiles/openaip/8/147/145 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/150/146 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/150/145 200 in 199ms
+ GET /api/openaip/tiles/openaip/8/150/147 200 in 200ms
+ GET /api/openaip/tiles/openaip/8/151/150 200 in 200ms
+ GET /api/openaip/tiles/openaip/8/144/145 200 in 189ms
+ GET /api/openaip/tiles/openaip/8/144/146 200 in 173ms
+ GET /api/openaip/tiles/openaip/8/145/148 200 in 173ms
+ GET /api/openaip/tiles/openaip/8/148/144 200 in 168ms
+ GET /api/openaip/tiles/openaip/8/147/150 200 in 169ms
+ GET /api/openaip/tiles/openaip/8/146/150 200 in 170ms
+ GET /api/openaip/tiles/openaip/8/146/147 200 in 171ms
+ GET /api/openaip/tiles/openaip/8/145/149 200 in 194ms
+ GET /api/openaip/tiles/openaip/8/146/149 200 in 195ms
+ GET /api/openaip/tiles/openaip/8/149/147 200 in 178ms
+ GET /api/openaip/tiles/openaip/8/144/147 200 in 179ms
+ GET /api/openaip/tiles/openaip/8/151/146 200 in 179ms
+ GET /api/openaip/tiles/openaip/8/144/148 200 in 130ms
+ ✓ Compiled in 3s (3099 modules)
+ ✓ Compiled in 745ms (1521 modules)
+ ✓ Compiled in 1579ms (1521 modules)
+ GET /login 200 in 410ms
+ ✓ Compiled /api/auth/[...nextauth] in 413ms (1817 modules)
+ GET /api/auth/session 200 in 808ms
+ ✓ Compiled /api/me in 451ms (1831 modules)
+ GET /api/me 200 in 707ms
+ GET /api/auth/providers 200 in 83ms
+ GET /api/auth/csrf 200 in 81ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 314ms
+ GET /api/auth/session 200 in 96ms
+ ✓ Compiled /api/tenant-config in 479ms (1835 modules)
+ GET /api/me 200 in 1173ms
+ GET /api/me 200 in 1181ms
+ GET /dashboard 200 in 1228ms
+ GET /api/tenant-config 200 in 1297ms
+ GET /api/me 200 in 134ms
+ GET /api/tenant-config 200 in 138ms
+ ○ Compiling /bookings/schedule/[id] ...
+ ✓ Compiled /api/dashboard-summary in 3s (1891 modules)
+ ✓ Compiled (1895 modules)
+ GET /api/me 200 in 3092ms
+ GET /api/me 200 in 3094ms
+ GET /api/roles 200 in 3541ms
+ GET /api/tenant-config 200 in 3583ms
+ GET /api/dashboard-summary 200 in 3584ms
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 6539ms
+ GET /api/auth/session 200 in 92ms
+ GET /api/me 200 in 131ms
+ GET /api/me 200 in 210ms
+ GET /api/me 200 in 213ms
+ GET /api/tenant-config 200 in 252ms
+ GET /api/roles 200 in 267ms
+ GET /api/tenant-config 200 in 249ms
+ GET /api/me 200 in 193ms
+ GET /api/me 200 in 212ms
+ GET /api/me 200 in 272ms
+ GET /api/tenant-config 200 in 308ms
+ GET /api/roles 200 in 369ms
+ GET /api/me 200 in 278ms
+ GET /api/roles 200 in 315ms
+ GET /api/me 200 in 223ms
+ GET /api/tenant-config 200 in 188ms
+ GET /api/me 200 in 244ms
+ GET /api/me 200 in 199ms
+ GET /api/tenant-config 200 in 237ms
+ GET /api/me 200 in 188ms
+ GET /api/roles 200 in 210ms
+ GET /api/tenant-config 200 in 149ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 1441ms (1897 modules)
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 119ms
+ GET /api/schedule-data 200 in 1772ms
+ GET /api/schedule-data 200 in 114ms
+ ○ Compiling /api/aircraft/[id] ...
+ ✓ Compiled /api/aircraft/[id] in 681ms (1899 modules)
+ ✓ Compiled in 1502ms (3728 modules)
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 4114ms
+ GET /api/bookings 200 in 4967ms
+ GET /api/users 200 in 5010ms
+ GET /api/bookings 200 in 144ms
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 99ms
+ GET /api/users 200 in 216ms
+ GET /api/aircraft/ZSTEST-bc7a 200 in 5567ms
+ GET /api/aircraft/ZSTEST-bc7a 200 in 69ms
+ ○ Compiling /api/training-routes ...
+ ✓ Compiled /api/training-routes in 618ms (2182 modules)
+ GET /api/training-routes 200 in 914ms
+ GET /api/training-routes 200 in 922ms
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 139ms
+ GET /login 200 in 271ms
+ GET /api/auth/session 200 in 101ms
+ GET /api/me 200 in 87ms
+ GET /api/auth/providers 200 in 69ms
+ GET /api/auth/csrf 200 in 80ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 101ms
+ GET /api/auth/session 200 in 109ms
+ GET /api/me 200 in 128ms
+ GET /api/me 200 in 130ms
+ GET /api/tenant-config 200 in 205ms
+ GET /dashboard 200 in 251ms
+ GET /api/me 200 in 114ms
+ GET /api/tenant-config 200 in 132ms
+ GET /api/me 200 in 145ms
+ GET /api/me 200 in 763ms
+ GET /api/me 200 in 754ms
+ GET /api/tenant-config 200 in 820ms
+ GET /api/roles 200 in 841ms
+ GET /api/dashboard-summary 200 in 1196ms
+ GET /api/roles 200 in 1077ms
+ GET /api/me 200 in 450ms
+ GET /api/tenant-config 200 in 511ms
+ GET /api/dashboard-summary 200 in 646ms
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 285ms
+ GET /api/auth/session 200 in 95ms
+ GET /api/me 200 in 124ms
+ GET /api/me 200 in 187ms
+ GET /api/me 200 in 178ms
+ GET /api/tenant-config 200 in 200ms
+ GET /api/tenant-config 200 in 192ms
+ GET /api/roles 200 in 233ms
+ GET /api/me 200 in 205ms
+ GET /api/me 200 in 252ms
+ GET /api/me 200 in 286ms
+ GET /api/tenant-config 200 in 290ms
+ GET /api/roles 200 in 337ms
+ GET /api/me 200 in 233ms
+ GET /api/me 200 in 164ms
+ GET /api/roles 200 in 284ms
+ GET /api/tenant-config 200 in 179ms
+ GET /api/me 200 in 198ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/me 200 in 188ms
+ GET /api/roles 200 in 231ms
+ GET /api/me 200 in 168ms
+ GET /api/tenant-config 200 in 206ms
+ GET /api/schedule-data 200 in 126ms
+ GET /api/schedule-data 200 in 83ms
+ GET /api/bookings 200 in 281ms
+ GET /api/users 200 in 303ms
+ GET /api/aircraft/ZSTEST-bc7a 200 in 291ms
+ GET /api/bookings 200 in 148ms
+ GET /api/users 200 in 155ms
+ GET /api/aircraft/ZSTEST-bc7a 200 in 151ms
+ GET /api/training-routes 200 in 145ms
+ GET /api/training-routes 200 in 158ms
+ ✓ Compiled in 1738ms (1521 modules)
+ GET /login 200 in 116ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 4.7s (3358 modules)
+ GET /api/auth/session 404 in 5156ms
+ ✓ Compiled /api/me in 475ms (1861 modules)
+ POST /api/auth/_log 200 in 1293ms
+ GET /api/me 200 in 1318ms
+ GET /api/auth/providers 200 in 88ms
+ GET /api/auth/csrf 200 in 84ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 92ms
+ GET /api/auth/session 200 in 79ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 521ms (1865 modules)
+ GET /api/me 200 in 1278ms
+ GET /api/me 200 in 1285ms
+ GET /dashboard 200 in 1365ms
+ GET /api/tenant-config 200 in 1390ms
+ GET /api/me 200 in 114ms
+ GET /api/tenant-config 200 in 124ms
+ GET /api/me 200 in 126ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 2.4s (1867 modules)
+ ✓ Compiled (1869 modules)
+ GET /api/me 200 in 4300ms
+ GET /api/me 200 in 4314ms
+ GET /api/tenant-config 200 in 4349ms
+ GET /api/roles 200 in 4451ms
+ GET /api/roles 200 in 4318ms
+ GET /api/me 200 in 209ms
+ GET /api/dashboard-summary 200 in 4541ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/dashboard-summary 200 in 230ms
+ ○ Compiling /bookings/schedule ...
+ ✓ Compiled /bookings/schedule in 2.4s (1918 modules)
+ GET /bookings/schedule 200 in 3188ms
+ GET /api/auth/session 200 in 151ms
+ GET /api/me 200 in 231ms
+ GET /api/me 200 in 320ms
+ GET /api/me 200 in 325ms
+ GET /api/roles 200 in 374ms
+ GET /api/tenant-config 200 in 390ms
+ GET /api/tenant-config 200 in 392ms
+ GET /api/me 200 in 265ms
+ GET /api/me 200 in 262ms
+ GET /api/me 200 in 302ms
+ GET /api/roles 200 in 386ms
+ GET /api/tenant-config 200 in 439ms
+ GET /api/me 200 in 306ms
+ GET /api/roles 200 in 352ms
+ GET /api/me 200 in 317ms
+ GET /api/me 200 in 235ms
+ GET /api/tenant-config 200 in 288ms
+ GET /api/me 200 in 244ms
+ GET /api/tenant-config 200 in 263ms
+ GET /api/me 200 in 242ms
+ GET /api/roles 200 in 267ms
+ GET /api/tenant-config 200 in 185ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 1743ms (1920 modules)
+ GET /api/me 200 in 2445ms
+ GET /api/me 200 in 2483ms
+ GET /api/dashboard-summary 200 in 2525ms
+ GET /api/schedule-data 200 in 2536ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.tenant.upsert()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/schedule-data 200 in 2933ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 2952ms
+ GET /login 200 in 317ms
+ GET /api/auth/session 200 in 110ms
+ GET /api/me 200 in 94ms
+ GET /api/auth/providers 200 in 94ms
+ GET /api/auth/csrf 200 in 83ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 123ms
+ GET /api/auth/session 200 in 81ms
+ GET /api/me 200 in 148ms
+ GET /api/me 200 in 151ms
+ GET /api/tenant-config 200 in 274ms
+ GET /dashboard 200 in 306ms
+ GET /api/me 200 in 144ms
+ GET /api/tenant-config 200 in 164ms
+ GET /api/me 200 in 133ms
+ GET /api/me 200 in 221ms
+ GET /api/me 200 in 206ms
+ GET /api/tenant-config 200 in 249ms
+ GET /api/roles 200 in 276ms
+ GET /api/dashboard-summary 200 in 294ms
+ GET /api/roles 200 in 281ms
+ GET /api/me 200 in 213ms
+ GET /api/tenant-config 200 in 248ms
+ GET /api/dashboard-summary 200 in 224ms
+ GET /bookings/schedule 200 in 301ms
+ GET /api/auth/session 200 in 80ms
+ GET /api/me 200 in 116ms
+ GET /api/me 200 in 194ms
+ GET /api/me 200 in 180ms
+ GET /api/tenant-config 200 in 196ms
+ GET /api/tenant-config 200 in 210ms
+ GET /api/roles 200 in 264ms
+ GET /api/me 200 in 280ms
+ GET /api/me 200 in 371ms
+ GET /api/me 200 in 371ms
+ GET /api/tenant-config 200 in 444ms
+ GET /api/roles 200 in 561ms
+ GET /api/me 200 in 335ms
+ GET /api/roles 200 in 395ms
+ GET /api/me 200 in 257ms
+ GET /api/tenant-config 200 in 231ms
+ GET /api/me 200 in 223ms
+ GET /api/me 200 in 222ms
+ GET /api/tenant-config 200 in 247ms
+ GET /api/me 200 in 242ms
+ GET /api/roles 200 in 247ms
+ GET /api/tenant-config 200 in 191ms
+ GET /api/me 200 in 123ms
+ GET /api/me 200 in 163ms
+ GET /api/dashboard-summary 200 in 257ms
+ GET /api/schedule-data 200 in 324ms
+ GET /api/schedule-data 200 in 306ms
+prisma:error 
+Invalid `prisma.managementOfChange.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.qualityAudit.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+prisma:error 
+Invalid `prisma.safetyReport.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 956ms
+ ✓ Compiled in 6.3s (3168 modules)
+ GET /login 200 in 495ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 521ms (1885 modules)
+ GET /api/auth/session 200 in 870ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 553ms (1899 modules)
+ GET /api/me 200 in 863ms
+ GET /api/auth/providers 200 in 75ms
+ GET /api/auth/csrf 200 in 68ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 91ms
+ GET /api/auth/session 200 in 84ms
+ ✓ Compiled /api/tenant-config in 504ms (1903 modules)
+ GET /api/me 200 in 1163ms
+ GET /api/me 200 in 1167ms
+ GET /dashboard 200 in 1243ms
+ GET /api/tenant-config 200 in 1266ms
+ GET /api/me 200 in 110ms
+ GET /api/tenant-config 200 in 116ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 4.2s (1905 modules)
+ ✓ Compiled (1907 modules)
+ GET /api/me 200 in 5655ms
+ GET /api/me 200 in 5651ms
+ GET /api/me 200 in 5684ms
+ GET /api/tenant-config 200 in 5738ms
+ GET /api/roles 200 in 5822ms
+ GET /api/me 200 in 220ms
+ GET /api/roles 200 in 256ms
+ GET /api/tenant-config 200 in 222ms
+ GET /api/dashboard-summary 200 in 6135ms
+prisma:error 
+Invalid `prisma.$queryRawUnsafe()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+ GET /api/dashboard-summary 200 in 523ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.9s (3419 modules)
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 404 in 3346ms
+ GET /api/auth/session 200 in 125ms
+ GET /api/me 200 in 113ms
+ GET /api/me 200 in 168ms
+ GET /api/tenant-config 200 in 232ms
+ GET /api/me 200 in 116ms
+ GET /api/tenant-config 200 in 150ms
+ GET /login 200 in 151ms
+ GET /api/auth/session 200 in 88ms
+ GET /api/me 200 in 99ms
+ GET /api/auth/providers 200 in 81ms
+ GET /api/auth/csrf 200 in 70ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 103ms
+ GET /api/auth/session 200 in 81ms
+ GET /api/me 200 in 160ms
+ GET /api/me 200 in 164ms
+ GET /api/tenant-config 200 in 254ms
+ GET /dashboard 200 in 306ms
+ GET /api/me 200 in 117ms
+ GET /api/tenant-config 200 in 137ms
+ GET /api/me 200 in 140ms
+ GET /api/me 200 in 249ms
+ GET /api/me 200 in 233ms
+ GET /api/roles 200 in 301ms
+ GET /api/tenant-config 200 in 282ms
+ GET /api/dashboard-summary 200 in 370ms
+ GET /api/roles 200 in 222ms
+ GET /api/me 200 in 166ms
+ GET /api/tenant-config 200 in 208ms
+ GET /api/dashboard-summary 200 in 223ms
+ GET /bookings/schedule/cd41a3bf-f88c-4205-b81c-6da2b485e2f4 200 in 348ms
+ GET /api/auth/session 200 in 91ms
+ GET /api/me 200 in 139ms
+ GET /api/me 200 in 182ms
+ GET /api/me 200 in 184ms
+ GET /api/tenant-config 200 in 194ms
+ GET /api/roles 200 in 240ms
+ GET /api/tenant-config 200 in 219ms
+ GET /api/me 200 in 215ms
+ GET /api/me 200 in 222ms
+ GET /api/me 200 in 247ms
+ GET /api/tenant-config 200 in 251ms
+ GET /api/roles 200 in 347ms
+ GET /api/me 200 in 224ms
+ GET /api/me 200 in 190ms
+ GET /api/roles 200 in 262ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/me 200 in 232ms
+ GET /api/tenant-config 200 in 259ms
+ GET /api/me 200 in 220ms
+ GET /api/me 200 in 190ms
+ GET /api/roles 200 in 272ms
+ GET /api/tenant-config 200 in 203ms
+ ○ Compiling /api/schedule-data ...
+ ✓ Compiled /api/schedule-data in 585ms (1910 modules)
+ GET /api/schedule-data 200 in 836ms
+ GET /api/schedule-data 200 in 126ms
+ ○ Compiling /api/aircraft/[id] ...
+ ✓ Compiled /api/aircraft/[id] in 691ms (1912 modules)
+ ✓ Compiled (2220 modules)
+ GET /api/bookings 200 in 4318ms
+ GET /api/aircraft/ZSTEST-bc7a 200 in 4329ms
+ GET /api/users 200 in 4397ms
+ GET /api/bookings 200 in 133ms
+ GET /api/aircraft/ZSTEST-bc7a 200 in 151ms
+ GET /api/users 200 in 142ms
+ ○ Compiling /api/training-routes ...
+ ✓ Compiled /api/training-routes in 1754ms (2222 modules)
+ GET /api/training-routes 200 in 1990ms
+ GET /api/training-routes 200 in 1978ms
+ ✓ Compiled in 8.2s (3168 modules)
+ ✓ Compiled in 1536ms (3168 modules)
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1628ms (1885 modules)
+ GET /api/auth/session 200 in 2144ms
+ ✓ Compiled in 2.3s (1521 modules)
+ ✓ Compiled in 617ms (1521 modules)
+ ✓ Compiled in 573ms (1521 modules)
+ ✓ Compiled in 728ms (1521 modules)
+ ✓ Compiled in 1726ms (1521 modules)
+ ✓ Compiled in 555ms (1521 modules)
+ ✓ Compiled in 654ms (1521 modules)
+ ✓ Compiled in 1774ms (1521 modules)
+ ✓ Compiled in 1657ms (1521 modules)
+ ✓ Compiled in 5.4s (3168 modules)
+ ✓ Compiled in 3.6s (3168 modules)
+ ✓ Compiled in 2.7s (3168 modules)
+ ✓ Compiled in 1106ms (3168 modules)
+ ✓ Compiled in 1349ms (3168 modules)

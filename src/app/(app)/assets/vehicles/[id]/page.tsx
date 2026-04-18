@@ -28,14 +28,7 @@ import type { DocumentExpirySettings } from '@/app/(app)/admin/document-dates/pa
 import { getDocumentExpiryBadgeStyle } from '@/lib/document-expiry';
 import { cn } from '@/lib/utils';
 import type { Vehicle, VehicleDocument } from '@/types/vehicle';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 
 const parseLocalDate = (value?: string | null) => {
   if (!value) return null;
@@ -293,57 +286,68 @@ function VehicleDocumentsTab({ vehicle, tenantId, expirySettings }: { vehicle: V
         />
       </div>
       <div className="flex-1 overflow-auto bg-background">
-        <Table>
-          <TableHeader className="bg-muted/30 sticky top-0 z-10">
-            <TableRow>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest px-8">Document Name</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Upload Date</TableHead>
-              <TableHead className="text-[10px] uppercase font-black tracking-widest">Expiration</TableHead>
-              <TableHead className="text-right text-[10px] uppercase font-black tracking-widest pr-8">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {vehicle.documents && vehicle.documents.length > 0 ? (
-              vehicle.documents.map((docItem) => {
-                const expiryStyle = getDocumentExpiryBadgeStyle(docItem.expirationDate, expirySettings);
-                return (
-                  <TableRow key={docItem.name} className="hover:bg-muted/5 transition-colors group">
-                    <TableCell className="font-black text-sm uppercase px-8">{docItem.name}</TableCell>
-                    <TableCell className="text-[11px] font-black uppercase tracking-tight opacity-70">{format(new Date(docItem.uploadDate), 'dd MMM yyyy')}</TableCell>
-                    <TableCell className="text-xs">
-                      {docItem.expirationDate ? (
-                        <Badge variant="outline" className="font-black h-8 px-4 border-2 shadow-sm uppercase text-[10px]" style={expiryStyle || undefined}>
-                          {format(parseLocalDate(docItem.expirationDate) || new Date(docItem.expirationDate), 'dd MMM yyyy')}
-                        </Badge>
-                      ) : (
-                        <span className="text-[10px] font-black uppercase text-muted-foreground opacity-30 italic">No Expiry Date</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right pr-8">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="icon" className="h-9 w-9 hover:bg-primary hover:text-primary-foreground border-slate-300 shadow-sm transition-all" onClick={() => setViewingDoc({ name: docItem.name, url: docItem.url })}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive hover:text-destructive-foreground border-slate-300 shadow-sm transition-all" onClick={() => handleDeleteDoc(docItem.name)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="h-64 text-center">
-                    <div className="flex flex-col items-center gap-3 opacity-30">
-                        <PlusCircle className="h-10 w-10" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">No ground asset documentation uploaded.</p>
+        <ResponsiveCardGrid
+          items={vehicle.documents || []}
+          isLoading={false}
+          className="p-4"
+          gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+          renderItem={(docItem) => {
+            const expiryStyle = getDocumentExpiryBadgeStyle(docItem.expirationDate, expirySettings);
+            return (
+              <Card key={docItem.name} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+                <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                  <div className="min-w-0 space-y-1">
+                    <CardTitle className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
+                      {docItem.name}
+                    </CardTitle>
+                    <CardDescription className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Uploaded {format(new Date(docItem.uploadDate), 'dd MMM yyyy')}
+                    </CardDescription>
+                  </div>
+                  <div className="rounded-full border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-primary">
+                    Document
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 px-4 py-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Upload Date</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">{format(new Date(docItem.uploadDate), 'dd MMM yyyy')}</p>
                     </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Expiration</p>
+                      <p className={cn("mt-1 text-sm font-semibold", !docItem.expirationDate && "text-muted-foreground italic")}>
+                        {docItem.expirationDate ? format(parseLocalDate(docItem.expirationDate) || new Date(docItem.expirationDate), 'dd MMM yyyy') : 'No expiry set'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Expiry Status</p>
+                      <Badge variant="outline" className="mt-1 h-8 px-4 border-2 shadow-sm uppercase text-[10px]" style={expiryStyle || undefined}>
+                        {docItem.expirationDate ? format(parseLocalDate(docItem.expirationDate) || new Date(docItem.expirationDate), 'dd MMM yyyy') : 'No Expiry Date'}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="icon" className="h-10 w-10 hover:bg-primary hover:text-primary-foreground border-slate-300 shadow-sm transition-all" onClick={() => setViewingDoc({ name: docItem.name, url: docItem.url })}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" className="h-10 w-10 text-destructive hover:bg-destructive hover:text-destructive-foreground border-slate-300 shadow-sm transition-all" onClick={() => handleDeleteDoc(docItem.name)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }}
+          emptyState={(
+            <div className="flex flex-col items-center gap-3 opacity-30 py-16">
+              <PlusCircle className="h-10 w-10" />
+              <p className="text-[10px] font-black uppercase tracking-widest">No ground asset documentation uploaded.</p>
+            </div>
+          )}
+        />
       </div>
 
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>

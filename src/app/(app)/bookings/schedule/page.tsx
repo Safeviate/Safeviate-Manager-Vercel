@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { getBlockingBookingForTracking, isBookingEligibleForTracking } from '@/lib/booking-tracking';
 
 const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
@@ -43,6 +44,7 @@ const BookingItem = ({
     isApproving,
     selectedDate,
     peopleMap,
+    allBookingsForAircraft,
 }: {
     booking: Booking;
     onBookingClick: (booking: Booking) => void;
@@ -51,6 +53,7 @@ const BookingItem = ({
     isApproving: boolean;
     selectedDate: Date;
     peopleMap: Map<string, string>;
+    allBookingsForAircraft: Booking[];
 }) => {
     const segments = [];
 
@@ -86,6 +89,9 @@ const BookingItem = ({
             const height = Math.max(durationMinutes, 40) * (HOUR_HEIGHT_PX / 60); 
             
             const isCancelled = booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason';
+            const statusLabel = booking.status === 'Completed' ? 'Complete' : booking.status;
+            const trackEligible = (booking.navlog?.legs?.length || 0) > 0 && isBookingEligibleForTracking(allBookingsForAircraft, booking);
+            const blockingBooking = trackEligible ? null : getBlockingBookingForTracking(allBookingsForAircraft, booking);
 
             return (
                 <div
@@ -134,7 +140,7 @@ const BookingItem = ({
                         ) : (
                             <div className="flex w-full flex-col items-center justify-center gap-0.5 text-center">
                                 {isCancelled && <p className="text-[7px] font-medium uppercase tracking-wide">Cancelled</p>}
-                                {booking.status === 'Completed' && <p className="text-[7px] font-medium uppercase tracking-wide">Completed</p>}
+                                {booking.status === 'Completed' && <p className="text-[7px] font-medium uppercase tracking-wide">{statusLabel}</p>}
                                 {booking.status === 'Approved' && (
                                     <p className="text-[7px] font-medium uppercase tracking-wide">
                                         {booking.approvedByName ? `Approved by ${booking.approvedByName}` : 'Approved'}
@@ -145,6 +151,12 @@ const BookingItem = ({
                                 ) : null}
                                 {booking.status !== 'Approved' && booking.status !== 'Completed' && !isCancelled && !canManualApprove(booking) ? (
                                     <p className="text-[7px] font-medium uppercase tracking-wide opacity-80">Awaiting instructor approval</p>
+                                ) : null}
+                                {blockingBooking ? (
+                                    <Badge variant="outline" className="h-4 rounded-md border-amber-200 bg-amber-50 px-1.5 text-[6px] font-black uppercase tracking-[0.12em] text-amber-800">
+                                        <Lock className="mr-0.5 h-2 w-2" />
+                                        Locked #{blockingBooking.bookingNumber}
+                                    </Badge>
                                 ) : null}
                             </div>
                         )}
@@ -497,6 +509,7 @@ export default function SchedulePage() {
                                             isApproving={approvingBookingId === booking.id}
                                             selectedDate={selectedDate}
                                             peopleMap={peopleMap}
+                                            allBookingsForAircraft={allBookings?.filter((entry) => entry.aircraftId === ac.id) || []}
                                         />
                                         ))}
                                     </div>

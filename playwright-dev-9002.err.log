@@ -1,0 +1,504 @@
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[schedule-data] fallback to empty payload: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.bookingRecord.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async GET (src\app\api\schedule-data\route.ts:33:41)
+  31 |
+  32 |     await Promise.all([ensureAircraftSchema(), ensureBookingsSchema()]);
+> 33 |     const [aircraftRows, bookingRows] = await Promise.all([
+     |                                         ^
+  34 |       prisma.aircraftRecord.findMany({
+  35 |         where: { tenantId },
+  36 |         orderBy: { createdAt: 'asc' }, {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for risks: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\6.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\6.pack.gz'
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for safety_reports: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.safetyReport.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for risks: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for risks: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[training-routes] fallback to empty list: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.tenant.upsert()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async getTenantId (src\app\api\training-routes\route.ts:19:3)
+    at async GET (src\app\api\training-routes\route.ts:32:22)
+  17 |   if (!email) return null;
+  18 |
+> 19 |   await prisma.tenant.upsert({
+     |   ^
+  20 |     where: { id: 'safeviate' },
+  21 |     update: { updatedAt: new Date() },
+  22 |     create: { id: 'safeviate', name: 'Safeviate' }, {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for safety_reports: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.safetyReport.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for risks: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\2.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\2.pack.gz'
+[dashboard-summary] fallback for management_of_change: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.managementOfChange.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for personnel: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.personnel.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for risks: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\6.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\6.pack.gz'
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for risks: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.risk.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\1.pack.gz'
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[dashboard-summary] fallback for personnel: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.personnel.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[schedule-data] fallback to empty payload: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.tenant.upsert()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async GET (src\app\api\schedule-data\route.ts:20:5)
+  18 |     }
+  19 |
+> 20 |     await prisma.tenant.upsert({
+     |     ^
+  21 |       where: { id: 'safeviate' },
+  22 |       update: { updatedAt: new Date() },
+  23 |       create: { id: 'safeviate', name: 'Safeviate' }, {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for management_of_change: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.managementOfChange.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for quality_audits: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.qualityAudit.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for corrective_action_plans: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.correctiveActionPlan.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+[dashboard-summary] fallback for safety_reports: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.safetyReport.findMany()` invocation:
+
+
+Too many database connections opened: FATAL: remaining connection slots are reserved for azure replication users
+Prisma Accelerate has built-in connection pooling to prevent such errors: https://pris.ly/client/error-accelerate
+    at async safeFindMany (src\app\api\dashboard-summary\route.ts:36:12)
+    at async GET (src\app\api\dashboard-summary\route.ts:87:9)
+  34 | async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
+  35 |   try {
+> 36 |     return await task;
+     |            ^
+  37 |   } catch (error) {
+  38 |     console.error(`[dashboard-summary] fallback for ${label}:`, error);
+  39 |     return []; {
+  code: 'P2037',
+  meta: [Object],
+  clientVersion: '6.19.3'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\1.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\1.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\9.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\9.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\16.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\16.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\8.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\8.pack.gz'

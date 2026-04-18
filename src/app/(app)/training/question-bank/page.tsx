@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, MoreHorizontal, WandSparkles, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -237,68 +237,52 @@ export default function QuestionBankPage() {
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <ScrollArea className="h-full">
             <div className="p-0">
-                {/* --- DESKTOP TABLE VIEW --- */}
-                <div className="hidden lg:block">
-                    <Table>
-                        <TableHeader className="bg-muted/30">
-                            <TableRow>
-                            <TableHead className="text-[10px] uppercase font-bold px-6 py-3 tracking-wider">Question Text</TableHead>
-                            <TableHead className="w-24 text-center text-[10px] uppercase font-bold tracking-wider">Options</TableHead>
-                            <TableHead className="w-24 text-right text-[10px] uppercase font-bold px-6 tracking-wider">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredItems.map((item) => (
-                            <TableRow key={item.id} className="hover:bg-muted/5 transition-colors">
-                                <TableCell className="font-bold text-sm text-foreground py-4 px-6">
-                                    <p className="line-clamp-2 leading-relaxed">&quot;{item.text}&quot;</p>
-                                </TableCell>
-                                <TableCell className="text-center font-black text-[10px] text-muted-foreground opacity-50 uppercase tracking-tighter">
-                                    {item.options.length} OPTS
-                                </TableCell>
-                                <TableCell className="text-right px-6">
+                <div className="p-4">
+                    <ResponsiveCardGrid
+                        items={filteredItems}
+                        isLoading={false}
+                        gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+                        renderItem={(item) => (
+                            <Card key={item.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
+                                <div className="border-b bg-muted/5 px-4 py-3 flex flex-row items-center justify-between space-y-0">
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{selectedTopic}</span>
+                                    <Badge variant="outline" className="text-[9px] font-black uppercase">{item.options.length} OPTIONS</Badge>
+                                </div>
+                                <CardContent className="space-y-4 px-4 py-4">
+                                    <p className="text-sm font-bold text-foreground line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div className="rounded-lg border bg-background px-3 py-3">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Options</p>
+                                            <p className="mt-1 text-sm font-semibold text-foreground">{item.options.length} stored</p>
+                                        </div>
+                                        <div className="rounded-lg border bg-background px-3 py-3">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                                            <p className="mt-1 text-sm font-semibold text-foreground">Active Bank Item</p>
+                                        </div>
+                                    </div>
                                     <div className="flex justify-end gap-2">
                                         <Button variant="outline" size="sm" className="h-8 w-8 text-primary border-slate-300" onClick={() => setEditingItem(item)}>
                                             <Pencil className="h-3.5 w-3.5" />
                                         </Button>
                                         <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} poolItems={poolItems} topicsData={topicsData} />
                                     </div>
-                                </TableCell>
-                            </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-
-                {/* --- MOBILE CARD VIEW --- */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden p-4">
-                    {filteredItems.map((item) => (
-                        <Card key={item.id} className="shadow-none border-slate-200 overflow-hidden">
-                            <div className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{selectedTopic}</span>
-                                <Badge variant="outline" className="text-[9px] font-black uppercase">{item.options.length} OPTIONS</Badge>
+                                </CardContent>
+                            </Card>
+                        )}
+                        emptyState={(
+                            <div className="h-64 text-center text-muted-foreground italic flex flex-col items-center justify-center gap-4 opacity-20">
+                                <Library className="h-16 w-16" />
+                                <div className="space-y-1">
+                                    <p className="text-lg font-black uppercase tracking-tighter">Empty Topic Database</p>
+                                    <p className="text-sm font-medium">No questions found in {selectedTopic || 'this topic'}.</p>
+                                </div>
                             </div>
-                            <CardContent className="p-4 py-3">
-                                <p className="text-sm font-bold text-foreground line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
-                            </CardContent>
-                            <CardFooter className="p-2 border-t bg-muted/5 flex gap-2">
-                                <Button variant="outline" size="compact" className="flex-1 border-slate-300" onClick={() => setEditingItem(item)}>
-                                    <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
-                                </Button>
-                                <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} poolItems={poolItems} topicsData={topicsData} />
-                            </CardFooter>
-                        </Card>
-                    ))}
+                        )}
+                    />
                 </div>
 
                 {filteredItems.length === 0 && !isLoading && (
-                    <div className="h-64 text-center text-muted-foreground italic flex flex-col items-center justify-center gap-4 opacity-20">
-                        <Library className="h-16 w-16" />
-                        <div className="space-y-1">
-                            <p className="text-lg font-black uppercase tracking-tighter">Empty Topic Database</p>
-                            <p className="text-sm font-medium">No questions found in {selectedTopic || 'this topic'}.</p>
-                        </div>
-                    </div>
+                    <div />
                 )}
             </div>
           </ScrollArea>

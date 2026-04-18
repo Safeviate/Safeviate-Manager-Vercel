@@ -17,7 +17,7 @@ export const MOBILE_ACTION_MENU_STATE_ITEM_CLASS =
   'relative flex w-full cursor-default select-none items-center gap-2 rounded-lg py-2 pl-8 pr-3 text-[11px] font-semibold text-slate-700 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[state=checked]:bg-slate-900 data-[state=checked]:text-white';
 
 export const MOBILE_ACTION_MENU_CONTENT_CLASS =
-  'z-[1400] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)] rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(15,23,42,0.18)]';
+  'z-[2700] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)] rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(15,23,42,0.18)]';
 
 export const MOBILE_ACTION_MENU_TRIGGER_CLASS =
   'h-8 w-full justify-between rounded-xl border-slate-300 bg-background px-3 text-xs font-medium shadow-sm hover:bg-muted md:hidden';

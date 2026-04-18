@@ -21,11 +21,14 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking, OverrideLog, TrainingRoute, ChecklistPhoto } from '@/types/booking';
 import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, CheckCircle2, PlaneTakeoff } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import Link from 'next/link';
 import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { cn } from '@/lib/utils';
+import { broadcastBookingUpdate } from '@/lib/booking-updates';
+import { getBlockingBookingForTracking, isBookingEligibleForTracking } from '@/lib/booking-tracking';
 
 const parseLocalDate = (value?: string | null) => {
     if (!value) return undefined;
@@ -33,6 +36,12 @@ const parseLocalDate = (value?: string | null) => {
     if (!year || !month || !day) return undefined;
     return new Date(year, month - 1, day, 12);
 };
+
+const BOOKING_STATUS_OPTIONS = [
+    { value: 'Tentative', label: 'Tentative' },
+    { value: 'Confirmed', label: 'Confirmed' },
+    { value: 'Completed', label: 'Complete' },
+] as const;
 
 const bookingFormSchema = z.object({
     type: z.string().min(1, 'Booking type is required.'),
@@ -92,6 +101,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
     const { userProfile } = useUserProfile();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const canEditBooking = hasPermission('bookings-schedule-manage');
     const [preFlight, setPreFlight] = useState(existingBooking?.preFlightData || {
         hobbs: 0,
@@ -139,9 +149,9 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const isUnderway = existingBooking?.status === 'Approved' || existingBooking?.status === 'Completed' || existingBooking?.preFlight;
     const canEditUnderway = canOverride; // If you have override, you can edit underway bookings
     const canTrackFlight = !!existingBooking
-        && existingBooking.status !== 'Completed'
-        && existingBooking.status !== 'Cancelled'
-        && existingBooking.status !== 'Cancelled with Reason';
+        && (existingBooking.navlog?.legs?.length || 0) > 0
+        && isBookingEligibleForTracking(allBookingsForAircraft, existingBooking);
+    const blockingBooking = existingBooking ? getBlockingBookingForTracking(allBookingsForAircraft, existingBooking) : null;
     
     const canDelete = hasPermission('bookings-delete') && (!isUnderway || canOverride);
 
@@ -267,12 +277,12 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             fuelUpliftLitres: preFlight.fuelUpliftLitres || 0,
             photos: preFlightPhotos,
         };
-        bookingData.postFlightData = {
-            ...postFlight,
-            defects: postFlight.defects || '',
-            fuelUpliftLitres: postFlight.fuelUpliftLitres || 0,
-            photos: postFlightPhotos,
-        };
+            bookingData.postFlightData = {
+                ...postFlight,
+                defects: postFlight.defects || '',
+                fuelUpliftLitres: postFlight.fuelUpliftLitres || 0,
+                photos: postFlightPhotos,
+            };
         bookingData.preFlight = !!preFlight.documentsChecked || (preFlight.hobbs > 0 || preFlight.tacho > 0);
         bookingData.postFlight = (postFlight.hobbs || 0) > 0;
         bookingData.workflowCompletion = {
@@ -301,23 +311,51 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         }
 
         try {
+            const clearActiveSessionsForBooking = async (bookingId: string) => {
+                const sessionsResponse = await fetch('/api/flight-sessions', { cache: 'no-store' });
+                if (!sessionsResponse.ok) return;
+                const sessionsPayload = await sessionsResponse.json().catch(() => ({ sessions: [] }));
+                const activeSessions = Array.isArray(sessionsPayload.sessions)
+                  ? sessionsPayload.sessions.filter((session: { id?: string; bookingId?: string; status?: string }) => session.bookingId === bookingId && session.status === 'active' && session.id)
+                  : [];
+
+                await Promise.all(
+                  activeSessions.map((session: { id: string }) =>
+                    fetch(`/api/flight-sessions?id=${encodeURIComponent(session.id)}`, { method: 'DELETE' })
+                  )
+                );
+              };
+
             if (existingBooking) {
                 await fetch('/api/bookings', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ booking: { ...bookingData, id: existingBooking.id, bookingNumber: existingBooking.bookingNumber } }),
                 });
+                if (bookingData.status === 'Completed' || bookingData.status === 'Cancelled') {
+                    await clearActiveSessionsForBooking(existingBooking.id);
+                }
+                broadcastBookingUpdate();
                 toast({ title: 'Booking Updated' });
             } else {
                 const response = await fetch('/api/bookings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ booking: { ...bookingData, preFlight: false, postFlight: false, createdById: userProfile?.id || null } }),
+                    body: JSON.stringify({
+                        booking: {
+                            ...bookingData,
+                            preFlight: false,
+                            postFlight: false,
+                            createdById: userProfile?.id || null,
+                            createdByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : null,
+                        },
+                    }),
                 });
                 const payload = await parseJsonResponse<{ error?: string }>(response);
                 if (!response.ok) {
                     throw new Error(payload?.error || 'Failed to create booking.');
                 }
+                broadcastBookingUpdate();
                 toast({ title: 'Booking Created' });
             }
             refreshBookings();
@@ -338,8 +376,10 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ bookingId: existingBooking.id }),
             });
+            broadcastBookingUpdate();
             toast({ title: 'Booking Deleted' });
             refreshBookings();
+            setDeleteConfirmOpen(false);
             setIsOpen(false);
         } catch (error: unknown) {
             toast({ variant: 'destructive', title: 'Delete Failed', description: error instanceof Error ? error.message : 'Delete failed.' });
@@ -352,8 +392,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader className="pb-4">
+            <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+                <DialogHeader className="pb-3">
                     <DialogTitle>{existingBooking ? `Booking #${existingBooking.bookingNumber}` : `New Booking for ${aircraft.tailNumber}`}</DialogTitle>
                     <DialogDescription>
                         {format(startTime, 'PPP')} • Fleet: {aircraft.tailNumber}
@@ -404,7 +444,35 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{['Tentative', 'Confirmed', 'Approved', 'Completed', 'Cancelled', 'Cancelled with Reason'].map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name="status" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <FormControl>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {BOOKING_STATUS_OPTIONS.map((option) => {
+                                                const active = field.value === option.value;
+                                                return (
+                                                    <Button
+                                                        key={option.value}
+                                                        type="button"
+                                                        variant={active ? 'default' : 'outline'}
+                                                        className={cn(
+                                                            'h-10 rounded-md px-3 text-[10px] font-black uppercase tracking-widest',
+                                                            active ? 'shadow-sm' : 'bg-background'
+                                                        )}
+                                                        onClick={() => field.onChange(option.value)}
+                                                        disabled={isLocked || !canEditBooking}
+                                                        aria-pressed={active}
+                                                    >
+                                                        {option.label}
+                                                    </Button>
+                                                );
+                                            })}
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
                         </div>
 
                         {watchStatus === 'Cancelled with Reason' && (
@@ -469,38 +537,53 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             />
                         </div>
 
-                        {!existingBooking && (
-                            <div className="p-4 border border-emerald-100 bg-emerald-50/30 rounded-xl space-y-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 flex items-center gap-2">
-                                     <MapIcon className="h-3.5 w-3.5" /> Mission Profile
-                                </p>
-                                <FormField control={form.control} name="routeId" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-[9px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}>
-                                            <FormControl>
-                                                <SelectTrigger className="bg-background">
-                                                    <SelectValue placeholder="Select a training route to pre-fill navlog..." />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="none">None / Manual Entry</SelectItem>
-                                                {trainingRoutes.map(r => (
-                                                    <SelectItem key={r.id} value={r.id}>
-                                                        {r.name} ({r.legs.length} Waypoints)
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
-                        )}
+                        <div className="grid gap-4 lg:grid-cols-2">
+                            {!existingBooking ? (
+                                <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-4 space-y-4">
+                                    <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                                         <MapIcon className="h-3.5 w-3.5" /> Mission Profile
+                                    </p>
+                                    <FormField control={form.control} name="routeId" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-[9px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}>
+                                                <FormControl>
+                                                    <SelectTrigger className="bg-background">
+                                                        <SelectValue placeholder="Select a training route to pre-fill navlog..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="none">None / Manual Entry</SelectItem>
+                                                    {trainingRoutes.map(r => (
+                                                        <SelectItem key={r.id} value={r.id}>
+                                                            {r.name} ({r.legs.length} Waypoints)
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
+                            ) : (
+                                <div />
+                            )}
 
-                        <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Admin Notes</FormLabel><FormControl><Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} /></FormControl><FormMessage /></FormItem> )}/>
+                            <FormField control={form.control} name="notes" render={({ field }) => (
+                                <FormItem className={cn('rounded-xl border bg-background p-4 shadow-sm', existingBooking ? 'lg:col-span-2' : '')}>
+                                    <div className="space-y-1.5">
+                                        <FormLabel>Admin Notes</FormLabel>
+                                        <p className="text-xs text-muted-foreground">Add any relevant notes for dispatch or follow-up.</p>
+                                    </div>
+                                    <FormControl>
+                                        <Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} className="min-h-[120px]" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                        </div>
 
-                        <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                        <div className="rounded-xl border bg-muted/20 p-3 space-y-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planning Requirement</p>
@@ -523,7 +606,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             </div>
                         </div>
 
-                        <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
+                        <div className="rounded-xl border bg-muted/20 p-3 space-y-4">
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
                                     <ClipboardCheck className="h-4 w-4 text-primary" />
@@ -712,21 +795,24 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                         </div>
 
                         {isOvernight && (
-                            <div className="grid grid-cols-2 gap-4 p-4 border rounded-md">
+                            <div className="grid grid-cols-2 gap-4 rounded-xl border p-3">
                                 <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(parseLocalDate(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         )}
 
-                        <DialogFooter className="flex flex-col sm:flex-row items-center gap-2">
+                        <DialogFooter className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:gap-2">
                             {existingBooking && canDelete && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button type="button" variant="destructive" className="mr-auto"><Trash2 className="h-4 w-4" /></Button>
-                                    </AlertDialogTrigger>
+                                <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                                    <Button type="button" variant="destructive" className="mr-auto" onClick={() => setDeleteConfirmOpen(true)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                     <AlertDialogContent>
                                         <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete booking #{existingBooking.bookingNumber}.</AlertDialogDescription></AlertDialogHeader>
-                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
                             )}
@@ -745,6 +831,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         <PlaneTakeoff className="h-4 w-4" /> Track Flight
                                     </Link>
                                 </Button>
+                            )}
+
+                            {existingBooking && !canTrackFlight && blockingBooking && (
+                                <Badge variant="outline" className="ml-auto h-10 rounded-xl border-amber-200 bg-amber-50 px-3 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">
+                                    <Lock className="mr-1.5 h-3.5 w-3.5" />
+                                    Locked by #{blockingBooking.bookingNumber}
+                                </Badge>
                             )}
 
                             <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">

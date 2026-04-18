@@ -41,7 +41,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { SheetHeader, SheetTitle } from './ui/sheet';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 
@@ -331,11 +330,8 @@ export function AppSidebarMobile() {
   
     return (
       <SidebarMobile open={openMobile} onOpenChange={setOpenMobile}>
-        <SidebarMobileContent className="p-0 overflow-hidden">
-          <SheetHeader>
-            <SheetTitle className="sr-only">Main Menu</SheetTitle>
-          </SheetHeader>
-          <SidebarHeader className="h-14 flex flex-row items-center gap-3 shrink-0 bg-header px-4 pt-[env(safe-area-inset-top)] box-content">
+        <SidebarMobileContent className="!p-0 !gap-0 overflow-hidden" aria-label="Main Menu">
+          <SidebarHeader className="flex h-[44px] flex-row items-center gap-3 shrink-0 bg-header px-4">
             <SidebarTrigger className="h-8 w-8 text-header-foreground opacity-80" />
             <span className="truncate font-headline text-lg font-bold tracking-tight text-header-foreground">
               Safeviate

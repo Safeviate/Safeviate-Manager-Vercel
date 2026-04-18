@@ -39,6 +39,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DeleteActionButton } from '@/components/record-action-buttons';
 import { cn } from '@/lib/utils';
+import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ExamsPage() {
   const { toast } = useToast();
@@ -277,113 +279,57 @@ export default function ExamsPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border overflow-hidden">
-                    {isLoadingTemplates ? (
-                      <div className="p-8 space-y-4">
-                        {[1, 2, 3].map(i => <div key={i} className="h-10 w-full bg-muted animate-pulse rounded-md" />)}
-                      </div>
-                    ) : filteredTemplates.length > 0 ? (
-                      <>
-                        <div className="grid gap-3 p-3 sm:hidden">
-                          {filteredTemplates.map((template) => (
-                            <div key={template.id} className="rounded-lg border bg-background p-3 shadow-sm">
-                              <div className="space-y-1">
-                                <p className="text-sm font-bold leading-tight">{template.title}</p>
-                                <p className="text-xs text-muted-foreground">{template.subject}</p>
-                              </div>
-                              <div className="mt-3 flex items-center justify-between">
-                                <Badge variant="outline" className="text-[10px] font-black text-primary uppercase">
-                                  PASS {template.passingScore}%
-                                </Badge>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="default"
-                                    size="compact"
-                                    onClick={() => setTakingExam({ template, isMock: false })}
-                                  >
-                                    <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
-                                    Start
+                  <div className="rounded-xl border overflow-hidden bg-card">
+                    <ResponsiveCardGrid
+                      items={filteredTemplates}
+                      isLoading={isLoadingTemplates}
+                      loadingCount={3}
+                      className="p-3"
+                      gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+                      renderItem={(template) => (
+                        <Card key={template.id} className="rounded-lg border bg-background p-3 shadow-sm">
+                          <div className="space-y-1">
+                            <p className="text-sm font-bold leading-tight">{template.title}</p>
+                            <p className="text-xs text-muted-foreground">{template.subject}</p>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between">
+                            <Badge variant="outline" className="text-[10px] font-black text-primary uppercase">
+                              PASS {template.passingScore}%
+                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="default"
+                                size="compact"
+                                onClick={() => setTakingExam({ template, isMock: false })}
+                              >
+                                <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
+                                Start
+                              </Button>
+                              {canManage && (
+                                <>
+                                  <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                                    <Link href={`/training/exams/${template.id}/edit`}>
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Link>
                                   </Button>
-                                  {canManage && (
-                                    <>
-                                      <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                                        <Link href={`/training/exams/${template.id}/edit`}>
-                                          <Pencil className="h-3.5 w-3.5" />
-                                        </Link>
-                                      </Button>
-                                      <DeleteActionButton
-                                        description={`This will permanently delete the template "${template.title}".`}
-                                        onDelete={() => handleDelete(template.id)}
-                                        srLabel="Delete template"
-                                      />
-                                    </>
-                                  )}
-                                </div>
-                              </div>
+                                  <DeleteActionButton
+                                    description={`This will permanently delete the template "${template.title}".`}
+                                    onDelete={() => handleDelete(template.id)}
+                                    srLabel="Delete template"
+                                  />
+                                </>
+                              )}
                             </div>
-                        ))}
-                      </div>
-
-                        <div className="hidden overflow-x-auto sm:block bg-background">
-                          <Table>
-                            <TableHeader className="bg-muted/30 border-b-2">
-                              <TableRow>
-                                <TableHead className="text-[10px] uppercase font-black tracking-widest px-8 h-14">Assessment Title</TableHead>
-                                <TableHead className="text-[10px] uppercase font-black tracking-widest h-14">Subject Category</TableHead>
-                                <TableHead className="text-center text-[10px] uppercase font-black tracking-widest h-14">Pass Mark</TableHead>
-                                <TableHead className="text-right text-[10px] uppercase font-black tracking-widest pr-8 h-14">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {filteredTemplates.map((template) => (
-                                <TableRow key={template.id} className="group border-b hover:bg-muted/10 transition-all">
-                                  <TableCell className="px-8 py-5 text-sm font-black text-foreground uppercase tracking-tight">{template.title}</TableCell>
-                                  <TableCell className="py-5">
-                                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest bg-background border-slate-300 shadow-sm px-3">
-                                      {template.subject}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-center py-5">
-                                    <span className="font-mono font-black text-lg text-primary">{template.passingScore}</span>
-                                    <span className="text-[10px] font-black opacity-40 ml-0.5">%</span>
-                                  </TableCell>
-                                  <TableCell className="text-right px-8 py-5">
-                                    <div className="flex justify-end gap-3 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
-                                      <Button 
-                                        variant="default" 
-                                        size="sm" 
-                                        onClick={() => setTakingExam({ template, isMock: false })}
-                                        className="h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg rounded-lg"
-                                      >
-                                        <PlayCircle className="h-4 w-4 mr-2" /> Start Certification
-                                      </Button>
-                                      {canManage && (
-                                        <div className="flex gap-2 border-l pl-3">
-                                          <Button asChild variant="outline" size="icon" className="h-10 w-10 rounded-lg border-slate-300 hover:bg-muted shadow-sm">
-                                            <Link href={`/training/exams/${template.id}/edit`}>
-                                              <Pencil className="h-4 w-4" />
-                                            </Link>
-                                          </Button>
-                                          <DeleteActionButton
-                                            description={`This will permanently delete the template "${template.title}".`}
-                                            onDelete={() => handleDelete(template.id)}
-                                            srLabel="Delete template"
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                          </div>
+                        </Card>
+                      )}
+                      renderLoadingItem={(index) => <Skeleton key={index} className="h-24 w-full rounded-lg" />}
+                      emptyState={(
+                        <div className="text-center py-12 bg-muted/5">
+                          <p className="text-sm font-bold uppercase tracking-widest text-foreground/70">No templates available.</p>
                         </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-12 bg-muted/5">
-                        <p className="text-sm font-bold uppercase tracking-widest text-foreground/70">No templates available.</p>
-                      </div>
-                    )}
+                      )}
+                    />
                   </div>
                 </section>
 
@@ -530,68 +476,35 @@ export default function ExamsPage() {
                             Fixed {isAviation ? 'Exam' : 'Assessment'} Templates (Practice)
                         </h2>
                         <div className="rounded-xl border overflow-hidden bg-card">
-                            <>
-                              <div className="grid gap-3 p-3 sm:hidden">
-                                {templates?.map((template) => (
-                                  <div key={template.id} className="rounded-lg border bg-background p-3 shadow-sm">
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-bold leading-tight">{template.title}</p>
-                                      <p className="text-xs text-muted-foreground">{template.subject}</p>
-                                    </div>
-                                    <Button
-                                      variant="outline"
-                                      size="compact"
-                                      className="mt-3 w-full bg-primary/5 hover:bg-primary/10 border-primary/20"
-                                      onClick={() => setTakingExam({ template, isMock: true })}
-                                    >
-                                      <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
-                                    </Button>
-                                  </div>
-                                ))}
-                                {(!templates || templates.length === 0) && (
-                                  <div className="py-8 text-center bg-muted/5 italic uppercase font-bold tracking-widest text-[10px] text-muted-foreground">
-                                    No fixed templates available for practice.
-                                  </div>
-                                )}
+                          <ResponsiveCardGrid
+                            items={templates || []}
+                            isLoading={isLoadingTemplates}
+                            loadingCount={3}
+                            className="p-3"
+                            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+                            renderItem={(template) => (
+                              <Card key={template.id} className="rounded-lg border bg-background p-3 shadow-sm">
+                                <div className="space-y-1">
+                                  <p className="text-sm font-bold leading-tight">{template.title}</p>
+                                  <p className="text-xs text-muted-foreground">{template.subject}</p>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="compact"
+                                  className="mt-3 w-full bg-primary/5 hover:bg-primary/10 border-primary/20"
+                                  onClick={() => setTakingExam({ template, isMock: true })}
+                                >
+                                  <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
+                                </Button>
+                              </Card>
+                            )}
+                            renderLoadingItem={(index) => <Skeleton key={index} className="h-24 w-full rounded-lg" />}
+                            emptyState={(
+                              <div className="py-8 text-center bg-muted/5 italic uppercase font-bold tracking-widest text-[10px] text-muted-foreground">
+                                No fixed templates available for practice.
                               </div>
-
-                              <div className="hidden overflow-x-auto sm:block">
-                                <Table>
-                                    <TableHeader className="bg-muted/30">
-                                    <TableRow>
-                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Title</TableHead>
-                                        <TableHead className="text-[10px] uppercase font-bold tracking-wider">Subject</TableHead>
-                                        <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
-                                    </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                    {templates?.map((template) => (
-                                        <TableRow key={template.id} className="group">
-                                        <TableCell className="font-bold text-sm text-foreground whitespace-nowrap">{template.title}</TableCell>
-                                        <TableCell className="text-sm font-medium text-foreground whitespace-nowrap">{template.subject}</TableCell>
-                                        <TableCell className="text-right whitespace-nowrap">
-                                            <Button 
-                                                variant="outline" 
-                                                size="compact" 
-                                                className="bg-primary/5 hover:bg-primary/10 border-primary/20"
-                                                onClick={() => setTakingExam({ template, isMock: true })}
-                                            >
-                                                <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
-                                            </Button>
-                                        </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {(!templates || templates.length === 0) && (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="h-32 text-center bg-muted/5 italic uppercase font-bold tracking-widest text-[10px] text-muted-foreground">
-                                                No fixed templates available for practice.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                    </TableBody>
-                                </Table>
-                              </div>
-                            </>
+                            )}
+                          />
                         </div>
                     </div>
                 </div>
