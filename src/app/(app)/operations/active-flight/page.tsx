@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { ActiveFlightTelemetryStrip } from '@/components/active-flight/active-flight-telemetry-strip';
 import { MOBILE_ACTION_MENU_ITEM_CLASS, MOBILE_ACTION_MENU_STATE_ITEM_CLASS, MobileActionDropdown } from '@/components/mobile-action-dropdown';
+import { useSidebar } from '@/components/ui/sidebar';
 import { BOOKING_UPDATES_STORAGE_KEY } from '@/lib/booking-updates';
 import { getTrackableBookings, isBookingEligibleForTracking } from '@/lib/booking-tracking';
 
@@ -153,6 +154,7 @@ const readInitialMapToggle = (key: string, fallback = true) => {
 
 export default function ActiveFlightPage() {
   const searchParams = useSearchParams();
+  const { openMobile } = useSidebar();
   const { toast } = useToast();
   const { tenantId, userProfile, isLoading: isUserLoading } = useUserProfile();
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
@@ -170,6 +172,7 @@ export default function ActiveFlightPage() {
   const [sessionSetupOpen, setSessionSetupOpen] = useState(false);
   const [showLayerSelectorOpen, setShowLayerSelectorOpen] = useState(false);
   const [showLayerLevelsOpen, setShowLayerLevelsOpen] = useState(false);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [followOwnship, setFollowOwnship] = useState(true);
   const [centreMapNonce, setCentreMapNonce] = useState(0);
   const [airportsVisible, setAirportsVisible] = useState(() => readInitialMapToggle('safeviate.active-flight-map-airports', true));
@@ -324,6 +327,18 @@ export default function ActiveFlightPage() {
   useEffect(() => {
     setFollowOwnship(true);
   }, [selectedRouteSignature]);
+
+  useEffect(() => {
+    if (!openMobile) return;
+    setMobileActionsOpen(false);
+    setShowLayerSelectorOpen(false);
+    setShowLayerLevelsOpen(false);
+  }, [openMobile]);
+
+  useEffect(() => {
+    if (!sessionSetupOpen) return;
+    setMobileActionsOpen(false);
+  }, [sessionSetupOpen]);
 
   const conflictingAircraftSession = useMemo(() => {
     if (!selectedAircraft || !deviceBinding?.deviceId) return null;
@@ -910,7 +925,7 @@ export default function ActiveFlightPage() {
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
         <Card className="flex h-full flex-col overflow-hidden border shadow-none">
           <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
-            <div className="sticky top-0 z-[2500] border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
+            <div className="sticky top-0 z-20 border-b bg-background px-2 py-1.5 md:z-[2500] md:px-3 md:py-2">
               <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Active flight action bar">
                 <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
                   <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setSessionSetupOpen(true)}>
@@ -952,7 +967,7 @@ export default function ActiveFlightPage() {
                   </Button>
                 </div>
                 <div className="w-full md:hidden">
-                  <MobileActionDropdown icon={Settings2} label="Actions">
+                  <MobileActionDropdown icon={Settings2} label="Actions" open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
                     <DropdownMenuItem
                       onClick={() => setSessionSetupOpen(true)}
                       className={MOBILE_ACTION_MENU_ITEM_CLASS}

@@ -28,11 +28,13 @@ interface MobileActionDropdownProps {
   children: ReactNode;
   className?: string;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function MobileActionDropdown({ icon: Icon, label, children, className, disabled }: MobileActionDropdownProps) {
+export function MobileActionDropdown({ icon: Icon, label, children, className, disabled, open, onOpenChange }: MobileActionDropdownProps) {
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={onOpenChange} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
