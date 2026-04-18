@@ -102,7 +102,7 @@ export function useGeolocationTrack(): GeolocationState {
       navigator.geolocation.clearWatch(geolocationStore.watchId);
     }
     geolocationStore.watchId = null;
-    setGeolocationSnapshot({ isWatching: false });
+    setGeolocationSnapshot({ isWatching: false, position: null });
   }, []);
 
   const startWatching = useCallback(() => {

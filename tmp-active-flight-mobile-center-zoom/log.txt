@@ -1,0 +1,7 @@
+centreButtons=0
+centre click error: locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /centre map/i }).first()[22m
+
+zoomPanel=null
+map={"width":1254.9600830078125,"height":1254.9600830078125}

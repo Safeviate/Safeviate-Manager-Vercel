@@ -1,0 +1,5 @@
+[fatal] page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/login
+Call log:
+[2m  - navigating to "http://localhost:3000/login", waiting until "networkidle"[22m
+
+    at [stdin]:13:16

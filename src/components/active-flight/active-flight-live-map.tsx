@@ -133,7 +133,6 @@ function MapInteractionWatcher({
 }) {
   useMapEvents({
     dragstart: onUserInteracted,
-    zoomstart: onUserInteracted,
   });
 
   return null;
@@ -1127,7 +1126,7 @@ export function ActiveFlightLiveMap({
 
   useEffect(() => {
     setTrackHistory(position ? [[position.latitude, position.longitude]] : []);
-  }, [aircraftRegistration, booking?.id, routeSignature]);
+  }, [aircraftRegistration, booking?.id, position, routeSignature]);
 
   useEffect(() => {
     if (!position) return;
@@ -2318,7 +2317,7 @@ export function ActiveFlightLiveMap({
             </div>
           ) : null}
           {layerLevelsPanelOpen ? (
-            <div className="pointer-events-auto absolute left-3 bottom-3 z-[1200] w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
+            <div className="pointer-events-auto absolute left-3 right-3 bottom-3 z-[1200] w-auto max-w-[calc(100vw-1.5rem)] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:left-3 sm:right-auto sm:w-[260px] sm:max-w-none">
               <div className="mb-3 flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-slate-500" />
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Map Zoom</p>

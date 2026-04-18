@@ -185,6 +185,7 @@ export default function ActiveFlightPage() {
   const resumeHydratedRef = useRef<string | null>(null);
   const handoffHydratedRef = useRef<string | null>(null);
   const lastWriteRef = useRef(0);
+  const trackingSessionEpochRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
   useEffect(() => {
     const binding = getOrCreateDeviceBinding();
@@ -308,6 +309,7 @@ export default function ActiveFlightPage() {
   );
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position), [selectedLegs, position]);
   const handleCentreMap = () => {
+    setFollowOwnship(true);
     setCentreMapNonce((current) => current + 1);
   };
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
@@ -594,10 +596,11 @@ export default function ActiveFlightPage() {
       groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? undefined,
     };
     const next = [...flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId), nextSession];
-    void persistSessions(next);
+    void persistSessions(next, trackingSessionEpochRef.current);
   }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraftId, selectedAircraftRegistrationValue, selectedBooking?.id, userProfile?.id]);
 
-  const persistSessions = async (next: FlightSession[]) => {
+  const persistSessions = async (next: FlightSession[], epoch: number) => {
+    if (epoch !== trackingSessionEpochRef.current) return;
     setFlightSessions(next);
     const current = next[next.length - 1];
     if (!current) return;
@@ -619,19 +622,21 @@ export default function ActiveFlightPage() {
         return;
       }
 
-      if (!response.ok) {
+        if (!response.ok) {
+          if (epoch !== trackingSessionEpochRef.current) return;
+          queueFlightSessionSave(current);
+          setHasQueuedSession(true);
+          return;
+        }
+
+        clearQueuedFlightSession(current.deviceId);
+        setHasQueuedSession(false);
+      } catch {
+        if (epoch !== trackingSessionEpochRef.current) return;
         queueFlightSessionSave(current);
         setHasQueuedSession(true);
-        return;
       }
-
-      clearQueuedFlightSession(current.deviceId);
-      setHasQueuedSession(false);
-    } catch {
-      queueFlightSessionSave(current);
-      setHasQueuedSession(true);
-    }
-  };
+    };
 
   const startTracking = () => {
     if (!selectedAircraftId || !selectedAircraftRegistrationValue || !deviceBinding) {
@@ -659,6 +664,7 @@ export default function ActiveFlightPage() {
       bookingId: selectedBooking?.id || '',
       aircraftRegistration: selectedAircraftRegistrationValue,
     });
+    trackingSessionEpochRef.current += 1;
     setIsTrackingActive(true);
     setSessionSetupOpen(false);
     lastWriteRef.current = 0;
@@ -676,13 +682,17 @@ export default function ActiveFlightPage() {
       startedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       breadcrumb: position ? buildBreadcrumb([], position) : [],
-    }));
+    }), trackingSessionEpochRef.current);
     startWatching();
   };
 
   const stopTrackingSession = async () => {
+    trackingSessionEpochRef.current += 1;
     stopWatching();
     setIsTrackingActive(false);
+    setSelectedAircraftId('');
+    setSelectedBookingId('');
+    setSelectedAircraftRegistration('');
     lastWriteRef.current = 0;
 
     if (!deviceBinding) return;
