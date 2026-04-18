@@ -288,9 +288,9 @@ export default function ActiveFlightPage() {
     [deviceBinding?.deviceId, flightSessions]
   );
   const activeSessionBookingRecord = useMemo(() => {
-    const bookingId = activeSessionForDevice?.bookingId || selectedBookingId;
+    const bookingId = activeSessionForDevice?.bookingId;
     return bookingId ? bookings.find((booking) => booking.id === bookingId) || null : null;
-  }, [activeSessionForDevice?.bookingId, bookings, selectedBookingId]);
+  }, [activeSessionForDevice?.bookingId, bookings]);
   const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
   const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
   const selectedAircraftRegistrationValue = selectedAircraft?.tailNumber || selectedAircraftRegistration || undefined;
@@ -693,13 +693,17 @@ export default function ActiveFlightPage() {
   };
 
   useEffect(() => {
-    if (!hasLoadedBookings || !deviceBinding?.deviceId || !activeSessionForDevice || !activeSessionBookingRecord) {
-      if (hasLoadedBookings && deviceBinding?.deviceId && activeSessionForDevice && !activeSessionBookingRecord) {
-        void stopTrackingSession();
-      }
+    if (!hasLoadedBookings || !deviceBinding?.deviceId || !activeSessionForDevice) return;
+
+    // Aircraft-only sessions are valid and should not be auto-stopped.
+    if (!activeSessionForDevice.bookingId) return;
+
+    if (!activeSessionBookingRecord) {
+      void stopTrackingSession();
       return;
     }
-    if (activeSessionForDevice.bookingId && activeSessionForDevice.bookingId !== activeSessionBookingRecord.id) return;
+
+    if (activeSessionForDevice.bookingId !== activeSessionBookingRecord.id) return;
     if (isBookingEligibleForTracking(bookings, activeSessionBookingRecord)) return;
     void stopTrackingSession();
   }, [activeSessionBookingRecord, activeSessionForDevice, bookings, deviceBinding?.deviceId, hasLoadedBookings, stopTrackingSession]);

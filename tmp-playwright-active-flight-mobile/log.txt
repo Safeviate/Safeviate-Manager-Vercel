@@ -1,0 +1,7 @@
+[body] Toggle Sidebar Safeviate ACTIVE FLIGHT Actions HGT N/A SPD N/A TRK N/A LEG N/A CFRQ N/A NWPT N/A NFRQ N/A ETA N/A + − Leaflet | © OpenStreetMap contributors, © OpenAIP
+[fatal] locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByText(/Session Setup/i).first() to be visible[22m
+[2m    64 × locator resolved to hidden <button type="button" class="inline-flex items-center justify-center whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-button-secondary-border text-button-secondary-foreground hover:bg-button-secondary-accent hover:text-button-secondary-accent-foreground py-2 h-8 gap-1.…>…</button>[22m
+
+    at [stdin]:31:24

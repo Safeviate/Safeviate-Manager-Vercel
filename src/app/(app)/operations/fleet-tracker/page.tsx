@@ -265,6 +265,8 @@ export default function FleetTrackerPage() {
                   navlogRoutesByBookingId={navlogRoutesByBookingId}
                   layerSelectorOpen={showLayerSelectorOpen}
                   layerLevelsOpen={showLayerLevelsOpen}
+                  onLayerSelectorOpenChange={setShowLayerSelectorOpen}
+                  onLayerLevelsOpenChange={setShowLayerLevelsOpen}
                 />
               </div>
             </div>
