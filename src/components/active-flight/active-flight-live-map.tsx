@@ -92,34 +92,15 @@ function FitFlightBounds({
   routePoints,
   position,
   followOwnship,
-  centreMapNonce,
 }: {
   routePoints: [number, number][];
   position: FlightPosition | null;
   followOwnship: boolean;
-  centreMapNonce: number;
 }) {
   const map = useMap();
   const lastFrameSignatureRef = useRef('');
-  const lastCentreMapNonceRef = useRef(0);
 
   useEffect(() => {
-    if (centreMapNonce !== 0 && centreMapNonce !== lastCentreMapNonceRef.current) {
-      lastCentreMapNonceRef.current = centreMapNonce;
-      if (position) {
-        map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
-      }
-      return;
-    }
-
-    if (followOwnship && position) {
-      const positionSignature = `${position.latitude.toFixed(6)},${position.longitude.toFixed(6)}`;
-      if (positionSignature === lastFrameSignatureRef.current) return;
-      lastFrameSignatureRef.current = positionSignature;
-      map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
-      return;
-    }
-
     if (routePoints.length > 0) {
       const routeSignature = routePoints.map(([latitude, longitude]) => `${latitude.toFixed(6)},${longitude.toFixed(6)}`).join('|');
       if (routeSignature === lastFrameSignatureRef.current) return;
@@ -135,7 +116,12 @@ function FitFlightBounds({
     }
 
     if (!position || !followOwnship) return;
-  }, [centreMapNonce, followOwnship, map, position, routePoints]);
+
+    const nextSignature = `${position.latitude.toFixed(6)},${position.longitude.toFixed(6)}`;
+    if (lastFrameSignatureRef.current === nextSignature) return;
+    lastFrameSignatureRef.current = nextSignature;
+    map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
+  }, [followOwnship, map, position, routePoints]);
 
   return null;
 }
@@ -147,6 +133,7 @@ function MapInteractionWatcher({
 }) {
   useMapEvents({
     dragstart: onUserInteracted,
+    zoomstart: onUserInteracted,
   });
 
   return null;
@@ -179,7 +166,6 @@ function MapResizeController() {
   const map = useMap();
 
   useEffect(() => {
-    (window as any).__safeviateActiveFlightMap = map;
     const container = map.getContainer();
     let frameId = 0;
     let timeoutId: number | null = null;
@@ -232,9 +218,6 @@ function MapResizeController() {
       window.cancelAnimationFrame(frameId);
       if (timeoutId) {
         window.clearTimeout(timeoutId);
-      }
-      if ((window as any).__safeviateActiveFlightMap === map) {
-        delete (window as any).__safeviateActiveFlightMap;
       }
       resizeObserver?.disconnect();
       window.removeEventListener('resize', scheduleRefresh);
@@ -927,7 +910,6 @@ export function ActiveFlightLiveMap({
   const [cacheNonce, setCacheNonce] = useState(0);
   const [cacheStatus, setCacheStatus] = useState('Ready to cache current view.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
-  const suppressFollowOwnshipResetRef = useRef(false);
   const [isCachingArea, setIsCachingArea] = useState(false);
   const [areaDownloadNonce, setAreaDownloadNonce] = useState(0);
   const [areaDownloadStatus, setAreaDownloadStatus] = useState('Download a larger area on this device.');
@@ -1145,34 +1127,7 @@ export function ActiveFlightLiveMap({
 
   useEffect(() => {
     setTrackHistory(position ? [[position.latitude, position.longitude]] : []);
-  }, [aircraftRegistration, booking?.id, position, routeSignature]);
-
-  useEffect(() => {
-    if (centreMapNonce === 0) return;
-    suppressFollowOwnshipResetRef.current = true;
-    const timer = window.setTimeout(() => {
-      suppressFollowOwnshipResetRef.current = false;
-    }, 1200);
-    return () => window.clearTimeout(timer);
-  }, [centreMapNonce]);
-
-  useEffect(() => {
-    const handleCentreMap = () => {
-      if (!position) return;
-      suppressFollowOwnshipResetRef.current = true;
-      const timer = window.setTimeout(() => {
-        suppressFollowOwnshipResetRef.current = false;
-      }, 1200);
-      const map = (window as any).__safeviateActiveFlightMap as L.Map | undefined;
-      if (map) {
-        map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
-      }
-      return () => window.clearTimeout(timer);
-    };
-
-    window.addEventListener('safeviate-centre-map', handleCentreMap);
-    return () => window.removeEventListener('safeviate-centre-map', handleCentreMap);
-  }, [position]);
+  }, [aircraftRegistration, booking?.id, routeSignature]);
 
   useEffect(() => {
     if (!position) return;
@@ -1538,12 +1493,7 @@ export function ActiveFlightLiveMap({
               viewportFeatures={viewportFeatures}
               onViewportFeaturesLoaded={setViewportFeatures}
             />
-            <MapInteractionWatcher
-              onUserInteracted={() => {
-                if (suppressFollowOwnshipResetRef.current) return;
-                onFollowOwnshipChange(false);
-              }}
-            />
+            <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
             <MapResizeController />
             <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
             <MapAreaCacheController
@@ -1578,12 +1528,7 @@ export function ActiveFlightLiveMap({
                 );
               }}
             />
-            <FitFlightBounds
-              routePoints={routePoints}
-              position={position}
-              followOwnship={followOwnship}
-              centreMapNonce={centreMapNonce}
-            />
+            <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
 
             {routePoints.length > 1 && (
               <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
@@ -1802,20 +1747,10 @@ export function ActiveFlightLiveMap({
                 viewportFeatures={viewportFeatures}
                 onViewportFeaturesLoaded={setViewportFeatures}
               />
-                <MapInteractionWatcher
-                  onUserInteracted={() => {
-                    if (suppressFollowOwnshipResetRef.current) return;
-                    onFollowOwnshipChange(false);
-                  }}
-                />
+              <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
               <MapResizeController />
               <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
-              <FitFlightBounds
-                routePoints={routePoints}
-                position={position}
-                followOwnship={followOwnship}
-                centreMapNonce={centreMapNonce}
-              />
+              <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
 
               {routePoints.length > 1 && (
                 <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
@@ -2195,20 +2130,10 @@ export function ActiveFlightLiveMap({
             viewportFeatures={viewportFeatures}
             onViewportFeaturesLoaded={setViewportFeatures}
           />
-            <MapInteractionWatcher
-              onUserInteracted={() => {
-                if (suppressFollowOwnshipResetRef.current) return;
-                onFollowOwnshipChange(false);
-              }}
-            />
+          <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
           <MapResizeController />
           <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
-          <FitFlightBounds
-            routePoints={routePoints}
-            position={position}
-            followOwnship={followOwnship}
-            centreMapNonce={centreMapNonce}
-          />
+          <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
 
           {routePoints.length > 1 && (
             <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
@@ -2393,7 +2318,7 @@ export function ActiveFlightLiveMap({
             </div>
           ) : null}
           {layerLevelsPanelOpen ? (
-            <div className="pointer-events-auto absolute left-3 right-3 bottom-3 z-[1200] w-auto max-w-[calc(100vw-1.5rem)] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:left-3 sm:right-auto sm:w-[260px] sm:max-w-none">
+            <div className="pointer-events-auto absolute left-3 bottom-3 z-[1200] w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
               <div className="mb-3 flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-slate-500" />
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Map Zoom</p>

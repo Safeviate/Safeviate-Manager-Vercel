@@ -185,7 +185,6 @@ export default function ActiveFlightPage() {
   const resumeHydratedRef = useRef<string | null>(null);
   const handoffHydratedRef = useRef<string | null>(null);
   const lastWriteRef = useRef(0);
-  const trackingSessionEpochRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
   useEffect(() => {
     const binding = getOrCreateDeviceBinding();
@@ -309,15 +308,7 @@ export default function ActiveFlightPage() {
   );
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position), [selectedLegs, position]);
   const handleCentreMap = () => {
-    setFollowOwnship(true);
     setCentreMapNonce((current) => current + 1);
-    if (typeof window !== 'undefined') {
-      const activeFlightMap = (window as typeof window & { __safeviateActiveFlightMap?: { setView: (center: [number, number], zoom: number, options?: { animate?: boolean }) => void; getZoom: () => number } }).__safeviateActiveFlightMap;
-      if (activeFlightMap && position) {
-        activeFlightMap.setView([position.latitude, position.longitude], activeFlightMap.getZoom(), { animate: false });
-      }
-      window.dispatchEvent(new CustomEvent('safeviate-centre-map'));
-    }
   };
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
@@ -603,11 +594,10 @@ export default function ActiveFlightPage() {
       groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? undefined,
     };
     const next = [...flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId), nextSession];
-    void persistSessions(next, trackingSessionEpochRef.current);
+    void persistSessions(next);
   }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraftId, selectedAircraftRegistrationValue, selectedBooking?.id, userProfile?.id]);
 
-  const persistSessions = async (next: FlightSession[], epoch: number) => {
-    if (epoch !== trackingSessionEpochRef.current) return;
+  const persistSessions = async (next: FlightSession[]) => {
     setFlightSessions(next);
     const current = next[next.length - 1];
     if (!current) return;
@@ -629,21 +619,19 @@ export default function ActiveFlightPage() {
         return;
       }
 
-        if (!response.ok) {
-          if (epoch !== trackingSessionEpochRef.current) return;
-          queueFlightSessionSave(current);
-          setHasQueuedSession(true);
-          return;
-        }
-
-        clearQueuedFlightSession(current.deviceId);
-        setHasQueuedSession(false);
-      } catch {
-        if (epoch !== trackingSessionEpochRef.current) return;
+      if (!response.ok) {
         queueFlightSessionSave(current);
         setHasQueuedSession(true);
+        return;
       }
-    };
+
+      clearQueuedFlightSession(current.deviceId);
+      setHasQueuedSession(false);
+    } catch {
+      queueFlightSessionSave(current);
+      setHasQueuedSession(true);
+    }
+  };
 
   const startTracking = () => {
     if (!selectedAircraftId || !selectedAircraftRegistrationValue || !deviceBinding) {
@@ -671,7 +659,6 @@ export default function ActiveFlightPage() {
       bookingId: selectedBooking?.id || '',
       aircraftRegistration: selectedAircraftRegistrationValue,
     });
-    trackingSessionEpochRef.current += 1;
     setIsTrackingActive(true);
     setSessionSetupOpen(false);
     lastWriteRef.current = 0;
@@ -689,17 +676,13 @@ export default function ActiveFlightPage() {
       startedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       breadcrumb: position ? buildBreadcrumb([], position) : [],
-    }), trackingSessionEpochRef.current);
+    }));
     startWatching();
   };
 
   const stopTrackingSession = async () => {
-    trackingSessionEpochRef.current += 1;
     stopWatching();
     setIsTrackingActive(false);
-    setSelectedAircraftId('');
-    setSelectedBookingId('');
-    setSelectedAircraftRegistration('');
     lastWriteRef.current = 0;
 
     if (!deviceBinding) return;
@@ -986,7 +969,7 @@ export default function ActiveFlightPage() {
                 <div className="w-full md:hidden">
                   <MobileActionDropdown icon={Settings2} label="Actions" open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
                     <DropdownMenuItem
-                      onSelect={() => setSessionSetupOpen(true)}
+                      onClick={() => setSessionSetupOpen(true)}
                       className={MOBILE_ACTION_MENU_ITEM_CLASS}
                     >
                       <Settings2 className="h-4 w-4" />
@@ -1008,7 +991,7 @@ export default function ActiveFlightPage() {
                       <SlidersHorizontal className="h-4 w-4" />
                       Map Zoom
                     </DropdownMenuCheckboxItem>
-                    <DropdownMenuItem onSelect={handleCentreMap} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
+                    <DropdownMenuItem onClick={handleCentreMap} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
                       <LocateFixed className="h-4 w-4" />
                       Centre Map
                     </DropdownMenuItem>
