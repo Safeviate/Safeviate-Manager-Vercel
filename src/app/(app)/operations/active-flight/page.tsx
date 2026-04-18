@@ -619,11 +619,11 @@ export default function ActiveFlightPage() {
   };
 
   const startTracking = () => {
-    if (!selectedAircraftId || !selectedAircraftRegistrationValue || !deviceBinding || !selectedBooking) {
+    if (!selectedAircraftId || !selectedAircraftRegistrationValue || !deviceBinding) {
       toast({
         variant: 'destructive',
-        title: 'Booking Not Available',
-        description: 'Complete or cancel the earlier booking on this aircraft before starting this one.',
+        title: 'Aircraft Not Selected',
+        description: 'Choose an aircraft registration before starting tracking.',
       });
       return;
     }
@@ -1115,7 +1115,7 @@ export default function ActiveFlightPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="active-flight-booking-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking / Navlog Route</Label>
+                <Label htmlFor="active-flight-booking-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking / Navlog Route (Optional)</Label>
               <select
                 id="active-flight-booking-select"
                 aria-label="Booking or navlog route"
@@ -1132,7 +1132,7 @@ export default function ActiveFlightPage() {
                   </select>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-                <Button className={HEADER_ACTION_BUTTON_CLASS} disabled={!selectedAircraft || !selectedBooking} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
+                <Button className={HEADER_ACTION_BUTTON_CLASS} disabled={!selectedAircraft} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
               <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} disabled={!isTrackingActive} onClick={stopTrackingSession}>Stop Tracking</Button>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/10 px-4 py-3 text-xs">
