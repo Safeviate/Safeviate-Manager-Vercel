@@ -311,6 +311,13 @@ export default function ActiveFlightPage() {
   const handleCentreMap = () => {
     setFollowOwnship(true);
     setCentreMapNonce((current) => current + 1);
+    if (typeof window !== 'undefined') {
+      const activeFlightMap = (window as typeof window & { __safeviateActiveFlightMap?: { setView: (center: [number, number], zoom: number, options?: { animate?: boolean }) => void; getZoom: () => number } }).__safeviateActiveFlightMap;
+      if (activeFlightMap && position) {
+        activeFlightMap.setView([position.latitude, position.longitude], activeFlightMap.getZoom(), { animate: false });
+      }
+      window.dispatchEvent(new CustomEvent('safeviate-centre-map'));
+    }
   };
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
@@ -979,7 +986,7 @@ export default function ActiveFlightPage() {
                 <div className="w-full md:hidden">
                   <MobileActionDropdown icon={Settings2} label="Actions" open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
                     <DropdownMenuItem
-                      onClick={() => setSessionSetupOpen(true)}
+                      onSelect={() => setSessionSetupOpen(true)}
                       className={MOBILE_ACTION_MENU_ITEM_CLASS}
                     >
                       <Settings2 className="h-4 w-4" />
@@ -1001,7 +1008,7 @@ export default function ActiveFlightPage() {
                       <SlidersHorizontal className="h-4 w-4" />
                       Map Zoom
                     </DropdownMenuCheckboxItem>
-                    <DropdownMenuItem onClick={handleCentreMap} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
+                    <DropdownMenuItem onSelect={handleCentreMap} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
                       <LocateFixed className="h-4 w-4" />
                       Centre Map
                     </DropdownMenuItem>
