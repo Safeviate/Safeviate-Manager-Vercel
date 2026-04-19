@@ -133,7 +133,6 @@ function MapInteractionWatcher({
 }) {
   useMapEvents({
     dragstart: onUserInteracted,
-    zoomstart: onUserInteracted,
   });
 
   return null;
