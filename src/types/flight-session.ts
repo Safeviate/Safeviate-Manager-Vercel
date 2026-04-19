@@ -35,6 +35,7 @@ export interface FlightSession {
   distanceToNextNm?: number;
   bearingToNext?: number;
   etaToNextWaypointMinutes?: number;
+  etaToNextMinutes?: number;
   groundSpeedKt?: number;
   crossTrackErrorNm?: number;
   onCourse?: boolean;
@@ -47,6 +48,7 @@ export interface ActiveLegState {
   distanceToNextNm?: number;
   bearingToNext?: number;
   etaToNextWaypointMinutes?: number;
+  etaToNextMinutes?: number;
   groundSpeedKt?: number;
   crossTrackErrorNm?: number;
   onCourse?: boolean;

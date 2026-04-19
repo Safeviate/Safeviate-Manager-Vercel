@@ -11,7 +11,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Map as MapIcon, Lock } from 'lucide-react';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { parseJsonResponse } from '@/lib/safe-json';
 
@@ -151,6 +153,7 @@ export default function WeatherPage() {
   const [vatsimData, setVatsimData] = useState<{ raw?: string; timestamp?: number | string } | null>(null);
   const [openMeteoData, setOpenMeteoData] = useState<OpenMeteoData | null>(null);
   const [metNorwayData, setMetNorwayData] = useState<MetNorwayData | null>(null);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -182,85 +185,6 @@ export default function WeatherPage() {
     const { lat, lon } = mapCoords;
     return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=1200&height=600&zoom=8&level=surface&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1`;
   }, [mapCoords]);
-
-  // Aggregated data for the summary cards
-  const unifiedObservation = useMemo(() => {
-    const omCurrent = openMeteoData?.current;
-    
-    // 1. Identify raw values from all sources
-    const officialAlt = weatherData?.altim ?? checkWxData?.barometer?.hg;
-    const officialHpa = checkWxData?.barometer?.hpa;
-    const groundHpa = omCurrent?.surface_pressure;
-    const officialAltValue = officialAlt == null ? null : Number(officialAlt);
-    const officialHpaValue = officialHpa == null ? null : Number(officialHpa);
-    const groundHpaValue = groundHpa == null ? null : Number(groundHpa);
-
-    // 2. Select best source (Official > Ground)
-    let altVal = officialAltValue ?? (groundHpaValue != null ? Number((groundHpaValue * 0.02953).toFixed(2)) : null);
-    let hpaVal = officialHpaValue ?? groundHpaValue ?? (officialAltValue != null ? officialAltValue * 33.8639 : null);
-
-    // 3. Normalize: If altimeter > 50, it was provided as hPa.
-    if (altVal != null && Number(altVal) > 50) {
-      altVal = Number((Number(altVal) * 0.02953).toFixed(2));
-    }
-
-    // 4. Normalize: If hPa < 50, it was provided as inHg.
-    if (hpaVal != null && Number(hpaVal) < 50) {
-      hpaVal = Math.round(Number(hpaVal) * 33.8639);
-    } else if (hpaVal != null) {
-      hpaVal = Math.round(Number(hpaVal));
-    }
-
-    const obs: WeatherObservation = {
-      wdir: weatherData?.wdir ?? checkWxData?.wind?.degrees ?? omCurrent?.wind_direction_10m ?? null,
-      wspd: weatherData?.wspd ?? checkWxData?.wind?.speed_kts ?? omCurrent?.wind_speed_10m ?? null,
-      wgst: weatherData?.wgst ?? checkWxData?.wind?.gust_kts ?? null,
-      visib: weatherData?.visib ?? checkWxData?.visibility?.miles ?? (omCurrent?.visibility != null ? Number((Number(omCurrent.visibility) / 1609.34).toFixed(1)) : null), // m to sm
-      temp: weatherData?.temp ?? checkWxData?.temperature?.celsius ?? omCurrent?.temperature_2m ?? null,
-      dewp: weatherData?.dewp ?? checkWxData?.dewpoint?.celsius ?? null,
-      altim: altVal,
-      altimHpa: hpaVal, 
-      icaoId: weatherData?.icaoId ?? checkWxData?.icao ?? vatsimData?.raw?.substring(0, 4) ?? icao.toUpperCase(),
-      name: weatherData?.name ?? checkWxData?.station?.name ?? null,
-      obsTime: weatherData?.obsTime ?? checkWxData?.timestamp ?? vatsimData?.timestamp ?? omCurrent?.time ?? null,
-      rawOb: weatherData?.rawOb ?? vatsimData?.raw ?? checkWxData?.raw_text ?? null,
-      fltcat: weatherData?.fltcat ?? checkWxData?.flight_category ?? null
-    };
-
-    // If METAR fields are missing, try to fill from the current TAF period
-    if (tafData?.fcsts?.[0]) {
-      const f = tafData.fcsts[0];
-      if (obs.wdir === null) obs.wdir = f.wdir ?? null;
-      if (obs.wspd === null) obs.wspd = f.wspd ?? null;
-      if (obs.visib === null) obs.visib = f.visib ?? null;
-    }
-
-    return obs;
-  }, [weatherData, checkWxData, vatsimData, openMeteoData, tafData, icao]);
-
-  if (isTenantLoading) {
-    return <Skeleton className="h-[420px] w-full" />;
-  }
-
-  if (
-    !shouldBypassIndustryRestrictions(tenant?.id) &&
-    !isHrefEnabledForIndustry('/operations/weather', tenant?.industry) &&
-    !(tenant?.enabledMenus?.includes('/operations/weather') ?? false)
-  ) {
-    return (
-      <Card className="mx-auto w-full max-w-3xl border shadow-none">
-        <CardHeader>
-          <CardTitle className="text-2xl font-black uppercase tracking-tight">Weather Unavailable</CardTitle>
-          <CardDescription>Aviation weather tools are only available for aviation tenants.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline" className="font-black uppercase">
-            <Link href="/operations">Back to Operations</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
 
   const fetchWeather = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,6 +252,61 @@ export default function WeatherPage() {
     }
   };
 
+  // Aggregated data for the summary cards
+  const unifiedObservation = useMemo(() => {
+    const omCurrent = openMeteoData?.current;
+    
+    // 1. Identify raw values from all sources
+    const officialAlt = weatherData?.altim ?? checkWxData?.barometer?.hg;
+    const officialHpa = checkWxData?.barometer?.hpa;
+    const groundHpa = omCurrent?.surface_pressure;
+    const officialAltValue = officialAlt == null ? null : Number(officialAlt);
+    const officialHpaValue = officialHpa == null ? null : Number(officialHpa);
+    const groundHpaValue = groundHpa == null ? null : Number(groundHpa);
+
+    // 2. Select best source (Official > Ground)
+    let altVal = officialAltValue ?? (groundHpaValue != null ? Number((groundHpaValue * 0.02953).toFixed(2)) : null);
+    let hpaVal = officialHpaValue ?? groundHpaValue ?? (officialAltValue != null ? officialAltValue * 33.8639 : null);
+
+    // 3. Normalize: If altimeter > 50, it was provided as hPa.
+    if (altVal != null && Number(altVal) > 50) {
+      altVal = Number((Number(altVal) * 0.02953).toFixed(2));
+    }
+
+    // 4. Normalize: If hPa < 50, it was provided as inHg.
+    if (hpaVal != null && Number(hpaVal) < 50) {
+      hpaVal = Math.round(Number(hpaVal) * 33.8639);
+    } else if (hpaVal != null) {
+      hpaVal = Math.round(Number(hpaVal));
+    }
+
+    const obs: WeatherObservation = {
+      wdir: weatherData?.wdir ?? checkWxData?.wind?.degrees ?? omCurrent?.wind_direction_10m ?? null,
+      wspd: weatherData?.wspd ?? checkWxData?.wind?.speed_kts ?? omCurrent?.wind_speed_10m ?? null,
+      wgst: weatherData?.wgst ?? checkWxData?.wind?.gust_kts ?? null,
+      visib: weatherData?.visib ?? checkWxData?.visibility?.miles ?? (omCurrent?.visibility != null ? Number((Number(omCurrent.visibility) / 1609.34).toFixed(1)) : null), // m to sm
+      temp: weatherData?.temp ?? checkWxData?.temperature?.celsius ?? omCurrent?.temperature_2m ?? null,
+      dewp: weatherData?.dewp ?? checkWxData?.dewpoint?.celsius ?? null,
+      altim: altVal,
+      altimHpa: hpaVal, 
+      icaoId: weatherData?.icaoId ?? checkWxData?.icao ?? vatsimData?.raw?.substring(0, 4) ?? icao.toUpperCase(),
+      name: weatherData?.name ?? checkWxData?.station?.name ?? null,
+      obsTime: weatherData?.obsTime ?? checkWxData?.timestamp ?? vatsimData?.timestamp ?? omCurrent?.time ?? null,
+      rawOb: weatherData?.rawOb ?? vatsimData?.raw ?? checkWxData?.raw_text ?? null,
+      fltcat: weatherData?.fltcat ?? checkWxData?.flight_category ?? null
+    };
+
+    // If METAR fields are missing, try to fill from the current TAF period
+    if (tafData?.fcsts?.[0]) {
+      const f = tafData.fcsts[0];
+      if (obs.wdir === null) obs.wdir = f.wdir ?? null;
+      if (obs.wspd === null) obs.wspd = f.wspd ?? null;
+      if (obs.visib === null) obs.visib = f.visib ?? null;
+    }
+
+    return obs;
+  }, [weatherData, checkWxData, vatsimData, openMeteoData, tafData, icao]);
+
   // Helper to calculate Flight Category if API doesn't provide it
   const calculateFlightCategory = (data: FlightCategoryData | null) => {
     if (!data) return 'UNKNOWN';
@@ -387,30 +366,38 @@ export default function WeatherPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-3 pt-0 md:p-3 max-w-[1200px] w-full mx-auto">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 pt-6 md:p-8 max-w-[1200px] w-full mx-auto">
       <Card className="flex-1 flex min-h-0 flex-col overflow-hidden shadow-none border">
-        <div className="flex min-h-10 items-center justify-center border-b bg-muted/5 px-3 py-1.5 md:px-4">
-          <p className="text-center text-[10px] font-medium leading-none text-muted-foreground sm:text-xs">
-            Multisource Metar and TAF sourced from NOAA, VATSIM, AVWX, CheckWX, Open-Meteo, and MET-Norway.
-          </p>
-        </div>
-        <div className="flex min-h-10 items-center justify-center border-b bg-muted/5 px-3 py-1.5 md:px-4">
-          <div className="flex w-full justify-center">
-            <form onSubmit={fetchWeather} className="flex w-full flex-col items-center justify-center gap-1.5 sm:flex-row md:w-auto">
-              <Input
-                placeholder="Enter ICAO (e.g. KJFK, EGLL)"
-                value={icao}
-                onChange={(e) => setIcao(e.target.value)}
-                className="h-8 w-full bg-background px-3 font-mono text-[10px] font-black uppercase sm:w-64"
-                maxLength={4}
-              />
-              <Button type="submit" disabled={loading} className="h-8 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm">
-                {loading ? <span className="animate-spin text-lg">↻</span> : <Search className="w-4 h-4" />}
-                {loading ? 'Fetching' : 'Search Updates'}
+        <MainPageHeader
+          title="Weather Center"
+          description="Multi-source METAR, TAF, decoded weather, and live operations mapping."
+          actions={
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              <form onSubmit={fetchWeather} className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <Input
+                  placeholder="Enter ICAO (e.g. KJFK, EGLL)"
+                  value={icao}
+                  onChange={(e) => setIcao(e.target.value)}
+                  className="w-full sm:w-64 font-mono uppercase font-black bg-background h-11"
+                  maxLength={4}
+                />
+                <Button type="submit" disabled={loading} className={HEADER_ACTION_BUTTON_CLASS}>
+                  {loading ? <span className="animate-spin text-lg">↻</span> : <Search className="w-4 h-4" />}
+                  {loading ? 'Fetching' : 'Search Updates'}
+                </Button>
+              </form>
+              <div className="h-10 w-px bg-border hidden sm:block mx-1" />
+              <Button 
+                variant="outline" 
+                onClick={() => setIsSyncDialogOpen(true)}
+                className={HEADER_SECONDARY_BUTTON_CLASS}
+              >
+                <Lock className="w-4 h-4" />
+                Sync Premium
               </Button>
-            </form>
-          </div>
-        </div>
+            </div>
+          }
+        />
         <CardContent className="flex-1 overflow-y-auto min-h-0 p-0 no-scrollbar">
           <div className="flex flex-col min-h-0">
             {loading && (
@@ -428,6 +415,17 @@ export default function WeatherPage() {
 
             {unifiedObservation.icaoId && !loading && (
                 <Tabs defaultValue="overview" className="flex flex-col space-y-6 p-4 md:p-6">
+                  <div className="flex items-center gap-2">
+                    <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest text-foreground">Multi-Source</p>
+                    {weatherData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">NOAA</Badge>}
+                    {tafData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">TAF</Badge>}
+                    {vatsimData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">VATSIM</Badge>}
+                    {avwxData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">AVWX</Badge>}
+                    {checkWxData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">CheckWX</Badge>}
+                    {openMeteoData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">Open-Meteo</Badge>}
+                    {metNorwayData && <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border bg-popover text-popover-foreground">MET-Norway</Badge>}
+                  </div>
+
                   <div className="space-y-6 pt-2">
                     <div className="grid grid-cols-2 md:grid-cols-4 overflow-hidden rounded-xl border-2 border-card-border bg-card shadow-sm">
                       <div className="p-4 flex flex-col items-center justify-center text-center">
@@ -751,15 +749,24 @@ export default function WeatherPage() {
                 </TabsContent>
               )}
 
-              <div className="space-y-4 pt-2 border-t border-dashed">
+              <div className="space-y-4 pt-4 border-t border-dashed">
                     <div className="flex flex-col gap-4">
-                        <div className="flex flex-col items-center justify-center gap-4 px-2 text-center sm:flex-row">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2">
                             <div className="space-y-1">
                                 <h4 className="text-sm font-black uppercase tracking-wider text-foreground">Live Operations Map</h4>
                                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-foreground">
                                     Interactive weather centered on {weatherData?.icaoId ?? tafData?.icaoId ?? 'Requested Station'}
                                 </p>
                             </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsSyncDialogOpen(true)}
+                                className={HEADER_SECONDARY_BUTTON_CLASS}
+                            >
+                                <Lock className="w-4 h-4 mr-2" />
+                                Sync Premium
+                            </Button>
                         </div>
                     </div>
 
@@ -789,6 +796,61 @@ export default function WeatherPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-[#1C1C1C] text-white border-[#333]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+                <div className="bg-amber-500 p-1.5 rounded-lg">
+                    <MapIcon className="w-5 h-5 text-black" />
+                </div>
+                Sync Windy Account
+            </DialogTitle>
+            <DialogDescription className="text-white/80 font-bold uppercase text-[10px] tracking-widest pt-1">
+                Unlock Premium Map Features
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+                <p className="text-sm font-medium leading-relaxed">
+                    To use your <span className="text-amber-500 font-bold">Windy Premium</span> features (high-res models, airport charts, etc.) inside Safeviate, you need to sign in to your Windy.com account in this browser.
+                </p>
+                <div className="flex flex-col gap-2 pt-2">
+                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-wider text-white/80">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">1</div>
+                        Click the button below to open Windy login.
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-wider text-white/80">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">2</div>
+                        Sign in with your email/password.
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-wider text-white/80">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">3</div>
+                        Return here to see your synced map.
+                    </div>
+                </div>
+            </div>
+          </div>
+          <DialogFooter className="flex sm:justify-between items-center bg-white/5 -mx-6 -mb-6 p-6 mt-2 rounded-b-lg border-t border-white/10">
+            <Button 
+                variant="ghost" 
+                onClick={() => setIsSyncDialogOpen(false)}
+                className={HEADER_SECONDARY_BUTTON_CLASS}
+            >
+                Cancel
+            </Button>
+            <Button 
+                asChild
+                className={HEADER_ACTION_BUTTON_CLASS}
+                onClick={() => setIsSyncDialogOpen(false)}
+            >
+                <a href="https://www.windy.com/login" target="_blank" rel="noreferrer">
+                    Log in to Windy.com
+                </a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

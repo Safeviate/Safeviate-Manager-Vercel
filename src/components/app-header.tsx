@@ -5,6 +5,10 @@ import { menuConfig } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { Bell, Search, ChevronDown } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import React, { useState, useEffect } from 'react';
 
 const findCurrentItem = (
@@ -52,6 +56,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { userProfile } = useUserProfile();
   const title = getTitle(pathname);
   const [headerOpacity, setHeaderOpacity] = useState(0.8);
 
@@ -72,6 +77,9 @@ export function AppHeader() {
       window.removeEventListener('storage', handleOpacityUpdate);
     };
   }, []);
+
+  const userDisplayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'User';
+  const userFallback = userDisplayName.charAt(0).toUpperCase();
 
   return (
     <header 

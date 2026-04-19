@@ -1,9 +1,10 @@
 'use client';
 
 import { ActiveFlightLiveMap } from '@/components/active-flight/active-flight-live-map';
-import { ActiveFlightTelemetryStrip } from '@/components/active-flight/active-flight-telemetry-strip';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DialogClose } from '@/components/ui/dialog';
+import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -15,17 +16,6 @@ type FullScreenFlightLayoutProps = {
   aircraftRegistration?: string;
   activeLegIndex?: number;
   activeLegState?: ActiveLegState | null;
-  followOwnship: boolean;
-  onFollowOwnshipChange: (followOwnship: boolean) => void;
-  centreMapNonce: number;
-  airportsVisible: boolean;
-  onAirportsVisibleChange: (open: boolean) => void;
-  airportLabelsVisible: boolean;
-  onAirportLabelsVisibleChange: (open: boolean) => void;
-  navaidsVisible: boolean;
-  onNavaidsVisibleChange: (open: boolean) => void;
-  navaidLabelsVisible: boolean;
-  onNavaidLabelsVisibleChange: (open: boolean) => void;
   heading: number | null;
   speed: number | null;
   altitude: number | null;
@@ -53,21 +43,12 @@ export function FullScreenFlightLayout({
   aircraftRegistration,
   activeLegIndex,
   activeLegState,
-  followOwnship,
-  onFollowOwnshipChange,
-  centreMapNonce,
-  airportsVisible,
-  onAirportsVisibleChange,
-  airportLabelsVisible,
-  onAirportLabelsVisibleChange,
-  navaidsVisible,
-  onNavaidsVisibleChange,
-  navaidLabelsVisible,
-  onNavaidLabelsVisibleChange,
   heading,
   speed,
   altitude,
   trailPoints,
+  syncStatusLabel,
+  syncStatusClassName,
   savedDeviceLabel,
   permissionState,
   isWatching,
@@ -78,6 +59,14 @@ export function FullScreenFlightLayout({
         <div className="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <div className="space-y-1">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Full Flight Tracking View</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-800 hover:bg-slate-100">
+                {aircraftRegistration || 'Aircraft not selected'}
+              </Badge>
+              <Badge className={cn('px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]', syncStatusClassName)}>
+                {syncStatusLabel}
+              </Badge>
+            </div>
           </div>
           <DialogClose asChild>
             <Button variant="outline" className="border-slate-200 bg-white font-black uppercase text-slate-800 hover:bg-slate-50">
@@ -86,17 +75,14 @@ export function FullScreenFlightLayout({
           </DialogClose>
         </div>
 
-        <ActiveFlightTelemetryStrip
-          booking={booking}
-          legs={legs}
-          position={position}
-          activeLegIndex={activeLegIndex}
-          activeLegState={activeLegState}
-          className="rounded-3xl border border-slate-200 bg-white shadow-sm"
-        />
-
         <div className="grid flex-1 gap-3 xl:min-h-[calc(100dvh-8.5rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.6fr)]">
           <div className="flex min-h-0 flex-col gap-3">
+            <FlightTelemetryTable
+              heading={heading != null ? `${heading.toFixed(0)}°` : 'N/A'}
+              speed={speed != null ? `${speed.toFixed(0)} kt` : 'N/A'}
+              altitude={altitude != null ? `${Math.round(altitude)} m` : 'N/A'}
+              trail={`${trailPoints} pts`}
+            />
             <div className="fullscreen-lite-map flex-1 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm md:p-4 xl:min-h-0">
               <ActiveFlightLiveMap
                 booking={booking}
@@ -105,18 +91,6 @@ export function FullScreenFlightLayout({
                 aircraftRegistration={aircraftRegistration}
                 activeLegIndex={activeLegIndex}
                 activeLegState={activeLegState}
-                compactLayout
-                followOwnship={followOwnship}
-                onFollowOwnshipChange={onFollowOwnshipChange}
-                centreMapNonce={centreMapNonce}
-                airportsVisible={airportsVisible}
-                onAirportsVisibleChange={onAirportsVisibleChange}
-                airportLabelsVisible={airportLabelsVisible}
-                onAirportLabelsVisibleChange={onAirportLabelsVisibleChange}
-                navaidsVisible={navaidsVisible}
-                onNavaidsVisibleChange={onNavaidsVisibleChange}
-                navaidLabelsVisible={navaidLabelsVisible}
-                onNavaidLabelsVisibleChange={onNavaidLabelsVisibleChange}
               />
             </div>
           </div>

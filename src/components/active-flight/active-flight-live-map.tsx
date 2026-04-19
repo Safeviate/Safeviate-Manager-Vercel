@@ -4,14 +4,10 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 import { FeatureGroup, GeoJSON, Marker, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Layers3, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
-import { useMapZoomPreferences } from '@/hooks/use-map-zoom-preferences';
-import { useMapZoomDraft } from '@/hooks/use-map-zoom-draft';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -278,6 +274,7 @@ function MapInteractionWatcher({
 }) {
   useMapEvents({
     dragstart: onUserInteracted,
+    zoomstart: onUserInteracted,
   });
 
   return null;
@@ -285,19 +282,21 @@ function MapInteractionWatcher({
 
 function MapRecenterController({
   position,
-  centreMapNonce,
+  recenterNonce,
+  onDone,
 }: {
   position: FlightPosition | null;
-  centreMapNonce: number;
+  recenterNonce: number;
+  onDone: () => void;
 }) {
   const map = useMap();
-  const lastHandledNonceRef = useRef(0);
 
   useEffect(() => {
-    if (centreMapNonce === 0 || centreMapNonce === lastHandledNonceRef.current) return;
+    if (recenterNonce === 0) return;
 
     if (position) {
       map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
+      onDone();
     }
   }, [map, onDone, position, recenterNonce]);
 
@@ -308,62 +307,30 @@ function MapResizeController() {
   const map = useMap();
 
   useEffect(() => {
-    const container = map.getContainer();
     let frameId = 0;
-    let timeoutId: number | null = null;
-    let lastWidth = container.clientWidth;
-    let lastHeight = container.clientHeight;
 
-    const invalidateIfSizeChanged = () => {
-      const nextWidth = container.clientWidth;
-      const nextHeight = container.clientHeight;
-
-      if (nextWidth === 0 || nextHeight === 0) return;
-      if (nextWidth === lastWidth && nextHeight === lastHeight) return;
-
-      lastWidth = nextWidth;
-      lastHeight = nextHeight;
-      map.invalidateSize(false);
-    };
-
-    const scheduleRefresh = () => {
+    const refreshMapSize = () => {
       window.cancelAnimationFrame(frameId);
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
-
-      timeoutId = window.setTimeout(() => {
-        frameId = window.requestAnimationFrame(() => {
-          invalidateIfSizeChanged();
-        });
-      }, 80);
+      frameId = window.requestAnimationFrame(() => {
+        map.invalidateSize(false);
+      });
     };
 
-    frameId = window.requestAnimationFrame(() => {
-      lastWidth = 0;
-      lastHeight = 0;
-      invalidateIfSizeChanged();
-    });
+    refreshMapSize();
 
-    const resizeObserver =
-      typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(() => {
-            scheduleRefresh();
-          })
-        : null;
+    const container = map.getContainer();
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refreshMapSize) : null;
     resizeObserver?.observe(container);
+    resizeObserver?.observe(container.parentElement || container);
 
-    window.addEventListener('resize', scheduleRefresh);
-    window.addEventListener('orientationchange', scheduleRefresh);
+    window.addEventListener('resize', refreshMapSize);
+    window.addEventListener('orientationchange', refreshMapSize);
 
     return () => {
       window.cancelAnimationFrame(frameId);
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
       resizeObserver?.disconnect();
-      window.removeEventListener('resize', scheduleRefresh);
-      window.removeEventListener('orientationchange', scheduleRefresh);
+      window.removeEventListener('resize', refreshMapSize);
+      window.removeEventListener('orientationchange', refreshMapSize);
     };
   }, [map]);
 
@@ -661,35 +628,14 @@ function MapAreaCacheController({
   }, [map]);
 
   const warmTileUrls = useCallback(async (tileUrls: string[]) => {
-    const knownTiles = readOfflineTileManifest();
-    const nextTileUrls = tileUrls.filter((url) => !knownTiles.has(url));
-    if (!nextTileUrls.length) return 0;
-
-    const warmedTileUrls: string[] = [];
-    const batchSize = 12;
-
-    for (let index = 0; index < nextTileUrls.length; index += batchSize) {
-      const batch = nextTileUrls.slice(index, index + batchSize);
-      const results = await Promise.allSettled(
-        batch.map((url) =>
+    await Promise.allSettled(
+      tileUrls.map(
+        (url) =>
           fetch(url, { mode: 'no-cors' })
-            .then(() => url)
-            .catch(() => null)
-        )
-      );
-
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-          warmedTileUrls.push(result.value);
-        }
-      }
-    }
-
-    if (warmedTileUrls.length) {
-      writeOfflineTileManifest([...knownTiles, ...warmedTileUrls]);
-    }
-
-    return warmedTileUrls.length;
+            .then(() => undefined)
+            .catch(() => undefined)
+      )
+    );
   }, []);
 
   useEffect(() => {
@@ -712,15 +658,11 @@ function MapAreaCacheController({
           return;
         }
 
-        onStatus(`Checking ${tileUrls.length} tiles for local reuse...`);
-        const warmedTileCount = await warmTileUrls(tileUrls);
+        onStatus(`Caching ${tileUrls.length} tiles...`);
+        await warmTileUrls(tileUrls);
 
-        onStatus(
-          warmedTileCount > 0
-            ? `Cached ${warmedTileCount} new tiles for offline reuse.`
-            : 'Current view already warmed on this device.'
-        );
-        onComplete(warmedTileCount > 0 ? warmedTileCount : tileUrls.length);
+        onStatus('Cached current view for offline use.');
+        onComplete(tileUrls.length);
       } finally {
         onDone();
       }
@@ -750,14 +692,10 @@ function MapAreaCacheController({
           return;
         }
 
-        onAreaDownloadStatus(`Checking ${tileUrls.length} area tiles for local reuse...`);
-        const warmedTileCount = await warmTileUrls(tileUrls);
-        onAreaDownloadStatus(
-          warmedTileCount > 0
-            ? `Area warmed with ${warmedTileCount} new tiles on this device.`
-            : 'Area tiles already warmed on this device.'
-        );
-        onAreaDownloadComplete(warmedTileCount > 0 ? warmedTileCount : tileUrls.length);
+        onAreaDownloadStatus(`Saving ${tileUrls.length} area tiles on this device...`);
+        await warmTileUrls(tileUrls);
+        onAreaDownloadStatus('Area saved on this device for offline use.');
+        onAreaDownloadComplete(tileUrls.length);
       } finally {
         onAreaDownloadDone();
       }
@@ -802,14 +740,10 @@ function MapAreaCacheController({
           return;
         }
 
-        onRouteDownloadStatus(`Checking ${tileUrls.length} route tiles for local reuse...`);
-        const warmedTileCount = await warmTileUrls(tileUrls);
-        onRouteDownloadStatus(
-          warmedTileCount > 0
-            ? `Route corridor warmed with ${warmedTileCount} new tiles on this device.`
-            : 'Route corridor tiles already warmed on this device.'
-        );
-        onRouteDownloadComplete(warmedTileCount > 0 ? warmedTileCount : tileUrls.length);
+        onRouteDownloadStatus(`Saving ${tileUrls.length} route tiles on this device...`);
+        await warmTileUrls(tileUrls);
+        onRouteDownloadStatus('Route corridor saved on this device for offline use.');
+        onRouteDownloadComplete(tileUrls.length);
       } finally {
         onRouteDownloadDone();
       }
@@ -850,7 +784,7 @@ function CompassDial({
         <div className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.65)]" />
       </div>
       <div className="space-y-0.5">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Track</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Heading</p>
         <p className="text-sm font-black tracking-wide text-slate-900">
           {headingTrue != null && !Number.isNaN(headingTrue) ? `${Math.round(((headingTrue % 360) + 360) % 360)} deg` : '---'}
         </p>
@@ -943,7 +877,7 @@ const readStoredActiveFlightMapLayerSettings = (): ActiveFlightMapLayerSettings 
 };
 
 async function readOfflineTileSummary() {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !('caches' in window)) {
     return {
       cacheCount: 0,
       tileCount: 0,
@@ -951,9 +885,14 @@ async function readOfflineTileSummary() {
     };
   }
 
-  const tileManifest = readOfflineTileManifest();
-  const tileCount = tileManifest.size;
-  const cacheCount = tileCount > 0 ? 1 : 0;
+  const cacheNames = (await caches.keys()).filter((cacheName) => cacheName.startsWith(OFFLINE_TILE_CACHE_PREFIX));
+  let tileCount = 0;
+
+  for (const cacheName of cacheNames) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    tileCount += keys.length;
+  }
 
   let usageLabel = 'Storage estimate unavailable on this device.';
   if ('storage' in navigator && typeof navigator.storage?.estimate === 'function') {
@@ -966,20 +905,13 @@ async function readOfflineTileSummary() {
   }
 
   return {
-    cacheCount,
+    cacheCount: cacheNames.length,
     tileCount,
-    usageLabel: tileCount > 0 ? `${usageLabel} Tile manifest tracks ${tileCount} warmed tiles for this browser.` : usageLabel,
+    usageLabel,
   };
 }
 
 async function clearOfflineTileCaches() {
-  if (typeof window !== 'undefined') {
-    try {
-      window.localStorage.removeItem(OFFLINE_TILE_MANIFEST_KEY);
-    } catch {
-      // Ignore browser storage failures and still attempt any cache cleanup below.
-    }
-  }
   if (typeof window === 'undefined' || !('caches' in window)) return;
   const cacheNames = await caches.keys();
   await Promise.all(
@@ -1022,26 +954,6 @@ export function ActiveFlightLiveMap({
   onLayersCardOpenChange?: (open: boolean) => void;
   onMapZoomCardOpenChange?: (open: boolean) => void;
 }) {
-  const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
-    storageKey: 'safeviate.active-flight-map-zoom',
-    defaultMinZoom: FALLBACK_MAP_MIN_ZOOM,
-    defaultMaxZoom: FALLBACK_MAP_MAX_ZOOM,
-  });
-  const mapMinZoom = zoomPreferences.minZoom;
-  const mapMaxZoom = zoomPreferences.maxZoom;
-  const {
-    draftMin: zoomDraftMin,
-    draftMax: zoomDraftMax,
-    setDraftMin: setZoomDraftMin,
-    setDraftMax: setZoomDraftMax,
-    saveDrafts: saveZoomDrafts,
-  } = useMapZoomDraft({
-    minZoom: mapMinZoom,
-    maxZoom: mapMaxZoom,
-    setZoomRange,
-    saveZoomRange,
-  });
-
   const routePoints = useMemo(
     () =>
       legs
@@ -1061,7 +973,7 @@ export function ActiveFlightLiveMap({
   const [internalFollowOwnship, setInternalFollowOwnship] = useState(true);
   const [recenterNonce, setRecenterNonce] = useState(0);
   const [cacheNonce, setCacheNonce] = useState(0);
-  const [cacheStatus, setCacheStatus] = useState('Ready to cache current view.');
+  const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
   const [isCachingArea, setIsCachingArea] = useState(false);
   const [areaDownloadNonce, setAreaDownloadNonce] = useState(0);
@@ -1069,9 +981,8 @@ export function ActiveFlightLiveMap({
   const [areaDownloadState, setAreaDownloadState] = useState<'idle' | 'downloading' | 'complete'>('idle');
   const [isDownloadingArea, setIsDownloadingArea] = useState(false);
   const [routeDownloadNonce, setRouteDownloadNonce] = useState(0);
-  const flightCacheLabel = booking?.bookingNumber ? `flight #${booking.bookingNumber}` : 'selected flight';
   const [routeDownloadStatus, setRouteDownloadStatus] = useState(
-    routePoints.length > 1 ? `Cache ${flightCacheLabel} route on this device.` : 'Load a flight route to cache it on this device.'
+    routePoints.length > 1 ? 'Download the loaded route corridor on this device.' : 'Load a route to download it on this device.'
   );
   const [routeDownloadState, setRouteDownloadState] = useState<'idle' | 'downloading' | 'complete'>('idle');
   const [isDownloadingRoute, setIsDownloadingRoute] = useState(false);
@@ -1154,12 +1065,12 @@ export function ActiveFlightLiveMap({
 
   useEffect(() => {
     setRouteDownloadStatus(
-      routePoints.length > 1 ? `Cache ${flightCacheLabel} route on this device.` : 'Load a flight route to cache it on this device.'
+      routePoints.length > 1 ? 'Download the loaded route corridor on this device.' : 'Load a route to download it on this device.'
     );
     if (routePoints.length <= 1 && routeDownloadState !== 'downloading') {
       setRouteDownloadState('idle');
     }
-  }, [flightCacheLabel, routeDownloadState, routePoints.length]);
+  }, [routeDownloadState, routePoints.length]);
 
   const followOwnship = followOwnshipProp ?? internalFollowOwnship;
   const airportFeatures = useMemo(() => viewportFeatures.filter((item) => item.sourceLayer === 'airports' && item.geometry?.coordinates), [viewportFeatures]);
@@ -1296,17 +1207,19 @@ export function ActiveFlightLiveMap({
     }
   }, [areaDownloadState, cacheState, refreshOfflineSummary, routeDownloadState]);
 
-  const handleClearOpenAipCache = () => {
-    setCacheStatus('Cache cleared.');
+  const handleFollowOwnship = () => {
+    setFollowOwnship(true);
+    setRecenterNonce((current) => current + 1);
+  };
+  const handleNorthUp = () => {
+    setFollowOwnship(false);
+    setRecenterNonce((current) => current + 1);
   };
 
   if (fullscreen) {
     return (
-      <div
-        className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black pointer-events-none"
-        style={{ ...mapShellStyle, overscrollBehavior: 'none' }}
-      >
-        <div className="pointer-events-auto absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
+      <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black" style={mapShellStyle}>
+        <div className="absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Full Flight Tracking View</p>
             <MenuCloseButton />
@@ -1314,7 +1227,7 @@ export function ActiveFlightLiveMap({
           <table className="w-full table-fixed border-collapse text-left">
             <tbody>
               <tr className="border-b border-slate-200">
-                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">TRK</th>
+                <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">HDG</th>
                 <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">ALT</th>
                 <th className="w-1/3 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">GS</th>
               </tr>
@@ -1371,7 +1284,7 @@ export function ActiveFlightLiveMap({
                 onClick={() => {
                   setIsCachingArea(true);
                   setCacheState('caching');
-                  setCacheStatus('Warming cache for current view...');
+                  setCacheStatus('Caching current view...');
                   setCacheNonce((current) => current + 1);
                 }}
               >
@@ -1411,7 +1324,7 @@ export function ActiveFlightLiveMap({
                 onClick={() => {
                   setIsDownloadingRoute(true);
                   setRouteDownloadState('downloading');
-                  setRouteDownloadStatus(`Caching ${flightCacheLabel} route on this device...`);
+                  setRouteDownloadStatus('Saving route corridor on this device...');
                   setRouteDownloadNonce((current) => current + 1);
                 }}
               >
@@ -1419,7 +1332,7 @@ export function ActiveFlightLiveMap({
                   <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center', isDownloadingRoute ? 'opacity-100' : 'opacity-0')}>
                     <Loader2 className="h-3 w-3 animate-spin" />
                   </span>
-                  <span>Cache Flight</span>
+                  <span>Download Route</span>
                 </span>
               </Button>
               <Dialog open={offlineManagerOpen} onOpenChange={setOfflineManagerOpen}>
@@ -1445,13 +1358,10 @@ export function ActiveFlightLiveMap({
                     <DialogTitle className="text-base font-black uppercase tracking-[0.12em] text-slate-900">
                       Offline Maps on This Device
                     </DialogTitle>
-                  <DialogDescription className="text-sm leading-6 text-slate-600">
-                    These maps are saved in this browser on this phone, tablet, or laptop. The browser manages the storage location automatically.
-                  </DialogDescription>
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Offline cache: {cacheStatus}
-                  </p>
-                </DialogHeader>
+                    <DialogDescription className="text-sm leading-6 text-slate-600">
+                      These maps are saved in this browser on this phone, tablet, or laptop. The browser manages the storage location automatically.
+                    </DialogDescription>
+                  </DialogHeader>
                   <div className="grid gap-3 text-sm">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Saved Tile Packs</p>
@@ -1466,7 +1376,7 @@ export function ActiveFlightLiveMap({
                       <p className="mt-1 font-semibold text-slate-700">{offlineUsageLabel}</p>
                     </div>
                     <div className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-xs font-medium leading-5 text-slate-600">
-                      Use <span className="font-black text-slate-900">Cache View</span> for a quick nearby area, <span className="font-black text-slate-900">Download Area</span> for a broader region, and <span className="font-black text-slate-900">Cache Flight</span> for the selected flight corridor on this same device.
+                      Use <span className="font-black text-slate-900">Cache View</span> for a quick nearby area, <span className="font-black text-slate-900">Download Area</span> for a broader region, and <span className="font-black text-slate-900">Download Route</span> for the loaded corridor on this same device.
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1">
@@ -1495,7 +1405,7 @@ export function ActiveFlightLiveMap({
                               setCacheState('idle');
                               setAreaDownloadState('idle');
                               setRouteDownloadState('idle');
-                              setCacheStatus('Ready to cache current view.');
+                              setCacheStatus('Cache current view for offline use.');
                               setAreaDownloadStatus('Download a larger area on this device.');
                               setRouteDownloadStatus(
                                 routePoints.length > 1
@@ -1560,42 +1470,20 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
 
-        <div className="pointer-events-auto absolute inset-0 overflow-hidden">
-          <div className="nose-up-map pointer-events-auto absolute inset-[-24%]">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="nose-up-map absolute inset-[-24%]">
           <LeafletMapFrame
             center={center}
             zoom={8}
-            minZoom={mapMinZoom}
-            maxZoom={mapMaxZoom}
+            minZoom={MAP_MIN_ZOOM}
+            maxZoom={MAP_MAX_ZOOM}
             zoomAnimation={false}
             className="h-full w-full rounded-none"
-            style={{ background: '#000000', touchAction: 'none', overscrollBehavior: 'none' }}
+            style={{ background: '#000000' }}
           >
-            {selectedBaseLayer === 'satellite' ? (
-              <TileLayer
-                url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-                attribution="&copy; Google Maps"
-              />
-            ) : (
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
-              />
-            )}
-            <ActiveFlightOpenAipLayers
-              mapMinZoom={mapMinZoom}
-              mapMaxZoom={mapMaxZoom}
-              showOpenAipChart={showOpenAipChart}
-              airportsVisible={airportsVisible}
-              airportLabelsVisible={airportLabelsVisible}
-              navaidsVisible={navaidsVisible}
-              navaidLabelsVisible={navaidLabelsVisible}
-              reportingVisible={reportingVisible}
-              reportingLabelsVisible={reportingLabelsVisible}
-              mapZoom={mapZoom}
-              onMapZoomChange={setMapZoom}
-              viewportFeatures={viewportFeatures}
-              onViewportFeaturesLoaded={setViewportFeatures}
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
             />
             <MapInteractionWatcher onUserInteracted={() => {
               if (position) {
@@ -1619,7 +1507,9 @@ export function ActiveFlightLiveMap({
               onStatus={setCacheStatus}
               onComplete={(tileCount) => {
                 setCacheState('complete');
-                setCacheStatus(tileCount > 0 ? 'Cache ready for current view.' : 'Nothing to cache in current view.');
+                setCacheStatus(
+                  tileCount > 0 ? 'Cached current view for offline use.' : 'No tiles available to cache.'
+                );
               }}
               onAreaDownloadStatus={setAreaDownloadStatus}
               onAreaDownloadComplete={(tileCount) => {
@@ -1633,10 +1523,10 @@ export function ActiveFlightLiveMap({
                 setRouteDownloadState(tileCount > 0 ? 'complete' : 'idle');
                 setRouteDownloadStatus(
                   tileCount > 0
-                    ? `${flightCacheLabel} route cached on this device.`
+                    ? 'Route corridor saved on this device for offline use.'
                     : routePoints.length > 1
-                      ? 'No flight route tiles available to cache.'
-                      : 'Load a flight route to cache it on this device.'
+                      ? 'No route tiles available to download.'
+                      : 'Load a route to download it on this device.'
                 );
               }}
             />
@@ -1696,7 +1586,7 @@ export function ActiveFlightLiveMap({
                     </p>
                     <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
                     <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                    <p>Track: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
+                    <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
                   </div>
                 </Popup>
               </Marker>
@@ -1705,52 +1595,36 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
 
-        <div className="pointer-events-auto absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-4 gap-2">
-          <Dialog open={compactFullscreenOpen} onOpenChange={setCompactFullscreenOpen}>
-            <DialogTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
-              >
-                Full Screen
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
-              <DialogHeader className="sr-only">
-                <DialogTitle>Full Flight Tracking View</DialogTitle>
-              </DialogHeader>
-              <FullScreenFlightLayout
-                booking={booking}
-                legs={legs}
-                position={position}
-                aircraftRegistration={aircraftRegistration}
-                activeLegIndex={activeLegIndex}
-                activeLegState={activeLegState}
-                followOwnship={followOwnship}
-                onFollowOwnshipChange={onFollowOwnshipChange}
-                centreMapNonce={centreMapNonce}
-                airportsVisible={airportsVisible}
-                onAirportsVisibleChange={setAirportsVisible}
-                airportLabelsVisible={airportLabelsVisible}
-                onAirportLabelsVisibleChange={setAirportLabelsVisible}
-                navaidsVisible={navaidsVisible}
-                onNavaidsVisibleChange={setNavaidsVisible}
-                navaidLabelsVisible={navaidLabelsVisible}
-                onNavaidLabelsVisibleChange={setNavaidLabelsVisible}
-                heading={position?.headingTrue ?? null}
-                speed={position?.speedKt ?? null}
-                altitude={position?.altitude ?? null}
-                trailPoints={trackHistory.length}
-                syncStatusLabel={followOwnship ? 'Ownship Follow' : 'North Up'}
-                syncStatusClassName="border-slate-200 bg-white text-slate-800 hover:bg-white"
-                savedDeviceLabel="Embedded Map"
-                permissionState="granted"
-                isWatching
-              />
-            </DialogContent>
-          </Dialog>
+        <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-3 gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+            onClick={handleFollowOwnship}
+          >
+            Nose Up
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+            onClick={handleNorthUp}
+          >
+            North Up
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+            onClick={() => {
+              setRecenterNonce((current) => current + 1);
+            }}
+          >
+            Center View
+          </Button>
         </div>
         <style jsx global>{`
           .fullscreen-map-shell .leaflet-top.leaflet-left {
@@ -1764,43 +1638,10 @@ export function ActiveFlightLiveMap({
             transition: transform 180ms ease-out;
           }
 
-          @media (max-width: 639px) and (orientation: portrait) {
-            .fullscreen-map-shell .nose-up-map {
-              left: 50%;
-              top: 50%;
-              width: 175vh;
-              height: 175vh;
-              inset: auto;
-              transform: translate(-50%, -50%) rotate(var(--map-rotation)) scale(1.08);
-            }
-          }
-
           .fullscreen-map-shell .nose-up-map .leaflet-top,
           .fullscreen-map-shell .nose-up-map .leaflet-bottom {
             transform: rotate(var(--map-counter-rotation));
             transform-origin: center;
-          }
-
-          .fullscreen-map-shell .nose-up-map .${openAipLabelClassName} {
-            display: inline-block;
-            width: max-content;
-            height: max-content;
-            background: #ffffff;
-            border: 0;
-            border-radius: 2px;
-            box-shadow: none;
-            color: #1d4ed8;
-            font-size: 7px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            line-height: 1;
-            padding: 1px 4px;
-            white-space: nowrap;
-            text-transform: uppercase;
-          }
-
-          .fullscreen-map-shell .nose-up-map .${openAipLabelClassName}::before {
-            display: none;
           }
 
           @media (min-width: 640px) {
@@ -1811,336 +1652,6 @@ export function ActiveFlightLiveMap({
             .fullscreen-map-shell .nose-up-map {
               inset: -20%;
             }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  if (compactLayout) {
-      return (
-        <div
-          className="relative h-full min-h-[360px] overflow-hidden rounded-[1.1rem] border border-slate-200/80 bg-white shadow-sm pointer-events-none"
-          style={{ ...mapShellStyle, overscrollBehavior: 'none' }}
-        >
-          <div className="pointer-events-auto absolute inset-0 overflow-hidden">
-            <div className="nose-up-map pointer-events-auto absolute inset-[-22%] bg-slate-950/5">
-            <LeafletMapFrame
-              center={center}
-              zoom={8}
-              minZoom={mapMinZoom}
-              maxZoom={mapMaxZoom}
-              className="h-full min-h-[360px] w-full rounded-none"
-              style={{ background: '#f8fafc', touchAction: 'none', overscrollBehavior: 'none' }}
-            >
-              {selectedBaseLayer === 'satellite' ? (
-                <TileLayer
-                  url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-                  attribution="&copy; Google Maps"
-                />
-              ) : (
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="&copy; OpenStreetMap contributors"
-                />
-              )}
-              <ActiveFlightOpenAipLayers
-                mapMinZoom={mapMinZoom}
-                mapMaxZoom={mapMaxZoom}
-                showOpenAipChart={showOpenAipChart}
-                airportsVisible={airportsVisible}
-                airportLabelsVisible={airportLabelsVisible}
-                navaidsVisible={navaidsVisible}
-                navaidLabelsVisible={navaidLabelsVisible}
-                reportingVisible={reportingVisible}
-                reportingLabelsVisible={reportingLabelsVisible}
-                mapZoom={mapZoom}
-                onMapZoomChange={setMapZoom}
-                viewportFeatures={viewportFeatures}
-                onViewportFeaturesLoaded={setViewportFeatures}
-              />
-              <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
-              <MapResizeController />
-              <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
-              <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
-
-              {routePoints.length > 1 && (
-                <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
-              )}
-
-              {trackHistory.length > 1 && (
-                <Polyline positions={trackHistory} color="#38bdf8" weight={3} opacity={0.7} />
-              )}
-
-              {activeLegIndex !== undefined &&
-                validRouteLegs[activeLegIndex]?.latitude !== undefined &&
-                validRouteLegs[activeLegIndex]?.longitude !== undefined &&
-                validRouteLegs[activeLegIndex + 1]?.latitude !== undefined &&
-                validRouteLegs[activeLegIndex + 1]?.longitude !== undefined && (
-                  <Polyline
-                    positions={[
-                      [validRouteLegs[activeLegIndex]!.latitude!, validRouteLegs[activeLegIndex]!.longitude!],
-                      [validRouteLegs[activeLegIndex + 1]!.latitude!, validRouteLegs[activeLegIndex + 1]!.longitude!],
-                    ]}
-                    color="#0ea5e9"
-                    weight={6}
-                    opacity={0.95}
-                  />
-                )}
-
-              {legs.map((leg, index) => {
-                if (leg.latitude === undefined || leg.longitude === undefined) return null;
-
-                return (
-                  <Marker key={leg.id} position={[leg.latitude, leg.longitude]} icon={WaypointIcon}>
-                    <Popup>
-                      <div className="space-y-1 text-xs">
-                        <p className="font-black uppercase">{leg.waypoint}</p>
-                        <p className="text-muted-foreground">Waypoint {index + 1}</p>
-                        {leg.frequencies && <p>{leg.frequencies}</p>}
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              })}
-
-              {position && (
-                <Marker
-                  position={[position.latitude, position.longitude]}
-                  icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', normalizedHeading)}
-                >
-                  <Popup>
-                    <div className="space-y-1 text-xs">
-                      <p className="font-black uppercase">{aircraftRegistration || 'Ownship'}</p>
-                      {booking && <p>Booking #{booking.bookingNumber}</p>}
-                      <p>
-                        {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
-                      </p>
-                      <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
-                      <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                      <p>Track: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
-                    </div>
-                  </Popup>
-                </Marker>
-              )}
-            </LeafletMapFrame>
-            </div>
-          </div>
-          {layerSelectorPanelOpen ? (
-            <div className="pointer-events-auto absolute bottom-4 left-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
-              <div className="border-b border-slate-100 px-3 py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-                    onClick={() => {
-                      onLayerSelectorOpenChange?.(false);
-                      setShowLayerSelectorPanel(false);
-                    }}
-                  >
-                    Close
-                  </button>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
-                </div>
-                <div className="mt-2 flex items-center justify-end gap-2">
-                  <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700">
-                    Base Layer
-                  </div>
-                </div>
-              </div>
-              <div className="px-3 py-3">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                    <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
-                    <span className="text-[10px] font-semibold">Light (Standard)</span>
-                  </label>
-                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                    <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
-                    <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
-                  </label>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 overflow-y-auto px-3 pb-3 pr-1">
-                <div className="space-y-2">
-                  {[
-                    ['OpenAIP Master Chart', showOpenAipChart, setShowOpenAipChart],
-                    ['OpenAIP Airports', airportsVisible, setAirportsVisible],
-                    ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
-                    ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
-                    ['Class E', classEVisible, setClassEVisible],
-                    ['Class F', classFVisible, setClassFVisible],
-                    ['Class G', classGVisible, setClassGVisible],
-                    ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
-                    ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
-                    ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
-                    ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
-                    ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
-                    ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
-                  ].map(([label, checked, setter]) => (
-                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                      <input
-                        type="checkbox"
-                        checked={checked as boolean}
-                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
-                      />
-                      <span className="text-[10px] font-semibold">{label as string}</span>
-                    </label>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Labels</p>
-                  {[
-                    ['Airport Labels', airportLabelsVisible, setAirportLabelsVisible],
-                    ['Navaid Labels', navaidLabelsVisible, setNavaidLabelsVisible],
-                    ['Reporting Labels', reportingLabelsVisible, setReportingLabelsVisible],
-                    ['Airspace Labels', airspaceLabelsVisible, setAirspaceLabelsVisible],
-                    ['Class E Labels', classELabelsVisible, setClassELabelsVisible],
-                    ['Class F Labels', classFLabelsVisible, setClassFLabelsVisible],
-                    ['Class G Labels', classGLabelsVisible, setClassGLabelsVisible],
-                    ['Military Labels', militaryLabelsVisible, setMilitaryLabelsVisible],
-                    ['Training Labels', trainingLabelsVisible, setTrainingLabelsVisible],
-                    ['Gliding Labels', glidingLabelsVisible, setGlidingLabelsVisible],
-                    ['Hang Gliding Labels', hangGlidingLabelsVisible, setHangGlidingLabelsVisible],
-                    ['Obstacle Labels', obstacleLabelsVisible, setObstacleLabelsVisible],
-                  ].map(([label, checked, setter]) => (
-                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                      <input
-                        type="checkbox"
-                        checked={checked as boolean}
-                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
-                      />
-                      <span className="text-[10px] font-semibold">{label as string}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-          {layerLevelsPanelOpen ? (
-            <div className="pointer-events-auto absolute bottom-4 right-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
-              <div className="border-b border-slate-100 px-3 py-3">
-                <div className="flex items-start gap-2">
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-                    onClick={() => {
-                      onLayerLevelsOpenChange?.(false);
-                      setShowLayerLevelsPanel(false);
-                    }}
-                  >
-                    Close
-                  </button>
-                  <p className="min-w-0 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
-                </div>
-                <div className="mt-2 space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
-                    Zoom {mapZoom} • decide what to load
-                  </p>
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Cache status: {cacheStatus}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 overflow-y-auto p-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="space-y-1">
-                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Min Zoom</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={mapMaxZoom}
-                      value={zoomDraftMin}
-                      onChange={(event) => setZoomDraftMin(event.target.value)}
-                      className="h-8 w-full rounded-lg border-slate-200 bg-white px-2 text-xs font-black"
-                      aria-label="Active Flight minimum zoom"
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Max Zoom</span>
-                    <Input
-                      type="number"
-                      min={mapMinZoom}
-                      max={22}
-                      value={zoomDraftMax}
-                      onChange={(event) => setZoomDraftMax(event.target.value)}
-                      className="h-8 w-full rounded-lg border-slate-200 bg-white px-2 text-xs font-black"
-                      aria-label="Active Flight maximum zoom"
-                    />
-                  </label>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 rounded-lg border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-50"
-                    onClick={() => resetZoomRange()}
-                  >
-                    Reset Zoom
-                  </Button>
-                  <Button
-                    type="button"
-                    className="h-8 rounded-lg px-3 text-[9px] font-black uppercase tracking-[0.16em]"
-                    onClick={() => saveZoomDrafts()}
-                  >
-                    Save Zoom
-                  </Button>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-8 rounded-lg border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-50"
-                  onClick={handleClearOpenAipCache}
-                >
-                  Clear Cache
-                </Button>
-              </div>
-            </div>
-          ) : null}
-          <style jsx>{`
-          .nose-up-map {
-            transform: rotate(var(--map-rotation)) scale(1.38);
-            transform-origin: 50% 50%;
-            transition: transform 180ms ease-out;
-          }
-
-          @media (max-width: 639px) and (orientation: portrait) {
-            .nose-up-map {
-              left: 50%;
-              top: 50%;
-              width: 175vh;
-              height: 175vh;
-              inset: auto;
-              transform: translate(-50%, -50%) rotate(var(--map-rotation)) scale(1.08);
-            }
-          }
-
-            .nose-up-map :global(.leaflet-top),
-          .nose-up-map :global(.leaflet-bottom) {
-            transform: rotate(var(--map-counter-rotation));
-            transform-origin: center;
-          }
-
-          .nose-up-map :global(.${openAipLabelClassName}) {
-            display: inline-block;
-            width: max-content;
-            height: max-content;
-            background: #ffffff;
-            border: 0;
-            border-radius: 2px;
-            box-shadow: none;
-            color: #1d4ed8;
-            font-size: 7px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            line-height: 1;
-            padding: 1px 4px;
-            white-space: nowrap;
-            text-transform: uppercase;
-          }
-
-          .nose-up-map :global(.${openAipLabelClassName}::before) {
-            display: none;
           }
         `}</style>
       </div>
@@ -2160,50 +1671,29 @@ export function ActiveFlightLiveMap({
               {followOwnship ? 'Nose-up' : 'North-up'}
             </p>
           </div>
-          <div className="h-8 w-px bg-slate-200" />
-          <div className="space-y-0.5">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Zoom</p>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={0}
-                max={mapMaxZoom}
-                value={zoomDraftMin}
-                onChange={(event) => setZoomDraftMin(event.target.value)}
-                className="h-8 w-16 rounded-full border-slate-200 bg-white px-2 text-xs font-black"
-                aria-label="Active Flight minimum zoom"
-              />
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">to</span>
-              <Input
-                type="number"
-                min={mapMinZoom}
-                max={22}
-                value={zoomDraftMax}
-                onChange={(event) => setZoomDraftMax(event.target.value)}
-                className="h-8 w-16 rounded-full border-slate-200 bg-white px-2 text-xs font-black"
-                aria-label="Active Flight maximum zoom"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 rounded-full border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={() => setFollowOwnship((current) => !current)}
+          >
+            {followOwnship ? 'Nose Up' : 'North Up'}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
             onClick={() => {
-              resetZoomRange();
+              setFollowOwnship(true);
+              setRecenterNonce((current) => current + 1);
             }}
-            >
-              Reset Zoom
-            </Button>
-            <Button
-              type="button"
-              className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.12em]"
-              onClick={() => saveZoomDrafts()}
-            >
-              Save Zoom
-            </Button>
-          </div>
+          >
+            Recenter
+          </Button>
         </div>
       </div>
       ) : null}
@@ -2346,31 +1836,9 @@ export function ActiveFlightLiveMap({
           className="h-full w-full rounded-2xl"
           style={{ background: '#020617' }}
         >
-          {selectedBaseLayer === 'satellite' ? (
-            <TileLayer
-              url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-              attribution="&copy; Google Maps"
-            />
-          ) : (
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
-            />
-          )}
-          <ActiveFlightOpenAipLayers
-            mapMinZoom={mapMinZoom}
-            mapMaxZoom={mapMaxZoom}
-            showOpenAipChart={showOpenAipChart}
-            airportsVisible={airportsVisible}
-            airportLabelsVisible={airportLabelsVisible}
-            navaidsVisible={navaidsVisible}
-            navaidLabelsVisible={navaidLabelsVisible}
-            reportingVisible={reportingVisible}
-            reportingLabelsVisible={reportingLabelsVisible}
-            mapZoom={mapZoom}
-            onMapZoomChange={setMapZoom}
-            viewportFeatures={viewportFeatures}
-            onViewportFeaturesLoaded={setViewportFeatures}
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution="&copy; OpenStreetMap contributors"
           />
           {showMasterChart ? (
             <TileLayer
@@ -2606,7 +2074,7 @@ export function ActiveFlightLiveMap({
                   </p>
                   <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
                   <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                  <p>Track: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
+                  <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
                 </div>
               </Popup>
             </Marker>
@@ -2644,136 +2112,7 @@ export function ActiveFlightLiveMap({
             display: none !important;
           }
         `}</style>
-          </div>
-          {layerSelectorPanelOpen ? (
-            <div className="pointer-events-auto absolute bottom-4 left-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
-              <div className="border-b border-slate-100 px-3 py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-                    onClick={() => {
-                      onLayerSelectorOpenChange?.(false);
-                      setShowLayerSelectorPanel(false);
-                    }}
-                  >
-                    Close
-                  </button>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
-                </div>
-                <div className="mt-2 flex items-center justify-end gap-2">
-                  <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700">
-                    Base Layer
-                  </div>
-                </div>
-              </div>
-              <div className="px-3 py-3">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                    <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
-                    <span className="text-[10px] font-semibold">Light (Standard)</span>
-                  </label>
-                  <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                    <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
-                    <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
-                  </label>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 overflow-y-auto px-3 pb-3 pr-1">
-                <div className="space-y-2">
-                  {[
-                    ['OpenAIP Master Chart', showOpenAipChart, setShowOpenAipChart],
-                    ['OpenAIP Airports', airportsVisible, setAirportsVisible],
-                    ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
-                    ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
-                    ['Class E', classEVisible, setClassEVisible],
-                    ['Class F', classFVisible, setClassFVisible],
-                    ['Class G', classGVisible, setClassGVisible],
-                    ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
-                    ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
-                    ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
-                    ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
-                    ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
-                    ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
-                  ].map(([label, checked, setter]) => (
-                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                      <input
-                        type="checkbox"
-                        checked={checked as boolean}
-                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
-                      />
-                      <span className="text-[10px] font-semibold">{label as string}</span>
-                    </label>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Labels</p>
-                  {[
-                    ['Airport Labels', airportLabelsVisible, setAirportLabelsVisible],
-                    ['Navaid Labels', navaidLabelsVisible, setNavaidLabelsVisible],
-                    ['Reporting Labels', reportingLabelsVisible, setReportingLabelsVisible],
-                    ['Airspace Labels', airspaceLabelsVisible, setAirspaceLabelsVisible],
-                    ['Class E Labels', classELabelsVisible, setClassELabelsVisible],
-                    ['Class F Labels', classFLabelsVisible, setClassFLabelsVisible],
-                    ['Class G Labels', classGLabelsVisible, setClassGLabelsVisible],
-                    ['Military Labels', militaryLabelsVisible, setMilitaryLabelsVisible],
-                    ['Training Labels', trainingLabelsVisible, setTrainingLabelsVisible],
-                    ['Gliding Labels', glidingLabelsVisible, setGlidingLabelsVisible],
-                    ['Hang Gliding Labels', hangGlidingLabelsVisible, setHangGlidingLabelsVisible],
-                    ['Obstacle Labels', obstacleLabelsVisible, setObstacleLabelsVisible],
-                  ].map(([label, checked, setter]) => (
-                    <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                      <input
-                        type="checkbox"
-                        checked={checked as boolean}
-                        onChange={(event) => (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)}
-                      />
-                      <span className="text-[10px] font-semibold">{label as string}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-          {layerLevelsPanelOpen ? (
-            <div className="pointer-events-auto absolute left-3 bottom-3 z-[1200] w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
-              <div className="mb-3 flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-slate-500" />
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Map Zoom</p>
-              </div>
-              <div className="space-y-3">
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={mapMaxZoom}
-                    value={zoomDraftMin}
-                    onChange={(event) => setZoomDraftMin(event.target.value)}
-                    className="h-9 text-xs font-black"
-                    aria-label="Active Flight minimum zoom"
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">to</span>
-                  <Input
-                    type="number"
-                    min={mapMinZoom}
-                    max={22}
-                    value={zoomDraftMax}
-                    onChange={(event) => setZoomDraftMax(event.target.value)}
-                    className="h-9 text-xs font-black"
-                    aria-label="Active Flight maximum zoom"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="outline" onClick={() => resetZoomRange()}>
-                    Reset
-                  </Button>
-                  <Button type="button" onClick={() => saveZoomDrafts()}>
-                    Save
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : null}
       </div>
-    );
-  }
+    </div>
+  );
+}
