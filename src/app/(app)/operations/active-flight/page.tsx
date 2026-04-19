@@ -3,18 +3,20 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
+import { ChevronDown, Loader2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useTheme } from '@/components/theme-provider';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
 import type { FlightPosition, FlightSession } from '@/types/flight-session';
@@ -25,6 +27,7 @@ import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/li
 import { cn } from '@/lib/utils';
 import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
 import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -41,7 +44,7 @@ interface ActiveTrackingState {
 
 interface ActiveTrackingSelection {
   aircraftId: string;
-  bookingId: string;
+  bookingId?: string;
 }
 
 const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/active-flight-live-map').then((module) => module.ActiveFlightLiveMap), {
@@ -138,7 +141,10 @@ export default function ActiveFlightPage() {
   const { tenantId, userProfile, isLoading: isUserLoading } = useUserProfile();
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const { uiMode } = useTheme();
+  const isMobile = useIsMobile();
+  const [isMobileSelectorOpen, setIsMobileSelectorOpen] = useState(false);
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
+  const [selectedBookingFilterId, setSelectedBookingFilterId] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState('');
   const [deviceLabelInput, setDeviceLabelInput] = useState('');
   const [savedDeviceLabel, setSavedDeviceLabel] = useState('');
@@ -149,6 +155,10 @@ export default function ActiveFlightPage() {
   const [isFullscreenMapOpen, setIsFullscreenMapOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [hasQueuedSession, setHasQueuedSession] = useState(false);
+  const [followOwnship, setFollowOwnship] = useState(true);
+  const [mapRecenterSignal, setMapRecenterSignal] = useState(0);
+  const [isLayersCardOpen, setIsLayersCardOpen] = useState(false);
+  const [isMapZoomCardOpen, setIsMapZoomCardOpen] = useState(false);
   const selectionHydratedRef = useRef<string | null>(null);
   const resumeHydratedRef = useRef<string | null>(null);
   const lastWriteRef = useRef(0);
@@ -218,19 +228,37 @@ export default function ActiveFlightPage() {
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
   const sortedAircraft = useMemo(() => [...aircrafts].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber)), [aircrafts]);
   const selectedAircraft = useMemo(() => sortedAircraft.find((aircraft) => aircraft.id === selectedAircraftId) || null, [selectedAircraftId, sortedAircraft]);
+  const bookingChoices = useMemo(
+    () => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()),
+    [bookings, selectedAircraftId],
+  );
   const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
   const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
+  const selectedBookingFilter = useMemo(() => bookingChoices.find((booking) => booking.id === selectedBookingFilterId) || null, [bookingChoices, selectedBookingFilterId]);
   const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
+  const selectedBookingFilterValue = selectedBookingFilter ? selectedBookingFilterId : undefined;
   const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
+  const mobileSelectorSummary = selectedAircraft?.tailNumber || selectedBookingFilter?.bookingNumber || selectedBooking?.bookingNumber
+    ? [selectedAircraft?.tailNumber, selectedBookingFilter ? `Booking #${selectedBookingFilter.bookingNumber}` : null, selectedBooking ? `Route #${selectedBooking.bookingNumber}` : null]
+        .filter(Boolean)
+        .join(' • ')
+    : 'Flight Setup';
   const selectedLegs = selectedBooking?.navlog?.legs || [];
-  const activeLegState = useMemo(() => getActiveLegState(selectedLegs, position), [selectedLegs, position]);
+  const currentDeviceSession = useMemo(
+    () => flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId) || null,
+    [deviceBinding?.deviceId, flightSessions],
+  );
+  const effectivePosition = position ?? currentDeviceSession?.lastPosition ?? null;
+  const activeLegState = useMemo(() => getActiveLegState(selectedLegs, effectivePosition), [effectivePosition, selectedLegs]);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
-    speed: activeLegState?.groundSpeedKt ?? position?.speedKt ?? null,
-    altitude: position?.altitude ?? null,
-    heading: position?.headingTrue ?? null,
-    trailPoints: flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId)?.breadcrumb?.length ?? (position ? 1 : 0),
+    speed: activeLegState?.groundSpeedKt ?? effectivePosition?.speedKt ?? null,
+    altitude: effectivePosition?.altitude ?? null,
+    heading: effectivePosition?.headingTrue ?? null,
+    trailPoints: currentDeviceSession?.breadcrumb?.length ?? (effectivePosition ? 1 : 0),
   };
+  const nextWaypointNumber = activeLegState?.activeLegIndex != null ? `${activeLegState.activeLegIndex + 2}` : 'N/A';
+  const etaToNextLabel = activeLegState?.etaToNextMinutes != null ? `${Math.max(1, Math.round(activeLegState.etaToNextMinutes))} min` : 'N/A';
   const syncStatusLabel = hasQueuedSession ? 'Queued for Sync' : isOnline ? 'Online' : 'Offline';
   const syncStatusClassName = hasQueuedSession
     ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50'
@@ -243,13 +271,85 @@ export default function ActiveFlightPage() {
     return flightSessions.find((session) => session.status === 'active' && session.aircraftId === selectedAircraft.id && session.deviceId !== deviceBinding.deviceId) || null;
   }, [deviceBinding?.deviceId, flightSessions, selectedAircraft]);
 
+  const actionButtons = [
+    {
+      value: isTrackingActive ? 'stop-tracking' : 'start-tracking',
+      label: isTrackingActive ? 'Stop Tracking' : 'Start Tracking',
+      onClick: () => {
+        if (isTrackingActive) {
+          stopTrackingSession();
+          return;
+        }
+        startTracking();
+      },
+      className: isTrackingActive
+        ? 'border-rose-600 bg-rose-600 text-white hover:bg-rose-700'
+        : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+      disabled: !isTrackingActive && (!selectedAircraft || Boolean(conflictingAircraftSession)),
+    },
+    {
+      value: 'layers',
+      label: 'Layers',
+      onClick: () => {
+        setIsLayersCardOpen((current) => !current);
+        setIsMapZoomCardOpen(false);
+      },
+      className: 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
+    {
+      value: 'map-zoom',
+      label: 'Map Zoom',
+      onClick: () => {
+        setIsMapZoomCardOpen((current) => !current);
+        setIsLayersCardOpen(false);
+      },
+      className: 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
+    {
+      value: 'centre-map',
+      label: 'Centre Map',
+      onClick: () => {
+        setMapRecenterSignal((current) => current + 1);
+        setIsLayersCardOpen(false);
+        setIsMapZoomCardOpen(false);
+      },
+      className: 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
+    {
+      value: 'north-up',
+      label: 'North Up',
+      onClick: () => {
+        setFollowOwnship(false);
+        setIsLayersCardOpen(false);
+        setIsMapZoomCardOpen(false);
+      },
+      className: !followOwnship ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
+    {
+      value: 'nose-up',
+      label: 'Nose Up',
+      onClick: () => {
+        setFollowOwnship(true);
+        setIsLayersCardOpen(false);
+        setIsMapZoomCardOpen(false);
+      },
+      className: followOwnship ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
+  ];
+
   const handleAircraftSelectionChange = (aircraftId: string) => {
     setSelectedAircraftId(aircraftId);
     if (!deviceBinding?.deviceId) return;
-    const nextBooking = bookings.find((booking) => booking.aircraftId === aircraftId && (booking.navlog?.legs?.length || 0) > 0) || null;
-    const bookingId = nextBooking?.id || '';
-    setSelectedBookingId(bookingId);
-    saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId });
+    saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId: selectedBookingId || undefined });
+  };
+
+  const handleBookingFilterSelectionChange = (bookingId: string) => {
+    setSelectedBookingFilterId(bookingId);
+    if (!deviceBinding?.deviceId) return;
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId: selectedAircraftId,
+      bookingId: selectedBookingId || undefined,
+    });
   };
 
   const handleBookingSelectionChange = (bookingId: string) => {
@@ -257,7 +357,7 @@ export default function ActiveFlightPage() {
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraftId,
-      bookingId,
+      bookingId: bookingId || undefined,
     });
   };
 
@@ -275,6 +375,9 @@ export default function ActiveFlightPage() {
 
     if (savedSelection.bookingId) {
       setSelectedBookingId(savedSelection.bookingId);
+    }
+    if (savedSelection.bookingId) {
+      setSelectedBookingFilterId(savedSelection.bookingId);
     }
   }, [deviceBinding?.deviceId]);
 
@@ -403,7 +506,9 @@ export default function ActiveFlightPage() {
 
   const persistSessions = async (next: FlightSession[]) => {
     setFlightSessions(next);
-    const current = next[next.length - 1];
+    const current = deviceBinding?.deviceId
+      ? next.find((session) => session.deviceId === deviceBinding.deviceId)
+      : next[next.length - 1];
     if (!current) return;
     try {
       const response = await fetch('/api/flight-sessions', {
@@ -447,12 +552,12 @@ export default function ActiveFlightPage() {
     saveActiveTrackingState(deviceBinding.deviceId, {
       active: true,
       aircraftId: selectedAircraft.id,
-      bookingId: selectedBooking?.id,
+      bookingId: selectedBooking?.id || undefined,
       savedAt: new Date().toISOString(),
     });
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraft.id,
-      bookingId: selectedBooking?.id || '',
+      bookingId: selectedBooking?.id || undefined,
     });
     setIsTrackingActive(true);
     lastWriteRef.current = 0;
@@ -462,14 +567,24 @@ export default function ActiveFlightPage() {
       pilotName,
       aircraftId: selectedAircraft.id,
       aircraftRegistration: selectedAircraft.tailNumber,
-      bookingId: selectedBooking?.id || '',
+      bookingId: selectedBooking?.id || undefined,
       status: 'active',
       deviceId: deviceBinding.deviceId,
       deviceLabel: savedDeviceLabel || deviceBinding.deviceLabel || '',
-      activeLegIndex: activeLegState?.activeLegIndex ?? 0,
       startedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       breadcrumb: position ? buildBreadcrumb([], position) : [],
+      ...(activeLegState
+        ? {
+            activeLegIndex: activeLegState.activeLegIndex,
+            distanceToNextNm: activeLegState.distanceToNextNm,
+            bearingToNext: activeLegState.bearingToNext,
+            etaToNextMinutes: activeLegState.etaToNextMinutes,
+            crossTrackErrorNm: activeLegState.crossTrackErrorNm,
+            onCourse: activeLegState.onCourse,
+            groundSpeedKt: activeLegState.groundSpeedKt ?? position?.speedKt ?? undefined,
+          }
+        : {}),
     }));
     startWatching();
   };
@@ -530,7 +645,7 @@ export default function ActiveFlightPage() {
           <ActiveFlightLiveMap
             booking={selectedBooking}
             legs={selectedLegs}
-            position={position}
+            position={effectivePosition}
             aircraftRegistration={selectedAircraft?.tailNumber}
             activeLegIndex={activeLegState?.activeLegIndex}
             activeLegState={activeLegState}
@@ -627,7 +742,7 @@ export default function ActiveFlightPage() {
         <ActiveFlightLiveMap
           booking={selectedBooking}
           legs={selectedLegs}
-          position={position}
+          position={effectivePosition}
           aircraftRegistration={selectedAircraft?.tailNumber}
           activeLegIndex={activeLegState?.activeLegIndex}
           activeLegState={activeLegState}
@@ -726,141 +841,201 @@ export default function ActiveFlightPage() {
         </section>
       )}
 
-      <Card className={cn('border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-        <CardHeader className={cn('border-b bg-muted/20', isModern && 'bg-transparent')}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={cn('text-[10px] font-black uppercase tracking-widest', isModern && 'border-slate-200 bg-slate-50 text-slate-700')}>Pilot Surface</Badge>
-                <Badge className={cn('text-[10px] font-black uppercase tracking-widest', isModern && 'border-slate-200 bg-sky-50 text-sky-800 hover:bg-sky-50')}>Active Flight</Badge>
+      <Card className={cn('flex min-h-0 flex-1 flex-col border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
+        <div className="border-b border-slate-200/80 px-2 py-1.5 sm:px-3 sm:py-2">
+          {isMobile ? (
+            <Collapsible open={isMobileSelectorOpen} onOpenChange={setIsMobileSelectorOpen}>
+              <div className="space-y-1.5">
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 w-full justify-between border-input bg-background px-2.5 py-1 text-[13px] font-medium text-foreground shadow-sm hover:bg-accent/40"
+                  >
+                    <span className="truncate">{mobileSelectorSummary}</span>
+                    <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', isMobileSelectorOpen && 'rotate-180')} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1.5 pt-0.5">
+                  <div className="space-y-1">
+                    <Label htmlFor="active-flight-aircraft-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft Registration</Label>
+                    <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
+                      <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-7 font-semibold text-[13px]">
+                        <SelectValue placeholder="Select an aircraft" />
+                      </SelectTrigger>
+                      <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="active-flight-booking-filter-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booking</Label>
+                    <Select value={selectedBookingFilterValue} onValueChange={handleBookingFilterSelectionChange}>
+                      <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-7 font-semibold text-[13px]">
+                        <SelectValue placeholder="Select a booking" />
+                      </SelectTrigger>
+                      <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
+                    <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
+                      <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-7 font-semibold text-[13px]">
+                        <SelectValue placeholder="Optional: select a booking with a navlog" />
+                      </SelectTrigger>
+                      <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </CollapsibleContent>
               </div>
-              <CardTitle className="text-2xl font-black uppercase tracking-tight">Register This Device To An Aircraft</CardTitle>
-              <CardDescription className="max-w-3xl text-sm">Instructors and pilots use this page to track their own live position. It binds the current phone or tablet to an aircraft registration and streams route progress, heading, speed, and altitude.</CardDescription>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50')}><Link href="/operations/fleet-tracker"><Radio className="mr-2 h-4 w-4" />Open Fleet Tracker</Link></Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-            <CardHeader>
-              <CardTitle className="text-sm font-black uppercase tracking-widest">Session Setup</CardTitle>
-              <CardDescription>Choose which aircraft this device is broadcasting as.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className={cn('rounded-xl border bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Signed-In Pilot</p>
-                  <p className="mt-2 text-sm font-black uppercase">{isUserLoading ? 'Loading profile...' : pilotName}</p>
-                  <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{tenantId ? `Tenant: ${tenantId}` : 'Tenant not resolved yet'}</p>
-                </div>
-                <div className={cn('rounded-xl border bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Device Binding</p>
-                  <p className="mt-2 break-all text-xs font-mono font-bold">{deviceBinding?.deviceId || 'Generating local device id...'}</p>
-                  <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Browser-backed session identity for this phone or tablet</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="device-label-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Device Label</Label>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input id="device-label-input" value={deviceLabelInput} onChange={(event) => setDeviceLabelInput(event.target.value)} placeholder="e.g. Barry Samsung A54" className="font-semibold" />
-                  <Button type="button" variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')} onClick={() => { setDeviceLabel(deviceLabelInput); setSavedDeviceLabel(deviceLabelInput.trim()); }}>Save Label</Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="active-flight-aircraft-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aircraft Registration</Label>
+            </Collapsible>
+          ) : (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[220px] flex-1 space-y-1">
+                <Label htmlFor="active-flight-aircraft-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft Registration</Label>
                 <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
-                  <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="font-semibold"><SelectValue placeholder="Select an aircraft" /></SelectTrigger>
+                  <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-8 font-semibold text-[13px]">
+                    <SelectValue placeholder="Select an aircraft" />
+                  </SelectTrigger>
                   <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="active-flight-booking-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking / Navlog Route</Label>
-                <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
-                  <SelectTrigger id="active-flight-booking-select" aria-label="Booking or navlog route" className="font-semibold"><SelectValue placeholder="Select a booking with a navlog" /></SelectTrigger>
-                  <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} • {booking.date} • {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
+              <div className="min-w-[220px] flex-1 space-y-1">
+                <Label htmlFor="active-flight-booking-filter-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booking</Label>
+                <Select value={selectedBookingFilterValue} onValueChange={handleBookingFilterSelectionChange}>
+                  <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-8 font-semibold text-[13px]">
+                    <SelectValue placeholder="Select a booking" />
+                  </SelectTrigger>
+                  <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <Button className={cn('w-full font-black uppercase', isModern && 'bg-slate-900 text-white shadow-sm hover:bg-slate-800')} disabled={!selectedAircraft || !!conflictingAircraftSession} onClick={startTracking}><PlaneTakeoff className="mr-2 h-4 w-4" />Start Tracking</Button>
-                <Button variant="outline" className={cn('w-full font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')} disabled={!isTrackingActive} onClick={stopTrackingSession}>Stop Tracking</Button>
+              <div className="min-w-[240px] flex-1 space-y-1">
+                <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
+                <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
+                  <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-8 font-semibold text-[13px]">
+                    <SelectValue placeholder="Optional: select a booking with a navlog" />
+                  </SelectTrigger>
+                  <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-              <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/10 px-4 py-3 text-xs">
-                <span className="font-black uppercase tracking-widest text-muted-foreground">Sync Status</span>
-                <Badge className={cn('px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]', syncStatusClassName)}>
-                  {syncStatusLabel}
-                </Badge>
+            </div>
+          )}
+        </div>
+        <div className="border-b border-slate-200/80 bg-white">
+          <div className="px-2 py-1.5 sm:px-3 sm:py-2">
+            {isMobile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label="Select flight action"
+                    className="h-8 w-full justify-between border-input bg-background px-2.5 py-1 text-[13px] font-medium shadow-sm hover:bg-accent/40"
+                  >
+                    <span>Select Action</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[14rem]">
+                  {actionButtons.map((action) => (
+                    <DropdownMenuItem
+                      key={action.value}
+                      disabled={action.disabled}
+                      className="text-[10px] font-bold uppercase"
+                      onClick={action.onClick}
+                    >
+                      {action.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                {actionButtons.map((action) => (
+                  <Button
+                    key={action.label}
+                    type="button"
+                    variant="outline"
+                    className={cn('h-7 rounded-md border px-2.5 text-[9px] font-black uppercase tracking-[0.1em]', action.className)}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-          <div className="space-y-6">
-            <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-              <CardHeader className="flex flex-row items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="text-sm font-black uppercase tracking-widest">Pilot Live Map</CardTitle>
-                  <CardDescription>Ownship track, loaded flight path, and live route progress.</CardDescription>
-                </div>
-                <Dialog open={isFullscreenMapOpen} onOpenChange={setIsFullscreenMapOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className={cn('font-black uppercase', isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}>Full Screen</Button>
-                  </DialogTrigger>
-                  <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
-                    <DialogHeader className="sr-only">
-                      <DialogTitle>Full Flight Tracking View</DialogTitle>
-                    </DialogHeader>
-                    <FullScreenFlightLayout
-                      booking={selectedBooking}
-                      legs={selectedLegs}
-                      position={position}
-                      aircraftRegistration={selectedAircraft?.tailNumber}
-                      activeLegIndex={activeLegState?.activeLegIndex}
-                      activeLegState={activeLegState}
-                      heading={liveTelemetry.heading}
-                      speed={liveTelemetry.speed}
-                      altitude={liveTelemetry.altitude}
-                      trailPoints={liveTelemetry.trailPoints}
-                      syncStatusLabel={syncStatusLabel}
-                      syncStatusClassName={syncStatusClassName}
-                      savedDeviceLabel={savedDeviceLabel}
-                      permissionState={permissionState}
-                      isWatching={isWatching}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FlightTelemetryTable
-                  heading={liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A'}
-                  speed={liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A'}
-                  altitude={liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A'}
-                  trail={`${liveTelemetry.trailPoints} pts`}
-                  className={cn(isModern && 'border-slate-200/90 bg-slate-50/70')}
-                />
-                {!isFullscreenMapOpen ? (
-        <ActiveFlightLiveMap
-          booking={selectedBooking}
-          legs={selectedLegs}
-          position={position}
-          aircraftRegistration={selectedAircraft?.tailNumber}
-          activeLegIndex={activeLegState?.activeLegIndex}
-          activeLegState={activeLegState}
-        />
-                ) : (
-                  <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground">
-                    Full screen map is open. Close it to restore the compact pilot map.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-              <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest">Active Leg Status</CardTitle></CardHeader>
-              <CardContent className="space-y-3 text-sm">{activeLegState ? <div className={cn('rounded-lg border bg-muted/10 p-3 text-xs font-medium', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}>Next waypoint {activeLegState.toWaypoint || 'N/A'} | {activeLegState.distanceToNextNm != null ? `${activeLegState.distanceToNextNm.toFixed(1)} NM` : 'Unavailable'}</div> : <div className={cn('rounded-lg border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground', isModern && 'rounded-2xl border-slate-200 bg-slate-50/70 text-slate-500')}>Select a booking and start tracking to compute the active leg.</div>}</CardContent>
-            </Card>
-            <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
-              <CardHeader><CardTitle className="text-sm font-black uppercase tracking-widest">Live Device Coordinates</CardTitle></CardHeader>
-              <CardContent className="space-y-3 text-sm">{position ? <div className={cn('rounded-lg border bg-muted/10 p-3 text-xs font-mono font-bold', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/70')}>{position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}</div> : <div className={cn('rounded-lg border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground', isModern && 'rounded-2xl border-slate-200 bg-slate-50/70 text-slate-500')}>Start tracking to stream coordinates.</div>}{geolocationError && <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{geolocationError}</div>}<p className="text-[10px] text-muted-foreground">Permission: {permissionState} · {isWatching ? 'watching' : 'idle'}</p></CardContent>
-            </Card>
+            )}
+          </div>
+        </div>
+        <div className="border-b border-slate-200/80 bg-white">
+          <div className="grid grid-cols-4 gap-px bg-slate-200/80 lg:grid-cols-8">
+            {[
+              { label: 'ALT', value: liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A' },
+              { label: 'SPD', value: liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A' },
+              { label: 'DIR', value: liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A' },
+              { label: 'NXT', value: nextWaypointNumber },
+              { label: 'DST', value: activeLegState?.distanceToNextNm != null ? `${activeLegState.distanceToNextNm.toFixed(1)} NM` : 'N/A' },
+              { label: 'WPT', value: activeLegState?.toWaypoint || 'N/A' },
+              { label: 'BRG', value: activeLegState?.bearingToNext != null ? `${activeLegState.bearingToNext.toFixed(0)}°` : 'N/A' },
+              { label: 'ETA', value: etaToNextLabel },
+            ].map((item) => (
+              <div key={item.label} className="flex min-w-0 items-center gap-1 bg-white px-1.5 py-1 sm:px-3">
+                <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+                  {item.label}
+                </span>
+                <span className="min-w-0 truncate text-[10px] font-black leading-none text-foreground">
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+          <Dialog open={isFullscreenMapOpen} onOpenChange={setIsFullscreenMapOpen}>
+            <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Full Flight Tracking View</DialogTitle>
+              </DialogHeader>
+              <FullScreenFlightLayout
+                booking={selectedBooking}
+                legs={selectedLegs}
+                position={effectivePosition}
+                aircraftRegistration={selectedAircraft?.tailNumber}
+                activeLegIndex={activeLegState?.activeLegIndex}
+                activeLegState={activeLegState}
+                heading={liveTelemetry.heading}
+                speed={liveTelemetry.speed}
+                altitude={liveTelemetry.altitude}
+                trailPoints={liveTelemetry.trailPoints}
+                syncStatusLabel={syncStatusLabel}
+                syncStatusClassName={syncStatusClassName}
+                savedDeviceLabel={savedDeviceLabel}
+                permissionState={permissionState}
+                isWatching={isWatching}
+              />
+            </DialogContent>
+          </Dialog>
+          <div className="flex min-h-0 flex-1 flex-col space-y-4 px-0 pb-0 pt-0">
+            {!isFullscreenMapOpen ? (
+              <ActiveFlightLiveMap
+                booking={selectedBooking}
+                legs={selectedLegs}
+                position={effectivePosition}
+                aircraftRegistration={selectedAircraft?.tailNumber}
+                activeLegIndex={activeLegState?.activeLegIndex}
+                activeLegState={activeLegState}
+                showControls={false}
+                followOwnship={followOwnship}
+                onFollowOwnshipChange={setFollowOwnship}
+                recenterSignal={mapRecenterSignal}
+                isLayersCardOpen={isLayersCardOpen}
+                isMapZoomCardOpen={isMapZoomCardOpen}
+                onLayersCardOpenChange={setIsLayersCardOpen}
+                onMapZoomCardOpenChange={setIsMapZoomCardOpen}
+              />
+            ) : (
+              <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground">
+                Full screen map is open. Close it to restore the compact pilot map.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

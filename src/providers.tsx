@@ -8,7 +8,7 @@ import { ServiceWorkerRegistration } from '@/components/service-worker-registrat
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false} refetchInterval={0}>
       <UserProfileProvider>
         <ThemeProvider>
           <ServiceWorkerRegistration />

@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, X, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -32,8 +33,14 @@ const RouteWaypointIcon = L.divIcon({
 interface AeronauticalMapProps {
   legs: NavlogLeg[];
   onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
+  onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
   hazards?: Hazard[];
   onAddHazard?: (lat: number, lng: number) => void;
+  isEditing?: boolean;
+  isZoomPanelOpen?: boolean;
+  onZoomPanelOpenChange?: (open: boolean) => void;
+  isLayersPanelOpen?: boolean;
+  onLayersPanelOpenChange?: (open: boolean) => void;
 }
 
 const HazardIcon = L.divIcon({
@@ -138,27 +145,6 @@ const getSearchZoom = (sourceLayer: OpenAipFeature['sourceLayer']) => {
   return 13; // reporting-points
 };
 
-type LayerLoadLevel = {
-  label: string;
-  minZoom: number;
-  description: string;
-};
-
-const LAYER_LOAD_LEVELS: LayerLoadLevel[] = [
-  { label: 'OpenAIP Master Chart', minZoom: 8, description: 'Base aeronautical chart tiles.' },
-  { label: 'OpenAIP Airports', minZoom: 8, description: 'Airport markers and runway labels.' },
-  { label: 'Airspace Class E', minZoom: 8, description: 'Controlled airspace boundaries.' },
-  { label: 'Airspace Class F', minZoom: 8, description: 'Controlled airspace boundaries.' },
-  { label: 'Airspace Class G', minZoom: 8, description: 'Controlled airspace boundaries.' },
-  { label: 'OpenAIP Navaids', minZoom: 9, description: 'VOR/NDB and radio aids.' },
-  { label: 'Military Operations Areas', minZoom: 9, description: 'Restricted military activity zones.' },
-  { label: 'Training Areas', minZoom: 9, description: 'Training and practice areas.' },
-  { label: 'Gliding Sectors', minZoom: 9, description: 'Gliding sector airspace.' },
-  { label: 'Hang Glidings', minZoom: 9, description: 'Hang gliding launch and operation areas.' },
-  { label: 'OpenAIP Reporting Points', minZoom: 10, description: 'Published reporting points.' },
-  { label: 'OpenAIP Obstacles', minZoom: 11, description: 'Obstacles and vertical hazards.' },
-];
-
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchOpenAipJson<T>(url: string, retries = 1): Promise<T | null> {
@@ -225,6 +211,7 @@ type OpenAipObstacle = {
 type FlightPlannerMapSettings = {
   id?: string;
   baseLayer?: 'light' | 'satellite';
+  showLabels?: boolean;
   showMasterChart?: boolean;
   showAirports?: boolean;
   showNavaids?: boolean;
@@ -244,6 +231,7 @@ type FlightPlannerMapSettings = {
 const FLIGHT_PLANNER_MAP_SETTINGS_KEY = 'safeviate.flight-planner-map-settings';
 const DEFAULT_FLIGHT_PLANNER_MAP_SETTINGS: Required<Omit<FlightPlannerMapSettings, 'id'>> = {
   baseLayer: 'light',
+  showLabels: true,
   showMasterChart: true,
   showAirports: true,
   showNavaids: true,
@@ -506,6 +494,50 @@ function MapZoomState({ onZoomChange }: { onZoomChange: (zoom: number) => void }
   return null;
 }
 
+function MapZoomLimits({
+  minZoom,
+  maxZoom,
+}: {
+  minZoom: number;
+  maxZoom: number;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setMinZoom(minZoom);
+    map.setMaxZoom(maxZoom);
+
+    const currentZoom = map.getZoom();
+    if (currentZoom < minZoom) {
+      map.setZoom(minZoom);
+      return;
+    }
+    if (currentZoom > maxZoom) {
+      map.setZoom(maxZoom);
+    }
+  }, [map, minZoom, maxZoom]);
+
+  return null;
+}
+
+function MapDragLock({ enabled }: { enabled: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (enabled) {
+      map.dragging.disable();
+    } else {
+      map.dragging.enable();
+    }
+
+    return () => {
+      map.dragging.enable();
+    };
+  }, [enabled, map]);
+
+  return null;
+}
+
 function VisibleAirspaceLoader({
   enabled,
   onFeaturesLoaded,
@@ -623,6 +655,7 @@ function LayerStateSync({
 }
 
 const CLICK_SNAP_THRESHOLD_NM = 8;
+const AVAILABLE_ZOOM_LEVELS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
 
 const toRadians = (value: number) => (value * Math.PI) / 180;
 
@@ -723,7 +756,7 @@ const formatAirspaceVerticalLimits = (airspace: OpenAipAirspace): string => {
     '';
 
   const rangeParts = [lower && `Lower ${lower}`, upper && `Upper ${upper}`].filter(Boolean) as string[];
-  if (rangeParts.length > 0) return rangeParts.join(' â€¢ ');
+  if (rangeParts.length > 0) return rangeParts.join(' • ');
   return fallback;
 };
 
@@ -1076,7 +1109,18 @@ const SearchControl = ({
   );
 };
 
-export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onAddHazard }: AeronauticalMapProps) {
+export default function AeronauticalMap({
+  legs,
+  onAddWaypoint,
+  onMoveWaypoint,
+  hazards = [],
+  onAddHazard,
+  isEditing = false,
+  isZoomPanelOpen = false,
+  onZoomPanelOpenChange,
+  isLayersPanelOpen = false,
+  onLayersPanelOpenChange,
+}: AeronauticalMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [searchFeatures, setSearchFeatures] = useState<OpenAipFeature[]>([]);
   const [viewportFeatures, setViewportFeatures] = useState<OpenAipFeature[]>([]);
@@ -1084,6 +1128,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   const [obstacleFeatures, setObstacleFeatures] = useState<OpenAipObstacle[]>([]);
   const [mapZoom, setMapZoom] = useState(8);
   const [masterVisible, setMasterVisible] = useState(() => readStoredFlightPlannerMapSettings().showMasterChart ?? true);
+  const [labelsVisible, setLabelsVisible] = useState(() => readStoredFlightPlannerMapSettings().showLabels ?? true);
   const [airportsVisible, setAirportsVisible] = useState(() => readStoredFlightPlannerMapSettings().showAirports ?? true);
   const [navaidsVisible, setNavaidsVisible] = useState(() => readStoredFlightPlannerMapSettings().showNavaids ?? true);
   const [reportingVisible, setReportingVisible] = useState(() => readStoredFlightPlannerMapSettings().showReportingPoints ?? true);
@@ -1101,7 +1146,9 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   const [pendingClickLabel, setPendingClickLabel] = useState<string | null>(null);
   const [layerInfo, setLayerInfo] = useState<LayerInfoState | null>(null);
   const lastPersistedSettingsRef = useRef<string>('');
-  const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(true);
+  const [minVisibleZoom, setMinVisibleZoom] = useState(8);
+  const [maxVisibleZoom, setMaxVisibleZoom] = useState(14);
+  const [draggingWaypointId, setDraggingWaypointId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -1173,15 +1220,6 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     selectedBaseLayer,
     trainingAreasVisible,
   ]);
-  const layerLevelSummary = useMemo(() => {
-    const availableNow = LAYER_LOAD_LEVELS.filter((layer) => mapZoom >= layer.minZoom);
-    const upcoming = LAYER_LOAD_LEVELS.filter((layer) => mapZoom < layer.minZoom).slice(0, 4);
-
-    return {
-      availableNow,
-      upcoming,
-    };
-  }, [mapZoom]);
   const airspaceStyle = useCallback((feature: any) => {
     const category = feature?.properties?.category;
     let palette = { color: '#38bdf8', fillColor: '#38bdf8' };
@@ -1219,8 +1257,8 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   const airportPointIcon = useMemo(() => featurePointIcon('#2563eb'), [featurePointIcon]);
   const navaidPointIcon = useMemo(() => featurePointIcon('#7c3aed'), [featurePointIcon]);
   const reportingPointIcon = useMemo(() => featurePointIcon('#d97706'), [featurePointIcon]);
-  const labelClassName = 'rounded-md border border-slate-200 bg-white/95 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-900 shadow-sm';
-  const airspaceLabelClassName = 'rounded-md border border-slate-300 bg-white/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-900 shadow-sm';
+  const labelClassName = 'active-flight-map-label rounded-sm border border-slate-200 bg-white/95 px-[1px] py-0 text-[8px] leading-[1] font-black uppercase tracking-[0.02em] text-slate-900 shadow-sm';
+  const airspaceLabelClassName = 'active-flight-map-airspace-label rounded-sm border border-slate-300 bg-white/90 px-[1px] py-0 text-[8px] leading-[1] font-black uppercase tracking-[0.02em] text-slate-900 shadow-sm';
   const obstaclePointToLayer = useCallback((feature: any, latlng: L.LatLngExpression) => {
     const height = feature?.properties?.height;
     return L.circleMarker(latlng, {
@@ -1277,7 +1315,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
         layer: match.layer,
         detail: [getAirspaceCategory(match.feature), match.feature.icaoClass ? `class ${match.feature.icaoClass}` : '', verticalLimits]
           .filter(Boolean)
-          .join(' â€¢ '),
+          .join(' • '),
       });
     }
 
@@ -1390,12 +1428,11 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     }
 
     if (nearest && nearestDistance <= CLICK_SNAP_THRESHOLD_NM) {
-      const [featureLon, featureLat] = nearest.geometry!.coordinates!;
       const identifier = nearest.icaoCode || nearest.identifier || nearest.name;
       const frequencies = formatWaypointFrequencies(nearest.frequencies);
-      const context = buildWaypointContext(buildLayerInfo(featureLat, featureLon));
+      const context = buildWaypointContext(buildLayerInfo(lat, lon));
       setPendingClickLabel(identifier);
-      onAddWaypoint(featureLat, featureLon, identifier, frequencies, context);
+      onAddWaypoint(lat, lon, identifier, frequencies, context);
       return;
     }
 
@@ -1405,14 +1442,22 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   }, [airportsVisible, buildLayerInfo, buildWaypointContext, navaidsVisible, openAipFeatures, onAddWaypoint, reportingVisible]);
 
   const handleLongPress = useCallback((lat: number, lon: number) => {
+    if (isEditing) return;
     setPendingClickLabel('Layer info');
     setLayerInfo(buildLayerInfo(lat, lon));
-  }, [buildLayerInfo]);
+  }, [buildLayerInfo, isEditing]);
+
+  useEffect(() => {
+    if (isEditing) {
+      setLayerInfo(null);
+    }
+  }, [isEditing]);
 
   useEffect(() => {
     const nextSettings: FlightPlannerMapSettings = {
       id: 'flight-planner-map',
       baseLayer: selectedBaseLayer,
+      showLabels: labelsVisible,
       showMasterChart: masterVisible,
       showAirports: airportsVisible,
       showNavaids: navaidsVisible,
@@ -1436,6 +1481,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
   }, [
     airspacesVisible,
     airportsVisible,
+    labelsVisible,
     classEVisible,
     classFVisible,
     classGVisible,
@@ -1466,7 +1512,8 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
     <LeafletMapFrame
       center={center}
       zoom={8}
-      maxZoom={14}
+      minZoom={minVisibleZoom}
+      maxZoom={maxVisibleZoom}
       preferCanvas
       className="h-full w-full outline-none"
       style={{ background: '#0f172a' }}
@@ -1524,7 +1571,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     },
                   }}
                 >
-                  {mapZoom >= 9 && (
+                  {labelsVisible && mapZoom >= 9 && (
                     <Tooltip
                       permanent
                       direction="top"
@@ -1568,7 +1615,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     },
                   }}
                 >
-                  {mapZoom >= 10 && (
+                  {labelsVisible && mapZoom >= 10 && (
                     <Tooltip
                       permanent
                       direction="top"
@@ -1612,7 +1659,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     },
                   }}
                 >
-                  {mapZoom >= 11 && (
+                  {labelsVisible && mapZoom >= 11 && (
                     <Tooltip
                       permanent
                       direction="top"
@@ -1641,7 +1688,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = props?.limits as string | undefined;
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1662,7 +1709,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = props?.limits as string | undefined;
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1683,7 +1730,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = props?.limits as string | undefined;
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1704,7 +1751,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = props?.limits as string | undefined;
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1725,7 +1772,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = props?.limits as string | undefined;
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1746,7 +1793,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = props?.limits as string | undefined;
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1767,7 +1814,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = props?.limits as string | undefined;
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'} • ${limits}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1788,7 +1835,7 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
                     const limits = formatAirspaceVerticalLimits(props as any);
                     layer.bindTooltip(
                       limits ? `${props?.name || 'Airspace'}${limits ? ` • ${limits}` : ''}` : `${props?.name || 'Airspace'}`,
-                      { permanent: mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
+                      { permanent: labelsVisible && mapZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 }
                     );
                     layer.bindPopup(`<div style="font-size:12px;font-weight:700;text-transform:uppercase">${props?.name || 'Airspace'}</div>`);
                   }}
@@ -1835,6 +1882,8 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
 
       <MapEvents onShortPress={handleMapClick} onLongPress={handleLongPress} />
       <MapZoomState onZoomChange={setMapZoom} />
+      <MapZoomLimits minZoom={minVisibleZoom} maxZoom={maxVisibleZoom} />
+      <MapDragLock enabled={Boolean(draggingWaypointId)} />
       <VisiblePointLoader
         airportsEnabled={airportsVisible}
         navaidsEnabled={navaidsVisible}
@@ -1967,7 +2016,23 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
       )}
 
       {legs.map((leg, index) => (
-        <Marker key={leg.id} position={[leg.latitude!, leg.longitude!]} icon={RouteWaypointIcon}>
+        <Marker
+          key={leg.id}
+          position={[leg.latitude!, leg.longitude!]}
+          icon={RouteWaypointIcon}
+          draggable={isEditing}
+          eventHandlers={{
+            dragstart: () => {
+              setDraggingWaypointId(leg.id);
+            },
+            dragend: (event) => {
+              const marker = event.target as L.Marker;
+              const nextPosition = marker.getLatLng();
+              setDraggingWaypointId(null);
+              onMoveWaypoint?.(leg.id, nextPosition.lat, nextPosition.lng);
+            },
+          }}
+        >
           <Popup>
             <div className="text-xs font-black uppercase space-y-1">
               <p className="text-primary font-bold">{leg.waypoint}</p>
@@ -1979,80 +2044,150 @@ export default function AeronauticalMap({ legs, onAddWaypoint, hazards = [], onA
 
       </LeafletMapFrame>
 
-      {showLayerLevelsPanel ? (
+      {isZoomPanelOpen ? (
       <div className="pointer-events-auto absolute right-4 top-4 z-[1000] w-[280px] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layer Levels</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
             <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
               Zoom {mapZoom} • decide what to load
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700">
-              {layerLevelSummary.availableNow.length} now
+          <button
+            type="button"
+            className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+            onClick={() => onZoomPanelOpenChange?.(false)}
+          >
+            Hide card
+          </button>
+        </div>
+
+        <div className="mt-3 space-y-3">
+          <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Min Zoom Level</p>
+            <Select
+              value={`${minVisibleZoom}`}
+              onValueChange={(value) => {
+                const nextMin = Number(value);
+                setMinVisibleZoom(nextMin);
+                if (nextMin > maxVisibleZoom) {
+                  setMaxVisibleZoom(nextMin);
+                }
+              }}
+            >
+              <SelectTrigger className="h-9 text-[10px] font-black uppercase">
+                <SelectValue placeholder="Select min zoom" />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
+                  <SelectItem key={`min-${zoomLevel}`} value={`${zoomLevel}`}>
+                    {zoomLevel}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Max Zoom Level</p>
+            <Select
+              value={`${maxVisibleZoom}`}
+              onValueChange={(value) => {
+                const nextMax = Number(value);
+                setMaxVisibleZoom(nextMax);
+                if (nextMax < minVisibleZoom) {
+                  setMinVisibleZoom(nextMax);
+                }
+              }}
+            >
+              <SelectTrigger className="h-9 text-[10px] font-black uppercase">
+                <SelectValue placeholder="Select max zoom" />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
+                  <SelectItem key={`max-${zoomLevel}`} value={`${zoomLevel}`}>
+                    {zoomLevel}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+      ) : null}
+
+      {isLayersPanelOpen ? (
+        <div className="pointer-events-auto absolute right-4 top-4 z-[1000] w-[320px] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Layers</p>
+              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
+                Show and hide visible map layers
+              </p>
             </div>
             <button
               type="button"
               className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
-              onClick={() => setShowLayerLevelsPanel(false)}
+              onClick={() => onLayersPanelOpenChange?.(false)}
             >
               Hide card
             </button>
           </div>
-        </div>
 
-        <div className="mt-3 space-y-3">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-700">Load now</p>
-            <div className="mt-1 space-y-1">
-              {layerLevelSummary.availableNow.map((layer) => (
-                <div key={layer.label} className="flex items-start justify-between gap-3 rounded-md border border-slate-100 bg-slate-50 px-2 py-1">
-                  <div className="min-w-0">
-                    <p className="truncate font-black uppercase tracking-[0.12em] text-slate-900">{layer.label}</p>
-                    <p className="text-[9px] leading-snug text-slate-500">{layer.description}</p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 font-black uppercase tracking-[0.14em] text-emerald-800">
-                    {layer.minZoom}+
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Next up</p>
-            <div className="mt-1 space-y-1">
-              {layerLevelSummary.upcoming.length > 0 ? (
-                layerLevelSummary.upcoming.map((layer) => (
-                <div key={layer.label} className="flex items-start justify-between gap-3 rounded-md border border-amber-100 bg-amber-50/70 px-2 py-1">
-                  <div className="min-w-0">
-                    <p className="truncate font-black uppercase tracking-[0.12em] text-slate-900">{layer.label}</p>
-                    <p className="text-[9px] leading-snug text-slate-500">{layer.description}</p>
-                  </div>
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 font-black uppercase tracking-[0.14em] text-amber-800">
-                      {layer.minZoom}+
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[9px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                  All supported layers are already available at this zoom.
-                </div>
-              )}
-            </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {[
+              { label: 'Labels', active: labelsVisible, setActive: setLabelsVisible },
+              { label: 'Master Chart', active: masterVisible, setActive: setMasterVisible },
+              { label: 'Airports', active: airportsVisible, setActive: setAirportsVisible },
+              { label: 'Navaids', active: navaidsVisible, setActive: setNavaidsVisible },
+              { label: 'Reporting Points', active: reportingVisible, setActive: setReportingVisible },
+              { label: 'Airspaces', active: airspacesVisible, setActive: setAirspacesVisible },
+              { label: 'Class E', active: classEVisible, setActive: setClassEVisible },
+              { label: 'Class F', active: classFVisible, setActive: setClassFVisible },
+              { label: 'Class G', active: classGVisible, setActive: setClassGVisible },
+              { label: 'Military Areas', active: militaryAreasVisible, setActive: setMilitaryAreasVisible },
+              { label: 'Training Areas', active: trainingAreasVisible, setActive: setTrainingAreasVisible },
+              { label: 'Gliding Sectors', active: glidingSectorsVisible, setActive: setGlidingSectorsVisible },
+              { label: 'Hang Glidings', active: hangGlidingVisible, setActive: setHangGlidingVisible },
+              { label: 'Obstacles', active: obstaclesVisible, setActive: setObstaclesVisible },
+              { label: 'Active Only', active: onlyActiveAirspace, setActive: setOnlyActiveAirspace },
+            ].map((item) => (
+              <Button
+                key={item.label}
+                type="button"
+                variant="outline"
+                className={`h-9 justify-start px-3 text-[10px] font-black uppercase ${
+                  item.active
+                    ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+                onClick={() => item.setActive(!item.active)}
+              >
+                {item.label}
+              </Button>
+            ))}
           </div>
         </div>
-      </div>
-      ) : (
-        <button
-          type="button"
-          className="pointer-events-auto absolute right-4 top-4 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-          onClick={() => setShowLayerLevelsPanel(true)}
-        >
-          Layer Levels
-        </button>
-      )}
+      ) : null}
+      <style jsx global>{`
+        .active-flight-map-label,
+        .active-flight-map-airspace-label {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        .active-flight-map-label .leaflet-tooltip-content,
+        .active-flight-map-airspace-label .leaflet-tooltip-content {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1 !important;
+        }
+
+        .active-flight-map-label:before,
+        .active-flight-map-airspace-label:before {
+          display: none !important;
+        }
+      `}</style>
     </div>
   );
 }

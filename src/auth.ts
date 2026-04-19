@@ -11,9 +11,21 @@ const cleanEnvValue = (value: string | undefined) =>
 
 const normalizeNextAuthUrl = () => {
   const current = cleanEnvValue(process.env.NEXTAUTH_URL);
-  if (process.env.NODE_ENV === 'development' && (!current || current.includes('vercel.app'))) {
-    return 'http://localhost:9002';
+  if (process.env.NODE_ENV === 'development') {
+    if (!current || current.includes('vercel.app')) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(current);
+      if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        return '';
+      }
+    } catch {
+      return '';
+    }
   }
+
   return current;
 };
 
@@ -28,7 +40,12 @@ const resolveNextAuthSecret = () => {
   throw new Error('[auth] NEXTAUTH_SECRET is required.');
 };
 
-process.env.NEXTAUTH_URL = normalizeNextAuthUrl();
+const normalizedNextAuthUrl = normalizeNextAuthUrl();
+if (normalizedNextAuthUrl) {
+  process.env.NEXTAUTH_URL = normalizedNextAuthUrl;
+} else {
+  delete process.env.NEXTAUTH_URL;
+}
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },

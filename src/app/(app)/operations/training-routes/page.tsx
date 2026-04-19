@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff } from 'lucide-react';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff, Pencil } from 'lucide-react';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +15,9 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
+import { useTheme } from '@/components/theme-provider';
+import { cn } from '@/lib/utils';
+import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,14 +30,29 @@ const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aerona
   loading: () => <div className="h-full w-full animate-pulse bg-slate-900 flex items-center justify-center text-white font-black uppercase tracking-widest text-[10px]">Loading Aeronautical Engine...</div>
 });
 
+const createEmptyRoute = (): TrainingRoute => ({
+  id: uuidv4(),
+  name: 'New Route',
+  description: '',
+  routeType: 'training',
+  legs: [],
+  hazards: [],
+  tenantId: 'safeviate',
+  createdAt: new Date().toISOString(),
+});
+
 export default function TrainingRoutesPage() {
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
+  const { uiMode } = useTheme();
   const [routes, setRoutes] = useState<TrainingRoute[]>([]);
   const [activeRoute, setActiveRoute] = useState<TrainingRoute | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [hazardToEdit, setHazardToEdit] = useState<{ lat: number; lng: number } | null>(null);
   const [hazardNote, setHazardNote] = useState('');
   const [search, setSearch] = useState('');
+  const [isMapZoomPanelOpen, setIsMapZoomPanelOpen] = useState(false);
+  const [isMapLayersPanelOpen, setIsMapLayersPanelOpen] = useState(false);
+  const isModern = uiMode === 'modern';
 
     useEffect(() => {
       const loadRoutes = async () => {
@@ -66,30 +84,49 @@ export default function TrainingRoutesPage() {
   };
 
   const handleCreateNew = () => {
-    const newRoute: TrainingRoute = {
-      id: uuidv4(),
-      name: 'New Route',
-      description: '',
-      routeType: 'training',
-      legs: [],
-      hazards: [],
-      tenantId: 'safeviate',
-      createdAt: new Date().toISOString(),
-    };
+    const newRoute = createEmptyRoute();
     setActiveRoute(newRoute);
     setIsEditing(true);
   };
 
-  const handleAddWaypoint = (lat: number, lon: number, identifier?: string) => {
+  const handleAddWaypoint = (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => {
     if (!isEditing || !activeRoute) return;
-    const newLeg: NavlogLeg = {
-      id: uuidv4(),
-      waypoint: identifier || `WP ${activeRoute.legs.length + 1}`,
-      latitude: lat,
-      longitude: lon,
-      altitude: 4500,
-    };
+    const newLeg = createNavlogLegFromCoordinates(
+      activeRoute.legs,
+      lat,
+      lon,
+      identifier || `WP ${activeRoute.legs.length + 1}`,
+      frequencies,
+      layerInfo,
+    );
     setActiveRoute({ ...activeRoute, legs: [...activeRoute.legs, newLeg] });
+  };
+
+  const handleMoveWaypoint = (legId: string, lat: number, lon: number) => {
+    if (!isEditing || !activeRoute) return;
+
+    const movedLegs = activeRoute.legs.map((leg) =>
+      leg.id === legId ? { ...leg, latitude: lat, longitude: lon } : leg
+    );
+
+    const recalculatedLegs = movedLegs.map((leg, index) => {
+      const rebuiltLeg = createNavlogLegFromCoordinates(
+        movedLegs.slice(0, index),
+        leg.latitude ?? 0,
+        leg.longitude ?? 0,
+        leg.waypoint?.replace(/-\d+$/, '') || 'PNT',
+        leg.frequencies,
+        leg.layerInfo,
+      );
+
+      return {
+        ...leg,
+        ...rebuiltLeg,
+        id: leg.id,
+      };
+    });
+
+    setActiveRoute({ ...activeRoute, legs: recalculatedLegs });
   };
 
   const handleAddHazardRequest = (lat: number, lng: number) => {
@@ -122,7 +159,10 @@ export default function TrainingRoutesPage() {
       await fetch(`/api/training-routes?id=${routeId}`, { method: 'DELETE' });
       const nextRoutes = routes.filter((route) => route.id !== routeId);
       setRoutes(nextRoutes);
-      if (activeRoute?.id === routeId) setActiveRoute(null);
+      if (activeRoute?.id === routeId) {
+        setActiveRoute(nextRoutes[0] ?? createEmptyRoute());
+        setIsEditing(nextRoutes.length === 0);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -165,58 +205,86 @@ export default function TrainingRoutesPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-hidden px-1">
-      <Card className="flex h-full flex-col overflow-hidden border shadow-none">
-        <div className="sticky top-0 z-30 border-b bg-card">
-            <MainPageHeader
-            title="Route Planner"
-            actions={<Button onClick={handleCreateNew} className={HEADER_ACTION_BUTTON_CLASS}><Plus size={14} className="mr-2" /> New Route</Button>}
-          />
-        </div>
+    <div className={cn('mx-auto flex w-full max-w-[1400px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
+      <Card className={cn('flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
+        <CardHeader className={cn('border-b bg-muted/20 px-4 py-3 sm:px-5', isModern && 'bg-transparent')}>
+          <div className="flex justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsMapZoomPanelOpen(true)}
+              className={cn(HEADER_ACTION_BUTTON_CLASS, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+            >
+              Map Zoom
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsMapLayersPanelOpen(true)}
+              className={cn(HEADER_ACTION_BUTTON_CLASS, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+            >
+              Map Layers
+            </Button>
+            <Button onClick={handleCreateNew} className={cn(HEADER_ACTION_BUTTON_CLASS, isModern && 'border-slate-200 bg-slate-800 text-white hover:bg-slate-700')}>
+              <Plus size={14} className="mr-2" /> New Route
+            </Button>
+          </div>
+        </CardHeader>
 
-        <CardContent className="flex-1 overflow-hidden p-0 bg-muted/5">
-          <div className="grid h-full grid-cols-1 overflow-hidden lg:grid-cols-[300px_1fr_350px]">
-            <div className="flex h-full flex-col overflow-hidden border-r bg-background">
-              <div className="border-b bg-muted/10 p-4">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search routes..." className="h-8 pl-9 text-[10px] font-bold uppercase" />
-                </div>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="space-y-1 p-2">
-                  {filteredRoutes.map((route) => (
-                    <button key={route.id} onClick={() => { setActiveRoute(route); setIsEditing(false); }} className={`w-full rounded-xl border p-3 text-left transition-all ${activeRoute?.id === route.id ? 'border-primary/20 bg-primary/5 shadow-sm' : 'border-transparent hover:bg-muted/50'}`}>
-                      <div className="mb-1 flex items-center justify-between">
-                        <Badge variant="outline" className="h-4 text-[8px] font-black uppercase opacity-60">{getRouteTypeLabel(route.routeType)}</Badge>
-                        <span className="text-[8px] font-bold text-muted-foreground">{route.legs.length} Waypoints</span>
-                      </div>
-                      <p className="truncate text-[11px] font-black uppercase">{route.name}</p>
-                      <p className="mt-1 line-clamp-1 text-[9px] font-bold italic text-muted-foreground">{route.description || 'No description'}</p>
-                    </button>
-                  ))}
-                  {filteredRoutes.length === 0 && (<div className="space-y-3 p-8 text-center opacity-40"><PlaneTakeoff size={32} className="mx-auto" /><p className="text-[10px] font-black uppercase tracking-widest">No routes found</p></div>)}
-                </div>
-              </ScrollArea>
-            </div>
-
-            <div className="relative flex h-full flex-col overflow-hidden bg-slate-900">
-              <AeronauticalMap legs={activeRoute?.legs || []} hazards={activeRoute?.hazards || []} onAddWaypoint={handleAddWaypoint} onAddHazard={handleAddHazardRequest} />
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <div className="grid min-h-[70vh] grid-cols-1 overflow-hidden lg:h-full lg:grid-cols-[minmax(0,1fr)_350px]">
+            <div className={cn('relative order-1 flex min-h-[320px] flex-col overflow-hidden bg-slate-900 lg:h-full lg:min-h-0', isModern && 'bg-white')}>
+              <AeronauticalMap
+                legs={activeRoute?.legs || []}
+                hazards={activeRoute?.hazards || []}
+                onAddWaypoint={handleAddWaypoint}
+                onMoveWaypoint={handleMoveWaypoint}
+                onAddHazard={handleAddHazardRequest}
+                isEditing={isEditing}
+                isZoomPanelOpen={isMapZoomPanelOpen}
+                onZoomPanelOpenChange={setIsMapZoomPanelOpen}
+                isLayersPanelOpen={isMapLayersPanelOpen}
+                onLayersPanelOpenChange={setIsMapLayersPanelOpen}
+              />
               {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
-            <div className="flex h-full flex-col overflow-hidden border-l bg-background">
+            <div className={cn('order-2 flex max-h-[70vh] min-h-0 flex-col overflow-hidden border-t bg-background lg:h-full lg:max-h-none lg:border-l lg:border-t-0', isModern && 'border-slate-200/80 bg-white')}>
               {activeRoute ? (
-                <div className="flex h-full flex-col">
-                  <div className="space-y-4 border-b p-6">
+                <ScrollArea className="flex-1">
+                  <div className="space-y-8 p-6 pb-12">
+                    <div className={cn('space-y-4 border-b pb-6', isModern && 'border-slate-200/80')}>
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Profile</p>
                       <div className="flex items-center gap-2">
+                        {!isEditing ? (
+                          <Button variant="outline" onClick={() => setIsEditing(true)} className={HEADER_SECONDARY_BUTTON_CLASS}><Pencil size={14} className="mr-2" /> Edit</Button>
+                        ) : null}
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(activeRoute.id)}><Trash2 size={14} /></Button>
                         <Button onClick={handleSave} disabled={!isEditing} className={HEADER_ACTION_BUTTON_CLASS}><Save size={14} className="mr-2" /> Save</Button>
                       </div>
                     </div>
                       <div className="space-y-3">
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Saved Routes</label>
+                          <Select
+                            value={activeRoute?.id ?? ''}
+                            onValueChange={(routeId) => {
+                              const selectedRoute = routes.find((route) => route.id === routeId) || null;
+                              setActiveRoute(selectedRoute);
+                              setIsEditing(false);
+                            }}
+                          >
+                            <SelectTrigger className="h-9 text-[10px] font-black uppercase">
+                              <SelectValue placeholder={routes.length ? 'Select saved route' : 'No saved routes'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {routes.map((route) => (
+                                <SelectItem key={route.id} value={route.id}>
+                                  {route.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div>
                           <label className="mb-1 block text-[9px] font-black uppercase text-muted-foreground">Route Name</label>
                           <Input value={activeRoute.name} onChange={(e) => setActiveRoute({ ...activeRoute, name: e.target.value })} className="h-9 text-xs font-black uppercase" readOnly={!isEditing} />
@@ -242,32 +310,78 @@ export default function TrainingRoutesPage() {
                           <Textarea value={activeRoute.description} onChange={(e) => setActiveRoute({ ...activeRoute, description: e.target.value })} className="min-h-[60px] text-[10px] font-bold" readOnly={!isEditing} placeholder="Route notes, sector details, frequency requirements, etc." />
                         </div>
                       </div>
-                  </div>
-                  <ScrollArea className="flex-1">
-                    <div className="space-y-8 p-6 pb-12">
+                    </div>
+                    <div className="space-y-8">
                       <section className="space-y-4">
                         <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Planned Legs</h3>
                         <div className="space-y-2">
-                          {activeRoute.legs.map((leg, i) => (
-                            <div key={leg.id} className="group overflow-hidden rounded-xl border bg-background p-3 shadow-sm transition-all hover:border-primary/20">
-                              <div className="mb-2 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-[10px] font-black uppercase">{i + 1}</div>
-                                  <Input value={leg.waypoint} onChange={(e) => { const next = [...activeRoute.legs]; next[i].waypoint = e.target.value; setActiveRoute({ ...activeRoute, legs: next }); }} className="h-6 w-24 border-none p-0 text-[10px] font-bold uppercase shadow-none focus-visible:ring-0" readOnly={!isEditing} />
+                          {activeRoute.legs.map((leg, i) => {
+                        const displayTitle = leg.waypoint || 'PNT';
+                            const detailLines = [leg.frequencies, leg.layerInfo].filter(Boolean);
+
+                            return (
+                              <div key={leg.id} className={cn('group rounded-xl border bg-background p-3 transition-colors hover:bg-muted/20', isModern && 'border-slate-200/90 bg-slate-50/70')}>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    {isEditing ? (
+                                      <Input
+                                        value={displayTitle}
+                                        onChange={(e) => {
+                                          const rawValue = e.target.value.trim();
+                                          const next = [...activeRoute.legs];
+                                          next[i].waypoint = rawValue.replace(/-\d+$/, '') || 'PNT';
+                                          setActiveRoute({ ...activeRoute, legs: next });
+                                        }}
+                                        className="h-6 w-full max-w-[16rem] border-none p-0 text-[11px] font-black uppercase text-slate-900 shadow-none focus-visible:ring-0"
+                                        readOnly={!isEditing}
+                                      />
+                                    ) : (
+                                      <p className="text-[11px] font-black uppercase leading-tight text-slate-900 break-words">{displayTitle}</p>
+                                    )}
+
+                                    {detailLines.map((line, index) => (
+                                      <p
+                                        key={`${leg.id}-detail-${index}`}
+                                        className={cn(
+                                          'mt-1 text-[9px] font-semibold leading-tight',
+                                          index === 0 ? 'text-slate-700' : 'text-slate-700'
+                                        )}
+                                      >
+                                        {line}
+                                      </p>
+                                    ))}
+
+                                    <div className="mt-2 flex gap-5">
+                                      <div className="flex flex-col">
+                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
+                                        <span className="text-[10px] font-black text-slate-900">{leg.distance?.toFixed(1) || '0.0'} NM</span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
+                                        <span className="text-[10px] font-black text-slate-900">{leg.magneticHeading?.toFixed(0) || '0'}°</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="shrink-0 flex flex-col items-end gap-2">
+                                    <span className="font-mono text-[8px] text-muted-foreground">
+                                      {leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}
+                                    </span>
+                                    {isEditing ? (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+                                        onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}
+                                      >
+                                        <Trash2 size={12} />
+                                      </Button>
+                                    ) : null}
+                                  </div>
                                 </div>
-                                {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}><Trash2 size={12} /></Button>}
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-[8px] font-black uppercase text-muted-foreground">Alt (ft)</p>
-                                  <Input type="number" value={leg.altitude} onChange={(e) => { const next = [...activeRoute.legs]; next[i].altitude = Number(e.target.value); setActiveRoute({ ...activeRoute, legs: next }); }} className="h-7 border-dashed text-[10px] font-black" readOnly={!isEditing} />
-                                </div>
-                                <div className="flex items-end justify-end">
-                                  <p className="font-mono text-[9px] font-bold text-muted-foreground">{leg.latitude?.toFixed(3)}, {leg.longitude?.toFixed(3)}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           {activeRoute.legs.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><Navigation className="mx-auto mb-2 h-6 w-6 opacity-50 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Click map to add waypoints</p></div>}
                         </div>
                       </section>
@@ -289,8 +403,8 @@ export default function TrainingRoutesPage() {
                         </div>
                       </section>
                     </div>
-                  </ScrollArea>
-                </div>
+                  </div>
+                </ScrollArea>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 p-12 text-center opacity-40">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted"><MapIcon size={32} /></div>

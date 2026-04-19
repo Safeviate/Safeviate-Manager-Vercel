@@ -157,30 +157,6 @@ export default function WeatherPage() {
 
   const { toast } = useToast();
 
-  if (isTenantLoading) {
-    return <Skeleton className="h-[420px] w-full" />;
-  }
-
-  if (
-    !shouldBypassIndustryRestrictions(tenant?.id) &&
-    !isHrefEnabledForIndustry('/operations/weather', tenant?.industry) &&
-    !(tenant?.enabledMenus?.includes('/operations/weather') ?? false)
-  ) {
-    return (
-      <Card className="mx-auto w-full max-w-3xl border shadow-none">
-        <CardHeader>
-          <CardTitle className="text-2xl font-black uppercase tracking-tight">Weather Unavailable</CardTitle>
-          <CardDescription>Aviation weather tools are only available for aviation tenants.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline" className="font-black uppercase">
-            <Link href="/operations">Back to Operations</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const mapCoords = useMemo(() => {
     // Priority: METAR -> TAF -> CheckWX -> Open-Meteo -> Default (FALA approx)
     const lat = Number(
@@ -364,6 +340,30 @@ export default function WeatherPage() {
       default: return 'bg-gray-500 hover:bg-gray-600 text-white';
     }
   };
+
+  if (isTenantLoading) {
+    return <Skeleton className="h-[420px] w-full" />;
+  }
+
+  if (
+    !shouldBypassIndustryRestrictions(tenant?.id) &&
+    !isHrefEnabledForIndustry('/operations/weather', tenant?.industry) &&
+    !(tenant?.enabledMenus?.includes('/operations/weather') ?? false)
+  ) {
+    return (
+      <Card className="mx-auto w-full max-w-3xl border shadow-none">
+        <CardHeader>
+          <CardTitle className="text-2xl font-black uppercase tracking-tight">Weather Unavailable</CardTitle>
+          <CardDescription>Aviation weather tools are only available for aviation tenants.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="font-black uppercase">
+            <Link href="/operations">Back to Operations</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 pt-6 md:p-8 max-w-[1200px] w-full mx-auto">
