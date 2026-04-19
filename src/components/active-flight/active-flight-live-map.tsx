@@ -1,7 +1,7 @@
 ﻿'use client';
 
-import { type CSSProperties, type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Marker, Pane, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FeatureGroup, GeoJSON, Marker, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Layers3, Loader2, SlidersHorizontal } from 'lucide-react';
@@ -15,6 +15,8 @@ import { useMapZoomDraft } from '@/hooks/use-map-zoom-draft';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
+import { parseJsonResponse } from '@/lib/safe-json';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const WaypointIcon = L.divIcon({
   className: '',
@@ -23,13 +25,29 @@ const WaypointIcon = L.divIcon({
   iconAnchor: [7, 7],
 });
 
-const OPENAIP_PANE_STYLE = { zIndex: 325 } as const;
-const OPENAIP_POINT_PANE_STYLE = { zIndex: 560 } as const;
-const OPENAIP_LABEL_PANE_STYLE = { zIndex: 650 } as const;
+const createAircraftMarkerIcon = (headingTrue?: number | null) =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="display:flex;align-items:center;justify-content:center;">
+        <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
+          <div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;transform:rotate(${headingTrue ?? 0}deg);transform-origin:center;filter:drop-shadow(0 0 6px rgba(14,165,233,0.35));">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M11 1L13.1 7.4L18.6 9.2V11.4L13.1 10.7L12.4 14.1L15.2 16.2V18.1L11 16.6L6.8 18.1V16.2L9.6 14.1L8.9 10.7L3.4 11.4V9.2L8.9 7.4L11 1Z" fill="#0ea5e9" stroke="#ffffff" stroke-width="0.9" stroke-linejoin="round"/>
+              <path d="M11 6.2V16.2" stroke="#ffffff" stroke-width="0.9" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
 
-type OpenAipPointFeature = {
+type OpenAipFeature = {
   _id: string;
   name: string;
+  type?: string;
   icaoCode?: string;
   identifier?: string;
   geometry?: {
@@ -38,90 +56,217 @@ type OpenAipPointFeature = {
   sourceLayer: 'airports' | 'navaids' | 'reporting-points';
 };
 
-const airportPointIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:10px;height:10px;border-radius:9999px;background:#2563eb;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(37,99,235,0.22);"></div>',
-  iconSize: [10, 10],
-  iconAnchor: [5, 5],
-});
+type OpenAipAirspace = {
+  _id: string;
+  name: string;
+  type?: number;
+  icaoClass?: number;
+  geometry?: {
+    type?: 'Polygon' | 'MultiPolygon' | 'LineString' | 'MultiLineString';
+    coordinates?: any;
+  };
+  hoursOfOperation?: {
+    operatingHours?: Array<{
+      dayOfWeek?: number;
+      startTime?: string;
+      endTime?: string;
+    }>;
+  };
+  lowerLimit?: unknown;
+  upperLimit?: unknown;
+  verticalLimits?: unknown;
+  limits?: unknown;
+  floor?: unknown;
+  ceiling?: unknown;
+};
 
-const navaidPointIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:10px;height:10px;clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);background:#7c3aed;border:2px solid #ffffff;box-shadow:0 0 0 2px rgba(124,58,237,0.18);"></div>',
-  iconSize: [10, 10],
-  iconAnchor: [5, 5],
-});
+type OpenAipObstacle = {
+  _id: string;
+  name: string;
+  geometry?: {
+    type?: 'Point';
+    coordinates?: [number, number];
+  };
+  height?: { value?: number };
+  elevation?: { value?: number };
+};
 
-const reportingPointIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid #f59e0b;filter:drop-shadow(0 0 2px rgba(245,158,11,0.35));"></div>',
-  iconSize: [14, 12],
-  iconAnchor: [7, 10],
-});
+const OPENAIP_POINT_RESOURCES = ['airports', 'navaids', 'reporting-points'] as const;
+const AIRSPACE_CLASS_E = 6;
+const AIRSPACE_CLASS_F = 7;
+const AIRSPACE_CLASS_G = 8;
 
-const openAipLabelClassName = 'openaip-layer-label';
+const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
-async function fetchOpenAipJson<T>(url: string): Promise<T | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return (await response.json()) as T;
-  } catch {
-    return null;
+async function fetchOpenAipJson<T>(url: string, retries = 1): Promise<T | null> {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        if (response.status >= 500 && attempt < retries) {
+          await delay(250 * (attempt + 1));
+          continue;
+        }
+        return null;
+      }
+
+      return (await parseJsonResponse<T>(response)) ?? null;
+    } catch (error) {
+      if (attempt < retries) {
+        await delay(250 * (attempt + 1));
+        continue;
+      }
+      throw error;
+    }
   }
+
+  return null;
 }
 
-const createAircraftMarkerIcon = (label: string, headingTrue?: number | null) =>
-  L.divIcon({
-    className: '',
-    html: `
-      <div style="display:flex;align-items:center;gap:8px;transform:translate(-8px,-8px);">
-        <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
-          <div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:18px solid #0ea5e9;transform:rotate(${headingTrue ?? 0}deg);transform-origin:center 70%;filter:drop-shadow(0 0 6px rgba(14,165,233,0.35));"></div>
-        </div>
-        <div style="padding:4px 8px;border-radius:9999px;background:rgba(15,23,42,0.92);color:#f8fafc;font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;border:1px solid rgba(148,163,184,0.35);white-space:nowrap;">
-          ${label}
-        </div>
-      </div>
-    `,
-    iconSize: [128, 36],
-    iconAnchor: [20, 20],
+const mergeOpenAipFeatures = (current: OpenAipFeature[], next: OpenAipFeature[]) => {
+  const merged = [...current];
+  for (const item of next) {
+    if (!merged.some((existing) => existing._id === item._id)) {
+      merged.push(item);
+    }
+  }
+  return merged;
+};
+
+const formatLimitValue = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return `${value}`;
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return [record.value, record.altitude, record.height, record.limit, record.text, record.unit, record.reference]
+      .map((candidate) => formatLimitValue(candidate))
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+};
+
+const formatAirspaceVerticalLimits = (airspace: OpenAipAirspace): string => {
+  const rawVertical = airspace.verticalLimits as Record<string, unknown> | undefined;
+  const lower =
+    formatLimitValue(rawVertical?.lower ?? rawVertical?.lowerLimit ?? rawVertical?.floor ?? airspace.lowerLimit ?? airspace.floor);
+  const upper =
+    formatLimitValue(rawVertical?.upper ?? rawVertical?.upperLimit ?? rawVertical?.ceiling ?? airspace.upperLimit ?? airspace.ceiling);
+  const fallback = formatLimitValue(airspace.limits) || formatLimitValue(rawVertical?.text) || formatLimitValue(rawVertical?.display) || '';
+  const rangeParts = [lower && `Lower ${lower}`, upper && `Upper ${upper}`].filter(Boolean) as string[];
+  if (rangeParts.length > 0) return rangeParts.join(' • ');
+  return fallback;
+};
+
+const isAirspaceActiveNow = (airspace: OpenAipAirspace) => {
+  const operatingHours = airspace.hoursOfOperation?.operatingHours;
+  if (!operatingHours || operatingHours.length === 0) return true;
+
+  const now = new Date();
+  const currentDay = now.getDay();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  return operatingHours.some((entry) => {
+    if (entry.dayOfWeek !== undefined && entry.dayOfWeek !== currentDay) return false;
+    if (!entry.startTime || !entry.endTime) return true;
+    if (entry.startTime === '00:00' && entry.endTime === '00:00') return true;
+
+    const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+    const [endHour, endMinute] = entry.endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMinute;
+    const endMinutes = endHour * 60 + endMinute;
+
+    if (startMinutes <= endMinutes) {
+      return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    }
+
+    return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
   });
+};
+
+const isMilitaryAirspace = (airspace: OpenAipAirspace) =>
+  airspace.type === 1 || airspace.type === 33 || /MILITARY|SHOOTING|WEAPONS|RANGE|MOA|M\.O\.A|OPERATIONS AREA/i.test(airspace.name);
+
+const isTrainingAirspace = (airspace: OpenAipAirspace) =>
+  airspace.type === 2 || /TRAINING|GENERAL FLYING|FLYING TNG|PJE/i.test(airspace.name);
+
+const isGlidingAirspace = (airspace: OpenAipAirspace) =>
+  airspace.type === 21 || /GLIDING|GLIDER/i.test(airspace.name);
+
+const isHangGlidingAirspace = (airspace: OpenAipAirspace) =>
+  /HANG\s*GLIDING|HANGGLIDING|HANG/i.test(airspace.name);
+
+const isControlledAirspace = (airspace: OpenAipAirspace) =>
+  /CTR|CONTROL\s*ZONE|CONTROLLED\s*TOR(E|W)R\s*REGION|CONTROL\s*TOR(E|W)R\s*REGION/i.test(airspace.name) ||
+  airspace.type === 5 ||
+  airspace.type === 10;
+
+const getAirspaceClassCategory = (airspace: OpenAipAirspace) => {
+  if (airspace.icaoClass === AIRSPACE_CLASS_E) return 'class-e';
+  if (airspace.icaoClass === AIRSPACE_CLASS_F) return 'class-f';
+  if (airspace.icaoClass === AIRSPACE_CLASS_G) return 'class-g';
+  return 'other';
+};
+
+const getAirspaceCategory = (airspace: OpenAipAirspace) => {
+  if (isControlledAirspace(airspace)) return 'ctr';
+  if (isMilitaryAirspace(airspace)) return 'military';
+  if (isTrainingAirspace(airspace)) return 'training';
+  if (isGlidingAirspace(airspace)) return 'gliding';
+  if (isHangGlidingAirspace(airspace)) return 'hang';
+  const classCategory = getAirspaceClassCategory(airspace);
+  if (classCategory !== 'other') return classCategory;
+  return 'other';
+};
+
+const airspaceFeatureCollection = (items: OpenAipAirspace[]) => ({
+  type: 'FeatureCollection' as const,
+  features: items
+    .filter((item) => item.geometry?.coordinates)
+    .map((item) => ({
+      type: 'Feature' as const,
+      geometry: item.geometry,
+      properties: {
+        _id: item._id,
+        name: item.name,
+        category: getAirspaceCategory(item),
+        limits: formatAirspaceVerticalLimits(item),
+      },
+    })),
+});
+
+const obstacleFeatureCollection = (items: OpenAipObstacle[]) => ({
+  type: 'FeatureCollection' as const,
+  features: items
+    .filter((item) => item.geometry?.coordinates)
+    .map((item) => ({
+      type: 'Feature' as const,
+      geometry: item.geometry,
+      properties: {
+        _id: item._id,
+        name: item.name,
+        height: item.height?.value,
+        elevation: item.elevation?.value,
+      },
+    })),
+});
 
 function FitFlightBounds({
-  routePoints,
   position,
-  followOwnship,
 }: {
-  routePoints: [number, number][];
   position: FlightPosition | null;
-  followOwnship: boolean;
 }) {
   const map = useMap();
   const lastFrameSignatureRef = useRef('');
 
   useEffect(() => {
-    if (routePoints.length > 0) {
-      const routeSignature = routePoints.map(([latitude, longitude]) => `${latitude.toFixed(6)},${longitude.toFixed(6)}`).join('|');
-      if (routeSignature === lastFrameSignatureRef.current) return;
-      lastFrameSignatureRef.current = routeSignature;
-
-      if (routePoints.length === 1) {
-        map.setView(routePoints[0], 11, { animate: false });
-        return;
-      }
-
-      map.fitBounds(L.latLngBounds(routePoints).pad(0.25), { animate: false });
-      return;
-    }
-
-    if (!position || !followOwnship) return;
-
+    if (!position) return;
     const nextSignature = `${position.latitude.toFixed(6)},${position.longitude.toFixed(6)}`;
     if (lastFrameSignatureRef.current === nextSignature) return;
     lastFrameSignatureRef.current = nextSignature;
     map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
-  }, [followOwnship, map, position, routePoints]);
+  }, [map, position]);
 
   return null;
 }
@@ -151,12 +296,10 @@ function MapRecenterController({
   useEffect(() => {
     if (centreMapNonce === 0 || centreMapNonce === lastHandledNonceRef.current) return;
 
-    lastHandledNonceRef.current = centreMapNonce;
-
     if (position) {
       map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
     }
-  }, [centreMapNonce, map, position]);
+  }, [map, onDone, position, recenterNonce]);
 
   return null;
 }
@@ -227,18 +370,65 @@ function MapResizeController() {
   return null;
 }
 
-function MapZoomState({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+function MapZoomBridge({
+  zoomInNonce,
+  zoomOutNonce,
+  onZoomChange,
+}: {
+  zoomInNonce: number;
+  zoomOutNonce: number;
+  onZoomChange: (zoom: number) => void;
+}) {
   const map = useMap();
 
   useEffect(() => {
-    onZoomChange(map.getZoom());
+    const publishZoom = () => {
+      onZoomChange(map.getZoom());
+    };
+
+    publishZoom();
+    map.on('zoomend', publishZoom);
+
+    return () => {
+      map.off('zoomend', publishZoom);
+    };
   }, [map, onZoomChange]);
 
-  useMapEvents({
-    zoomend() {
-      onZoomChange(map.getZoom());
-    },
-  });
+  useEffect(() => {
+    if (zoomInNonce === 0) return;
+    map.zoomIn();
+  }, [map, zoomInNonce]);
+
+  useEffect(() => {
+    if (zoomOutNonce === 0) return;
+    map.zoomOut();
+  }, [map, zoomOutNonce]);
+
+  return null;
+}
+
+function MapZoomLimits({
+  minZoom,
+  maxZoom,
+}: {
+  minZoom: number;
+  maxZoom: number;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setMinZoom(minZoom);
+    map.setMaxZoom(maxZoom);
+
+    const currentZoom = map.getZoom();
+    if (currentZoom < minZoom) {
+      map.setZoom(minZoom);
+      return;
+    }
+    if (currentZoom > maxZoom) {
+      map.setZoom(maxZoom);
+    }
+  }, [map, minZoom, maxZoom]);
 
   return null;
 }
@@ -252,14 +442,14 @@ function VisiblePointLoader({
   airportsEnabled: boolean;
   navaidsEnabled: boolean;
   reportingEnabled: boolean;
-  onFeaturesLoaded: (features: OpenAipPointFeature[]) => void;
+  onFeaturesLoaded: (features: OpenAipFeature[]) => void;
 }) {
   const map = useMap();
   const requestSeq = useRef(0);
   const lastRequestKeyRef = useRef('');
 
   const activeResources = useMemo(() => {
-    const resources: OpenAipPointFeature['sourceLayer'][] = [];
+    const resources: Array<typeof OPENAIP_POINT_RESOURCES[number]> = [];
     if (airportsEnabled) resources.push('airports');
     if (navaidsEnabled) resources.push('navaids');
     if (reportingEnabled) resources.push('reporting-points');
@@ -267,32 +457,29 @@ function VisiblePointLoader({
   }, [airportsEnabled, navaidsEnabled, reportingEnabled]);
 
   const loadVisiblePoints = useCallback(async () => {
-    if (activeResources.length === 0) {
-      onFeaturesLoaded([]);
-      return;
-    }
+    if (activeResources.length === 0) return;
 
     const bounds = map.getBounds().pad(0.25);
-    const bbox = [
-      bounds.getWest().toFixed(6),
-      bounds.getSouth().toFixed(6),
-      bounds.getEast().toFixed(6),
-      bounds.getNorth().toFixed(6),
-    ].join(',');
+    const bbox = [bounds.getWest().toFixed(6), bounds.getSouth().toFixed(6), bounds.getEast().toFixed(6), bounds.getNorth().toFixed(6)].join(',');
     const requestKey = `${activeResources.join(',')}|${bbox}`;
     if (lastRequestKeyRef.current === requestKey) return;
     lastRequestKeyRef.current = requestKey;
     const nextSeq = ++requestSeq.current;
 
-    const responses = await Promise.all(
-      activeResources.map(async (resource) => {
-        const data = await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=${resource}&bbox=${bbox}`);
-        return (data?.items || []).map((item: any) => ({ ...item, sourceLayer: resource })) as OpenAipPointFeature[];
-      })
-    );
+    try {
+      const responses = await Promise.all(
+        activeResources.map(async (resource) => {
+          const data = (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=${resource}&bbox=${bbox}`)) ?? { items: [] };
+          return { resource, data };
+        })
+      );
 
-    if (nextSeq !== requestSeq.current) return;
-    onFeaturesLoaded(responses.flat());
+      if (nextSeq !== requestSeq.current) return;
+      const combined = responses.flatMap(({ resource, data }) => (data.items || []).map((item: any) => ({ ...item, sourceLayer: resource })));
+      onFeaturesLoaded(combined);
+    } catch (error) {
+      console.error('Viewport OpenAIP load failed', error);
+    }
   }, [activeResources, map, onFeaturesLoaded]);
 
   useEffect(() => {
@@ -300,10 +487,10 @@ function VisiblePointLoader({
   }, [loadVisiblePoints]);
 
   useMapEvents({
-    moveend() {
+    moveend: () => {
       void loadVisiblePoints();
     },
-    zoomend() {
+    zoomend: () => {
       void loadVisiblePoints();
     },
   });
@@ -311,150 +498,92 @@ function VisiblePointLoader({
   return null;
 }
 
-function ActiveFlightOpenAipLayers({
-  mapMinZoom,
-  mapMaxZoom,
-  showOpenAipChart,
-  airportsVisible,
-  airportLabelsVisible,
-  navaidsVisible,
-  navaidLabelsVisible,
-  reportingVisible,
-  reportingLabelsVisible,
-  mapZoom,
-  onMapZoomChange,
-  viewportFeatures,
-  onViewportFeaturesLoaded,
+function VisibleAirspaceLoader({
+  enabled,
+  onFeaturesLoaded,
 }: {
-  mapMinZoom: number;
-  mapMaxZoom: number;
-  showOpenAipChart: boolean;
-  airportsVisible: boolean;
-  airportLabelsVisible: boolean;
-  navaidsVisible: boolean;
-  navaidLabelsVisible: boolean;
-  reportingVisible: boolean;
-  reportingLabelsVisible: boolean;
-  mapZoom: number;
-  onMapZoomChange: (zoom: number) => void;
-  viewportFeatures: OpenAipPointFeature[];
-  onViewportFeaturesLoaded: (features: OpenAipPointFeature[]) => void;
+  enabled: boolean;
+  onFeaturesLoaded: (features: OpenAipAirspace[]) => void;
 }) {
-  const airportFeatures = useMemo(
-    () => viewportFeatures.filter((feature) => feature.sourceLayer === 'airports'),
-    [viewportFeatures]
-  );
-  const navaidFeatures = useMemo(
-    () => viewportFeatures.filter((feature) => feature.sourceLayer === 'navaids'),
-    [viewportFeatures]
-  );
-  const reportingPointFeatures = useMemo(
-    () => viewportFeatures.filter((feature) => feature.sourceLayer === 'reporting-points'),
-    [viewportFeatures]
-  );
+  const map = useMap();
+  const requestSeq = useRef(0);
+  const lastRequestKeyRef = useRef('');
 
-  return (
-    <>
-      <MapZoomState onZoomChange={onMapZoomChange} />
-      <VisiblePointLoader
-        airportsEnabled={airportsVisible}
-        navaidsEnabled={navaidsVisible}
-        reportingEnabled={reportingVisible}
-        onFeaturesLoaded={onViewportFeaturesLoaded}
-      />
-      {showOpenAipChart ? (
-        <Pane name="active-flight-openaip" style={OPENAIP_PANE_STYLE}>
-          <TileLayer
-            pane="active-flight-openaip"
-            url="/api/openaip/tiles/openaip/{z}/{x}/{y}"
-            attribution="&copy; OpenAIP"
-            opacity={1}
-            minZoom={Math.max(mapMinZoom, 8)}
-            minNativeZoom={8}
-            maxNativeZoom={16}
-            maxZoom={Math.min(mapMaxZoom, 20)}
-          />
-        </Pane>
-      ) : null}
-      <Pane name="active-flight-openaip-points" style={OPENAIP_POINT_PANE_STYLE} />
-      <Pane name="active-flight-openaip-labels" style={OPENAIP_LABEL_PANE_STYLE} />
+  const loadVisibleAirspaces = useCallback(async () => {
+    if (!enabled) return;
+    const bounds = map.getBounds().pad(0.25);
+    const bbox = [bounds.getWest().toFixed(6), bounds.getSouth().toFixed(6), bounds.getEast().toFixed(6), bounds.getNorth().toFixed(6)].join(',');
+    if (lastRequestKeyRef.current === bbox) return;
+    lastRequestKeyRef.current = bbox;
+    const nextSeq = ++requestSeq.current;
 
-      {airportsVisible && mapZoom >= 8
-        ? airportFeatures.map((feature) => {
-            const coords = feature.geometry?.coordinates;
-            if (!coords) return null;
-            const [lon, lat] = coords;
-            const identifier = feature.icaoCode || feature.identifier || feature.name;
-            return (
-              <Marker key={feature._id} position={[lat, lon]} icon={airportPointIcon} pane="active-flight-openaip-points">
-                {airportLabelsVisible && mapZoom >= 9 ? (
-                  <Tooltip
-                    permanent
-                    pane="active-flight-openaip-labels"
-                    direction="top"
-                    offset={[0, -6]}
-                    opacity={0.95}
-                    className={openAipLabelClassName}
-                  >
-                    {identifier}
-                  </Tooltip>
-                ) : null}
-              </Marker>
-            );
-          })
-        : null}
+    try {
+      const data = (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=airspaces&bbox=${bbox}`)) ?? { items: [] };
+      if (nextSeq !== requestSeq.current) return;
+      onFeaturesLoaded((data.items || []) as OpenAipAirspace[]);
+    } catch (error) {
+      console.error('Viewport OpenAIP airspace load failed', error);
+    }
+  }, [enabled, map, onFeaturesLoaded]);
 
-      {navaidsVisible && mapZoom >= 9
-        ? navaidFeatures.map((feature) => {
-            const coords = feature.geometry?.coordinates;
-            if (!coords) return null;
-            const [lon, lat] = coords;
-            const identifier = feature.icaoCode || feature.identifier || feature.name;
-            return (
-              <Marker key={feature._id} position={[lat, lon]} icon={navaidPointIcon} pane="active-flight-openaip-points">
-                {navaidLabelsVisible && mapZoom >= 10 ? (
-                  <Tooltip
-                    permanent
-                    pane="active-flight-openaip-labels"
-                    direction="top"
-                    offset={[0, -6]}
-                    opacity={0.95}
-                    className={openAipLabelClassName}
-                  >
-                    {identifier}
-                  </Tooltip>
-                ) : null}
-              </Marker>
-            );
-          })
-        : null}
+  useEffect(() => {
+    void loadVisibleAirspaces();
+  }, [loadVisibleAirspaces]);
 
-      {reportingVisible && mapZoom >= 10
-        ? reportingPointFeatures.map((feature) => {
-            const coords = feature.geometry?.coordinates;
-            if (!coords) return null;
-            const [lon, lat] = coords;
-            const identifier = feature.icaoCode || feature.identifier || feature.name;
-            return (
-              <Marker key={feature._id} position={[lat, lon]} icon={reportingPointIcon} pane="active-flight-openaip-points">
-                {reportingLabelsVisible && mapZoom >= 11 ? (
-                  <Tooltip
-                    permanent
-                    pane="active-flight-openaip-labels"
-                    direction="top"
-                    offset={[0, -6]}
-                    opacity={0.95}
-                    className={openAipLabelClassName}
-                  >
-                    {identifier}
-                  </Tooltip>
-                ) : null}
-              </Marker>
-            );
-          })
-        : null}
-    </>
-  );
+  useMapEvents({
+    moveend: () => {
+      void loadVisibleAirspaces();
+    },
+    zoomend: () => {
+      void loadVisibleAirspaces();
+    },
+  });
+
+  return null;
+}
+
+function VisibleObstacleLoader({
+  enabled,
+  onFeaturesLoaded,
+}: {
+  enabled: boolean;
+  onFeaturesLoaded: (features: OpenAipObstacle[]) => void;
+}) {
+  const map = useMap();
+  const requestSeq = useRef(0);
+  const lastRequestKeyRef = useRef('');
+
+  const loadVisibleObstacles = useCallback(async () => {
+    if (!enabled) return;
+    const bounds = map.getBounds().pad(0.35);
+    const bbox = [bounds.getWest().toFixed(6), bounds.getSouth().toFixed(6), bounds.getEast().toFixed(6), bounds.getNorth().toFixed(6)].join(',');
+    if (lastRequestKeyRef.current === bbox) return;
+    lastRequestKeyRef.current = bbox;
+    const nextSeq = ++requestSeq.current;
+
+    try {
+      const data = (await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=obstacles&bbox=${bbox}`)) ?? { items: [] };
+      if (nextSeq !== requestSeq.current) return;
+      onFeaturesLoaded((data.items || []) as OpenAipObstacle[]);
+    } catch (error) {
+      console.error('Viewport OpenAIP obstacle load failed', error);
+    }
+  }, [enabled, map, onFeaturesLoaded]);
+
+  useEffect(() => {
+    void loadVisibleObstacles();
+  }, [loadVisibleObstacles]);
+
+  useMapEvents({
+    moveend: () => {
+      void loadVisibleObstacles();
+    },
+    zoomend: () => {
+      void loadVisibleObstacles();
+    },
+  });
+
+  return null;
 }
 
 function MapAreaCacheController({
@@ -746,33 +875,72 @@ function MenuCloseButton({ onClose }: { onClose?: () => void }) {
 }
 
 const OFFLINE_TILE_CACHE_PREFIX = 'safeviate-tiles-';
-const OFFLINE_TILE_MANIFEST_KEY = 'safeviate-tile-manifest-v1';
-const FALLBACK_MAP_MIN_ZOOM = 6;
-const FALLBACK_MAP_MAX_ZOOM = 14;
-const MAP_MIN_ZOOM = FALLBACK_MAP_MIN_ZOOM;
-const MAP_MAX_ZOOM = FALLBACK_MAP_MAX_ZOOM;
+const ACTIVE_FLIGHT_MAP_LAYER_SETTINGS_KEY = 'safeviate.active-flight-map-layer-settings';
+const MAP_MIN_ZOOM = 6;
+const MAP_MAX_ZOOM = 14;
+const AVAILABLE_ZOOM_LEVELS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
 
-function readOfflineTileManifest() {
-  if (typeof window === 'undefined') return new Set<string>();
-  try {
-    const raw = window.localStorage.getItem(OFFLINE_TILE_MANIFEST_KEY);
-    if (!raw) return new Set<string>();
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return new Set<string>();
-    return new Set(parsed.filter((value): value is string => typeof value === 'string'));
-  } catch {
-    return new Set<string>();
-  }
-}
+type ActiveFlightMapLayerSettings = {
+  showLabels: boolean;
+  showMasterChart: boolean;
+  showAirports: boolean;
+  showNavaids: boolean;
+  showReportingPoints: boolean;
+  showAirspaces: boolean;
+  showClassE: boolean;
+  showClassF: boolean;
+  showClassG: boolean;
+  showMilitaryAreas: boolean;
+  showTrainingAreas: boolean;
+  showGlidingSectors: boolean;
+  showHangGlidings: boolean;
+  showObstacles: boolean;
+  showOnlyActiveAirspace: boolean;
+  showRouteLine: boolean;
+  showWaypointMarkers: boolean;
+  showTrackLine: boolean;
+};
 
-function writeOfflineTileManifest(tileUrls: Iterable<string>) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(OFFLINE_TILE_MANIFEST_KEY, JSON.stringify(Array.from(new Set(tileUrls))));
-  } catch {
-    // Ignore browser storage failures and keep warmed browser cache behavior.
+const DEFAULT_ACTIVE_FLIGHT_MAP_LAYER_SETTINGS: ActiveFlightMapLayerSettings = {
+  showLabels: true,
+  showMasterChart: true,
+  showAirports: true,
+  showNavaids: true,
+  showReportingPoints: false,
+  showAirspaces: false,
+  showClassE: false,
+  showClassF: false,
+  showClassG: false,
+  showMilitaryAreas: false,
+  showTrainingAreas: true,
+  showGlidingSectors: false,
+  showHangGlidings: false,
+  showObstacles: false,
+  showOnlyActiveAirspace: false,
+  showRouteLine: true,
+  showWaypointMarkers: true,
+  showTrackLine: true,
+};
+
+const readStoredActiveFlightMapLayerSettings = (): ActiveFlightMapLayerSettings => {
+  if (typeof window === 'undefined') {
+    return DEFAULT_ACTIVE_FLIGHT_MAP_LAYER_SETTINGS;
   }
-}
+
+  const stored = window.localStorage.getItem(ACTIVE_FLIGHT_MAP_LAYER_SETTINGS_KEY);
+  if (!stored) {
+    return DEFAULT_ACTIVE_FLIGHT_MAP_LAYER_SETTINGS;
+  }
+
+  try {
+    return {
+      ...DEFAULT_ACTIVE_FLIGHT_MAP_LAYER_SETTINGS,
+      ...(JSON.parse(stored) as Partial<ActiveFlightMapLayerSettings>),
+    };
+  } catch {
+    return DEFAULT_ACTIVE_FLIGHT_MAP_LAYER_SETTINGS;
+  }
+};
 
 async function readOfflineTileSummary() {
   if (typeof window === 'undefined') {
@@ -829,22 +997,14 @@ export function ActiveFlightLiveMap({
   activeLegIndex,
   activeLegState,
   fullscreen = false,
-  compactLayout = false,
-  followOwnship,
+  showControls = true,
+  followOwnship: followOwnshipProp,
   onFollowOwnshipChange,
-  centreMapNonce,
-  layerSelectorOpen,
-  layerLevelsOpen,
-  onLayerSelectorOpenChange,
-  onLayerLevelsOpenChange,
-  airportsVisible: airportsVisibleProp,
-  onAirportsVisibleChange,
-  airportLabelsVisible: airportLabelsVisibleProp,
-  onAirportLabelsVisibleChange,
-  navaidsVisible: navaidsVisibleProp,
-  onNavaidsVisibleChange,
-  navaidLabelsVisible: navaidLabelsVisibleProp,
-  onNavaidLabelsVisibleChange,
+  recenterSignal = 0,
+  isLayersCardOpen = false,
+  isMapZoomCardOpen = false,
+  onLayersCardOpenChange,
+  onMapZoomCardOpenChange,
 }: {
   booking: Booking | null;
   legs: NavlogLeg[];
@@ -853,22 +1013,14 @@ export function ActiveFlightLiveMap({
   activeLegIndex?: number;
   activeLegState?: ActiveLegState | null;
   fullscreen?: boolean;
-  compactLayout?: boolean;
-  followOwnship: boolean;
-  onFollowOwnshipChange: (followOwnship: boolean) => void;
-  centreMapNonce: number;
-  layerSelectorOpen?: boolean;
-  layerLevelsOpen?: boolean;
-  onLayerSelectorOpenChange?: (open: boolean) => void;
-  onLayerLevelsOpenChange?: (open: boolean) => void;
-  airportsVisible?: boolean;
-  onAirportsVisibleChange?: (open: boolean) => void;
-  airportLabelsVisible?: boolean;
-  onAirportLabelsVisibleChange?: (open: boolean) => void;
-  navaidsVisible?: boolean;
-  onNavaidsVisibleChange?: (open: boolean) => void;
-  navaidLabelsVisible?: boolean;
-  onNavaidLabelsVisibleChange?: (open: boolean) => void;
+  showControls?: boolean;
+  followOwnship?: boolean;
+  onFollowOwnshipChange?: (followOwnship: boolean) => void;
+  recenterSignal?: number;
+  isLayersCardOpen?: boolean;
+  isMapZoomCardOpen?: boolean;
+  onLayersCardOpenChange?: (open: boolean) => void;
+  onMapZoomCardOpenChange?: (open: boolean) => void;
 }) {
   const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
     storageKey: 'safeviate.active-flight-map-zoom',
@@ -906,6 +1058,8 @@ export function ActiveFlightLiveMap({
     [routePoints]
   );
   const [trackHistory, setTrackHistory] = useState<[number, number][]>([]);
+  const [internalFollowOwnship, setInternalFollowOwnship] = useState(true);
+  const [recenterNonce, setRecenterNonce] = useState(0);
   const [cacheNonce, setCacheNonce] = useState(0);
   const [cacheStatus, setCacheStatus] = useState('Ready to cache current view.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
@@ -927,192 +1081,75 @@ export function ActiveFlightLiveMap({
   const [offlineUsageLabel, setOfflineUsageLabel] = useState('Checking browser storage on this device...');
   const [isRefreshingOfflineSummary, setIsRefreshingOfflineSummary] = useState(false);
   const [isClearingOfflineMaps, setIsClearingOfflineMaps] = useState(false);
-  const [compactFullscreenOpen, setCompactFullscreenOpen] = useState(false);
-  const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>('light');
-  const [showOpenAipChart, setShowOpenAipChart] = useState(true);
-  const [internalAirportsVisible, setInternalAirportsVisible] = useState(true);
-  const [internalAirportLabelsVisible, setInternalAirportLabelsVisible] = useState(true);
-  const [internalNavaidsVisible, setInternalNavaidsVisible] = useState(true);
-  const [internalNavaidLabelsVisible, setInternalNavaidLabelsVisible] = useState(true);
-  const [reportingVisible, setReportingVisible] = useState(true);
-  const [reportingLabelsVisible, setReportingLabelsVisible] = useState(true);
-  const [airspacesVisible, setAirspacesVisible] = useState(true);
-  const [airspaceLabelsVisible, setAirspaceLabelsVisible] = useState(false);
-  const [classEVisible, setClassEVisible] = useState(false);
-  const [classELabelsVisible, setClassELabelsVisible] = useState(false);
-  const [classFVisible, setClassFVisible] = useState(false);
-  const [classFLabelsVisible, setClassFLabelsVisible] = useState(false);
-  const [classGVisible, setClassGVisible] = useState(true);
-  const [classGLabelsVisible, setClassGLabelsVisible] = useState(false);
-  const [militaryAreasVisible, setMilitaryAreasVisible] = useState(false);
-  const [militaryLabelsVisible, setMilitaryLabelsVisible] = useState(false);
-  const [trainingAreasVisible, setTrainingAreasVisible] = useState(false);
-  const [trainingLabelsVisible, setTrainingLabelsVisible] = useState(false);
-  const [glidingSectorsVisible, setGlidingSectorsVisible] = useState(false);
-  const [glidingLabelsVisible, setGlidingLabelsVisible] = useState(false);
-  const [hangGlidingVisible, setHangGlidingVisible] = useState(false);
-  const [hangGlidingLabelsVisible, setHangGlidingLabelsVisible] = useState(false);
-  const [obstaclesVisible, setObstaclesVisible] = useState(true);
-  const [obstacleLabelsVisible, setObstacleLabelsVisible] = useState(false);
-  const [mapZoom, setMapZoom] = useState(8);
-  const [viewportFeatures, setViewportFeatures] = useState<OpenAipPointFeature[]>([]);
-  const [showLayerSelectorPanel, setShowLayerSelectorPanel] = useState(false);
-  const [showLayerLevelsPanel, setShowLayerLevelsPanel] = useState(false);
-  const layerSelectorPanelOpen = layerSelectorOpen ?? showLayerSelectorPanel;
-  const layerLevelsPanelOpen = layerLevelsOpen ?? showLayerLevelsPanel;
-  const airportsVisible = airportsVisibleProp ?? internalAirportsVisible;
-  const setAirportsVisible = onAirportsVisibleChange ?? setInternalAirportsVisible;
-  const airportLabelsVisible = airportLabelsVisibleProp ?? internalAirportLabelsVisible;
-  const setAirportLabelsVisible = onAirportLabelsVisibleChange ?? setInternalAirportLabelsVisible;
-  const navaidsVisible = navaidsVisibleProp ?? internalNavaidsVisible;
-  const setNavaidsVisible = onNavaidsVisibleChange ?? setInternalNavaidsVisible;
-  const navaidLabelsVisible = navaidLabelsVisibleProp ?? internalNavaidLabelsVisible;
-  const setNavaidLabelsVisible = onNavaidLabelsVisibleChange ?? setInternalNavaidLabelsVisible;
+  const [viewportFeatures, setViewportFeatures] = useState<OpenAipFeature[]>([]);
+  const [airspaceFeatures, setAirspaceFeatures] = useState<OpenAipAirspace[]>([]);
+  const [obstacleFeatures, setObstacleFeatures] = useState<OpenAipObstacle[]>([]);
+  const [showRouteLine, setShowRouteLine] = useState(() => readStoredActiveFlightMapLayerSettings().showRouteLine);
+  const [showWaypointMarkers, setShowWaypointMarkers] = useState(() => readStoredActiveFlightMapLayerSettings().showWaypointMarkers);
+  const [showTrackLine, setShowTrackLine] = useState(() => readStoredActiveFlightMapLayerSettings().showTrackLine);
+  const [showLabels, setShowLabels] = useState(() => readStoredActiveFlightMapLayerSettings().showLabels);
+  const [showMasterChart, setShowMasterChart] = useState(() => readStoredActiveFlightMapLayerSettings().showMasterChart);
+  const [showAirports, setShowAirports] = useState(() => readStoredActiveFlightMapLayerSettings().showAirports);
+  const [showNavaids, setShowNavaids] = useState(() => readStoredActiveFlightMapLayerSettings().showNavaids);
+  const [showReportingPoints, setShowReportingPoints] = useState(() => readStoredActiveFlightMapLayerSettings().showReportingPoints);
+  const [showAirspaces, setShowAirspaces] = useState(() => readStoredActiveFlightMapLayerSettings().showAirspaces);
+  const [showClassE, setShowClassE] = useState(() => readStoredActiveFlightMapLayerSettings().showClassE);
+  const [showClassF, setShowClassF] = useState(() => readStoredActiveFlightMapLayerSettings().showClassF);
+  const [showClassG, setShowClassG] = useState(() => readStoredActiveFlightMapLayerSettings().showClassG);
+  const [showMilitaryAreas, setShowMilitaryAreas] = useState(() => readStoredActiveFlightMapLayerSettings().showMilitaryAreas);
+  const [showTrainingAreas, setShowTrainingAreas] = useState(() => readStoredActiveFlightMapLayerSettings().showTrainingAreas);
+  const [showGlidingSectors, setShowGlidingSectors] = useState(() => readStoredActiveFlightMapLayerSettings().showGlidingSectors);
+  const [showHangGlidings, setShowHangGlidings] = useState(() => readStoredActiveFlightMapLayerSettings().showHangGlidings);
+  const [showObstacles, setShowObstacles] = useState(() => readStoredActiveFlightMapLayerSettings().showObstacles);
+  const [showOnlyActiveAirspace, setShowOnlyActiveAirspace] = useState(() => readStoredActiveFlightMapLayerSettings().showOnlyActiveAirspace);
+  const [currentZoom, setCurrentZoom] = useState(8);
+  const [minVisibleZoom, setMinVisibleZoom] = useState(8);
+  const [maxVisibleZoom, setMaxVisibleZoom] = useState(14);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem('safeviate.active-flight-map-layer');
-      if (stored === 'light' || stored === 'satellite') {
-        setSelectedBaseLayer(stored);
-      }
+    if (typeof window === 'undefined') return;
 
-      const storedOpenAip = window.localStorage.getItem('safeviate.active-flight-map-openaip-chart');
-      if (storedOpenAip === 'true' || storedOpenAip === 'false') {
-        setShowOpenAipChart(storedOpenAip === 'true');
-      }
+    const settings: ActiveFlightMapLayerSettings = {
+      showLabels,
+      showMasterChart,
+      showAirports,
+      showNavaids,
+      showReportingPoints,
+      showAirspaces,
+      showClassE,
+      showClassF,
+      showClassG,
+      showMilitaryAreas,
+      showTrainingAreas,
+      showGlidingSectors,
+      showHangGlidings,
+      showObstacles,
+      showOnlyActiveAirspace,
+      showRouteLine,
+      showWaypointMarkers,
+      showTrackLine,
+    };
 
-      const storedAirports = window.localStorage.getItem('safeviate.active-flight-map-airports');
-      if (storedAirports === 'true' || storedAirports === 'false') {
-        setAirportsVisible(storedAirports === 'true');
-      }
-
-      const storedAirportLabels = window.localStorage.getItem('safeviate.active-flight-map-airport-labels');
-      if (storedAirportLabels === 'true' || storedAirportLabels === 'false') {
-        setAirportLabelsVisible(storedAirportLabels === 'true');
-      }
-
-      const storedNavaids = window.localStorage.getItem('safeviate.active-flight-map-navaids');
-      if (storedNavaids === 'true' || storedNavaids === 'false') {
-        setNavaidsVisible(storedNavaids === 'true');
-      }
-
-      const storedNavaidLabels = window.localStorage.getItem('safeviate.active-flight-map-navaid-labels');
-      if (storedNavaidLabels === 'true' || storedNavaidLabels === 'false') {
-        setNavaidLabelsVisible(storedNavaidLabels === 'true');
-      }
-
-      const storedReporting = window.localStorage.getItem('safeviate.active-flight-map-reporting');
-      if (storedReporting === 'true' || storedReporting === 'false') {
-        setReportingVisible(storedReporting === 'true');
-      }
-
-      const storedReportingLabels = window.localStorage.getItem('safeviate.active-flight-map-reporting-labels');
-      if (storedReportingLabels === 'true' || storedReportingLabels === 'false') {
-        setReportingLabelsVisible(storedReportingLabels === 'true');
-      }
-
-      const booleanKeys: Array<[string, Dispatch<SetStateAction<boolean>>]> = [
-        ['safeviate.active-flight-map-airspaces', setAirspacesVisible],
-        ['safeviate.active-flight-map-airspace-labels', setAirspaceLabelsVisible],
-        ['safeviate.active-flight-map-class-e', setClassEVisible],
-        ['safeviate.active-flight-map-class-e-labels', setClassELabelsVisible],
-        ['safeviate.active-flight-map-class-f', setClassFVisible],
-        ['safeviate.active-flight-map-class-f-labels', setClassFLabelsVisible],
-        ['safeviate.active-flight-map-class-g', setClassGVisible],
-        ['safeviate.active-flight-map-class-g-labels', setClassGLabelsVisible],
-        ['safeviate.active-flight-map-military', setMilitaryAreasVisible],
-        ['safeviate.active-flight-map-military-labels', setMilitaryLabelsVisible],
-        ['safeviate.active-flight-map-training', setTrainingAreasVisible],
-        ['safeviate.active-flight-map-training-labels', setTrainingLabelsVisible],
-        ['safeviate.active-flight-map-gliding', setGlidingSectorsVisible],
-        ['safeviate.active-flight-map-gliding-labels', setGlidingLabelsVisible],
-        ['safeviate.active-flight-map-hang-gliding', setHangGlidingVisible],
-        ['safeviate.active-flight-map-hang-gliding-labels', setHangGlidingLabelsVisible],
-        ['safeviate.active-flight-map-obstacles', setObstaclesVisible],
-        ['safeviate.active-flight-map-obstacle-labels', setObstacleLabelsVisible],
-      ];
-
-      for (const [key, setter] of booleanKeys) {
-        const stored = window.localStorage.getItem(key);
-        if (stored === 'true' || stored === 'false') {
-          setter(stored === 'true');
-        }
-      }
-    } catch {
-      // keep default
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('safeviate.active-flight-map-layer', selectedBaseLayer);
-    } catch {
-      // ignore storage failures
-    }
-  }, [selectedBaseLayer]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('safeviate.active-flight-map-openaip-chart', String(showOpenAipChart));
-    } catch {
-      // ignore storage failures
-    }
-  }, [showOpenAipChart]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('safeviate.active-flight-map-airports', String(airportsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-airport-labels', String(airportLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-navaids', String(navaidsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-navaid-labels', String(navaidLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-reporting', String(reportingVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-reporting-labels', String(reportingLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-airspaces', String(airspacesVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-airspace-labels', String(airspaceLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-class-e', String(classEVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-class-e-labels', String(classELabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-class-f', String(classFVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-class-f-labels', String(classFLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-class-g', String(classGVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-class-g-labels', String(classGLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-military', String(militaryAreasVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-military-labels', String(militaryLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-training', String(trainingAreasVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-training-labels', String(trainingLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-gliding', String(glidingSectorsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-gliding-labels', String(glidingLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-hang-gliding', String(hangGlidingVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-hang-gliding-labels', String(hangGlidingLabelsVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-obstacles', String(obstaclesVisible));
-      window.localStorage.setItem('safeviate.active-flight-map-obstacle-labels', String(obstacleLabelsVisible));
-    } catch {
-      // ignore storage failures
-    }
+    window.localStorage.setItem(ACTIVE_FLIGHT_MAP_LAYER_SETTINGS_KEY, JSON.stringify(settings));
   }, [
-    airportsVisible,
-    airportLabelsVisible,
-    navaidsVisible,
-    navaidLabelsVisible,
-    reportingVisible,
-    reportingLabelsVisible,
-    airspacesVisible,
-    airspaceLabelsVisible,
-    classEVisible,
-    classELabelsVisible,
-    classFVisible,
-    classFLabelsVisible,
-    classGVisible,
-    classGLabelsVisible,
-    militaryAreasVisible,
-    militaryLabelsVisible,
-    trainingAreasVisible,
-    trainingLabelsVisible,
-    glidingSectorsVisible,
-    glidingLabelsVisible,
-    hangGlidingVisible,
-    hangGlidingLabelsVisible,
-    obstaclesVisible,
-    obstacleLabelsVisible,
+    showLabels,
+    showMasterChart,
+    showAirports,
+    showNavaids,
+    showReportingPoints,
+    showAirspaces,
+    showClassE,
+    showClassF,
+    showClassG,
+    showMilitaryAreas,
+    showTrainingAreas,
+    showGlidingSectors,
+    showHangGlidings,
+    showObstacles,
+    showOnlyActiveAirspace,
+    showRouteLine,
+    showWaypointMarkers,
+    showTrackLine,
   ]);
 
   useEffect(() => {
@@ -1124,9 +1161,77 @@ export function ActiveFlightLiveMap({
     }
   }, [flightCacheLabel, routeDownloadState, routePoints.length]);
 
+  const followOwnship = followOwnshipProp ?? internalFollowOwnship;
+  const airportFeatures = useMemo(() => viewportFeatures.filter((item) => item.sourceLayer === 'airports' && item.geometry?.coordinates), [viewportFeatures]);
+  const navaidFeatures = useMemo(() => viewportFeatures.filter((item) => item.sourceLayer === 'navaids' && item.geometry?.coordinates), [viewportFeatures]);
+  const reportingPointFeatures = useMemo(() => viewportFeatures.filter((item) => item.sourceLayer === 'reporting-points' && item.geometry?.coordinates), [viewportFeatures]);
+  const airspaceCollections = useMemo(() => {
+    const filterItems = (predicate: (item: OpenAipAirspace) => boolean) =>
+      airspaceFeatureCollection(airspaceFeatures.filter((item) => item.geometry?.coordinates && (!showOnlyActiveAirspace || isAirspaceActiveNow(item)) && predicate(item)));
+
+    return {
+      classE: filterItems((item) => getAirspaceClassCategory(item) === 'class-e'),
+      classF: filterItems((item) => getAirspaceClassCategory(item) === 'class-f'),
+      classG: filterItems((item) => getAirspaceClassCategory(item) === 'class-g'),
+      military: filterItems((item) => isMilitaryAirspace(item)),
+      training: filterItems((item) => isTrainingAirspace(item)),
+      gliding: filterItems((item) => isGlidingAirspace(item)),
+      hangGliding: filterItems((item) => isHangGlidingAirspace(item)),
+      general: filterItems((item) => getAirspaceCategory(item) === 'other' || getAirspaceCategory(item) === 'ctr'),
+    };
+  }, [airspaceFeatures, showOnlyActiveAirspace]);
+  const obstacleGeoJson = useMemo(() => obstacleFeatureCollection(obstacleFeatures), [obstacleFeatures]);
+  const featurePointIcon = useCallback((color: string) => L.divIcon({
+    className: '',
+    html: `<div style="width:8px;height:8px;border-radius:9999px;background:${color};border:1.5px solid #ffffff;box-shadow:0 0 0 1px rgba(15,23,42,0.2);"></div>`,
+    iconSize: [8, 8],
+    iconAnchor: [4, 4],
+  }), []);
+  const airportPointIcon = useMemo(() => featurePointIcon('#2563eb'), [featurePointIcon]);
+  const navaidPointIcon = useMemo(() => featurePointIcon('#7c3aed'), [featurePointIcon]);
+  const reportingPointIcon = useMemo(() => featurePointIcon('#d97706'), [featurePointIcon]);
+  const labelClassName = 'active-flight-map-label rounded-sm border border-slate-200 bg-white/95 px-[1px] py-0 text-[8px] leading-[1] font-black uppercase tracking-[0.02em] text-slate-900 shadow-sm';
+  const airspaceLabelClassName = 'active-flight-map-airspace-label rounded-sm border border-slate-300 bg-white/90 px-[1px] py-0 text-[8px] leading-[1] font-black uppercase tracking-[0.02em] text-slate-900 shadow-sm';
+  const airspaceStyle = useCallback((feature: any) => {
+    const category = feature?.properties?.category;
+    let palette = { color: '#38bdf8', fillColor: '#38bdf8' };
+    if (category === 'ctr') palette = { color: '#dc2626', fillColor: '#fca5a5' };
+    else if (category === 'military') palette = { color: '#ef4444', fillColor: '#ef4444' };
+    else if (category === 'training') palette = { color: '#f59e0b', fillColor: '#f59e0b' };
+    else if (category === 'gliding') palette = { color: '#22c55e', fillColor: '#22c55e' };
+    else if (category === 'hang') palette = { color: '#a855f7', fillColor: '#a855f7' };
+    else if (category === 'class-e') palette = { color: '#3b82f6', fillColor: '#3b82f6' };
+    else if (category === 'class-f') palette = { color: '#f97316', fillColor: '#f97316' };
+    else if (category === 'class-g') palette = { color: '#14b8a6', fillColor: '#14b8a6' };
+
+    return { ...palette, weight: 2, fillOpacity: 0.12, opacity: 0.85 };
+  }, []);
+  const obstaclePointToLayer = useCallback((feature: any, latlng: L.LatLngExpression) => {
+    const height = feature?.properties?.height;
+    return L.circleMarker(latlng, {
+      radius: height && Number(height) > 250 ? 5 : 4,
+      color: '#ef4444',
+      fillColor: '#ef4444',
+      fillOpacity: 0.8,
+      weight: 1,
+    });
+  }, []);
+  const setFollowOwnship = useCallback((value: boolean | ((current: boolean) => boolean)) => {
+    const nextValue = typeof value === 'function' ? value(followOwnship) : value;
+    onFollowOwnshipChange?.(nextValue);
+    if (followOwnshipProp === undefined) {
+      setInternalFollowOwnship(nextValue);
+    }
+  }, [followOwnship, followOwnshipProp, onFollowOwnshipChange]);
+
   useEffect(() => {
     setTrackHistory(position ? [[position.latitude, position.longitude]] : []);
   }, [aircraftRegistration, booking?.id, routeSignature]);
+
+  useEffect(() => {
+    if (recenterSignal === 0) return;
+    setRecenterNonce((current) => current + 1);
+  }, [recenterSignal]);
 
   useEffect(() => {
     if (!position) return;
@@ -1159,7 +1264,7 @@ export function ActiveFlightLiveMap({
     position?.headingTrue != null && !Number.isNaN(position.headingTrue)
       ? ((position.headingTrue % 360) + 360) % 360
       : null;
-  const mapRotationDegrees = followOwnship && normalizedHeading != null ? -normalizedHeading : 0;
+  const mapRotationDegrees = normalizedHeading != null ? -normalizedHeading : 0;
   const mapShellStyle = {
     '--map-rotation': `${mapRotationDegrees}deg`,
     '--map-counter-rotation': `${-mapRotationDegrees}deg`,
@@ -1492,9 +1597,17 @@ export function ActiveFlightLiveMap({
               viewportFeatures={viewportFeatures}
               onViewportFeaturesLoaded={setViewportFeatures}
             />
-            <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
+            <MapInteractionWatcher onUserInteracted={() => {
+              if (position) {
+                setRecenterNonce((current) => current + 1);
+              }
+            }} />
             <MapResizeController />
-            <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
+            <MapRecenterController
+              position={position}
+              recenterNonce={recenterNonce}
+              onDone={() => setRecenterNonce(0)}
+            />
             <MapAreaCacheController
               cacheNonce={cacheNonce}
               areaDownloadNonce={areaDownloadNonce}
@@ -1527,7 +1640,7 @@ export function ActiveFlightLiveMap({
                 );
               }}
             />
-            <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
+            <FitFlightBounds position={position} />
 
             {routePoints.length > 1 && (
               <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
@@ -1572,11 +1685,11 @@ export function ActiveFlightLiveMap({
             {position && (
               <Marker
                 position={[position.latitude, position.longitude]}
-                icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', normalizedHeading)}
+                icon={createAircraftMarkerIcon(normalizedHeading)}
               >
                 <Popup>
                   <div className="space-y-1 text-xs">
-                    <p className="font-black uppercase">{aircraftRegistration || 'Ownship'}</p>
+                    <p className="font-black uppercase">{aircraftRegistration || 'Current Position'}</p>
                     {booking && <p>Booking #{booking.bookingNumber}</p>}
                     <p>
                       {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
@@ -2035,8 +2148,9 @@ export function ActiveFlightLiveMap({
   }
 
   return (
-    <div className="space-y-3 pointer-events-auto" style={mapShellStyle}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm">
+      <div className="flex h-full min-h-0 flex-col space-y-3" style={mapShellStyle}>
+      {showControls ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <CompassDial headingTrue={position?.headingTrue} />
           <div className="h-8 w-px bg-slate-200" />
@@ -2092,15 +2206,144 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
       </div>
+      ) : null}
 
-      <div className="relative overflow-hidden rounded-2xl">
-        <div className="nose-up-map relative min-h-[360px]">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-2xl">
+        {isMapZoomCardOpen ? (
+          <div className="pointer-events-auto absolute left-3 top-3 z-[1000] w-[320px] max-w-[calc(100%-1.5rem)] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
+                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
+                  Zoom {currentZoom} • decide what to load
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                onClick={() => onMapZoomCardOpenChange?.(false)}
+              >
+                Hide card
+              </button>
+            </div>
+            <div className="mt-3 grid gap-3">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Min Zoom Level</p>
+                <Select
+                  value={`${minVisibleZoom}`}
+                  onValueChange={(value) => {
+                    const nextMin = Number(value);
+                    setMinVisibleZoom(nextMin);
+                    if (nextMin > maxVisibleZoom) {
+                      setMaxVisibleZoom(nextMin);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-[10px] font-black uppercase">
+                    <SelectValue placeholder="Select min zoom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
+                      <SelectItem key={`active-flight-min-${zoomLevel}`} value={`${zoomLevel}`}>
+                        {zoomLevel}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Max Zoom Level</p>
+                <Select
+                  value={`${maxVisibleZoom}`}
+                  onValueChange={(value) => {
+                    const nextMax = Number(value);
+                    setMaxVisibleZoom(nextMax);
+                    if (nextMax < minVisibleZoom) {
+                      setMinVisibleZoom(nextMax);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-[10px] font-black uppercase">
+                    <SelectValue placeholder="Select max zoom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
+                      <SelectItem key={`active-flight-max-${zoomLevel}`} value={`${zoomLevel}`}>
+                        {zoomLevel}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {isLayersCardOpen ? (
+          <div className="pointer-events-auto absolute right-3 top-3 z-[1000] w-[320px] max-w-[calc(100%-1.5rem)] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Layers</p>
+                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
+                  Show and hide visible map layers
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                onClick={() => onLayersCardOpenChange?.(false)}
+              >
+                Hide card
+              </button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                { label: 'Labels', active: showLabels, setActive: setShowLabels },
+                { label: 'Master Chart', active: showMasterChart, setActive: setShowMasterChart },
+                { label: 'Airports', active: showAirports, setActive: setShowAirports },
+                { label: 'Navaids', active: showNavaids, setActive: setShowNavaids },
+                { label: 'Reporting Points', active: showReportingPoints, setActive: setShowReportingPoints },
+                { label: 'Airspaces', active: showAirspaces, setActive: setShowAirspaces },
+                { label: 'Class E', active: showClassE, setActive: setShowClassE },
+                { label: 'Class F', active: showClassF, setActive: setShowClassF },
+                { label: 'Class G', active: showClassG, setActive: setShowClassG },
+                { label: 'Military Areas', active: showMilitaryAreas, setActive: setShowMilitaryAreas },
+                { label: 'Training Areas', active: showTrainingAreas, setActive: setShowTrainingAreas },
+                { label: 'Gliding Sectors', active: showGlidingSectors, setActive: setShowGlidingSectors },
+                { label: 'Hang Glidings', active: showHangGlidings, setActive: setShowHangGlidings },
+                { label: 'Obstacles', active: showObstacles, setActive: setShowObstacles },
+                { label: 'Active Only', active: showOnlyActiveAirspace, setActive: setShowOnlyActiveAirspace },
+                { label: 'Route', active: showRouteLine, setActive: setShowRouteLine },
+                { label: 'Waypoints', active: showWaypointMarkers, setActive: setShowWaypointMarkers },
+                { label: 'Track', active: showTrackLine, setActive: setShowTrackLine },
+              ].map((item) => (
+                <Button
+                  key={item.label}
+                  type="button"
+                  variant="outline"
+                  className={`h-9 justify-start px-3 text-[10px] font-black uppercase ${
+                    item.active
+                      ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                  onClick={() => item.setActive(!item.active)}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="nose-up-map relative h-full min-h-[360px] flex-1">
         <LeafletMapFrame
           center={center}
           zoom={8}
-          minZoom={mapMinZoom}
-          maxZoom={mapMaxZoom}
-          className="h-full min-h-[360px] w-full rounded-2xl"
+          minZoom={minVisibleZoom}
+          maxZoom={maxVisibleZoom}
+          className="h-full w-full rounded-2xl"
           style={{ background: '#020617' }}
         >
           {selectedBaseLayer === 'satellite' ? (
@@ -2129,18 +2372,193 @@ export function ActiveFlightLiveMap({
             viewportFeatures={viewportFeatures}
             onViewportFeaturesLoaded={setViewportFeatures}
           />
-          <MapInteractionWatcher onUserInteracted={() => onFollowOwnshipChange(false)} />
+          {showMasterChart ? (
+            <TileLayer
+              url="/api/openaip/tiles/openaip/{z}/{x}/{y}"
+              attribution="&copy; OpenAIP"
+              opacity={1}
+              minZoom={8}
+              minNativeZoom={8}
+              maxNativeZoom={16}
+              maxZoom={20}
+            />
+          ) : null}
+          <VisiblePointLoader
+            airportsEnabled={showAirports}
+            navaidsEnabled={showNavaids}
+            reportingEnabled={showReportingPoints}
+            onFeaturesLoaded={setViewportFeatures}
+          />
+          <VisibleAirspaceLoader
+            enabled={showAirspaces || showClassE || showClassF || showClassG || showMilitaryAreas || showTrainingAreas || showGlidingSectors || showHangGlidings}
+            onFeaturesLoaded={setAirspaceFeatures}
+          />
+          <VisibleObstacleLoader enabled={showObstacles} onFeaturesLoaded={setObstacleFeatures} />
+          <MapInteractionWatcher onUserInteracted={() => {
+            if (position) {
+              setRecenterNonce((current) => current + 1);
+            }
+          }} />
           <MapResizeController />
-          <MapRecenterController position={position} centreMapNonce={centreMapNonce} />
-          <FitFlightBounds routePoints={routePoints} position={position} followOwnship={followOwnship} />
+          <MapZoomBridge zoomInNonce={0} zoomOutNonce={0} onZoomChange={setCurrentZoom} />
+          <MapZoomLimits minZoom={minVisibleZoom} maxZoom={maxVisibleZoom} />
+          <MapRecenterController
+            position={position}
+            recenterNonce={recenterNonce}
+            onDone={() => setRecenterNonce(0)}
+          />
+          <FitFlightBounds position={position} />
 
-          {routePoints.length > 1 && (
+          {showRouteLine && routePoints.length > 1 && (
             <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
           )}
 
-          {trackHistory.length > 1 && (
+          {showTrackLine && trackHistory.length > 1 && (
             <Polyline positions={trackHistory} color="#38bdf8" weight={3} opacity={0.7} />
           )}
+
+          {showAirports ? (
+            <FeatureGroup>
+              {currentZoom >= 8 && airportFeatures.map((feature) => {
+                const coords = feature.geometry?.coordinates;
+                if (!coords) return null;
+                const [lon, lat] = coords;
+                const identifier = feature.icaoCode || feature.identifier || feature.name;
+                return (
+                  <Marker key={feature._id} position={[lat, lon]} icon={airportPointIcon}>
+                    {showLabels && currentZoom >= 9 ? (
+                      <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={labelClassName}>
+                        {identifier}
+                      </Tooltip>
+                    ) : null}
+                  </Marker>
+                );
+              })}
+            </FeatureGroup>
+          ) : null}
+
+          {showNavaids ? (
+            <FeatureGroup>
+              {currentZoom >= 9 && navaidFeatures.map((feature) => {
+                const coords = feature.geometry?.coordinates;
+                if (!coords) return null;
+                const [lon, lat] = coords;
+                const identifier = feature.icaoCode || feature.identifier || feature.name;
+                return (
+                  <Marker key={feature._id} position={[lat, lon]} icon={navaidPointIcon}>
+                    {showLabels && currentZoom >= 10 ? (
+                      <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={labelClassName}>
+                        {identifier}
+                      </Tooltip>
+                    ) : null}
+                  </Marker>
+                );
+              })}
+            </FeatureGroup>
+          ) : null}
+
+          {showReportingPoints ? (
+            <FeatureGroup>
+              {currentZoom >= 10 && reportingPointFeatures.map((feature) => {
+                const coords = feature.geometry?.coordinates;
+                if (!coords) return null;
+                const [lon, lat] = coords;
+                const identifier = feature.icaoCode || feature.identifier || feature.name;
+                return (
+                  <Marker key={feature._id} position={[lat, lon]} icon={reportingPointIcon}>
+                    {showLabels && currentZoom >= 11 ? (
+                      <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={labelClassName}>
+                        {identifier}
+                      </Tooltip>
+                    ) : null}
+                  </Marker>
+                );
+              })}
+            </FeatureGroup>
+          ) : null}
+
+          {showClassE && airspaceCollections.classE.features.length > 0 ? (
+            <GeoJSON
+              key={`active-flight-airspace-class-e-${airspaceCollections.classE.features.length}-${showOnlyActiveAirspace}`}
+              data={airspaceCollections.classE as any}
+              style={airspaceStyle as any}
+              onEachFeature={(feature, layer) => {
+                const props = feature.properties as any;
+                layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, {
+                  permanent: showLabels && currentZoom >= 8,
+                  direction: 'center',
+                  className: airspaceLabelClassName,
+                  opacity: 0.9,
+                });
+              }}
+            />
+          ) : null}
+
+          {showClassF && airspaceCollections.classF.features.length > 0 ? (
+            <GeoJSON key={`active-flight-airspace-class-f-${airspaceCollections.classF.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.classF as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
+              const props = feature.properties as any;
+              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
+            }} />
+          ) : null}
+
+          {showClassG && airspaceCollections.classG.features.length > 0 ? (
+            <GeoJSON key={`active-flight-airspace-class-g-${airspaceCollections.classG.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.classG as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
+              const props = feature.properties as any;
+              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
+            }} />
+          ) : null}
+
+          {showMilitaryAreas && airspaceCollections.military.features.length > 0 ? (
+            <GeoJSON key={`active-flight-airspace-military-${airspaceCollections.military.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.military as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
+              const props = feature.properties as any;
+              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
+            }} />
+          ) : null}
+
+          {showTrainingAreas && airspaceCollections.training.features.length > 0 ? (
+            <GeoJSON key={`active-flight-airspace-training-${airspaceCollections.training.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.training as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
+              const props = feature.properties as any;
+              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
+            }} />
+          ) : null}
+
+          {showGlidingSectors && airspaceCollections.gliding.features.length > 0 ? (
+            <GeoJSON key={`active-flight-airspace-gliding-${airspaceCollections.gliding.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.gliding as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
+              const props = feature.properties as any;
+              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
+            }} />
+          ) : null}
+
+          {showHangGlidings && airspaceCollections.hangGliding.features.length > 0 ? (
+            <GeoJSON key={`active-flight-airspace-hang-${airspaceCollections.hangGliding.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.hangGliding as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
+              const props = feature.properties as any;
+              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
+            }} />
+          ) : null}
+
+          {showAirspaces && airspaceCollections.general.features.length > 0 ? (
+            <GeoJSON key={`active-flight-airspace-general-${airspaceCollections.general.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.general as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
+              const props = feature.properties as any;
+              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
+            }} />
+          ) : null}
+
+          {showObstacles && obstacleGeoJson.features.length > 0 ? (
+            <GeoJSON
+              key={`active-flight-obstacles-${obstacleGeoJson.features.length}`}
+              data={obstacleGeoJson as any}
+              pointToLayer={obstaclePointToLayer as any}
+              onEachFeature={(feature, layer) => {
+                const props = feature.properties as any;
+                layer.bindTooltip(`${props?.name || 'Obstacle'}${props?.height ? ` • ${props.height} m` : ''}`, {
+                  permanent: showLabels && currentZoom >= 11,
+                  direction: 'top',
+                  className: labelClassName,
+                  opacity: 0.95,
+                });
+              }}
+            />
+          ) : null}
 
           {activeLegIndex !== undefined &&
             validRouteLegs[activeLegIndex]?.latitude !== undefined &&
@@ -2158,7 +2576,7 @@ export function ActiveFlightLiveMap({
               />
             )}
 
-          {legs.map((leg, index) => {
+          {showWaypointMarkers && legs.map((leg, index) => {
             if (leg.latitude === undefined || leg.longitude === undefined) return null;
 
             return (
@@ -2177,11 +2595,11 @@ export function ActiveFlightLiveMap({
           {position && (
             <Marker
               position={[position.latitude, position.longitude]}
-              icon={createAircraftMarkerIcon(aircraftRegistration || 'Ownship', normalizedHeading)}
+              icon={createAircraftMarkerIcon(normalizedHeading)}
             >
               <Popup>
                 <div className="space-y-1 text-xs">
-                  <p className="font-black uppercase">{aircraftRegistration || 'Ownship'}</p>
+                  <p className="font-black uppercase">{aircraftRegistration || 'Current Position'}</p>
                   {booking && <p>Booking #{booking.bookingNumber}</p>}
                   <p>
                     {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
@@ -2208,21 +2626,22 @@ export function ActiveFlightLiveMap({
             transform-origin: center;
           }
 
-          .nose-up-map :global(.${openAipLabelClassName}) {
-            background: transparent;
-            border: 0;
-            border-radius: 0;
-            box-shadow: none;
-            color: #1d4ed8;
-            font-size: 7px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            padding: 0;
-            text-transform: uppercase;
+          .nose-up-map :global(.active-flight-map-label),
+          .nose-up-map :global(.active-flight-map-airspace-label) {
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
-          .nose-up-map :global(.${openAipLabelClassName}::before) {
-            display: none;
+          .nose-up-map :global(.active-flight-map-label .leaflet-tooltip-content),
+          .nose-up-map :global(.active-flight-map-airspace-label .leaflet-tooltip-content) {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+          }
+
+          .nose-up-map :global(.active-flight-map-label:before),
+          .nose-up-map :global(.active-flight-map-airspace-label:before) {
+            display: none !important;
           }
         `}</style>
           </div>

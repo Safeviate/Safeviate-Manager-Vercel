@@ -362,6 +362,30 @@ export default function WeatherPage() {
     }
   };
 
+  if (isTenantLoading) {
+    return <Skeleton className="h-[420px] w-full" />;
+  }
+
+  if (
+    !shouldBypassIndustryRestrictions(tenant?.id) &&
+    !isHrefEnabledForIndustry('/operations/weather', tenant?.industry) &&
+    !(tenant?.enabledMenus?.includes('/operations/weather') ?? false)
+  ) {
+    return (
+      <Card className="mx-auto w-full max-w-3xl border shadow-none">
+        <CardHeader>
+          <CardTitle className="text-2xl font-black uppercase tracking-tight">Weather Unavailable</CardTitle>
+          <CardDescription>Aviation weather tools are only available for aviation tenants.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="font-black uppercase">
+            <Link href="/operations">Back to Operations</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-3 pt-0 md:p-3 max-w-[1200px] w-full mx-auto">
       <Card className="flex-1 flex min-h-0 flex-col overflow-hidden shadow-none border">
