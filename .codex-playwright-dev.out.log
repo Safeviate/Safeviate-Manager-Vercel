@@ -1,0 +1,407 @@
+
+> nextn@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:9002
+   - Network:      http://192.168.1.58:9002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.6s
+ ✓ Compiled /middleware in 278ms (159 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 4.3s (752 modules)
+ GET / 307 in 4960ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1932ms (769 modules)
+ GET /login 200 in 1556ms
+ GET / 307 in 125ms
+ GET /login 200 in 107ms
+ ○ Compiling /api/me ...
+ ✓ Compiled /users in 3.2s (1400 modules)
+ GET /api/me 200 in 3638ms
+ GET /login 200 in 4024ms
+ GET / 307 in 3842ms
+ GET /users 200 in 3861ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 938ms (1404 modules)
+ GET /api/tenant-config 200 in 1468ms
+ GET /login 200 in 1833ms
+ ✓ Compiled /api/roles in 473ms (1406 modules)
+ GET /api/roles 200 in 702ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1306ms (1410 modules)
+ GET /api/auth/session 200 in 375ms
+ GET /api/dashboard-summary 200 in 1631ms
+ GET /api/auth/session 200 in 2345ms
+ GET /api/me 200 in 113ms
+ GET /api/roles 200 in 209ms
+ GET /api/roles 200 in 202ms
+ GET /api/me 200 in 212ms
+ GET /api/me 200 in 193ms
+ GET /login 200 in 382ms
+ GET /api/me 200 in 293ms
+ GET /api/me 200 in 264ms
+ GET /api/roles 200 in 313ms
+ GET /api/roles 200 in 313ms
+ GET /api/me 200 in 260ms
+ GET /api/roles 200 in 177ms
+ GET /api/me 200 in 249ms
+ GET /api/roles 200 in 192ms
+ GET /api/me 200 in 272ms
+ GET /api/roles 200 in 303ms
+ GET /api/me 200 in 304ms
+ GET /api/roles 200 in 253ms
+ GET /login 200 in 183ms
+ GET /login 200 in 314ms
+ GET /api/auth/session 200 in 100ms
+ GET /api/me 200 in 85ms
+ GET /api/auth/providers 200 in 125ms
+ ○ Compiling /operations/active-flight ...
+ ✓ Compiled /operations/active-flight in 2.1s (1554 modules)
+ GET /api/auth/csrf 200 in 2418ms
+ POST /api/auth/callback/credentials 200 in 649ms
+ GET /operations/active-flight 200 in 3195ms
+ GET /api/auth/session 200 in 82ms
+ GET /api/me 200 in 106ms
+ ✓ Compiled /api/roles in 401ms (1003 modules)
+ GET /api/me 200 in 1055ms
+ GET /api/me 200 in 1064ms
+ GET /login 200 in 1128ms
+ GET /api/roles 200 in 1166ms
+ GET /api/roles 200 in 1141ms
+ GET /api/me 200 in 125ms
+ GET /api/roles 200 in 197ms
+ GET /api/roles 200 in 140ms
+ GET /api/me 200 in 147ms
+ GET /login 200 in 224ms
+ GET /login 200 in 307ms
+ GET /api/auth/session 200 in 83ms
+ GET /api/me 200 in 71ms
+ GET /api/auth/providers 200 in 74ms
+ GET /api/auth/csrf 200 in 68ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 285ms
+ GET /api/auth/session 200 in 80ms
+ ○ Compiling /api/tenant-config ...
+ GET /api/me 200 in 2460ms
+ GET /api/me 200 in 2461ms
+ ✓ Compiled /api/tenant-config in 2.7s (2840 modules)
+ GET /login 200 in 257ms
+ GET /api/auth/session 200 in 98ms
+ GET /api/me 200 in 89ms
+ GET /api/auth/providers 200 in 74ms
+ GET /api/auth/csrf 200 in 85ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 96ms
+ GET /api/auth/session 200 in 95ms
+ GET /api/tenant-config 200 in 177ms
+ GET /dashboard 200 in 189ms
+ GET /api/me 200 in 202ms
+ GET /api/me 200 in 210ms
+ GET /api/tenant-config 200 in 135ms
+ GET /api/me 200 in 147ms
+ GET /api/me 200 in 162ms
+ ○ Compiling /api/dashboard-summary ...
+ ✓ Compiled /api/dashboard-summary in 608ms (1650 modules)
+ GET /api/roles 200 in 1436ms
+ GET /api/tenant-config 200 in 1444ms
+ GET /api/me 200 in 1450ms
+ GET /api/roles 200 in 1307ms
+ GET /api/me 200 in 1585ms
+ GET /api/tenant-config 200 in 198ms
+ GET /api/me 200 in 217ms
+ GET /api/dashboard-summary 200 in 1676ms
+ GET /api/dashboard-summary 200 in 231ms
+ GET /api/me 200 in 290ms
+ GET /login 200 in 322ms
+ GET /api/auth/session 200 in 89ms
+ GET /api/me 200 in 87ms
+ GET /api/auth/providers 200 in 76ms
+ GET /api/auth/csrf 200 in 83ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 64ms
+ GET /api/auth/session 200 in 80ms
+ GET /api/tenant-config 200 in 192ms
+ GET /dashboard 200 in 215ms
+ GET /api/me 200 in 218ms
+ GET /api/me 200 in 229ms
+ GET /api/tenant-config 200 in 153ms
+ GET /api/me 200 in 159ms
+ GET /api/me 200 in 208ms
+ GET /api/tenant-config 200 in 209ms
+ GET /api/roles 200 in 236ms
+ GET /api/me 200 in 243ms
+ GET /api/me 200 in 231ms
+ GET /api/dashboard-summary 200 in 269ms
+ GET /api/roles 200 in 229ms
+ GET /api/tenant-config 200 in 203ms
+ GET /api/me 200 in 263ms
+ GET /api/dashboard-summary 200 in 256ms
+ GET /operations/active-flight 200 in 417ms
+ GET /api/auth/session 200 in 98ms
+ GET /api/me 200 in 229ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/roles 200 in 241ms
+ GET /api/me 200 in 254ms
+ GET /api/me 200 in 248ms
+ GET /api/me 200 in 214ms
+ GET /api/tenant-config 200 in 182ms
+ GET /api/roles 200 in 221ms
+ GET /api/me 200 in 240ms
+ GET /api/me 200 in 227ms
+ GET /api/me 200 in 194ms
+ GET /api/tenant-config 200 in 191ms
+ GET /api/roles 200 in 200ms
+ GET /api/tenant-config 200 in 183ms
+ GET /api/me 200 in 218ms
+ GET /api/me 200 in 227ms
+ GET /api/tenant-config 200 in 184ms
+ GET /api/roles 200 in 199ms
+ GET /api/me 200 in 204ms
+ GET /api/me 200 in 214ms
+ GET /api/me 200 in 168ms
+ ○ Compiling /api/flight-sessions ...
+ ✓ Compiled /api/flight-sessions in 1778ms (2847 modules)
+ GET /api/tenant-config 200 in 2062ms
+ GET /api/tenant-config 200 in 2041ms
+ GET /api/me 200 in 2059ms
+ GET /api/flight-sessions 200 in 2085ms
+ GET /api/flight-sessions 200 in 1933ms
+ GET /api/schedule-data 200 in 2106ms
+ GET /api/schedule-data 200 in 83ms
+ ✓ Compiled in 2.9s (1946 modules)
+ ✓ Compiled /login in 212ms (748 modules)
+ GET /login 200 in 740ms
+ ✓ Compiled /api/auth/[...nextauth] in 323ms (987 modules)
+ GET /api/auth/session 200 in 649ms
+ ✓ Compiled /api/me in 270ms (1001 modules)
+ GET /api/me 200 in 562ms
+ GET /api/auth/providers 200 in 86ms
+ GET /api/auth/csrf 200 in 70ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: 'http://localhost:9002'
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 91ms
+ GET /api/auth/session 200 in 73ms
+ ○ Compiling /api/tenant-config ...
+ ✓ Compiled /api/tenant-config in 1559ms (1642 modules)
+ ✓ Compiled (1646 modules)
+ GET /api/tenant-config 200 in 3068ms
+ GET /api/me 200 in 3073ms
+ GET /api/me 200 in 3079ms
+ GET /dashboard 200 in 3084ms
+ GET /operations/active-flight 200 in 1781ms
+ GET /api/auth/session 200 in 100ms
+ GET /api/me 200 in 172ms
+ ○ Compiling /api/roles ...
+ ✓ Compiled /api/roles in 551ms (1648 modules)
+ GET /api/tenant-config 200 in 1237ms
+ GET /api/tenant-config 200 in 1235ms
+ GET /api/me 200 in 1264ms
+ GET /api/me 200 in 1293ms
+ GET /api/roles 200 in 1309ms
+ GET /api/me 200 in 1140ms
+ GET /api/me 200 in 248ms
+ GET /api/tenant-config 200 in 233ms
+ GET /api/roles 200 in 276ms
+ GET /api/me 200 in 279ms
+ GET /api/roles 200 in 260ms
+ GET /api/me 200 in 280ms
+ GET /api/me 200 in 238ms
+ GET /api/tenant-config 200 in 237ms
+ GET /api/tenant-config 200 in 270ms
+ GET /api/me 200 in 308ms
+ GET /api/roles 200 in 304ms
+ GET /api/me 200 in 318ms
+ GET /api/tenant-config 200 in 204ms
+ GET /api/me 200 in 212ms
+ GET /api/me 200 in 166ms
+ ✓ Compiled /api/flight-sessions in 459ms (1650 modules)
+ ✓ Compiled (1653 modules)
+ GET /api/flight-sessions 200 in 1102ms
+ GET /api/flight-sessions 200 in 1254ms
+ GET /api/tenant-config 200 in 1274ms
+ GET /api/me 200 in 1253ms
+ GET /api/tenant-config 200 in 1254ms
+ GET /api/schedule-data 200 in 1269ms
+ ✓ Compiled in 1757ms (1954 modules)
+ ✓ Compiled in 1851ms (1954 modules)
+ ✓ Compiled in 1908ms (1954 modules)
+ ✓ Compiled in 1478ms (1954 modules)
+ ✓ Compiled in 1121ms (1954 modules)
+ ✓ Compiled in 1214ms (1954 modules)
+ ✓ Compiled in 1149ms (1954 modules)
+ ✓ Compiled in 1708ms (1954 modules)
+ ✓ Compiled in 1456ms (1954 modules)
+ ✓ Compiled in 1585ms (1954 modules)
+ ✓ Compiled in 926ms (1954 modules)
+ ✓ Compiled in 1499ms (1954 modules)
+ ✓ Compiled in 1382ms (1954 modules)
+ ✓ Compiled in 1679ms (1954 modules)
+ ✓ Compiled in 1733ms (1954 modules)
+ ✓ Compiled in 2.6s (1206 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1463ms (1959 modules)
+ GET /login 404 in 2358ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1143ms (988 modules)
+ GET /api/auth/session 200 in 1608ms
+ ✓ Compiled /api/me in 415ms (1002 modules)
+ GET /api/me 200 in 746ms
+ ✓ Compiled in 1791ms (1206 modules)
+ ✓ Compiled in 571ms (1206 modules)
+ ✓ Compiled in 808ms (1206 modules)
+ ✓ Compiled in 529ms (1206 modules)
+ ✓ Compiled in 655ms (1206 modules)
+ ✓ Compiled in 504ms (1206 modules)
+ ✓ Compiled in 880ms (1206 modules)
+ ✓ Compiled in 788ms (1206 modules)
+ ✓ Compiled in 779ms (1206 modules)
+ ✓ Compiled in 669ms (1206 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 890ms (1945 modules)
+ GET /login 404 in 1467ms
+ ✓ Compiled /api/auth/[...nextauth] in 345ms (988 modules)
+ GET /api/auth/session 200 in 782ms
+ ✓ Compiled /api/me in 363ms (1002 modules)
+ GET /api/me 200 in 770ms
+ ○ Compiling /operations/training-routes ...
+ ✓ Compiled /operations/training-routes in 2.7s (2253 modules)
+ GET /operations/training-routes 200 in 3581ms
+ GET /api/auth/session 200 in 267ms
+ ○ Compiling /api/roles ...
+ ✓ Compiled /api/roles in 1371ms (2255 modules)
+ GET /api/roles 200 in 2132ms
+ GET /api/roles 200 in 2093ms
+ GET /api/me 404 in 2234ms
+ GET /api/me 200 in 171ms
+ GET /api/roles 200 in 172ms
+ GET /api/me 200 in 235ms
+ GET /api/roles 200 in 239ms
+ GET /login 200 in 244ms
+ ✓ Compiled in 3.2s (2012 modules)
+ GET /login 200 in 672ms
+ ✓ Compiled in 1751ms (2012 modules)
+ GET /login 200 in 270ms
+ ✓ Compiled in 1733ms (2012 modules)
+ GET /login 200 in 188ms
+ ✓ Compiled in 2.1s (2012 modules)
+ GET /login 200 in 225ms
+ ✓ Compiled in 1584ms (2012 modules)
+ ✓ Compiled in 1891ms (2012 modules)
+ ✓ Compiled in 1074ms (2012 modules)
+ ✓ Compiled in 2.2s (2012 modules)
+ ✓ Compiled in 1105ms (2012 modules)
+ ✓ Compiled in 982ms (2012 modules)
+ ✓ Compiled in 1463ms (2012 modules)
+ ✓ Compiled in 1057ms (2012 modules)
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1216ms (1017 modules)
+ GET /api/auth/session 200 in 1622ms
+ ✓ Compiled in 392ms (1017 modules)
+ ✓ Compiled in 1556ms (2012 modules)
+ ✓ Compiled in 948ms (2012 modules)
+ ✓ Compiled in 910ms (2012 modules)
+ ✓ Compiled in 1643ms (2012 modules)
+ ✓ Compiled in 1117ms (2012 modules)
+ ✓ Compiled in 1254ms (2012 modules)
+ ✓ Compiled in 2.9s (2012 modules)
+ ✓ Compiled in 1440ms (2012 modules)
+ ✓ Compiled in 1356ms (2012 modules)
+ ✓ Compiled in 1053ms (2012 modules)
+ ✓ Compiled in 1328ms (2012 modules)
+ ✓ Compiled in 2.3s (2012 modules)
+ ✓ Compiled in 1905ms (1998 modules)
+ ✓ Compiled in 1549ms (2014 modules)
+ ✓ Compiled in 1416ms (2014 modules)
+ ✓ Compiled in 850ms (2014 modules)
+ ✓ Compiled in 1158ms (2014 modules)
+ ✓ Compiled in 1088ms (2014 modules)
+ ✓ Compiled in 1007ms (2014 modules)
+ ✓ Compiled in 1093ms (2014 modules)
+ ✓ Compiled in 1435ms (2014 modules)
+ ✓ Compiled in 1489ms (2014 modules)
+ ✓ Compiled in 1698ms (2014 modules)
+ ✓ Compiled in 1212ms (2014 modules)
+ ✓ Compiled in 1970ms (2014 modules)
+ ✓ Compiled in 1129ms (2014 modules)
+ ✓ Compiled in 1227ms (2014 modules)
+ ✓ Compiled in 1849ms (2014 modules)
+ ✓ Compiled in 1530ms (2014 modules)
+ ✓ Compiled in 1999ms (2014 modules)
+ ✓ Compiled in 1529ms (2014 modules)
+ ✓ Compiled in 1582ms (2014 modules)
+ ✓ Compiled in 1809ms (2014 modules)
+ ✓ Compiled in 1341ms (2014 modules)
+ ✓ Compiled in 1545ms (2014 modules)
+ ✓ Compiled in 1400ms (2014 modules)
+ ✓ Compiled in 1318ms (2014 modules)
+ ✓ Compiled in 1677ms (2014 modules)
+ ✓ Compiled in 1069ms (2014 modules)
+ ✓ Compiled in 1014ms (2014 modules)
+ ✓ Compiled in 870ms (2014 modules)
+ ✓ Compiled in 2.3s (2014 modules)
+ ✓ Compiled in 1195ms (2014 modules)
+ ✓ Compiled in 1492ms (2014 modules)
+ ✓ Compiled in 1301ms (2014 modules)
+ ✓ Compiled in 833ms (2014 modules)
+ ✓ Compiled in 1043ms (2014 modules)
+ ✓ Compiled in 1004ms (2014 modules)
+ ✓ Compiled in 1990ms (2014 modules)
+ ✓ Compiled in 990ms (2014 modules)
+ ✓ Compiled in 1041ms (2014 modules)
+ ✓ Compiled in 956ms (2014 modules)
+ ✓ Compiled in 1652ms (2014 modules)
+ ✓ Compiled in 884ms (2014 modules)
+ ✓ Compiled in 1819ms (2014 modules)
+ ✓ Compiled in 2.3s (2014 modules)
+ ✓ Compiled in 2.3s (2014 modules)
+ ○ Compiling /api/openaip ...
+ ✓ Compiled /api/openaip in 2s (1018 modules)
+ ✓ Compiled in 724ms (1234 modules)
+ GET /api/auth/session 200 in 3571ms
+ GET /api/openaip?resource=airports&bbox=27,-26,28,-25 200 in 3920ms
+ ✓ Compiled in 2.5s (2014 modules)
+ ✓ Compiled in 3s (2014 modules)
+ ✓ Compiled in 2.2s (2000 modules)
+ ✓ Compiled in 3.1s (2014 modules)
+ ✓ Compiled in 3.5s (2014 modules)
+ ✓ Compiled in 1616ms (2014 modules)
+ ✓ Compiled in 1291ms (2014 modules)
+ ✓ Compiled in 2.1s (2014 modules)
+ ✓ Compiled in 1282ms (2014 modules)
+ ✓ Compiled in 2.3s (2014 modules)
+ ✓ Compiled in 1648ms (2014 modules)
+ ✓ Compiled in 1968ms (2014 modules)
+ ✓ Compiled in 1526ms (2014 modules)
+ ✓ Compiled in 854ms (2014 modules)
+ ✓ Compiled in 1682ms (2014 modules)

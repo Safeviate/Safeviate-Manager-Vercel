@@ -1,0 +1,67 @@
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\3.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\3.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\24.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\server-development\24.pack.gz'
+ ⨯ ./src/app/(app)/operations/training-routes/page.tsx
+Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+     ,-[[36;1;4mC:\Safeviate\Safeviate-Manager-Vercel\src\app\(app)\operations\training-routes\page.tsx[0m:380:1]
+ [2m377[0m |                     <p className="mt-2 text-[10px] font-bold leading-relaxed">Choose a route from the list or create a new one to begin planning.</p>
+ [2m378[0m |                   </div>
+ [2m379[0m |                 </div>
+ [2m380[0m |               )}
+     : [35;1m               ^[0m
+ [2m381[0m |             </div>
+ [2m382[0m |           </div>
+ [2m382[0m |         </CardContent>
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Safeviate\Safeviate-Manager-Vercel\src\app\(app)\operations\training-routes\page.tsx[0m:382:1]
+ [2m379[0m |                 </div>
+ [2m380[0m |               )}
+ [2m381[0m |             </div>
+ [2m382[0m |           </div>
+     : [35;1m          ^[0m
+ [2m383[0m |         </CardContent>
+ [2m384[0m |       </Card>
+ [2m384[0m | 
+     `----
+  [31mx[0m Unterminated regexp literal
+     ,-[[36;1;4mC:\Safeviate\Safeviate-Manager-Vercel\src\app\(app)\operations\training-routes\page.tsx[0m:382:1]
+ [2m379[0m |                 </div>
+ [2m380[0m |               )}
+ [2m381[0m |             </div>
+ [2m382[0m |           </div>
+     : [35;1m           ^^^^^[0m
+ [2m383[0m |         </CardContent>
+ [2m384[0m |       </Card>
+ [2m384[0m | 
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/(app)/operations/training-routes/page.tsx
+ ⨯ ./src/app/(app)/operations/training-routes/page.tsx
+Error:   [31mx[0m Expected '</', got 'jsx text (
+  [31m|[0m                 )'
+     ,-[[36;1;4mC:\Safeviate\Safeviate-Manager-Vercel\src\app\(app)\operations\training-routes\page.tsx[0m:369:1]
+ [2m366[0m |                             </div>
+ [2m367[0m |                           </section>
+ [2m368[0m |                         </div>
+ [2m369[0m | [35;1m,[0m[35;1m-[0m[35;1m>[0m                   </ScrollArea>
+ [2m370[0m | [35;1m`[0m[35;1m-[0m[35;1m>[0m                 </div>
+ [2m371[0m |                   ) : (
+ [2m372[0m |                     <div className="flex h-full flex-col items-center justify-center space-y-4 p-12 text-center opacity-40">
+ [2m372[0m |                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted"><MapIcon size={32} /></div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/(app)/operations/training-routes/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\2.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\2.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\1.pack.gz'
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Safeviate\Safeviate-Manager-Vercel\.next\cache\webpack\client-development\0.pack.gz'
