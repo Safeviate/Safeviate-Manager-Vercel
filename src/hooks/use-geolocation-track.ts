@@ -24,6 +24,17 @@ const normalizeHeading = (value: number | null | undefined) => {
   return ((value % 360) + 360) % 360;
 };
 
+const smoothHeading = (previous: number | null, next: number | null, alpha = 0.25) => {
+  if (next == null) return previous;
+  if (previous == null) return next;
+
+  const previousRadians = toRadians(previous);
+  const nextRadians = toRadians(next);
+  const x = (1 - alpha) * Math.cos(previousRadians) + alpha * Math.cos(nextRadians);
+  const y = (1 - alpha) * Math.sin(previousRadians) + alpha * Math.sin(nextRadians);
+  return normalizeHeading(toDegrees(Math.atan2(y, x)));
+};
+
 const toRadians = (value: number) => (value * Math.PI) / 180;
 const toDegrees = (value: number) => (value * 180) / Math.PI;
 
@@ -71,6 +82,7 @@ const geolocationStore = {
     isWatching: false,
   } as GeolocationSnapshot,
   watchId: null as number | null,
+  smoothedHeadingTrue: null as number | null,
   listeners: new Set<() => void>(),
 };
 
@@ -102,6 +114,7 @@ export function useGeolocationTrack(): GeolocationState {
       navigator.geolocation.clearWatch(geolocationStore.watchId);
     }
     geolocationStore.watchId = null;
+    geolocationStore.smoothedHeadingTrue = null;
     setGeolocationSnapshot({ isWatching: false, position: null });
   }, []);
 
@@ -116,7 +129,8 @@ export function useGeolocationTrack(): GeolocationState {
 
     if (geolocationStore.watchId !== null) return;
 
-    setGeolocationSnapshot({ error: null, isWatching: true });
+    geolocationStore.smoothedHeadingTrue = null;
+    setGeolocationSnapshot({ error: null, isWatching: true, position: null });
     geolocationStore.watchId = navigator.geolocation.watchPosition(
       (geoPosition) => {
         const previousPosition = geolocationStore.snapshot.position;
@@ -138,6 +152,12 @@ export function useGeolocationTrack(): GeolocationState {
               )
             : null;
 
+        const nextHeading = smoothHeading(
+          geolocationStore.smoothedHeadingTrue ?? previousPosition?.headingTrue ?? null,
+          derivedHeading ?? browserHeading ?? previousPosition?.headingTrue ?? null
+        );
+        geolocationStore.smoothedHeadingTrue = nextHeading;
+
         setGeolocationSnapshot({
           permissionState: 'granted',
           isWatching: true,
@@ -147,7 +167,7 @@ export function useGeolocationTrack(): GeolocationState {
             accuracy: geoPosition.coords.accuracy,
             altitude: geoPosition.coords.altitude,
             speedKt,
-            headingTrue: derivedHeading ?? browserHeading ?? previousPosition?.headingTrue ?? null,
+            headingTrue: nextHeading,
             timestamp: new Date(geoPosition.timestamp).toISOString(),
           },
         });
@@ -165,7 +185,7 @@ export function useGeolocationTrack(): GeolocationState {
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 5000,
+        maximumAge: 0,
         timeout: 15000,
       }
     );

@@ -6,8 +6,10 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
+import { ActiveFlightMapLibreShell } from '@/components/active-flight/active-flight-maplibre-shell';
+import { OPENAIP_VECTOR_TILE_URL } from '@/lib/maplibre-map-config';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
@@ -91,8 +93,40 @@ const OPENAIP_POINT_RESOURCES = ['airports', 'navaids', 'reporting-points'] as c
 const AIRSPACE_CLASS_E = 6;
 const AIRSPACE_CLASS_F = 7;
 const AIRSPACE_CLASS_G = 8;
+const LOCATION_CALIBRATION_STORAGE_KEY = 'safeviate:active-flight-location-calibration';
+type Point = [number, number];
+
+type LocationCalibration = {
+  latitude: number;
+  longitude: number;
+  savedAt: string;
+};
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const readLocationCalibration = () => {
+  if (typeof window === 'undefined') return null;
+
+  const raw = window.localStorage.getItem(LOCATION_CALIBRATION_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as LocationCalibration;
+  } catch {
+    window.localStorage.removeItem(LOCATION_CALIBRATION_STORAGE_KEY);
+    return null;
+  }
+};
+
+const saveLocationCalibration = (calibration: LocationCalibration) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(LOCATION_CALIBRATION_STORAGE_KEY, JSON.stringify(calibration));
+};
+
+const clearLocationCalibration = () => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(LOCATION_CALIBRATION_STORAGE_KEY);
+};
 
 async function fetchOpenAipJson<T>(url: string, retries = 1): Promise<T | null> {
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -995,6 +1029,10 @@ export function ActiveFlightLiveMap({
   const [viewportFeatures, setViewportFeatures] = useState<OpenAipFeature[]>([]);
   const [airspaceFeatures, setAirspaceFeatures] = useState<OpenAipAirspace[]>([]);
   const [obstacleFeatures, setObstacleFeatures] = useState<OpenAipObstacle[]>([]);
+  const [locationCalibration, setLocationCalibration] = useState<LocationCalibration | null>(null);
+  const [mapCenter, setMapCenter] = useState<Point | null>(null);
+  const manualLatitudeInputRef = useRef<HTMLInputElement | null>(null);
+  const manualLongitudeInputRef = useRef<HTMLInputElement | null>(null);
   const [showRouteLine, setShowRouteLine] = useState(() => readStoredActiveFlightMapLayerSettings().showRouteLine);
   const [showWaypointMarkers, setShowWaypointMarkers] = useState(() => readStoredActiveFlightMapLayerSettings().showWaypointMarkers);
   const [showTrackLine, setShowTrackLine] = useState(() => readStoredActiveFlightMapLayerSettings().showTrackLine);
@@ -1016,6 +1054,7 @@ export function ActiveFlightLiveMap({
   const [currentZoom, setCurrentZoom] = useState(8);
   const [minVisibleZoom, setMinVisibleZoom] = useState(8);
   const [maxVisibleZoom, setMaxVisibleZoom] = useState(14);
+  const useVectorOpenAipLayers = Boolean(OPENAIP_VECTOR_TILE_URL);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1064,6 +1103,10 @@ export function ActiveFlightLiveMap({
   ]);
 
   useEffect(() => {
+    setLocationCalibration(readLocationCalibration());
+  }, []);
+
+  useEffect(() => {
     setRouteDownloadStatus(
       routePoints.length > 1 ? 'Download the loaded route corridor on this device.' : 'Load a route to download it on this device.'
     );
@@ -1073,6 +1116,31 @@ export function ActiveFlightLiveMap({
   }, [routeDownloadState, routePoints.length]);
 
   const followOwnship = followOwnshipProp ?? internalFollowOwnship;
+  const displayPosition = useMemo<FlightPosition | null>(() => {
+    if (!position && !locationCalibration) return null;
+
+    if (position && !locationCalibration) {
+      return position;
+    }
+
+    if (position && locationCalibration) {
+      return {
+        ...position,
+        latitude: locationCalibration.latitude,
+        longitude: locationCalibration.longitude,
+      };
+    }
+
+    return {
+      latitude: locationCalibration!.latitude,
+      longitude: locationCalibration!.longitude,
+      accuracy: undefined,
+      altitude: null,
+      speedKt: null,
+      headingTrue: null,
+      timestamp: locationCalibration!.savedAt,
+    };
+  }, [locationCalibration, position]);
   const airportFeatures = useMemo(() => viewportFeatures.filter((item) => item.sourceLayer === 'airports' && item.geometry?.coordinates), [viewportFeatures]);
   const navaidFeatures = useMemo(() => viewportFeatures.filter((item) => item.sourceLayer === 'navaids' && item.geometry?.coordinates), [viewportFeatures]);
   const reportingPointFeatures = useMemo(() => viewportFeatures.filter((item) => item.sourceLayer === 'reporting-points' && item.geometry?.coordinates), [viewportFeatures]);
@@ -1136,8 +1204,8 @@ export function ActiveFlightLiveMap({
   }, [followOwnship, followOwnshipProp, onFollowOwnshipChange]);
 
   useEffect(() => {
-    setTrackHistory(position ? [[position.latitude, position.longitude]] : []);
-  }, [aircraftRegistration, booking?.id, routeSignature]);
+    setTrackHistory(displayPosition ? [[displayPosition.latitude, displayPosition.longitude]] : []);
+  }, [aircraftRegistration, booking?.id, displayPosition, routeSignature]);
 
   useEffect(() => {
     if (recenterSignal === 0) return;
@@ -1145,10 +1213,10 @@ export function ActiveFlightLiveMap({
   }, [recenterSignal]);
 
   useEffect(() => {
-    if (!position) return;
+    if (!displayPosition) return;
 
     setTrackHistory((current) => {
-      const nextPoint: [number, number] = [position.latitude, position.longitude];
+      const nextPoint: [number, number] = [displayPosition.latitude, displayPosition.longitude];
       const lastPoint = current[current.length - 1];
 
       if (lastPoint && lastPoint[0] === nextPoint[0] && lastPoint[1] === nextPoint[1]) {
@@ -1158,10 +1226,10 @@ export function ActiveFlightLiveMap({
       const nextHistory = [...current, nextPoint];
       return nextHistory.slice(-40);
     });
-  }, [position]);
+  }, [displayPosition]);
 
-  const center = position
-    ? ([position.latitude, position.longitude] as [number, number])
+  const center = displayPosition
+    ? ([displayPosition.latitude, displayPosition.longitude] as [number, number])
     : routePoints[0] || ([-25.9, 27.9] as [number, number]);
   const currentLeg = activeLegIndex != null ? validRouteLegs[activeLegIndex] || null : null;
   const nextLeg = activeLegIndex != null ? validRouteLegs[activeLegIndex + 1] || null : null;
@@ -1180,6 +1248,15 @@ export function ActiveFlightLiveMap({
     '--map-rotation': `${mapRotationDegrees}deg`,
     '--map-counter-rotation': `${-mapRotationDegrees}deg`,
   } as CSSProperties;
+  const rawAccuracyMeters = position?.accuracy != null && !Number.isNaN(position.accuracy) ? Math.round(position.accuracy) : null;
+  const isCoarseFix = rawAccuracyMeters != null && rawAccuracyMeters > 500;
+  const locationStatusLabel = locationCalibration
+    ? 'Calibrated'
+    : isCoarseFix
+      ? 'Coarse GPS'
+      : position
+        ? 'GPS Fix'
+        : 'Waiting for GPS';
   const refreshOfflineSummary = useCallback(async () => {
     setIsRefreshingOfflineSummary(true);
     try {
@@ -1215,6 +1292,38 @@ export function ActiveFlightLiveMap({
     setFollowOwnship(false);
     setRecenterNonce((current) => current + 1);
   };
+  const handleCalibrateLocation = () => {
+    if (!mapCenter) return;
+
+    const calibration: LocationCalibration = {
+      latitude: mapCenter[0],
+      longitude: mapCenter[1],
+      savedAt: new Date().toISOString(),
+    };
+
+    setLocationCalibration(calibration);
+    saveLocationCalibration(calibration);
+  };
+  const handleClearCalibration = () => {
+    clearLocationCalibration();
+    setLocationCalibration(null);
+  };
+  const handleApplyManualCalibration = () => {
+    const latitude = Number(manualLatitudeInputRef.current?.value);
+    const longitude = Number(manualLongitudeInputRef.current?.value);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return;
+
+    const calibration: LocationCalibration = {
+      latitude,
+      longitude,
+      savedAt: new Date().toISOString(),
+    };
+
+    setLocationCalibration(calibration);
+    saveLocationCalibration(calibration);
+  };
 
   if (fullscreen) {
     return (
@@ -1249,7 +1358,7 @@ export function ActiveFlightLiveMap({
             </tbody>
           </table>
           <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-            Mode: {followOwnship ? 'Nose Up' : 'North Up'}
+            Mode: {followOwnship ? 'Nose Up' : 'North Up'} · {locationStatusLabel}{rawAccuracyMeters != null ? ` · ${rawAccuracyMeters} m` : ''}
           </div>
           <div className="flex min-h-14 items-center justify-between gap-2 border-t border-slate-200 px-3 py-2">
             <div className="min-w-0 flex-1">
@@ -1334,6 +1443,16 @@ export function ActiveFlightLiveMap({
                   </span>
                   <span>Download Route</span>
                 </span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 min-w-[7.25rem] rounded-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-800 shadow-sm hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800"
+                onClick={locationCalibration ? handleClearCalibration : handleCalibrateLocation}
+                disabled={!locationCalibration && !mapCenter}
+              >
+                {locationCalibration ? 'Use GPS' : 'Calibrate Here'}
               </Button>
               <Dialog open={offlineManagerOpen} onOpenChange={setOfflineManagerOpen}>
                 <DialogTrigger asChild>
@@ -1472,130 +1591,50 @@ export function ActiveFlightLiveMap({
 
         <div className="absolute inset-0 overflow-hidden">
           <div className="nose-up-map absolute inset-[-24%]">
-          <LeafletMapFrame
-            center={center}
-            zoom={8}
-            minZoom={MAP_MIN_ZOOM}
-            maxZoom={MAP_MAX_ZOOM}
-            zoomAnimation={false}
-            className="h-full w-full rounded-none"
-            style={{ background: '#000000' }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
-            />
-            <MapInteractionWatcher onUserInteracted={() => {
-              if (position) {
-                setRecenterNonce((current) => current + 1);
-              }
-            }} />
-            <MapResizeController />
-            <MapRecenterController
-              position={position}
-              recenterNonce={recenterNonce}
-              onDone={() => setRecenterNonce(0)}
-            />
-            <MapAreaCacheController
-              cacheNonce={cacheNonce}
-              areaDownloadNonce={areaDownloadNonce}
-              routeDownloadNonce={routeDownloadNonce}
+            <ActiveFlightMapLibreShell
+              className="h-full w-full rounded-none"
+              center={center}
+              position={displayPosition}
               routePoints={routePoints}
-              onDone={() => setIsCachingArea(false)}
-              onAreaDownloadDone={() => setIsDownloadingArea(false)}
-              onRouteDownloadDone={() => setIsDownloadingRoute(false)}
-              onStatus={setCacheStatus}
-              onComplete={(tileCount) => {
-                setCacheState('complete');
-                setCacheStatus(
-                  tileCount > 0 ? 'Cached current view for offline use.' : 'No tiles available to cache.'
-                );
-              }}
-              onAreaDownloadStatus={setAreaDownloadStatus}
-              onAreaDownloadComplete={(tileCount) => {
-                setAreaDownloadState(tileCount > 0 ? 'complete' : 'idle');
-                setAreaDownloadStatus(
-                  tileCount > 0 ? 'Area saved on this device for offline use.' : 'No area tiles available to download.'
-                );
-              }}
-              onRouteDownloadStatus={setRouteDownloadStatus}
-              onRouteDownloadComplete={(tileCount) => {
-                setRouteDownloadState(tileCount > 0 ? 'complete' : 'idle');
-                setRouteDownloadStatus(
-                  tileCount > 0
-                    ? 'Route corridor saved on this device for offline use.'
-                    : routePoints.length > 1
-                      ? 'No route tiles available to download.'
-                      : 'Load a route to download it on this device.'
-                );
+              trackHistory={trackHistory}
+              legs={legs}
+              followOwnship={followOwnship}
+              recenterSignal={recenterNonce}
+              minZoom={MAP_MIN_ZOOM}
+              maxZoom={MAP_MAX_ZOOM}
+              showRouteLine={showRouteLine}
+              showWaypointMarkers={showWaypointMarkers}
+              showTrackLine={showTrackLine}
+              showLabels={showLabels}
+              showMasterChart={showMasterChart}
+              showAirports={showAirports}
+              showNavaids={showNavaids}
+              showReportingPoints={showReportingPoints}
+              showAirspaces={showAirspaces}
+              showClassE={showClassE}
+              showClassF={showClassF}
+              showClassG={showClassG}
+              showMilitaryAreas={showMilitaryAreas}
+              showTrainingAreas={showTrainingAreas}
+              showGlidingSectors={showGlidingSectors}
+              showHangGlidings={showHangGlidings}
+              showObstacles={showObstacles}
+              showOnlyActiveAirspace={showOnlyActiveAirspace}
+              airportFeatures={airportFeatures}
+              navaidFeatures={navaidFeatures}
+              reportingPointFeatures={reportingPointFeatures}
+              airspaceCollections={airspaceCollections}
+              obstacleGeoJson={obstacleGeoJson}
+              onZoomChange={setCurrentZoom}
+              onCenterChange={(nextCenter) => setMapCenter(nextCenter)}
+              onUserInteracted={() => {
+                // Keep manual zoom/pan stable; recentering is handled explicitly by the Centre View button.
               }}
             />
-            <FitFlightBounds position={position} />
-
-            {routePoints.length > 1 && (
-              <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
-            )}
-
-            {trackHistory.length > 1 && (
-              <Polyline positions={trackHistory} color="#38bdf8" weight={3} opacity={0.7} />
-            )}
-
-            {activeLegIndex !== undefined &&
-              validRouteLegs[activeLegIndex]?.latitude !== undefined &&
-              validRouteLegs[activeLegIndex]?.longitude !== undefined &&
-              validRouteLegs[activeLegIndex + 1]?.latitude !== undefined &&
-              validRouteLegs[activeLegIndex + 1]?.longitude !== undefined && (
-                <Polyline
-                  positions={[
-                    [validRouteLegs[activeLegIndex]!.latitude!, validRouteLegs[activeLegIndex]!.longitude!],
-                    [validRouteLegs[activeLegIndex + 1]!.latitude!, validRouteLegs[activeLegIndex + 1]!.longitude!],
-                  ]}
-                  color="#0ea5e9"
-                  weight={6}
-                  opacity={0.95}
-                />
-              )}
-
-            {legs.map((leg, index) => {
-              if (leg.latitude === undefined || leg.longitude === undefined) return null;
-
-              return (
-                <Marker key={leg.id} position={[leg.latitude, leg.longitude]} icon={WaypointIcon}>
-                  <Popup>
-                    <div className="space-y-1 text-xs">
-                      <p className="font-black uppercase">{leg.waypoint}</p>
-                      <p className="text-muted-foreground">Waypoint {index + 1}</p>
-                      {leg.frequencies && <p>{leg.frequencies}</p>}
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
-
-            {position && (
-              <Marker
-                position={[position.latitude, position.longitude]}
-                icon={createAircraftMarkerIcon(normalizedHeading)}
-              >
-                <Popup>
-                  <div className="space-y-1 text-xs">
-                    <p className="font-black uppercase">{aircraftRegistration || 'Current Position'}</p>
-                    {booking && <p>Booking #{booking.bookingNumber}</p>}
-                    <p>
-                      {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
-                    </p>
-                    <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
-                    <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                    <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
-          </LeafletMapFrame>
           </div>
         </div>
 
-        <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-3 gap-2">
+        <div className="absolute inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-[1000] grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Button
             type="button"
             size="sm"
@@ -1624,6 +1663,16 @@ export function ActiveFlightLiveMap({
             }}
           >
             Center View
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
+            onClick={locationCalibration ? handleClearCalibration : handleCalibrateLocation}
+            disabled={!locationCalibration && !mapCenter}
+          >
+            {locationCalibration ? 'Use GPS' : 'Calibrate Here'}
           </Button>
         </div>
         <style jsx global>{`
@@ -1670,6 +1719,10 @@ export function ActiveFlightLiveMap({
             <p className="text-sm font-semibold text-slate-900">
               {followOwnship ? 'Nose-up' : 'North-up'}
             </p>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+              {locationStatusLabel}
+              {rawAccuracyMeters != null ? ` • ${rawAccuracyMeters} m` : ''}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -1693,6 +1746,47 @@ export function ActiveFlightLiveMap({
             }}
           >
             Recenter
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={locationCalibration ? handleClearCalibration : handleCalibrateLocation}
+            disabled={!locationCalibration && !mapCenter}
+          >
+            {locationCalibration ? 'Use GPS' : 'Calibrate Here'}
+          </Button>
+        </div>
+        <div className="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Latitude</p>
+            <Input
+              ref={manualLatitudeInputRef}
+              inputMode="decimal"
+              placeholder="e.g. -26.133"
+              className="h-9 border-slate-200 bg-white text-sm font-semibold text-slate-900"
+              defaultValue={locationCalibration?.latitude ?? displayPosition?.latitude ?? ''}
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Longitude</p>
+            <Input
+              ref={manualLongitudeInputRef}
+              inputMode="decimal"
+              placeholder="e.g. 27.921"
+              className="h-9 border-slate-200 bg-white text-sm font-semibold text-slate-900"
+              defaultValue={locationCalibration?.longitude ?? displayPosition?.longitude ?? ''}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 self-end rounded-full border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={handleApplyManualCalibration}
+          >
+            Apply
           </Button>
         </div>
       </div>
@@ -1778,6 +1872,9 @@ export function ActiveFlightLiveMap({
                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
                   Show and hide visible map layers
                 </p>
+                <p className="mt-2 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-700">
+                  OpenAIP {useVectorOpenAipLayers ? 'Vector' : 'Fallback'}
+                </p>
               </div>
               <button
                 type="button"
@@ -1828,258 +1925,44 @@ export function ActiveFlightLiveMap({
         ) : null}
 
         <div className="nose-up-map relative h-full min-h-[360px] flex-1">
-        <LeafletMapFrame
-          center={center}
-          zoom={8}
-          minZoom={minVisibleZoom}
-          maxZoom={maxVisibleZoom}
-          className="h-full w-full rounded-2xl"
-          style={{ background: '#020617' }}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors"
+          <ActiveFlightMapLibreShell
+            className="h-full w-full rounded-2xl"
+            center={center}
+            position={displayPosition}
+            routePoints={routePoints}
+            trackHistory={trackHistory}
+            legs={legs}
+            followOwnship={followOwnship}
+            recenterSignal={recenterNonce}
+            minZoom={minVisibleZoom}
+            maxZoom={maxVisibleZoom}
+            showRouteLine={showRouteLine}
+            showWaypointMarkers={showWaypointMarkers}
+            showTrackLine={showTrackLine}
+            showLabels={showLabels}
+            showMasterChart={showMasterChart}
+            showAirports={showAirports}
+            showNavaids={showNavaids}
+            showReportingPoints={showReportingPoints}
+            showAirspaces={showAirspaces}
+            showClassE={showClassE}
+            showClassF={showClassF}
+            showClassG={showClassG}
+            showMilitaryAreas={showMilitaryAreas}
+            showTrainingAreas={showTrainingAreas}
+            showGlidingSectors={showGlidingSectors}
+            showHangGlidings={showHangGlidings}
+            showObstacles={showObstacles}
+            showOnlyActiveAirspace={showOnlyActiveAirspace}
+            airportFeatures={airportFeatures}
+            navaidFeatures={navaidFeatures}
+            reportingPointFeatures={reportingPointFeatures}
+            airspaceCollections={airspaceCollections}
+            obstacleGeoJson={obstacleGeoJson}
+            onZoomChange={setCurrentZoom}
+            onCenterChange={(nextCenter) => setMapCenter(nextCenter)}
+            onUserInteracted={() => setFollowOwnship(false)}
           />
-          {showMasterChart ? (
-            <TileLayer
-              url="/api/openaip/tiles/openaip/{z}/{x}/{y}"
-              attribution="&copy; OpenAIP"
-              opacity={1}
-              minZoom={8}
-              minNativeZoom={8}
-              maxNativeZoom={16}
-              maxZoom={20}
-            />
-          ) : null}
-          <VisiblePointLoader
-            airportsEnabled={showAirports}
-            navaidsEnabled={showNavaids}
-            reportingEnabled={showReportingPoints}
-            onFeaturesLoaded={setViewportFeatures}
-          />
-          <VisibleAirspaceLoader
-            enabled={showAirspaces || showClassE || showClassF || showClassG || showMilitaryAreas || showTrainingAreas || showGlidingSectors || showHangGlidings}
-            onFeaturesLoaded={setAirspaceFeatures}
-          />
-          <VisibleObstacleLoader enabled={showObstacles} onFeaturesLoaded={setObstacleFeatures} />
-          <MapInteractionWatcher onUserInteracted={() => {
-            if (position) {
-              setRecenterNonce((current) => current + 1);
-            }
-          }} />
-          <MapResizeController />
-          <MapZoomBridge zoomInNonce={0} zoomOutNonce={0} onZoomChange={setCurrentZoom} />
-          <MapZoomLimits minZoom={minVisibleZoom} maxZoom={maxVisibleZoom} />
-          <MapRecenterController
-            position={position}
-            recenterNonce={recenterNonce}
-            onDone={() => setRecenterNonce(0)}
-          />
-          <FitFlightBounds position={position} />
-
-          {showRouteLine && routePoints.length > 1 && (
-            <Polyline positions={routePoints} color="#10b981" weight={4} dashArray="10 10" opacity={0.85} />
-          )}
-
-          {showTrackLine && trackHistory.length > 1 && (
-            <Polyline positions={trackHistory} color="#38bdf8" weight={3} opacity={0.7} />
-          )}
-
-          {showAirports ? (
-            <FeatureGroup>
-              {currentZoom >= 8 && airportFeatures.map((feature) => {
-                const coords = feature.geometry?.coordinates;
-                if (!coords) return null;
-                const [lon, lat] = coords;
-                const identifier = feature.icaoCode || feature.identifier || feature.name;
-                return (
-                  <Marker key={feature._id} position={[lat, lon]} icon={airportPointIcon}>
-                    {showLabels && currentZoom >= 9 ? (
-                      <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={labelClassName}>
-                        {identifier}
-                      </Tooltip>
-                    ) : null}
-                  </Marker>
-                );
-              })}
-            </FeatureGroup>
-          ) : null}
-
-          {showNavaids ? (
-            <FeatureGroup>
-              {currentZoom >= 9 && navaidFeatures.map((feature) => {
-                const coords = feature.geometry?.coordinates;
-                if (!coords) return null;
-                const [lon, lat] = coords;
-                const identifier = feature.icaoCode || feature.identifier || feature.name;
-                return (
-                  <Marker key={feature._id} position={[lat, lon]} icon={navaidPointIcon}>
-                    {showLabels && currentZoom >= 10 ? (
-                      <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={labelClassName}>
-                        {identifier}
-                      </Tooltip>
-                    ) : null}
-                  </Marker>
-                );
-              })}
-            </FeatureGroup>
-          ) : null}
-
-          {showReportingPoints ? (
-            <FeatureGroup>
-              {currentZoom >= 10 && reportingPointFeatures.map((feature) => {
-                const coords = feature.geometry?.coordinates;
-                if (!coords) return null;
-                const [lon, lat] = coords;
-                const identifier = feature.icaoCode || feature.identifier || feature.name;
-                return (
-                  <Marker key={feature._id} position={[lat, lon]} icon={reportingPointIcon}>
-                    {showLabels && currentZoom >= 11 ? (
-                      <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={labelClassName}>
-                        {identifier}
-                      </Tooltip>
-                    ) : null}
-                  </Marker>
-                );
-              })}
-            </FeatureGroup>
-          ) : null}
-
-          {showClassE && airspaceCollections.classE.features.length > 0 ? (
-            <GeoJSON
-              key={`active-flight-airspace-class-e-${airspaceCollections.classE.features.length}-${showOnlyActiveAirspace}`}
-              data={airspaceCollections.classE as any}
-              style={airspaceStyle as any}
-              onEachFeature={(feature, layer) => {
-                const props = feature.properties as any;
-                layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, {
-                  permanent: showLabels && currentZoom >= 8,
-                  direction: 'center',
-                  className: airspaceLabelClassName,
-                  opacity: 0.9,
-                });
-              }}
-            />
-          ) : null}
-
-          {showClassF && airspaceCollections.classF.features.length > 0 ? (
-            <GeoJSON key={`active-flight-airspace-class-f-${airspaceCollections.classF.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.classF as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
-              const props = feature.properties as any;
-              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
-            }} />
-          ) : null}
-
-          {showClassG && airspaceCollections.classG.features.length > 0 ? (
-            <GeoJSON key={`active-flight-airspace-class-g-${airspaceCollections.classG.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.classG as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
-              const props = feature.properties as any;
-              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
-            }} />
-          ) : null}
-
-          {showMilitaryAreas && airspaceCollections.military.features.length > 0 ? (
-            <GeoJSON key={`active-flight-airspace-military-${airspaceCollections.military.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.military as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
-              const props = feature.properties as any;
-              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
-            }} />
-          ) : null}
-
-          {showTrainingAreas && airspaceCollections.training.features.length > 0 ? (
-            <GeoJSON key={`active-flight-airspace-training-${airspaceCollections.training.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.training as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
-              const props = feature.properties as any;
-              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
-            }} />
-          ) : null}
-
-          {showGlidingSectors && airspaceCollections.gliding.features.length > 0 ? (
-            <GeoJSON key={`active-flight-airspace-gliding-${airspaceCollections.gliding.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.gliding as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
-              const props = feature.properties as any;
-              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
-            }} />
-          ) : null}
-
-          {showHangGlidings && airspaceCollections.hangGliding.features.length > 0 ? (
-            <GeoJSON key={`active-flight-airspace-hang-${airspaceCollections.hangGliding.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.hangGliding as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
-              const props = feature.properties as any;
-              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 9, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
-            }} />
-          ) : null}
-
-          {showAirspaces && airspaceCollections.general.features.length > 0 ? (
-            <GeoJSON key={`active-flight-airspace-general-${airspaceCollections.general.features.length}-${showOnlyActiveAirspace}`} data={airspaceCollections.general as any} style={airspaceStyle as any} onEachFeature={(feature, layer) => {
-              const props = feature.properties as any;
-              layer.bindTooltip(props?.limits ? `${props?.name || 'Airspace'} • ${props?.limits}` : `${props?.name || 'Airspace'}`, { permanent: showLabels && currentZoom >= 8, direction: 'center', className: airspaceLabelClassName, opacity: 0.9 });
-            }} />
-          ) : null}
-
-          {showObstacles && obstacleGeoJson.features.length > 0 ? (
-            <GeoJSON
-              key={`active-flight-obstacles-${obstacleGeoJson.features.length}`}
-              data={obstacleGeoJson as any}
-              pointToLayer={obstaclePointToLayer as any}
-              onEachFeature={(feature, layer) => {
-                const props = feature.properties as any;
-                layer.bindTooltip(`${props?.name || 'Obstacle'}${props?.height ? ` • ${props.height} m` : ''}`, {
-                  permanent: showLabels && currentZoom >= 11,
-                  direction: 'top',
-                  className: labelClassName,
-                  opacity: 0.95,
-                });
-              }}
-            />
-          ) : null}
-
-          {activeLegIndex !== undefined &&
-            validRouteLegs[activeLegIndex]?.latitude !== undefined &&
-            validRouteLegs[activeLegIndex]?.longitude !== undefined &&
-            validRouteLegs[activeLegIndex + 1]?.latitude !== undefined &&
-            validRouteLegs[activeLegIndex + 1]?.longitude !== undefined && (
-              <Polyline
-                positions={[
-                  [validRouteLegs[activeLegIndex]!.latitude!, validRouteLegs[activeLegIndex]!.longitude!],
-                  [validRouteLegs[activeLegIndex + 1]!.latitude!, validRouteLegs[activeLegIndex + 1]!.longitude!],
-                ]}
-                color="#0ea5e9"
-                weight={6}
-                opacity={0.95}
-              />
-            )}
-
-          {showWaypointMarkers && legs.map((leg, index) => {
-            if (leg.latitude === undefined || leg.longitude === undefined) return null;
-
-            return (
-              <Marker key={leg.id} position={[leg.latitude, leg.longitude]} icon={WaypointIcon}>
-                <Popup>
-                  <div className="space-y-1 text-xs">
-                    <p className="font-black uppercase">{leg.waypoint}</p>
-                    <p className="text-muted-foreground">Waypoint {index + 1}</p>
-                    {leg.frequencies && <p>{leg.frequencies}</p>}
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-
-          {position && (
-            <Marker
-              position={[position.latitude, position.longitude]}
-              icon={createAircraftMarkerIcon(normalizedHeading)}
-            >
-              <Popup>
-                <div className="space-y-1 text-xs">
-                  <p className="font-black uppercase">{aircraftRegistration || 'Current Position'}</p>
-                  {booking && <p>Booking #{booking.bookingNumber}</p>}
-                  <p>
-                    {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
-                  </p>
-                  <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
-                  <p>Speed: {position.speedKt != null ? `${position.speedKt.toFixed(1)} kt` : 'Unavailable'}</p>
-                  <p>Heading: {position.headingTrue != null ? `${position.headingTrue.toFixed(0)} deg` : 'Unavailable'}</p>
-                </div>
-              </Popup>
-            </Marker>
-          )}
-        </LeafletMapFrame>
         </div>
         <style jsx>{`
           .nose-up-map {

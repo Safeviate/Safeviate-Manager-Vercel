@@ -49,7 +49,11 @@ export default function AuditChecklistsManager() {
   useEffect(() => {
     void loadData();
     window.addEventListener('safeviate-quality-templates-updated', loadData);
-    return () => window.removeEventListener('safeviate-quality-templates-updated', loadData);
+    window.addEventListener('safeviate-departments-updated', loadData);
+    return () => {
+      window.removeEventListener('safeviate-quality-templates-updated', loadData);
+      window.removeEventListener('safeviate-departments-updated', loadData);
+    };
   }, []);
 
   const groupedTemplates = useMemo(() => {

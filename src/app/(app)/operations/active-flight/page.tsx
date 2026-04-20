@@ -34,6 +34,7 @@ const MAX_BREADCRUMB_POINTS = 60;
 const FLIGHT_SESSION_OUTBOX_PREFIX = 'safeviate:active-flight-session-outbox:';
 const ACTIVE_TRACKING_STATE_PREFIX = 'safeviate:active-flight-tracking-state:';
 const ACTIVE_TRACKING_SELECTION_PREFIX = 'safeviate:active-flight-selection:';
+const ACTIVE_TRACKING_LOCATION_CALIBRATION_PREFIX = 'safeviate:active-flight-location-calibration:';
 
 interface ActiveTrackingState {
   active: true;
@@ -45,6 +46,12 @@ interface ActiveTrackingState {
 interface ActiveTrackingSelection {
   aircraftId: string;
   bookingId?: string;
+}
+
+interface LocationCalibration {
+  latitude: number;
+  longitude: number;
+  savedAt: string;
 }
 
 const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/active-flight-live-map').then((module) => module.ActiveFlightLiveMap), {
@@ -130,6 +137,32 @@ const saveActiveTrackingSelection = (deviceId: string, selection: ActiveTracking
   window.localStorage.setItem(getActiveTrackingSelectionKey(deviceId), JSON.stringify(selection));
 };
 
+const getLocationCalibrationKey = (deviceId: string) => `${ACTIVE_TRACKING_LOCATION_CALIBRATION_PREFIX}${deviceId}`;
+
+const readLocationCalibration = (deviceId: string) => {
+  if (typeof window === 'undefined') return null;
+
+  const raw = window.localStorage.getItem(getLocationCalibrationKey(deviceId));
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as LocationCalibration;
+  } catch {
+    window.localStorage.removeItem(getLocationCalibrationKey(deviceId));
+    return null;
+  }
+};
+
+const saveLocationCalibration = (deviceId: string, calibration: LocationCalibration) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(getLocationCalibrationKey(deviceId), JSON.stringify(calibration));
+};
+
+const clearLocationCalibration = (deviceId: string) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(getLocationCalibrationKey(deviceId));
+};
+
 const getResumeTimestamp = (session: ActiveTrackingState | FlightSession) =>
   ('updatedAt' in session && session.updatedAt) ||
   ('savedAt' in session && session.savedAt) ||
@@ -152,6 +185,9 @@ export default function ActiveFlightPage() {
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [flightSessions, setFlightSessions] = useState<FlightSession[]>([]);
+  const [scheduleDataLoaded, setScheduleDataLoaded] = useState(false);
+  const [locationCalibration, setLocationCalibration] = useState<LocationCalibration | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [isFullscreenMapOpen, setIsFullscreenMapOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [hasQueuedSession, setHasQueuedSession] = useState(false);
@@ -179,6 +215,7 @@ export default function ActiveFlightPage() {
         setAircrafts(data.aircraft || []);
         setBookings(data.bookings || []);
       }
+      setScheduleDataLoaded(true);
       if (sessionsRes.ok) {
         const data = await sessionsRes.json();
         setFlightSessions(Array.isArray(data.sessions) ? data.sessions : []);
@@ -248,7 +285,32 @@ export default function ActiveFlightPage() {
     () => flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId) || null,
     [deviceBinding?.deviceId, flightSessions],
   );
-  const effectivePosition = position ?? currentDeviceSession?.lastPosition ?? null;
+  const displayPosition = useMemo<FlightPosition | null>(() => {
+    if (!position && !locationCalibration) return null;
+
+    if (position && !locationCalibration) {
+      return position;
+    }
+
+    if (position && locationCalibration) {
+      return {
+        ...position,
+        latitude: locationCalibration.latitude,
+        longitude: locationCalibration.longitude,
+      };
+    }
+
+    return {
+      latitude: locationCalibration!.latitude,
+      longitude: locationCalibration!.longitude,
+      accuracy: undefined,
+      altitude: null,
+      speedKt: null,
+      headingTrue: null,
+      timestamp: locationCalibration!.savedAt,
+    };
+  }, [locationCalibration, position]);
+  const effectivePosition = displayPosition;
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, effectivePosition), [effectivePosition, selectedLegs]);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
@@ -257,6 +319,15 @@ export default function ActiveFlightPage() {
     heading: effectivePosition?.headingTrue ?? null,
     trailPoints: currentDeviceSession?.breadcrumb?.length ?? (effectivePosition ? 1 : 0),
   };
+  const rawAccuracyMeters = position?.accuracy != null && !Number.isNaN(position.accuracy) ? Math.round(position.accuracy) : null;
+  const isCoarseFix = rawAccuracyMeters != null && rawAccuracyMeters > 500;
+  const locationStatusLabel = locationCalibration
+    ? 'Calibrated'
+    : isCoarseFix
+      ? 'Coarse GPS'
+      : position
+        ? 'GPS Fix'
+        : 'Waiting for GPS';
   const nextWaypointNumber = activeLegState?.activeLegIndex != null ? `${activeLegState.activeLegIndex + 2}` : 'N/A';
   const etaToNextLabel = activeLegState?.etaToNextMinutes != null ? `${Math.max(1, Math.round(activeLegState.etaToNextMinutes))} min` : 'N/A';
   const syncStatusLabel = hasQueuedSession ? 'Queued for Sync' : isOnline ? 'Online' : 'Offline';
@@ -382,16 +453,18 @@ export default function ActiveFlightPage() {
   }, [deviceBinding?.deviceId]);
 
   useEffect(() => {
+    if (!scheduleDataLoaded) return;
     if (!selectedAircraftId) return;
     if (selectedAircraft) return;
     setSelectedAircraftId('');
-  }, [selectedAircraft, selectedAircraftId]);
+  }, [scheduleDataLoaded, selectedAircraft, selectedAircraftId]);
 
   useEffect(() => {
+    if (!scheduleDataLoaded) return;
     if (!selectedBookingId) return;
     if (selectedBooking) return;
     setSelectedBookingId('');
-  }, [selectedBooking, selectedBookingId]);
+  }, [scheduleDataLoaded, selectedBooking, selectedBookingId]);
 
   useEffect(() => {
     if (!deviceBinding?.deviceId) return;
@@ -472,7 +545,7 @@ export default function ActiveFlightPage() {
   }, [deviceBinding?.deviceId]);
 
   useEffect(() => {
-    if (!isTrackingActive || !position || !selectedAircraft || !deviceBinding) return;
+    if (!isTrackingActive || !displayPosition || !selectedAircraft || !deviceBinding) return;
     const now = Date.now();
     if (now - lastWriteRef.current < 5000) return;
     lastWriteRef.current = now;
@@ -491,18 +564,18 @@ export default function ActiveFlightPage() {
       activeLegIndex: activeLegState?.activeLegIndex ?? 0,
       startedAt,
       updatedAt: new Date().toISOString(),
-      lastPosition: position,
-      breadcrumb: buildBreadcrumb(existingSession?.breadcrumb, position),
+      lastPosition: displayPosition,
+      breadcrumb: buildBreadcrumb(existingSession?.breadcrumb, displayPosition),
       distanceToNextNm: activeLegState?.distanceToNextNm,
       bearingToNext: activeLegState?.bearingToNext,
       etaToNextMinutes: activeLegState?.etaToNextMinutes,
       crossTrackErrorNm: activeLegState?.crossTrackErrorNm,
       onCourse: activeLegState?.onCourse,
-      groundSpeedKt: activeLegState?.groundSpeedKt ?? position.speedKt ?? undefined,
+      groundSpeedKt: activeLegState?.groundSpeedKt ?? displayPosition.speedKt ?? undefined,
     };
     const next = [...flightSessions.filter((session) => session.deviceId !== deviceBinding.deviceId), nextSession];
     void persistSessions(next);
-  }, [activeLegState, deviceBinding, flightSessions, isTrackingActive, pilotName, position, savedDeviceLabel, selectedAircraft, selectedBooking?.id, userProfile?.id]);
+  }, [activeLegState, deviceBinding, displayPosition, flightSessions, isTrackingActive, pilotName, savedDeviceLabel, selectedAircraft, selectedBooking?.id, userProfile?.id]);
 
   const persistSessions = async (next: FlightSession[]) => {
     setFlightSessions(next);

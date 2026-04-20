@@ -113,7 +113,7 @@ export default function FlightPlannerPage() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="gap-1.5 text-[10px] font-black uppercase">
                 <Sparkles className="h-3.5 w-3.5" />
-                OpenAIP Chart + Search
+                MapLibre Base + OpenAIP Search
               </Badge>
               <Button
                 variant="outline"

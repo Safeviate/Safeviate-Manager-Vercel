@@ -309,7 +309,30 @@ export function NewChecklistDialog({
               <div className="space-y-6 p-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="title" render={({ field }) => ( <FormItem><FormLabel>Template Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                  <FormField control={form.control} name="departmentId" render={({ field }) => ( <FormItem><FormLabel>Department</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger></FormControl><SelectContent>{departments.map(d => (<SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )} />
+                  <FormField
+                    control={form.control}
+                    name="departmentId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a department" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {departments.map((d) => (
+                              <SelectItem key={d.id} value={d.id}>
+                                {d.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 
                 <Separator />
