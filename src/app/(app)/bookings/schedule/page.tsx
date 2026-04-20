@@ -395,9 +395,9 @@ export default function SchedulePage() {
             <MainPageHeader 
                 title="Daily Schedule"
                 description=""
-                className="lg:[&_.main-page-header__header]:justify-center"
+                className="lg:[&_.main-page-header__header]:justify-between lg:[&_.main-page-header__actions]:w-full lg:[&_.main-page-header__actions]:justify-center"
                 actions={
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>Previous Day</Button>
                         <Popover>
                             <PopoverTrigger asChild>

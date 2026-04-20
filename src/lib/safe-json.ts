@@ -8,3 +8,13 @@ export async function parseJsonResponse<T>(response: Response): Promise<T | null
     return null;
   }
 }
+
+export function safeJsonParse<T>(text: string): T | null {
+  if (!text.trim()) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}

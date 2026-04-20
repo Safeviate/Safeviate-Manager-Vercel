@@ -100,7 +100,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-[1400px] mx-auto w-full pt-4 px-1">
+      <div className="space-y-6 max-w-[1200px] mx-auto w-full pt-4 px-1">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-[400px] w-full" />
       </div>
@@ -109,7 +109,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   if (!tenantId) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+      <div className="max-w-[1200px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground">Tenant context is required to load this report.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/safety/safety-reports">Return to reports list</Link>
@@ -120,7 +120,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
   if (!report) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+      <div className="max-w-[1200px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground">Report not found.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/safety/safety-reports">Return to reports list</Link>
@@ -130,7 +130,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
         
         {/* --- MAIN CONTENT CARD --- */}

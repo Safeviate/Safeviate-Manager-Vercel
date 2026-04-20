@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
+import { CardControlHeader, HEADER_COMPACT_CONTROL_CLASS } from "@/components/page-header";
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -203,20 +203,35 @@ export default function AuditsPage() {
         const archivedAudits = filteredByOrg.filter(a => a.status === 'Archived');
 
         return (
-            <Card className="h-full min-h-0 flex flex-col overflow-hidden shadow-none border">
-                <MainPageHeader 
-                    title="Audits"
-                    className="lg:[&_.main-page-header__header]:flex-col lg:[&_.main-page-header__header]:items-center lg:[&_.main-page-header__header]:gap-2 lg:[&_.main-page-header__header]:py-1.5 lg:[&_.main-page-header__description]:text-center lg:[&_.main-page-header__actions]:w-full lg:[&_.main-page-header__actions]:justify-center"
+            <Card className="h-full min-h-0 flex flex-col overflow-hidden border border-card-border shadow-none">
+                <CardControlHeader
+                    isMobile={isMobile}
+                    context={shouldShowOrganizationTabs ? (
+                        <OrganizationTabsRow
+                            organizations={organizations || []}
+                            activeTab={activeOrgTab}
+                            onTabChange={setActiveOrgTab}
+                            className="border-0 bg-transparent px-0 py-0"
+                        />
+                    ) : undefined}
+                    mobileContext={shouldShowOrganizationTabs ? (
+                        <OrganizationTabsRow
+                            organizations={organizations || []}
+                            activeTab={activeOrgTab}
+                            onTabChange={setActiveOrgTab}
+                            className="border-0 bg-transparent px-0 py-0"
+                        />
+                    ) : undefined}
                     actions={
                         <Button
-                          asChild
-                          variant="outline"
-                          size={isMobile ? "compact" : "sm"}
-                          className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
-                      >
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_COMPACT_CONTROL_CLASS}
+                        >
                             <Link href="/quality/audit-checklists">
                                 <span className="flex items-center gap-2">
-                                    <ShieldCheck className="h-4 w-4" /> 
+                                    <ShieldCheck className="h-3.5 w-3.5" /> 
                                     {isMobile ? "Templates" : "Audit Templates"}
                                 </span>
                                 {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
@@ -225,23 +240,13 @@ export default function AuditsPage() {
                     }
                 />
 
-                {shouldShowOrganizationTabs && (
-                    <OrganizationTabsRow
-                        organizations={organizations || []}
-                        activeTab={activeOrgTab}
-                        onTabChange={setActiveOrgTab}
-                        centerTabs
-                        className="px-3 py-2 border-b bg-muted/5 shrink-0 md:px-4"
-                    />
-                )}
-
                 <Tabs value={activeStatusTab} onValueChange={setActiveStatusTab} className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     <ResponsiveTabRow
                         value={activeStatusTab}
                         onValueChange={setActiveStatusTab}
                         placeholder="Filter Status"
                         centerTabs
-                        className="px-3 py-2 border-b bg-muted/5 shrink-0 md:px-4"
+                    className="px-3 py-2 border-b border-card-border/70 bg-muted/5 shrink-0 md:px-4"
                         options={[
                             { value: 'active', label: `Active (${activeAudits.length})`, icon: ListFilter },
                             { value: 'archived', label: `Archived (${archivedAudits.length})`, icon: ListFilter },

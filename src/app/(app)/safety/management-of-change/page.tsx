@@ -134,7 +134,7 @@ export default function ManagementOfChangePage() {
         );
 
         return (
-            <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
+            <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl max-w-[1200px] w-full mx-auto">
                 <div className="flex flex-col bg-muted/5">
                     <div className="w-full border-b border-border px-4 py-3" style={headerBandBorderStyle}>
                         {shouldShowOrganizationTabs && (
@@ -191,7 +191,7 @@ export default function ManagementOfChangePage() {
 
     if (isLoading) {
         return (
-            <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+            <div className="max-w-[1200px] mx-auto w-full space-y-6 pt-4 px-1">
                 <Skeleton className="h-20 w-full" />
                 <Skeleton className="h-[400px] w-full" />
             </div>
@@ -200,7 +200,7 @@ export default function ManagementOfChangePage() {
 
     if (error) {
         return (
-            <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+            <div className="max-w-[1200px] mx-auto w-full text-center py-20 px-1">
                 <p className="text-muted-foreground">Error loading records: {error.message}</p>
             </div>
         );
@@ -209,7 +209,7 @@ export default function ManagementOfChangePage() {
     const showTabs = shouldShowOrganizationTabs;
 
     return (
-        <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
             {!showTabs ? (
                 renderOrgCard(scopedOrganizationId)
             ) : (

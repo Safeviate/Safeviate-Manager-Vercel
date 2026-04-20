@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -77,6 +78,11 @@ export function NewChecklistDialog({
   const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
   const [complianceItems, setComplianceItems] = useState<ComplianceRequirement[]>([]);
+  const [availableDepartments, setAvailableDepartments] = useState<Department[]>(departments);
+  const departmentOptions = availableDepartments.length > 0
+    ? availableDepartments
+    : [{ id: 'general', name: 'General' }];
+  const defaultDepartmentId = availableDepartments[0]?.id ?? 'general';
 
   // Drag-and-drop state for sections
   const dragSectionNode = useRef<HTMLDivElement | null>(null);
@@ -102,12 +108,41 @@ export function NewChecklistDialog({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    setAvailableDepartments(departments);
+  }, [departments]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+    const loadDepartments = async () => {
+      try {
+        const response = await fetch('/api/departments', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ departments: [] }));
+        if (!cancelled && Array.isArray(payload.departments)) {
+          setAvailableDepartments(payload.departments);
+        }
+      } catch {
+        if (!cancelled) {
+          setAvailableDepartments(departments);
+        }
+      }
+    };
+
+    void loadDepartments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [departments, isOpen]);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: existingTemplate || {
       title: '',
-      departmentId: '',
+      departmentId: defaultDepartmentId,
       sections: [],
     },
   });
@@ -119,9 +154,24 @@ export function NewChecklistDialog({
 
   useEffect(() => {
     if (isOpen) {
-        form.reset(existingTemplate || { title: '', departmentId: '', sections: [] });
+        form.reset(existingTemplate || { title: '', departmentId: defaultDepartmentId, sections: [] });
     }
-  }, [isOpen, existingTemplate, form]);
+  }, [defaultDepartmentId, isOpen, existingTemplate, form]);
+
+  useEffect(() => {
+    if (!isOpen || existingTemplate) {
+      return;
+    }
+
+    if (availableDepartments.length === 0) {
+      return;
+    }
+
+    const currentDepartmentId = form.getValues('departmentId');
+    if (!currentDepartmentId) {
+      form.setValue('departmentId', availableDepartments[0].id, { shouldValidate: true });
+    }
+  }, [availableDepartments, existingTemplate, form, isOpen]);
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -143,7 +193,7 @@ export function NewChecklistDialog({
           : {
               ...dataToSave,
               id: crypto.randomUUID(),
-              category: departments.find(d => d.id === values.departmentId)?.name || 'General',
+              category: departmentOptions.find(d => d.id === values.departmentId)?.name || 'General',
               organizationId: '',
             };
 
@@ -317,12 +367,12 @@ export function NewChecklistDialog({
                         <FormLabel>Department</FormLabel>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger disabled={departmentOptions.length === 0}>
                               <SelectValue placeholder="Select a department" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {departments.map((d) => (
+                            {departmentOptions.map((d) => (
                               <SelectItem key={d.id} value={d.id}>
                                 {d.name}
                               </SelectItem>

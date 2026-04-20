@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -1090,6 +1091,15 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-4 pt-2">
                     <p className="text-[9px] font-black uppercase italic text-foreground/60">Controls panels, cards, and their border treatment.</p>
+                    <p className="text-[9px] font-medium text-muted-foreground">
+                      Card shells and header bands follow the coherence matrix specimen and the
+                      {' '}
+                      <Link href="/quality/coherence-matrix" className="font-semibold text-primary underline-offset-4 hover:underline">
+                        safeviate-card-layout-standard
+                      </Link>
+                      {' '}
+                      reference.
+                    </p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {Object.entries(cardTheme).map(([name, value]) => (
                         <div key={name} className="space-y-1.5">

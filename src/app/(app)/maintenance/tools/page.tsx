@@ -38,7 +38,7 @@ export default function ToolsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 px-1">
+      <div className="max-w-[1000px] mx-auto w-full space-y-6 px-1">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-[500px] w-full" />
       </div>
@@ -46,15 +46,15 @@ export default function ToolsPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
+    <div className="max-w-[1000px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+      <Card className="flex-none flex flex-col overflow-hidden shadow-none border w-full max-w-[1000px] mx-auto self-center">
         <MainPageHeader
           title="Tools & Equipment"
           description="Manage specialized tools, equipment tracking, and calibration standards. (Under development)"
           actions={canManageAssets ? <AddToolDialog /> : undefined}
         />
-        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <ToolList data={tools || []} />
+        <CardContent className="mx-auto flex w-full max-w-[1000px] flex-1 p-0 overflow-hidden bg-background">
+          <ToolList />
         </CardContent>
       </Card>
     </div>

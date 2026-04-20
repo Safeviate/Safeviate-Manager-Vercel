@@ -142,7 +142,7 @@ export default function QuestionBankPage() {
   }
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+    <div className="max-w-[1000px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader 
           title="Question Bank Manager"

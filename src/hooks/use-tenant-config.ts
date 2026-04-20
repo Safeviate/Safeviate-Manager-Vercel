@@ -9,6 +9,16 @@ const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
 const FALLBACK_TENANT_ID = 'safeviate';
 const FALLBACK_TENANT_NAME = 'Safeviate';
 
+const safeJsonParse = <T,>(text: string): T | null => {
+  if (!text.trim()) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+};
+
 const mergeTenantConfig = (
   serverConfig: Record<string, unknown> | null,
   localConfig: Record<string, unknown> | null
@@ -60,11 +70,11 @@ export const useTenantConfig = () => {
     if (typeof window === 'undefined') return;
 
     const syncOverride = () => {
-      try {
+        try {
         const stored = window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY);
         setIndustryOverride(stored as IndustryType | null);
         const tenantConfigStored = window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
-        setLocalOverride(tenantConfigStored ? JSON.parse(tenantConfigStored) : null);
+        setLocalOverride(tenantConfigStored ? safeJsonParse<Record<string, unknown>>(tenantConfigStored) : null);
       } catch {
         setIndustryOverride(null);
         setLocalOverride(null);

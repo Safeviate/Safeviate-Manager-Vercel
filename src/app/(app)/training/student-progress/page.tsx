@@ -55,15 +55,18 @@ export default function StudentProgressPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
-        <Card className="flex flex-col shadow-none border overflow-hidden">
-            <MainPageHeader title="Student Progress" />
+        <Card className="flex flex-col overflow-hidden border border-card-border shadow-none">
+            <MainPageHeader
+                title="Student Progress"
+                className="[&>div:first-child]:h-10 [&>div:first-child]:py-0 [&>div:first-child]:items-center"
+            />
             
             <div className="p-4 lg:p-6">
                 {students && students.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {students.map(student => (
                             <Link key={student.id} href={`/training/student-progress/${student.id}`}>
-                                <Card className="hover:bg-muted/50 transition-colors h-full shadow-none border">
+                                <Card className="hover:bg-muted/50 transition-colors h-full shadow-none border overflow-hidden">
                                     <CardHeader className="flex flex-row items-center gap-4">
                                         <Avatar className="h-12 w-12 border">
                                             <AvatarImage src={`https://picsum.photos/seed/${student.firstName}/100/100`} />

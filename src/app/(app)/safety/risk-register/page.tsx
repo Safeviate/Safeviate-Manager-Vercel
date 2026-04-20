@@ -24,7 +24,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { CardControlHeader, MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -224,7 +224,26 @@ export default function RiskRegisterPage() {
     const displayAreas = uncategorizedRisks.length > 0 ? [...hazardAreas, 'Uncategorized'] : hazardAreas;
 
     return (
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl max-w-[1200px] w-full mx-auto">
+        <CardControlHeader
+          isMobile={isMobile}
+          context={showTabs ? (
+            <OrganizationTabsRow
+              organizations={organizations || []}
+              activeTab={activeOrgTab}
+              onTabChange={setActiveOrgTab}
+              className="border-0 bg-transparent px-0 py-0"
+            />
+          ) : undefined}
+          mobileContext={showTabs ? (
+            <OrganizationTabsRow
+              organizations={organizations || []}
+              activeTab={activeOrgTab}
+              onTabChange={setActiveOrgTab}
+              className="border-0 bg-transparent px-0 py-0"
+            />
+          ) : undefined}
+        />
         <div className="sticky top-0 z-30 bg-card">
           <MainPageHeader
             title="Risk Register"
@@ -329,7 +348,7 @@ export default function RiskRegisterPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+        <div className="max-w-[1200px] mx-auto w-full space-y-6 pt-4 px-1">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-[500px] w-full" />
       </div>
@@ -337,7 +356,7 @@ export default function RiskRegisterPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
       {!showTabs ? (
         renderOrgCard(scopedOrganizationId)
       ) : (

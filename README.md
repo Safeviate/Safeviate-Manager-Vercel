@@ -32,3 +32,7 @@ This repo now includes Prisma alongside existing Drizzle code during migration.
 `npm run prisma:push:local`
 
 Keep local auth URLs on `http://localhost:9002`, and set both `DATABASE_URL` and `DATABASE_URL_UNPOOLED` in `.env.local` to the Azure PostgreSQL connection string with `sslmode=require`.
+
+## Card Layout Standard
+
+For card shells, header bands, border tokens, and compact control rows, use the coherence matrix specimen as the visual reference and follow the `safeviate-card-layout-standard` skill.

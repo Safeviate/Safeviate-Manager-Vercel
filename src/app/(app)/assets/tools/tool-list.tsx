@@ -48,7 +48,7 @@ export function ToolList({ data }: { data: Tool[] }) {
       <ResponsiveCardGrid
         items={data}
         isLoading={false}
-        className="p-4 pb-20"
+        className="mx-auto w-full max-w-[1000px] p-4 pb-20"
         gridClassName="sm:grid-cols-2 xl:grid-cols-3"
         renderItem={(tool) => (
           <Card key={tool.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">

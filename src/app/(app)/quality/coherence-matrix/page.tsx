@@ -2,7 +2,12 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { MainPageHeader } from "@/components/page-header";
+import {
+  CardControlHeader,
+  HEADER_ACTION_BUTTON_CLASS,
+  HEADER_COMPACT_CONTROL_CLASS,
+  HEADER_SECONDARY_BUTTON_CLASS,
+} from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, ChevronDown, WandSparkles, Loader2, ClipboardPaste, Layers, MoreHorizontal, Copy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,7 +33,7 @@ import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/components/theme-provider';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { OrganizationTabsRow } from '@/components/responsive-tab-row';
+import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -309,7 +314,8 @@ function UploadRegulationsDialog({ tenantId, organizationId, regulationFamily, a
                 {trigger || (
                     <Button 
                         variant="outline" 
-                        size={isMobile ? "compact" : "default"}
+                        size="compact"
+                        className={cn(HEADER_COMPACT_CONTROL_CLASS, 'text-foreground hover:bg-accent/40')}
                     >
                         <WandSparkles className="h-3.5 w-3.5 text-primary" /> 
                         {isMobile ? "AI Populate" : "AI Populate"}
@@ -652,7 +658,7 @@ export default function CoherenceMatrixPage() {
                     const lineText = child.technicalStandard?.trim() || child.regulationStatement?.trim();
 
                     return (
-                        <div key={child.id} className="border-b border-slate-200 px-4 py-3 last:border-b-0">
+                        <div key={child.id} className="border-b border-card-border/70 px-4 py-3 last:border-b-0">
                             <p className="text-sm leading-6 text-foreground">
                                 {marker ? <span className="mr-2 font-semibold">{marker}</span> : null}
                                 <span>{lineText}</span>
@@ -745,10 +751,10 @@ export default function CoherenceMatrixPage() {
                                     </div>
                                 </div>
                             </div>
-                            <CollapsibleContent className="space-y-4 border-t bg-muted/5 px-4 pb-4 pt-3">
+                            <CollapsibleContent className="space-y-4 border-t border-card-border/70 bg-muted/5 px-4 pb-4 pt-3">
                                 {child.technicalStandard?.trim() ? (
                                     <div className="space-y-2 overflow-hidden">
-                                        <div className="rounded-md border border-slate-200 bg-background/60 px-4 py-3">
+                                        <div className="rounded-md border border-card-border/70 bg-background/60 px-4 py-3">
                                             {renderTechnicalStandardText(child.technicalStandard)}
                                         </div>
                                     </div>
@@ -801,7 +807,7 @@ export default function CoherenceMatrixPage() {
                 <div
                     className={cn(
                         "p-4",
-                        hasChildren && "border-b"
+                        hasChildren && "border-b border-card-border/70"
                     )}
                     style={nodeStyle}
                 >
@@ -868,7 +874,7 @@ export default function CoherenceMatrixPage() {
                     </div>
                 </div>
                 <CollapsibleContent className={cn(
-                    "space-y-4 border-t bg-muted/5",
+                    "space-y-4 border-t border-card-border/70 bg-muted/5",
                     depth === 0 ? "p-4" : "px-6 pb-5 pt-3"
                 )}>
                     {item.technicalStandard?.trim() ? (
@@ -889,105 +895,111 @@ export default function CoherenceMatrixPage() {
     };
 
     return (
-        <Card className="h-full min-h-0 flex flex-col overflow-hidden shadow-none border">
-            <MainPageHeader 
-                title="Coherence Matrix"
-                className="lg:[&_.main-page-header__header]:flex-col lg:[&_.main-page-header__header]:items-center lg:[&_.main-page-header__header]:gap-2 lg:[&_.main-page-header__header]:py-1.5 lg:[&_.main-page-header__description]:text-center lg:[&_.main-page-header__actions]:w-full lg:[&_.main-page-header__actions]:justify-center"
-                actions={
-                    canManageMatrix ? (
-                    isMobile ? (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    aria-label="Open coherence matrix actions"
-                                    className="h-9 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-[10px] font-black uppercase shadow-sm hover:bg-muted"
-                                >
-                                    <span className="flex items-center gap-2">
-                                        <MoreHorizontal className="h-3.5 w-3.5" />
-                                        Actions
-                                    </span>
-                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
-                                <UploadRegulationsDialog 
-                                    tenantId={tenantId!} 
-                                    organizationId={contextOrgId} 
-                                    regulationFamily={activeRegulationTab}
-                                    availableParentHeaders={currentFamilySubheaders}
-                                    trigger={
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                            <WandSparkles className="mr-2 h-4 w-4" /> AI Populate
-                                        </DropdownMenuItem>
-                                    }
-                                />
-                                <DropdownMenuItem onClick={() => handleOpenForm()}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenForm(null, 'header')}>
-                                    <Layers className="mr-2 h-4 w-4" /> Add Header
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenForm(null, 'subheader')}>
-                                    <Layers className="mr-2 h-4 w-4" /> Add Subheader
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    ) : (
-                        <div className="flex flex-wrap items-center gap-2">
-                            <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={currentFamilySubheaders} />
+        <Card className="h-full min-h-0 flex flex-col overflow-hidden border-0 shadow-none">
+            <CardControlHeader
+                isMobile={isMobile}
+                context={shouldShowOrganizationTabs ? (
+                    <OrganizationTabsRow
+                        organizations={organizations || []}
+                        activeTab={activeOrgTab}
+                        onTabChange={setActiveOrgTab}
+                        className="border-0 bg-transparent px-0 py-0"
+                    />
+                ) : undefined}
+                mobileContext={shouldShowOrganizationTabs ? (
+                    <OrganizationTabsRow
+                        organizations={organizations || []}
+                        activeTab={activeOrgTab}
+                        onTabChange={setActiveOrgTab}
+                        className="border-0 bg-transparent px-0 py-0"
+                    />
+                ) : undefined}
+                actions={canManageMatrix ? (
+                    <>
+                        <UploadRegulationsDialog tenantId={tenantId!} organizationId={contextOrgId} regulationFamily={activeRegulationTab} availableParentHeaders={currentFamilySubheaders} />
+                        <Button
+                            variant="outline"
+                            className={cn(HEADER_COMPACT_CONTROL_CLASS, 'text-foreground hover:bg-accent/40')}
+                            onClick={() => handleOpenForm(null, 'header')}
+                        >
+                            <Layers className="h-4 w-4" />
+                            Add Header
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className={cn(HEADER_COMPACT_CONTROL_CLASS, 'text-foreground hover:bg-accent/40')}
+                            onClick={() => handleOpenForm(null, 'subheader')}
+                        >
+                            <Layers className="h-4 w-4" />
+                            Add Subheader
+                        </Button>
+                        <Button 
+                            className={cn(
+                                HEADER_COMPACT_CONTROL_CLASS,
+                                'border-[hsl(var(--button-primary-border))] bg-[hsl(var(--button-primary-background))] text-[hsl(var(--button-primary-foreground))] hover:bg-[hsl(var(--button-primary-accent))] hover:text-[hsl(var(--button-primary-accent-foreground))]'
+                            )}
+                            onClick={() => handleOpenForm()}
+                        >
+                            <PlusCircle className="h-4 w-4" /> 
+                            Add Item
+                        </Button>
+                    </>
+                ) : undefined}
+                mobileActions={canManageMatrix ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                             <Button
                                 variant="outline"
-                                className="h-10 gap-2 px-4 py-2 text-sm font-medium"
-                                onClick={() => handleOpenForm(null, 'header')}
+                                aria-label="Open coherence matrix actions"
+                                className="h-9 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-[10px] font-black uppercase shadow-sm hover:bg-muted"
                             >
-                                <Layers className="h-4 w-4" />
-                                Add Header
+                                <span className="flex items-center gap-2">
+                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                    Actions
+                                </span>
+                                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                             </Button>
-                            <Button
-                                variant="outline"
-                                className="h-10 gap-2 px-4 py-2 text-sm font-medium"
-                                onClick={() => handleOpenForm(null, 'subheader')}
-                            >
-                                <Layers className="h-4 w-4" />
-                                Add Subheader
-                            </Button>
-                            <Button 
-                                className="h-10 gap-2 px-4 py-2 text-sm font-medium"
-                                onClick={() => handleOpenForm()}
-                            >
-                                <PlusCircle className="h-4 w-4" /> 
-                                Add Item
-                            </Button>
-                        </div>
-                    )) : undefined
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                            <UploadRegulationsDialog 
+                                tenantId={tenantId!} 
+                                organizationId={contextOrgId} 
+                                regulationFamily={activeRegulationTab}
+                                availableParentHeaders={currentFamilySubheaders}
+                                trigger={
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <WandSparkles className="mr-2 h-4 w-4" /> AI Populate
+                                    </DropdownMenuItem>
+                                }
+                            />
+                            <DropdownMenuItem onClick={() => handleOpenForm()}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenForm(null, 'header')}>
+                                <Layers className="mr-2 h-4 w-4" /> Add Header
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenForm(null, 'subheader')}>
+                                <Layers className="mr-2 h-4 w-4" /> Add Subheader
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : undefined}
+                navigation={
+                    <ResponsiveTabRow
+                        value={regulationTabToUiValue(activeRegulationTab)}
+                        onValueChange={(value) => setActiveRegulationTab(uiValueToRegulationTab(value))}
+                        placeholder="Select Regulation Family"
+                        centerTabs
+                        className="border-0 bg-transparent px-0 py-0"
+                        options={REGULATION_TABS.map((tab) => ({
+                            value: regulationTabToUiValue(tab.value),
+                            label: tab.label,
+                        }))}
+                    />
                 }
             />
             
-            {shouldShowOrganizationTabs && (
-                <OrganizationTabsRow
-                    organizations={organizations || []}
-                    activeTab={activeOrgTab}
-                    onTabChange={setActiveOrgTab}
-                    buttonLikeTabs
-                    centerTabs
-                    className="px-3 py-2 border-b bg-muted/5 shrink-0 md:px-4"
-                />
-            )}
-
-            <div className="border-b bg-muted/5 px-3 py-2 shrink-0 md:px-4">
-                <Tabs value={regulationTabToUiValue(activeRegulationTab)} onValueChange={(value) => setActiveRegulationTab(uiValueToRegulationTab(value))} className="w-full">
-                    <TabsList className="bg-transparent h-auto p-0 border-b-0 justify-center overflow-x-auto no-scrollbar flex items-center gap-1.5 mx-auto">
-                        {REGULATION_TABS.map((tab) => (
-                            <TabsTrigger key={tab.value} value={regulationTabToUiValue(tab.value)} className="rounded-md h-8 px-3 text-[9px] font-black uppercase tracking-[0.08em] border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground shrink-0">
-                                {tab.label}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
-            </div>
-            
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-6">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-6 pt-4">
                 <div className="space-y-4">
                     {topLevelItems.map(parentItem => renderMatrixNode(parentItem, 0))}
                     {topLevelItems.length === 0 && (
@@ -1005,7 +1017,7 @@ export default function CoherenceMatrixPage() {
 
   if ((!canViewMatrix && isPermissionsLoading) || isProfileLoading || !userProfile || isLoading) {
     return (
-        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-[600px] w-full" />
         </div>
@@ -1014,7 +1026,7 @@ export default function CoherenceMatrixPage() {
 
   if (!canViewMatrix) {
     return (
-        <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1">
             <Card className="border shadow-none">
                 <CardContent className="py-16 text-center">
                     <p className="text-sm font-black uppercase tracking-widest text-foreground/90">No Access</p>
@@ -1026,8 +1038,8 @@ export default function CoherenceMatrixPage() {
   }
 
   return (
-    <div className={cn("max-w-[1400px] mx-auto w-full flex flex-col pt-0 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
-        <div className="flex-1 min-h-0 flex flex-col shadow-none border rounded-xl bg-card overflow-hidden">
+    <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col pt-0 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-xl border border-card-border bg-card shadow-none">
             {!shouldShowOrganizationTabs ? (
                 renderOrgContext(scopedOrganizationId)
             ) : (

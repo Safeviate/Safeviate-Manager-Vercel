@@ -1,10 +1,15 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Building, type LucideIcon } from 'lucide-react';
+import { Building, ChevronDown, type LucideIcon } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { HEADER_TAB_LIST_CLASS, HEADER_TAB_TRIGGER_CLASS } from '@/components/page-header';
+import {
+  HEADER_COMPACT_CONTROL_CLASS,
+  HEADER_SECONDARY_BUTTON_CLASS,
+  HEADER_TAB_LIST_CLASS,
+  HEADER_TAB_TRIGGER_CLASS,
+} from '@/components/page-header';
 import {
   Select,
   SelectContent,
@@ -12,6 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 type ResponsiveTabOption = {
@@ -94,9 +106,9 @@ export function ResponsiveTabRow({
                   value={option.value}
                   className={cn(
                     buttonLikeTabs
-                      ? "h-8 rounded-md border border-input bg-background px-3 py-1.5 text-[10px] font-medium shadow-sm gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                      ? `${HEADER_COMPACT_CONTROL_CLASS} text-[10px] font-medium shadow-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm`
                       : flatTabs
-                        ? "rounded-md border border-input bg-transparent px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] shadow-none data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                        ? `${HEADER_COMPACT_CONTROL_CLASS} bg-transparent px-4 tracking-[0.16em] data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`
                         : `${HEADER_TAB_TRIGGER_CLASS} border bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none`,
                     joinedDesktopTabs && !flatTabs
                       ? "!rounded-none border-0 border-r border-input last:border-r-0 data-[state=active]:rounded-none"
@@ -137,23 +149,52 @@ export function OrganizationTabsRow({
   buttonLikeTabs = false,
   centerTabs = false,
 }: OrganizationTabsRowProps) {
+  const activeOrganizationLabel =
+    activeTab === 'internal'
+      ? 'Internal'
+      : organizations.find((organization) => organization.id === activeTab)?.name || 'Select Organization';
+
   return (
-    <ResponsiveTabRow
-      value={activeTab}
-      onValueChange={onTabChange}
-      placeholder="Select Organization"
-      className={className}
-      flatTabs={flatTabs}
-      buttonLikeTabs={buttonLikeTabs}
-      centerTabs={centerTabs}
-      options={[
-        { value: 'internal', label: 'Internal', icon: Building },
-        ...organizations.map((organization) => ({
-          value: organization.id,
-          label: organization.name,
-          icon: Building,
-        })),
-      ]}
-    />
+    <div className={className || 'border-b bg-muted/5 px-3 py-2 shrink-0'}>
+      <div className={cn('flex', centerTabs ? 'justify-center' : 'justify-start')}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                HEADER_SECONDARY_BUTTON_CLASS,
+                HEADER_COMPACT_CONTROL_CLASS,
+                'min-w-[220px] max-w-full justify-between',
+                flatTabs && 'bg-transparent',
+                buttonLikeTabs && 'font-black'
+              )}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <Building className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{activeOrganizationLabel}</span>
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="z-[7000] min-w-[220px] max-w-[360px]">
+            <DropdownMenuItem onClick={() => onTabChange('internal')} className="text-[10px] font-bold uppercase">
+              <Building className="h-3.5 w-3.5" />
+              Internal
+            </DropdownMenuItem>
+            {organizations.map((organization) => (
+              <DropdownMenuItem
+                key={organization.id}
+                onClick={() => onTabChange(organization.id)}
+                className="text-[10px] font-bold uppercase"
+              >
+                <Building className="h-3.5 w-3.5" />
+                {organization.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }

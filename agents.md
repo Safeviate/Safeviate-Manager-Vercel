@@ -46,3 +46,4 @@ This file is the default working guide for the Safeviate Manager repo. Keep it p
 - Prisma is the active database path, with some older Drizzle code still present.
 - Aviation features include maps, weather, approvals, and booking workflows.
 - Main code lives in `src/`, database schema in `prisma/`, and tests in `test/`.
+- For card shells, header bands, row hierarchy, border tokens, and compact control layout, use the coherence matrix specimen as the reference implementation and follow the `safeviate-card-layout-standard` skill.

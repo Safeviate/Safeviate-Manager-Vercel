@@ -1,5 +1,4 @@
 import type { FC, ReactNode } from 'react';
-import { CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 export const HEADER_ACTION_BUTTON_CLASS =
@@ -16,6 +15,21 @@ export const HEADER_TAB_LIST_CLASS =
 
 export const HEADER_TAB_TRIGGER_CLASS =
   "h-8 rounded-md px-3 text-[9px] font-medium uppercase tracking-[0.08em] transition-all shadow-none border border-input gap-1.5 shrink-0 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
+
+export const HEADER_COMPACT_CONTROL_CLASS =
+  "h-8 rounded-md border border-input bg-background px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0";
+
+export const CARD_HEADER_BAND_CLASS =
+  "border-b bg-muted/5 px-3 py-2 shrink-0 md:px-4";
+
+export const CARD_HEADER_TOP_ROW_CLASS =
+  "flex items-start justify-between gap-4";
+
+export const CARD_HEADER_SCOPE_ZONE_CLASS =
+  "min-w-0 flex-1";
+
+export const CARD_HEADER_ACTION_ZONE_CLASS =
+  "flex shrink-0 flex-wrap items-center justify-end gap-2";
 
 const DEFAULT_HEADER_DESCRIPTIONS: Record<string, string> = {
   'Flight Billing': 'Review completed flights ready for billing and export.',
@@ -53,6 +67,16 @@ interface MainPageHeaderProps {
   className?: string;
 }
 
+interface CardControlHeaderProps {
+  context?: ReactNode;
+  actions?: ReactNode;
+  navigation?: ReactNode;
+  mobileContext?: ReactNode;
+  mobileActions?: ReactNode;
+  className?: string;
+  isMobile?: boolean;
+}
+
 /**
  * Shared supporting header for pages that already expose the title in the app top bar.
  * Keep this strip slim and use it for secondary description text and in-page actions.
@@ -69,22 +93,74 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
     : DEFAULT_HEADER_DESCRIPTIONS[title] || 'Overview of this section.';
 
   return (
-    <div className={cn("main-page-header flex w-full shrink-0 flex-col border-b bg-muted/5", className)}>
-      <CardHeader className="main-page-header__header flex flex-col gap-2 px-3 py-2 md:px-4 md:py-2.5 lg:flex-row lg:items-center lg:justify-between">
+    <CardControlHeader
+      className={cn("main-page-header flex w-full shrink-0 flex-col bg-muted/5", className)}
+      isMobile={false}
+      context={resolvedDescription ? (
         <div className="flex min-w-0 flex-col gap-1">
-          {resolvedDescription ? (
-            <p className="main-page-header__description text-[10px] font-medium text-muted-foreground sm:text-xs">
-              {resolvedDescription}
-            </p>
-          ) : null}
+          <p className="main-page-header__description text-[10px] font-medium text-muted-foreground sm:text-xs">
+            {resolvedDescription}
+          </p>
         </div>
+      ) : undefined}
+      mobileContext={resolvedDescription ? (
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="main-page-header__description text-[10px] font-medium text-muted-foreground sm:text-xs">
+            {resolvedDescription}
+          </p>
+        </div>
+      ) : undefined}
+      actions={actions ? (
+        <div className="main-page-header__actions flex w-full flex-wrap items-center gap-1.5 [&_button]:h-8 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-[9px] [&_button]:tracking-[0.08em] [&_a]:h-8 [&_a]:gap-1.5 [&_a]:px-3 [&_a]:text-[9px] [&_a]:tracking-[0.08em]">
+          {actions}
+        </div>
+      ) : undefined}
+    />
+  );
+};
 
-        {actions && (
-          <div className="main-page-header__actions flex w-full flex-wrap items-center gap-1.5 lg:w-auto [&_button]:h-8 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-[9px] [&_button]:tracking-[0.08em] [&_a]:h-8 [&_a]:gap-1.5 [&_a]:px-3 [&_a]:text-[9px] [&_a]:tracking-[0.08em]">
-            {actions}
-          </div>
-        )}
-      </CardHeader>
+export const CardControlHeader: FC<CardControlHeaderProps> = ({
+  context,
+  actions,
+  navigation,
+  mobileContext,
+  mobileActions,
+  className,
+  isMobile = false,
+}) => {
+  const hasTopRow = Boolean(context || actions || mobileContext || mobileActions);
+  const resolvedMobileContext = mobileContext ?? context;
+  const resolvedMobileActions = mobileActions ?? actions;
+
+  return (
+    <div className={cn("flex w-full shrink-0 flex-col", className)}>
+      {hasTopRow ? (
+        <div className={CARD_HEADER_BAND_CLASS}>
+          {isMobile ? (
+            <div className="space-y-2">
+              {resolvedMobileContext ? resolvedMobileContext : null}
+              {resolvedMobileActions ? resolvedMobileActions : null}
+            </div>
+          ) : (
+            <div className={CARD_HEADER_TOP_ROW_CLASS}>
+              <div className={CARD_HEADER_SCOPE_ZONE_CLASS}>
+                {context ? context : null}
+              </div>
+              {actions ? (
+                <div className={CARD_HEADER_ACTION_ZONE_CLASS}>
+                  {actions}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {navigation ? (
+        <div className={CARD_HEADER_BAND_CLASS}>
+          {navigation}
+        </div>
+      ) : null}
     </div>
   );
 };

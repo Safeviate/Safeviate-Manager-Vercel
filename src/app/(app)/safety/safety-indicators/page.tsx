@@ -152,7 +152,7 @@ export default function SafetyIndicatorsPage() {
         </div>
         <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
           {spiConfig.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1400px] mx-auto w-full">
+            <div className="grid grid-cols-1 gap-6 pb-20 max-w-[1200px] mx-auto w-full">
               {spiConfig.map(spi => (
                 <SPICard
                   key={spi.id}
@@ -172,7 +172,7 @@ export default function SafetyIndicatorsPage() {
               ))}
             </div>
           ) : (
-            <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-muted/10 px-6 py-16 text-center">
+            <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-muted/10 px-6 py-16 text-center">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">No Indicators Configured</p>
               <p className="mt-2 max-w-xl text-sm text-muted-foreground">
                 Add your first safety indicator to start tracking month-by-month performance against your thresholds.
@@ -205,11 +205,11 @@ export default function SafetyIndicatorsPage() {
     );
   };
 
-  if (isLoading) return <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1 h-full overflow-hidden"><Skeleton className="h-20 w-full" /><Skeleton className="flex-1 w-full" /></div>;
+  if (isLoading) return <div className="max-w-[1200px] mx-auto w-full space-y-6 pt-4 px-1 h-full overflow-hidden"><Skeleton className="h-20 w-full" /><Skeleton className="flex-1 w-full" /></div>;
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
       {!showTabs ? renderOrgCard(scopedOrganizationId) : <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden"><div className="flex-1 min-h-0 overflow-hidden flex flex-col"><TabsContent value="internal" className="mt-0 h-full flex flex-col flex-1 overflow-hidden">{renderOrgCard('internal')}</TabsContent>{organizations.map(org => (<TabsContent key={org.id} value={org.id} className="mt-0 h-full flex flex-col flex-1 overflow-hidden">{renderOrgCard(org.id)}</TabsContent>))}</div></Tabs>}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>{selectedSpi?.id === 'new-spi' ? 'Create New Indicator' : `Edit Indicator: ${selectedSpi?.name}`}</DialogTitle><DialogDescription>Define targets and alert thresholds for this performance indicator.</DialogDescription></DialogHeader>{selectedSpi && <EditSpiForm spi={selectedSpi} onSave={handleSave} onCancel={() => setIsEditDialogOpen(false)} />}</DialogContent></Dialog>
     </div>

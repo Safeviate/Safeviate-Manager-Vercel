@@ -296,12 +296,6 @@ export const menuConfig: MenuItem[] = [
         description: 'View upcoming required maintenance events.',
         permissionId: 'maintenance-schedule-view',
       },
-      {
-        href: '/maintenance/tools',
-        label: 'Tools',
-        description: 'Manage specialized tools and equipment.',
-        permissionId: 'maintenance-view',
-      },
     ],
   },
   {
