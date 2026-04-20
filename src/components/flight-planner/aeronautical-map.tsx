@@ -9,6 +9,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Search, X, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -2065,54 +2066,44 @@ export default function AeronauticalMap({
         </div>
 
         <div className="mt-3 space-y-3">
-          <div className="space-y-1">
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Min Zoom Level</p>
-            <Select
-              value={`${minVisibleZoom}`}
-              onValueChange={(value) => {
-                const nextMin = Number(value);
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Min Zoom Level</p>
+              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{minVisibleZoom}</span>
+            </div>
+            <Slider
+              value={[minVisibleZoom]}
+              min={4}
+              max={16}
+              step={1}
+              onValueChange={([nextMin]) => {
                 setMinVisibleZoom(nextMin);
                 if (nextMin > maxVisibleZoom) {
                   setMaxVisibleZoom(nextMin);
                 }
               }}
-            >
-              <SelectTrigger className="h-9 text-[10px] font-black uppercase">
-                <SelectValue placeholder="Select min zoom" />
-              </SelectTrigger>
-              <SelectContent>
-                {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
-                  <SelectItem key={`min-${zoomLevel}`} value={`${zoomLevel}`}>
-                    {zoomLevel}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              className="py-1"
+            />
           </div>
 
-          <div className="space-y-1">
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Max Zoom Level</p>
-            <Select
-              value={`${maxVisibleZoom}`}
-              onValueChange={(value) => {
-                const nextMax = Number(value);
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Max Zoom Level</p>
+              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{maxVisibleZoom}</span>
+            </div>
+            <Slider
+              value={[maxVisibleZoom]}
+              min={4}
+              max={16}
+              step={1}
+              onValueChange={([nextMax]) => {
                 setMaxVisibleZoom(nextMax);
                 if (nextMax < minVisibleZoom) {
                   setMinVisibleZoom(nextMax);
                 }
               }}
-            >
-              <SelectTrigger className="h-9 text-[10px] font-black uppercase">
-                <SelectValue placeholder="Select max zoom" />
-              </SelectTrigger>
-              <SelectContent>
-                {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
-                  <SelectItem key={`max-${zoomLevel}`} value={`${zoomLevel}`}>
-                    {zoomLevel}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              className="py-1"
+            />
           </div>
         </div>
       </div>

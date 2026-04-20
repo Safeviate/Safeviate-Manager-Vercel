@@ -59,7 +59,6 @@ type ActiveFlightMapLibreShellProps = {
   showOnlyActiveAirspace: boolean;
   onZoomChange?: (zoom: number) => void;
   onCenterChange?: (center: Point) => void;
-  onUserInteracted?: () => void;
 };
 
 const normalizeHeading = (value: number | null | undefined) => {
@@ -272,7 +271,6 @@ export function ActiveFlightMapLibreShell({
   showOnlyActiveAirspace,
   onZoomChange,
   onCenterChange,
-  onUserInteracted,
 }: ActiveFlightMapLibreShellProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -286,7 +284,6 @@ export function ActiveFlightMapLibreShell({
   const lastLoadedPayloadRef = useRef('');
   const onZoomChangeRef = useRef(onZoomChange);
   const onCenterChangeRef = useRef(onCenterChange);
-  const onUserInteractedRef = useRef(onUserInteracted);
 
   const [loadedAirportFeatures, setLoadedAirportFeatures] = useState(airportFeatures);
   const [loadedNavaidFeatures, setLoadedNavaidFeatures] = useState(navaidFeatures);
@@ -408,10 +405,6 @@ export function ActiveFlightMapLibreShell({
   }, [onCenterChange]);
 
   useEffect(() => {
-    onUserInteractedRef.current = onUserInteracted;
-  }, [onUserInteracted]);
-
-  useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
@@ -526,7 +519,7 @@ export function ActiveFlightMapLibreShell({
           'text-anchor': 'top',
           'text-allow-overlap': true,
           'text-ignore-placement': true,
-          'text-rotation-alignment': 'map',
+          'text-rotation-alignment': 'viewport',
           'text-pitch-alignment': 'viewport',
           'icon-rotation-alignment': 'map',
           visibility: 'visible',
@@ -673,7 +666,7 @@ export function ActiveFlightMapLibreShell({
             'text-anchor': 'center',
             'text-allow-overlap': true,
             'text-ignore-placement': true,
-            'text-rotation-alignment': 'map',
+            'text-rotation-alignment': 'viewport',
             'text-pitch-alignment': 'viewport',
             visibility: toLayerVisibility(showLabels && showMasterChart && (showAirspaces || showClassE || showClassF || showClassG || showMilitaryAreas || showTrainingAreas || showGlidingSectors || showHangGlidings)),
           } as any,
@@ -710,7 +703,7 @@ export function ActiveFlightMapLibreShell({
             'text-anchor': 'top',
             'text-allow-overlap': true,
             'text-ignore-placement': true,
-            'text-rotation-alignment': 'map',
+            'text-rotation-alignment': 'viewport',
             'text-pitch-alignment': 'viewport',
             visibility: toLayerVisibility(showLabels && showMasterChart && showObstacles),
           } as any,
@@ -742,7 +735,7 @@ export function ActiveFlightMapLibreShell({
           'text-anchor': 'top',
           'text-allow-overlap': true,
           'text-ignore-placement': true,
-          'text-rotation-alignment': 'map',
+          'text-rotation-alignment': 'viewport',
           'text-pitch-alignment': 'viewport',
           'symbol-placement': 'point',
           visibility: 'visible',
@@ -826,7 +819,7 @@ export function ActiveFlightMapLibreShell({
             'text-anchor': 'center',
             'text-allow-overlap': true,
             'text-ignore-placement': true,
-            'text-rotation-alignment': 'map',
+            'text-rotation-alignment': 'viewport',
             'text-pitch-alignment': 'viewport',
             visibility: toLayerVisibility(showLabels && showMasterChart && (showAirspaces || showClassE || showClassF || showClassG || showMilitaryAreas || showTrainingAreas || showGlidingSectors || showHangGlidings)),
           } as any,
@@ -861,7 +854,7 @@ export function ActiveFlightMapLibreShell({
             'text-anchor': 'top',
             'text-allow-overlap': true,
             'text-ignore-placement': true,
-            'text-rotation-alignment': 'map',
+            'text-rotation-alignment': 'viewport',
             'text-pitch-alignment': 'viewport',
             visibility: toLayerVisibility(showLabels && showMasterChart && showObstacles),
           } as any,
@@ -894,12 +887,8 @@ export function ActiveFlightMapLibreShell({
       const center = map.getCenter();
       onCenterChangeRef.current?.([center.lat, center.lng]);
     };
-    const handleInteraction = () => onUserInteractedRef.current?.();
-
     map.on('moveend', handleMove);
     map.on('zoomend', handleMove);
-    map.on('dragstart', handleInteraction);
-    map.on('zoomstart', handleInteraction);
 
     const resizeObserver = new ResizeObserver(() => map.resize());
     resizeObserver.observe(containerRef.current);
@@ -908,8 +897,6 @@ export function ActiveFlightMapLibreShell({
       resizeObserver.disconnect();
       map.off('moveend', handleMove);
       map.off('zoomend', handleMove);
-      map.off('dragstart', handleInteraction);
-      map.off('zoomstart', handleInteraction);
       ownshipMarkerRef.current?.remove();
       ownshipMarkerRef.current = null;
       waypointMarkersRef.current.forEach((marker) => marker.remove());
@@ -1144,14 +1131,15 @@ export function ActiveFlightMapLibreShell({
       .setLngLat([position.longitude, position.latitude])
       .addTo(map);
 
-    const bearingOffset = debugBearingOffset || 0;
-
     if (!followOwnship) {
       const el = ownship.getElement().querySelector<HTMLElement>('[data-ownship-icon]');
       if (el) {
-        el.style.transform = `rotate(${heading + bearingOffset}deg)`;
+        el.style.transform = `rotate(${heading + (debugBearingOffset || 0)}deg)`;
       }
-      map.setBearing(0);
+      map.jumpTo({
+        center: [position.longitude, position.latitude],
+        bearing: 0,
+      });
       return;
     }
 
@@ -1160,12 +1148,9 @@ export function ActiveFlightMapLibreShell({
       el.style.transform = 'rotate(0deg)';
     }
 
-    map.easeTo({
+    map.jumpTo({
       center: [position.longitude, position.latitude],
-      offset: [0, -window.innerHeight / 4],
-      bearing: heading + bearingOffset,
-      duration: 0,
-      essential: true,
+      bearing: heading + (debugBearingOffset || 0),
     });
   }, [debugBearingOffset, followOwnship, position]);
 
@@ -1174,12 +1159,9 @@ export function ActiveFlightMapLibreShell({
     if (!map || !position || recenterSignal === 0) return;
 
     const heading = normalizeHeading(position.headingTrue) ?? 0;
-    map.easeTo({
+    map.jumpTo({
       center: [position.longitude, position.latitude],
-      offset: [0, 0],
-      bearing: followOwnship ? heading + debugBearingOffset : 0,
-      duration: 450,
-      essential: true,
+      bearing: followOwnship ? heading + (debugBearingOffset || 0) : 0,
     });
   }, [debugBearingOffset, followOwnship, position, recenterSignal]);
 

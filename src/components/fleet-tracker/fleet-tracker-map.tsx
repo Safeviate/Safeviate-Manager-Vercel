@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FeatureGroup, GeoJSON, Marker, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
@@ -10,11 +10,11 @@ import type { NavlogLeg } from '@/types/booking';
 import { isFlightSessionStale } from '@/lib/flight-session-status';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
 import { useMapZoomPreferences } from '@/hooks/use-map-zoom-preferences';
-import { useMapZoomDraft } from '@/hooks/use-map-zoom-draft';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { getCachedOpenAipResponse, setCachedOpenAipResponse } from '@/lib/openaip-cache';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -569,18 +569,11 @@ export function FleetTrackerMap({
   onLayerLevelsOpenChange?: (open: boolean) => void;
 }) {
   const initialSettings = useMemo(() => readStoredFleetTrackerMapSettings(), []);
-  const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
+  const { preferences: zoomPreferences, setZoomRange } = useMapZoomPreferences({
     storageKey: 'safeviate.fleet-tracker-map-zoom',
     defaultMinZoom: 4,
     defaultMaxZoom: 16,
   });
-  const { draftMin: zoomDraftMin, draftMax: zoomDraftMax, setDraftMin: setZoomDraftMin, setDraftMax: setZoomDraftMax, saveDrafts: saveZoomDrafts } =
-    useMapZoomDraft({
-      minZoom: zoomPreferences.minZoom,
-      maxZoom: zoomPreferences.maxZoom,
-      setZoomRange,
-      saveZoomRange,
-    });
 
   const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>(initialSettings.baseLayer);
   const [showAircraftNames, setShowAircraftNames] = useState(initialSettings.showAircraftNames);
@@ -1069,31 +1062,60 @@ export function FleetTrackerMap({
       ) : null}
 
       {layerLevelsOpen ? (
-        <div className="absolute left-3 bottom-3 z-[1200] w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
-          <div className="mb-3 flex items-center gap-2">
+        <div className="pointer-events-auto absolute left-3 top-3 z-[1200] w-[320px] max-w-[calc(100%-1.5rem)] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
+              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
+                Zoom {Math.round((mapMinZoom + mapMaxZoom) / 2)} · range {mapMinZoom}-{mapMaxZoom}
+              </p>
+            </div>
             <button
               type="button"
-              className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+              className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
               onClick={() => onLayerLevelsOpenChange?.(false)}
             >
-              Close
+              Hide card
             </button>
-            <SlidersHorizontal className="h-4 w-4 text-slate-500" />
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Map Zoom</p>
           </div>
-          <div className="space-y-3">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <Input type="number" min={0} max={mapMaxZoom} value={zoomDraftMin} onChange={(event) => setZoomDraftMin(event.target.value)} className="h-9 text-xs font-black" />
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">to</span>
-              <Input type="number" min={mapMinZoom} max={22} value={zoomDraftMax} onChange={(event) => setZoomDraftMax(event.target.value)} className="h-9 text-xs font-black" />
+          <div className="mt-3 grid gap-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Min Zoom Level</p>
+                <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{mapMinZoom}</span>
+              </div>
+              <Slider
+                value={[mapMinZoom]}
+                min={4}
+                max={16}
+                step={1}
+                onValueChange={([nextMin]) => {
+                  setZoomRange({
+                    minZoom: nextMin,
+                    maxZoom: Math.max(nextMin, mapMaxZoom),
+                  });
+                }}
+                className="py-1"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant="outline" onClick={() => resetZoomRange()}>
-                Reset
-              </Button>
-              <Button type="button" onClick={() => saveZoomDrafts()}>
-                Save
-              </Button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Max Zoom Level</p>
+                <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{mapMaxZoom}</span>
+              </div>
+              <Slider
+                value={[mapMaxZoom]}
+                min={4}
+                max={16}
+                step={1}
+                onValueChange={([nextMax]) => {
+                  setZoomRange({
+                    minZoom: Math.min(nextMax, mapMinZoom),
+                    maxZoom: nextMax,
+                  });
+                }}
+                className="py-1"
+              />
             </div>
           </div>
         </div>

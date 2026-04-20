@@ -15,6 +15,7 @@ import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { Slider } from '@/components/ui/slider';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const WaypointIcon = L.divIcon({
   className: '',
@@ -297,19 +298,6 @@ function FitFlightBounds({
     lastFrameSignatureRef.current = nextSignature;
     map.setView([position.latitude, position.longitude], map.getZoom(), { animate: false });
   }, [map, position]);
-
-  return null;
-}
-
-function MapInteractionWatcher({
-  onUserInteracted,
-}: {
-  onUserInteracted: () => void;
-}) {
-  useMapEvents({
-    dragstart: onUserInteracted,
-    zoomstart: onUserInteracted,
-  });
 
   return null;
 }
@@ -1016,6 +1004,7 @@ export function ActiveFlightLiveMap({
   const [mapCoverScale, setMapCoverScale] = useState(1.35);
   const [debugBearingOffset, setDebugBearingOffset] = useState(0);
   const [pendingDebugBearingOffset, setPendingDebugBearingOffset] = useState(0);
+  const isMobile = useIsMobile();
   const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
   const [isCachingArea, setIsCachingArea] = useState(false);
@@ -1281,11 +1270,6 @@ export function ActiveFlightLiveMap({
     position?.headingTrue != null && !Number.isNaN(position.headingTrue)
       ? ((position.headingTrue % 360) + 360) % 360
       : null;
-  const mapRotationDegrees = normalizedHeading != null ? -normalizedHeading : 0;
-  const mapShellStyle = {
-    '--map-rotation': `${mapRotationDegrees}deg`,
-    '--map-counter-rotation': `${-mapRotationDegrees}deg`,
-  } as CSSProperties;
   const rawAccuracyMeters = position?.accuracy != null && !Number.isNaN(position.accuracy) ? Math.round(position.accuracy) : null;
   const isCoarseFix = rawAccuracyMeters != null && rawAccuracyMeters > 500;
   const locationStatusLabel = locationCalibration
@@ -1295,6 +1279,11 @@ export function ActiveFlightLiveMap({
       : position
         ? 'GPS Fix'
         : 'No GPS Fix';
+  const locationSourceLabel = locationCalibration
+    ? 'Using calibrated location'
+    : position
+      ? 'Following browser GPS'
+      : 'No live position';
   const locationStatusDetail = geolocationError
     ? geolocationError
     : permissionState === 'denied'
@@ -1333,7 +1322,6 @@ export function ActiveFlightLiveMap({
 
   const handleFollowOwnship = () => {
     setFollowOwnship(true);
-    setRecenterNonce((current) => current + 1);
   };
   const handleNorthUp = () => {
     setFollowOwnship(false);
@@ -1374,7 +1362,7 @@ export function ActiveFlightLiveMap({
 
   if (fullscreen) {
     return (
-      <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black" style={mapShellStyle}>
+      <div className="fullscreen-map-shell relative h-[100dvh] w-full min-h-0 overflow-hidden bg-black">
         <div className="absolute inset-x-3 top-3 z-[1000] overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Full Flight Tracking View</p>
@@ -1406,6 +1394,9 @@ export function ActiveFlightLiveMap({
           </table>
           <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
             Mode: {followOwnship ? 'Track Up' : 'North Up'} · {locationStatusLabel}{rawAccuracyMeters != null ? ` · ${rawAccuracyMeters} m` : ''}
+          </div>
+          <div className="border-t border-slate-200 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            {locationSourceLabel}
           </div>
           <div className="border-t border-slate-200 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
             {locationStatusDetail}
@@ -1639,8 +1630,8 @@ export function ActiveFlightLiveMap({
           </div>
         </div>
 
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="nose-up-map absolute inset-0" style={{ ['--map-cover-scale' as string]: mapCoverScale } as CSSProperties}>
+          <div className="absolute inset-0 overflow-hidden">
+          <div className="nose-up-map absolute inset-0">
             <ActiveFlightMapLibreShell
               className="h-full w-full rounded-none"
               center={center}
@@ -1678,10 +1669,7 @@ export function ActiveFlightLiveMap({
               obstacleGeoJson={obstacleGeoJson}
               onZoomChange={setCurrentZoom}
               onCenterChange={(nextCenter) => setMapCenter(nextCenter)}
-              onUserInteracted={() => {
-                // Keep manual zoom/pan stable; recentering is handled explicitly by the Centre View button.
-              }}
-            />
+          />
           </div>
         </div>
 
@@ -1732,25 +1720,9 @@ export function ActiveFlightLiveMap({
             left: 0.75rem !important;
           }
 
-          .fullscreen-map-shell .nose-up-map {
-            transform: rotate(var(--map-rotation)) scale(var(--map-cover-scale));
-            transform-origin: 50% 50%;
-            transition: transform 180ms ease-out;
-          }
-
-          .fullscreen-map-shell .nose-up-map .leaflet-top,
-          .fullscreen-map-shell .nose-up-map .leaflet-bottom {
-            transform: rotate(var(--map-counter-rotation));
-            transform-origin: center;
-          }
-
           @media (min-width: 640px) {
             .fullscreen-map-shell .leaflet-top.leaflet-left {
               top: 11.75rem !important;
-            }
-
-            .fullscreen-map-shell .nose-up-map {
-              inset: -20%;
             }
           }
         `}</style>
@@ -1759,7 +1731,7 @@ export function ActiveFlightLiveMap({
   }
 
   return (
-      <div className="flex h-full min-h-0 flex-col space-y-3" style={mapShellStyle}>
+      <div className="flex h-full min-h-0 flex-col space-y-3">
       {showControls ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
@@ -2048,22 +2020,9 @@ export function ActiveFlightLiveMap({
             obstacleGeoJson={obstacleGeoJson}
             onZoomChange={setCurrentZoom}
             onCenterChange={(nextCenter) => setMapCenter(nextCenter)}
-            onUserInteracted={() => setFollowOwnship(false)}
           />
         </div>
         <style jsx>{`
-          .nose-up-map {
-            transform: rotate(var(--map-rotation)) scale(var(--map-cover-scale));
-            transform-origin: 50% 50%;
-            transition: transform 180ms ease-out;
-          }
-
-          .nose-up-map :global(.leaflet-top),
-          .nose-up-map :global(.leaflet-bottom) {
-            transform: rotate(var(--map-counter-rotation));
-            transform-origin: center;
-          }
-
           .nose-up-map :global(.active-flight-map-label),
           .nose-up-map :global(.active-flight-map-airspace-label) {
             margin: 0 !important;
