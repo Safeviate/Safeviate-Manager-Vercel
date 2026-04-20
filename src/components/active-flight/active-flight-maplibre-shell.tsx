@@ -36,6 +36,7 @@ type ActiveFlightMapLibreShellProps = {
   obstacleGeoJson: { type: 'FeatureCollection'; features: Array<{ type: 'Feature'; geometry?: { type?: string; coordinates?: any }; properties?: { _id: string; name: string; height?: number; elevation?: number } }> };
   followOwnship: boolean;
   recenterSignal: number;
+  debugBearingOffset?: number;
   minZoom: number;
   maxZoom: number;
   showRouteLine: boolean;
@@ -248,6 +249,7 @@ export function ActiveFlightMapLibreShell({
   obstacleGeoJson,
   followOwnship,
   recenterSignal,
+  debugBearingOffset = 0,
   minZoom,
   maxZoom,
   showRouteLine,
@@ -438,7 +440,12 @@ export function ActiveFlightMapLibreShell({
     ownshipEl.style.boxShadow = '0 0 0 4px rgba(14,165,233,0.15)';
     ownshipEl.style.transformOrigin = 'center';
     ownshipEl.style.position = 'relative';
-    ownshipEl.innerHTML = '<div style="position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:2px;height:10px;background:#0ea5e9;border-radius:9999px;"></div>';
+    ownshipEl.innerHTML = `
+      <div data-ownship-icon style="width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;">
+        <div style="width:100%;height:100%;border-radius:9999px;background:#0ea5e9;border:3px solid white;box-shadow:0 0 0 4px rgba(14,165,233,0.15);"></div>
+        <div style="position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:2px;height:10px;background:#0ea5e9;border-radius:9999px;"></div>
+      </div>
+    `;
 
     ownshipMarkerRef.current = new maplibregl.Marker({ element: ownshipEl, anchor: 'center' });
 
@@ -893,7 +900,6 @@ export function ActiveFlightMapLibreShell({
     map.on('zoomend', handleMove);
     map.on('dragstart', handleInteraction);
     map.on('zoomstart', handleInteraction);
-    map.on('rotate', handleInteraction);
 
     const resizeObserver = new ResizeObserver(() => map.resize());
     resizeObserver.observe(containerRef.current);
@@ -904,7 +910,6 @@ export function ActiveFlightMapLibreShell({
       map.off('zoomend', handleMove);
       map.off('dragstart', handleInteraction);
       map.off('zoomstart', handleInteraction);
-      map.off('rotate', handleInteraction);
       ownshipMarkerRef.current?.remove();
       ownshipMarkerRef.current = null;
       waypointMarkersRef.current.forEach((marker) => marker.remove());
@@ -1139,21 +1144,30 @@ export function ActiveFlightMapLibreShell({
       .setLngLat([position.longitude, position.latitude])
       .addTo(map);
 
-    const el = ownship.getElement() as HTMLDivElement;
-    el.style.transform = `rotate(${heading}deg)`;
+    const bearingOffset = debugBearingOffset || 0;
 
     if (!followOwnship) {
+      const el = ownship.getElement().querySelector<HTMLElement>('[data-ownship-icon]');
+      if (el) {
+        el.style.transform = `rotate(${heading + bearingOffset}deg)`;
+      }
+      map.setBearing(0);
       return;
+    }
+
+    const el = ownship.getElement().querySelector<HTMLElement>('[data-ownship-icon]');
+    if (el) {
+      el.style.transform = 'rotate(0deg)';
     }
 
     map.easeTo({
       center: [position.longitude, position.latitude],
       offset: [0, -window.innerHeight / 4],
-      bearing: heading,
+      bearing: heading + bearingOffset,
       duration: 0,
       essential: true,
     });
-  }, [followOwnship, position]);
+  }, [debugBearingOffset, followOwnship, position]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1163,11 +1177,11 @@ export function ActiveFlightMapLibreShell({
     map.easeTo({
       center: [position.longitude, position.latitude],
       offset: [0, 0],
-      bearing: followOwnship ? heading : 0,
+      bearing: followOwnship ? heading + debugBearingOffset : 0,
       duration: 450,
       essential: true,
     });
-  }, [followOwnship, position, recenterSignal]);
+  }, [debugBearingOffset, followOwnship, position, recenterSignal]);
 
   useEffect(() => {
     const map = mapRef.current;

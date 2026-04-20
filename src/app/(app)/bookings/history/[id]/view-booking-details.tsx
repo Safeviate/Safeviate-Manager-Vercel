@@ -32,7 +32,7 @@ import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGra
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
-  () => import('@/components/flight-planner/aeronautical-map'),
+  () => import('@/components/bookings/booking-planning-map').then((mod) => mod.BookingPlanningMap),
   { 
     ssr: false,
     loading: () => (

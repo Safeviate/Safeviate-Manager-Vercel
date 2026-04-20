@@ -1148,8 +1148,8 @@ export default function AeronauticalMap({
   const [pendingClickLabel, setPendingClickLabel] = useState<string | null>(null);
   const [layerInfo, setLayerInfo] = useState<LayerInfoState | null>(null);
   const lastPersistedSettingsRef = useRef<string>('');
-  const [minVisibleZoom, setMinVisibleZoom] = useState(8);
-  const [maxVisibleZoom, setMaxVisibleZoom] = useState(14);
+  const [minVisibleZoom, setMinVisibleZoom] = useState(4);
+  const [maxVisibleZoom, setMaxVisibleZoom] = useState(16);
   const [draggingWaypointId, setDraggingWaypointId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1530,7 +1530,7 @@ export default function AeronauticalMap({
         <LayersControl.BaseLayer checked={selectedBaseLayer === 'satellite'} name="Satellite (Hybrid)">
           <TileLayer
             url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-            attribution="&copy; Google Maps"
+            attribution="&copy; MapLibre / OpenStreetMap"
           />
         </LayersControl.BaseLayer>
 

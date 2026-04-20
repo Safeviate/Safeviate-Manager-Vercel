@@ -209,11 +209,21 @@ export default function ActiveFlightPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [scheduleRes, sessionsRes] = await Promise.all([fetch('/api/schedule-data'), fetch('/api/flight-sessions', { cache: 'no-store' })]);
+      const [aircraftRes, scheduleRes, sessionsRes] = await Promise.all([
+        fetch('/api/aircraft', { cache: 'no-store' }),
+        fetch('/api/schedule-data', { cache: 'no-store' }),
+        fetch('/api/flight-sessions', { cache: 'no-store' }),
+      ]);
+      let scheduleAircrafts: Aircraft[] = [];
       if (scheduleRes.ok) {
         const data = await scheduleRes.json();
-        setAircrafts(data.aircraft || []);
-        setBookings(data.bookings || []);
+        scheduleAircrafts = Array.isArray(data.aircraft) ? data.aircraft : [];
+        setAircrafts(scheduleAircrafts);
+        setBookings(Array.isArray(data.bookings) ? data.bookings : []);
+      }
+      if (scheduleAircrafts.length === 0 && aircraftRes.ok) {
+        const data = await aircraftRes.json();
+        setAircrafts(Array.isArray(data.aircraft) ? data.aircraft : []);
       }
       setScheduleDataLoaded(true);
       if (sessionsRes.ok) {
@@ -263,7 +273,22 @@ export default function ActiveFlightPage() {
   }, []);
 
   const deviceBinding = useMemo(() => getOrCreateDeviceBinding(), []);
-  const sortedAircraft = useMemo(() => [...aircrafts].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber)), [aircrafts]);
+  const fallbackAircraft = useMemo(
+    () =>
+      flightSessions
+        .filter((session, index, items) => items.findIndex((item) => item.aircraftId === session.aircraftId) === index)
+        .map((session) => ({
+          id: session.aircraftId,
+          make: '',
+          model: '',
+          tailNumber: session.aircraftRegistration,
+        })) as Aircraft[],
+    [flightSessions]
+  );
+  const sortedAircraft = useMemo(() => {
+    const source = aircrafts.length > 0 ? aircrafts : fallbackAircraft;
+    return [...source].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber));
+  }, [aircrafts, fallbackAircraft]);
   const selectedAircraft = useMemo(() => sortedAircraft.find((aircraft) => aircraft.id === selectedAircraftId) || null, [selectedAircraftId, sortedAircraft]);
   const bookingChoices = useMemo(
     () => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()),
@@ -286,7 +311,7 @@ export default function ActiveFlightPage() {
     [deviceBinding?.deviceId, flightSessions],
   );
   const displayPosition = useMemo<FlightPosition | null>(() => {
-    if (!position && !locationCalibration) return null;
+    if (!position && !locationCalibration && !currentDeviceSession?.lastPosition) return null;
 
     if (position && !locationCalibration) {
       return position;
@@ -300,6 +325,10 @@ export default function ActiveFlightPage() {
       };
     }
 
+    if (currentDeviceSession?.lastPosition && !locationCalibration) {
+      return currentDeviceSession.lastPosition;
+    }
+
     return {
       latitude: locationCalibration!.latitude,
       longitude: locationCalibration!.longitude,
@@ -309,7 +338,7 @@ export default function ActiveFlightPage() {
       headingTrue: null,
       timestamp: locationCalibration!.savedAt,
     };
-  }, [locationCalibration, position]);
+  }, [currentDeviceSession?.lastPosition, locationCalibration, position]);
   const effectivePosition = displayPosition;
   const activeLegState = useMemo(() => getActiveLegState(selectedLegs, effectivePosition), [effectivePosition, selectedLegs]);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';

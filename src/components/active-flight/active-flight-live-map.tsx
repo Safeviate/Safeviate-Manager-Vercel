@@ -14,7 +14,7 @@ import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 import { cn } from '@/lib/utils';
 import { parseJsonResponse } from '@/lib/safe-json';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 
 const WaypointIcon = L.divIcon({
   className: '',
@@ -844,8 +844,8 @@ function MenuCloseButton({ onClose }: { onClose?: () => void }) {
 
 const OFFLINE_TILE_CACHE_PREFIX = 'safeviate-tiles-';
 const ACTIVE_FLIGHT_MAP_LAYER_SETTINGS_KEY = 'safeviate.active-flight-map-layer-settings';
-const MAP_MIN_ZOOM = 6;
-const MAP_MAX_ZOOM = 14;
+const MAP_MIN_ZOOM = 4;
+const MAP_MAX_ZOOM = 16;
 const AVAILABLE_ZOOM_LEVELS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
 
 type ActiveFlightMapLayerSettings = {
@@ -971,6 +971,9 @@ export function ActiveFlightLiveMap({
   isMapZoomCardOpen = false,
   onLayersCardOpenChange,
   onMapZoomCardOpenChange,
+  geolocationError,
+  permissionState,
+  isWatching,
 }: {
   booking: Booking | null;
   legs: NavlogLeg[];
@@ -987,6 +990,9 @@ export function ActiveFlightLiveMap({
   isMapZoomCardOpen?: boolean;
   onLayersCardOpenChange?: (open: boolean) => void;
   onMapZoomCardOpenChange?: (open: boolean) => void;
+  geolocationError?: string | null;
+  permissionState?: 'idle' | 'granted' | 'denied' | 'unsupported';
+  isWatching?: boolean;
 }) {
   const routePoints = useMemo(
     () =>
@@ -1007,6 +1013,9 @@ export function ActiveFlightLiveMap({
   const [internalFollowOwnship, setInternalFollowOwnship] = useState(true);
   const [recenterNonce, setRecenterNonce] = useState(0);
   const [cacheNonce, setCacheNonce] = useState(0);
+  const [mapCoverScale, setMapCoverScale] = useState(1.35);
+  const [debugBearingOffset, setDebugBearingOffset] = useState(0);
+  const [pendingDebugBearingOffset, setPendingDebugBearingOffset] = useState(0);
   const [cacheStatus, setCacheStatus] = useState('Cache current view for offline use.');
   const [cacheState, setCacheState] = useState<'idle' | 'caching' | 'complete'>('idle');
   const [isCachingArea, setIsCachingArea] = useState(false);
@@ -1052,9 +1061,14 @@ export function ActiveFlightLiveMap({
   const [showObstacles, setShowObstacles] = useState(() => readStoredActiveFlightMapLayerSettings().showObstacles);
   const [showOnlyActiveAirspace, setShowOnlyActiveAirspace] = useState(() => readStoredActiveFlightMapLayerSettings().showOnlyActiveAirspace);
   const [currentZoom, setCurrentZoom] = useState(8);
-  const [minVisibleZoom, setMinVisibleZoom] = useState(8);
-  const [maxVisibleZoom, setMaxVisibleZoom] = useState(14);
+  const [minVisibleZoom, setMinVisibleZoom] = useState(4);
+  const [maxVisibleZoom, setMaxVisibleZoom] = useState(16);
   const useVectorOpenAipLayers = Boolean(OPENAIP_VECTOR_TILE_URL);
+  const showDebugMapTools = process.env.NODE_ENV !== 'production';
+
+  useEffect(() => {
+    setPendingDebugBearingOffset(debugBearingOffset);
+  }, [debugBearingOffset]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1208,6 +1222,30 @@ export function ActiveFlightLiveMap({
   }, [aircraftRegistration, booking?.id, displayPosition, routeSignature]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateMapCoverScale = () => {
+      const width = window.visualViewport?.width ?? window.innerWidth;
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      if (!width || !height) return;
+      const aspectRatio = Math.max(width, height) / Math.min(width, height);
+      const nextScale = Math.min(1.9, Math.max(1.18, aspectRatio * 1.04));
+      setMapCoverScale(nextScale);
+    };
+
+    updateMapCoverScale();
+    window.addEventListener('resize', updateMapCoverScale);
+    window.addEventListener('orientationchange', updateMapCoverScale);
+    window.visualViewport?.addEventListener('resize', updateMapCoverScale);
+
+    return () => {
+      window.removeEventListener('resize', updateMapCoverScale);
+      window.removeEventListener('orientationchange', updateMapCoverScale);
+      window.visualViewport?.removeEventListener('resize', updateMapCoverScale);
+    };
+  }, []);
+
+  useEffect(() => {
     if (recenterSignal === 0) return;
     setRecenterNonce((current) => current + 1);
   }, [recenterSignal]);
@@ -1256,7 +1294,16 @@ export function ActiveFlightLiveMap({
       ? 'Coarse GPS'
       : position
         ? 'GPS Fix'
-        : 'Waiting for GPS';
+        : 'No GPS Fix';
+  const locationStatusDetail = geolocationError
+    ? geolocationError
+    : permissionState === 'denied'
+      ? 'Location permission denied'
+      : permissionState === 'unsupported'
+        ? 'Geolocation unsupported'
+        : isWatching
+          ? 'Waiting for a browser location fix'
+          : 'Tracking is idle';
   const refreshOfflineSummary = useCallback(async () => {
     setIsRefreshingOfflineSummary(true);
     try {
@@ -1358,7 +1405,10 @@ export function ActiveFlightLiveMap({
             </tbody>
           </table>
           <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-            Mode: {followOwnship ? 'Nose Up' : 'North Up'} · {locationStatusLabel}{rawAccuracyMeters != null ? ` · ${rawAccuracyMeters} m` : ''}
+            Mode: {followOwnship ? 'Track Up' : 'North Up'} · {locationStatusLabel}{rawAccuracyMeters != null ? ` · ${rawAccuracyMeters} m` : ''}
+          </div>
+          <div className="border-t border-slate-200 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            {locationStatusDetail}
           </div>
           <div className="flex min-h-14 items-center justify-between gap-2 border-t border-slate-200 px-3 py-2">
             <div className="min-w-0 flex-1">
@@ -1590,11 +1640,12 @@ export function ActiveFlightLiveMap({
         </div>
 
         <div className="absolute inset-0 overflow-hidden">
-          <div className="nose-up-map absolute inset-[-24%]">
+          <div className="nose-up-map absolute inset-0" style={{ ['--map-cover-scale' as string]: mapCoverScale } as CSSProperties}>
             <ActiveFlightMapLibreShell
               className="h-full w-full rounded-none"
               center={center}
               position={displayPosition}
+              debugBearingOffset={debugBearingOffset}
               routePoints={routePoints}
               trackHistory={trackHistory}
               legs={legs}
@@ -1642,7 +1693,7 @@ export function ActiveFlightLiveMap({
             className="h-9 w-full rounded-full border-slate-200 bg-white px-2 text-[9px] font-black uppercase tracking-[0.10em] text-slate-800 shadow-sm transition-transform duration-150 hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px active:bg-white active:text-slate-800 focus-visible:bg-white focus-visible:text-slate-800 sm:h-10 sm:px-4 sm:text-[11px]"
             onClick={handleFollowOwnship}
           >
-            Nose Up
+            Track Up
           </Button>
           <Button
             type="button"
@@ -1682,7 +1733,7 @@ export function ActiveFlightLiveMap({
           }
 
           .fullscreen-map-shell .nose-up-map {
-            transform: rotate(var(--map-rotation)) scale(1.42);
+            transform: rotate(var(--map-rotation)) scale(var(--map-cover-scale));
             transform-origin: 50% 50%;
             transition: transform 180ms ease-out;
           }
@@ -1717,7 +1768,7 @@ export function ActiveFlightLiveMap({
           <div className="space-y-0.5">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Map Mode</p>
             <p className="text-sm font-semibold text-slate-900">
-              {followOwnship ? 'Nose-up' : 'North-up'}
+              {followOwnship ? 'Track-up' : 'North-up'}
             </p>
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
               {locationStatusLabel}
@@ -1733,7 +1784,7 @@ export function ActiveFlightLiveMap({
             className="h-9 rounded-full border-slate-200 bg-white px-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
             onClick={() => setFollowOwnship((current) => !current)}
           >
-            {followOwnship ? 'Nose Up' : 'North Up'}
+            {followOwnship ? 'Track Up' : 'North Up'}
           </Button>
           <Button
             type="button"
@@ -1799,7 +1850,7 @@ export function ActiveFlightLiveMap({
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
-                  Zoom {currentZoom} • decide what to load
+                  Zoom {currentZoom} · range {minVisibleZoom}-{maxVisibleZoom}
                 </p>
               </div>
               <button
@@ -1810,57 +1861,92 @@ export function ActiveFlightLiveMap({
                 Hide card
               </button>
             </div>
-            <div className="mt-3 grid gap-3">
-              <div className="space-y-1">
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Min Zoom Level</p>
-                <Select
-                  value={`${minVisibleZoom}`}
-                  onValueChange={(value) => {
-                    const nextMin = Number(value);
+          <div className="mt-3 grid gap-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Min Zoom Level</p>
+                  <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{minVisibleZoom}</span>
+                </div>
+                <Slider
+                  value={[minVisibleZoom]}
+                  min={4}
+                  max={16}
+                  step={1}
+                  onValueChange={([nextMin]) => {
                     setMinVisibleZoom(nextMin);
                     if (nextMin > maxVisibleZoom) {
                       setMaxVisibleZoom(nextMin);
                     }
                   }}
-                >
-                  <SelectTrigger className="h-9 text-[10px] font-black uppercase">
-                    <SelectValue placeholder="Select min zoom" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
-                      <SelectItem key={`active-flight-min-${zoomLevel}`} value={`${zoomLevel}`}>
-                        {zoomLevel}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  className="py-1"
+                />
               </div>
 
-              <div className="space-y-1">
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Max Zoom Level</p>
-                <Select
-                  value={`${maxVisibleZoom}`}
-                  onValueChange={(value) => {
-                    const nextMax = Number(value);
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Max Zoom Level</p>
+                  <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{maxVisibleZoom}</span>
+                </div>
+                <Slider
+                  value={[maxVisibleZoom]}
+                  min={4}
+                  max={16}
+                  step={1}
+                  onValueChange={([nextMax]) => {
                     setMaxVisibleZoom(nextMax);
                     if (nextMax < minVisibleZoom) {
                       setMinVisibleZoom(nextMax);
                     }
                   }}
-                >
-                  <SelectTrigger className="h-9 text-[10px] font-black uppercase">
-                    <SelectValue placeholder="Select max zoom" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_ZOOM_LEVELS.map((zoomLevel) => (
-                      <SelectItem key={`active-flight-max-${zoomLevel}`} value={`${zoomLevel}`}>
-                        {zoomLevel}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  className="py-1"
+                />
               </div>
             </div>
+            {showDebugMapTools ? (
+              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Debug Bearing</p>
+                  <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                    Offset {Math.round(debugBearingOffset)}°
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-full border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.12em] text-slate-800 shadow-sm hover:bg-slate-50"
+                    onClick={() => setDebugBearingOffset(0)}
+                  >
+                    Reset
+                  </Button>
+                </div>
+                <div className="mt-2 inline-flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'h-2.5 w-2.5 rounded-full',
+                      debugBearingOffset === 0 ? 'bg-slate-300' : 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.18)]'
+                    )}
+                  />
+                  <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    {debugBearingOffset === 0 ? 'Offset idle' : 'Debug rotation active'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-180}
+                  max={180}
+                  step={1}
+                  value={pendingDebugBearingOffset}
+                  onChange={(event) => setPendingDebugBearingOffset(Number(event.target.value))}
+                  onPointerUp={() => setDebugBearingOffset(pendingDebugBearingOffset)}
+                  onTouchEnd={() => setDebugBearingOffset(pendingDebugBearingOffset)}
+                  onMouseUp={() => setDebugBearingOffset(pendingDebugBearingOffset)}
+                  onKeyUp={() => setDebugBearingOffset(pendingDebugBearingOffset)}
+                  className="mt-3 h-2 w-full cursor-pointer accent-slate-900"
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -1929,6 +2015,7 @@ export function ActiveFlightLiveMap({
             className="h-full w-full rounded-2xl"
             center={center}
             position={displayPosition}
+            debugBearingOffset={debugBearingOffset}
             routePoints={routePoints}
             trackHistory={trackHistory}
             legs={legs}
@@ -1966,7 +2053,7 @@ export function ActiveFlightLiveMap({
         </div>
         <style jsx>{`
           .nose-up-map {
-            transform: rotate(var(--map-rotation)) scale(1.38);
+            transform: rotate(var(--map-rotation)) scale(var(--map-cover-scale));
             transform-origin: 50% 50%;
             transition: transform 180ms ease-out;
           }

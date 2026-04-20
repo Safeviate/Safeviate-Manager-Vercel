@@ -571,8 +571,8 @@ export function FleetTrackerMap({
   const initialSettings = useMemo(() => readStoredFleetTrackerMapSettings(), []);
   const { preferences: zoomPreferences, setZoomRange, saveZoomRange, resetZoomRange } = useMapZoomPreferences({
     storageKey: 'safeviate.fleet-tracker-map-zoom',
-    defaultMinZoom: 3,
-    defaultMaxZoom: 18,
+    defaultMinZoom: 4,
+    defaultMaxZoom: 16,
   });
   const { draftMin: zoomDraftMin, draftMax: zoomDraftMax, setDraftMin: setZoomDraftMin, setDraftMax: setZoomDraftMax, saveDrafts: saveZoomDrafts } =
     useMapZoomDraft({
@@ -774,7 +774,7 @@ export function FleetTrackerMap({
       >
         <TileLayer
           url={selectedBaseLayer === 'light' ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'}
-          attribution={selectedBaseLayer === 'light' ? '&copy; OpenStreetMap contributors' : '&copy; Google Maps'}
+          attribution={selectedBaseLayer === 'light' ? '&copy; OpenStreetMap contributors' : '&copy; MapLibre / OpenStreetMap'}
         />
         <FitBounds sessions={positionedSessions} />
         <MapZoomState onZoomChange={setMapZoom} />
