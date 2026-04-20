@@ -5,7 +5,7 @@ import { getPublicBaseUrl } from '@/lib/server/site-url';
 import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
 import { prisma } from '@/lib/prisma';
 import { hash } from 'bcryptjs';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 
 export async function POST(request: Request) {
   try {

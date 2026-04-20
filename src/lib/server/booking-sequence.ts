@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 import { formatBookingSequenceNumber } from '@/lib/booking-sequence';
 import { prisma } from '@/lib/prisma';
 import { ensureTenantConfigSchema } from '@/lib/server/bootstrap-db';

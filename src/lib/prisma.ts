@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/generated/prisma/client';
+import { PrismaNeon } from '@prisma/adapter-neon';
 import { assertRequiredEnv } from '@/lib/server/env';
 
 if (!process.env.DATABASE_URL && process.env.DATABASE_URL_UNPOOLED) {
@@ -30,6 +31,9 @@ let databaseAvailabilityCache: DatabaseAvailabilityCache | null = null;
 export const prisma =
   global.__prisma ??
   new PrismaClient({
+    adapter: new PrismaNeon({
+      connectionString: process.env.DATABASE_URL,
+    }),
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
