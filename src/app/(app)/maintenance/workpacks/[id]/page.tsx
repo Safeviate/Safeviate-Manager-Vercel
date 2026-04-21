@@ -71,7 +71,7 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 px-4">
+      <div className="max-w-[1100px] mx-auto w-full space-y-6 px-4">
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -83,7 +83,7 @@ export default function WorkpackDetailsPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full p-4 overflow-hidden">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full p-4 overflow-hidden">
       <Card className="shrink-0 bg-background shadow-md border-b-4 border-b-primary sticky top-0 z-10">
         <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-start gap-4">

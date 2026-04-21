@@ -89,7 +89,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-[1400px] mx-auto w-full pt-4 px-1">
+      <div className="space-y-6 max-w-[1100px] mx-auto w-full pt-4 px-1">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-[600px] w-full" />
       </div>
@@ -98,7 +98,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   if (!audit || !enrichedAudit) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+      <div className="max-w-[1100px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground mb-4">Audit record not found.</p>
         <BackNavButton href="/quality/audits" text="Back to Audits" />
       </div>
@@ -112,7 +112,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     : "bg-red-500";
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
           <div className="space-y-1">

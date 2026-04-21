@@ -208,7 +208,7 @@ export default function AiStudioPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-col gap-4 overflow-hidden">
       <MainPageHeader
         title="AI Studio"
         description="A single workspace for every AI flow currently available in Safeviate."

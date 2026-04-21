@@ -323,7 +323,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto flex w-full max-w-[1350px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map((item) => (
             <Skeleton key={item} className="h-28 w-full" />
@@ -351,7 +351,7 @@ export default function DashboardPage() {
   return (
     <div
       className={cn(
-        'mx-auto flex h-full w-full max-w-[1350px] flex-col gap-6 overflow-y-auto pb-10 no-scrollbar',
+        'mx-auto flex h-full w-full max-w-[1100px] flex-col gap-6 overflow-y-auto pb-10 no-scrollbar',
         isModern && 'gap-7 px-2 md:px-1'
       )}
     >

@@ -40,7 +40,7 @@ export default function StudentProgressPage() {
 
   if (isLoadingStudents) {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6 px-1">
             <Skeleton className="h-14 w-full" />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Skeleton className="h-32 w-full" />
@@ -54,7 +54,7 @@ export default function StudentProgressPage() {
 
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full px-1">
         <Card className="flex flex-col overflow-hidden border border-card-border shadow-none">
             <MainPageHeader
                 title="Student Progress"

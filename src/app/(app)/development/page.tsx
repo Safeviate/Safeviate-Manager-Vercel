@@ -112,7 +112,7 @@ export default function DevelopmentPage() {
   );
 
   return (
-    <div className="grid gap-6">
+      <div className="grid gap-6">
       <section className="space-y-4">
         <div className="space-y-1">
           <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">

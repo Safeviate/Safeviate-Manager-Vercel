@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export default function PermissionsPage() {
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         <MainPageHeader title="Permissions" />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">

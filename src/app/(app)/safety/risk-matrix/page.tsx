@@ -136,7 +136,7 @@ export default function RiskMatrixPage() {
   if (!colors) return null;
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-6 px-1 pb-4">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden gap-6 px-1 pb-4">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         <MainPageHeader
           title="Risk Matrix"

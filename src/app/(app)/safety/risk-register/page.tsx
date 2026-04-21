@@ -228,7 +228,7 @@ export default function RiskRegisterPage() {
     const displayAreas = uncategorizedRisks.length > 0 ? [...hazardAreas, 'Uncategorized'] : hazardAreas;
 
     return (
-        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl max-w-[1200px] w-full mx-auto">
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl max-w-[1100px] w-full mx-auto">
         <CardControlHeader
           isMobile={isMobile}
           context={showTabs ? (
@@ -362,7 +362,7 @@ export default function RiskRegisterPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6 pt-4 px-1">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-[500px] w-full" />
       </div>
@@ -370,7 +370,7 @@ export default function RiskRegisterPage() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
       {!showTabs ? (
         renderOrgCard(scopedOrganizationId)
       ) : (

@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 export default function LogbookPage() {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6">
             <Card className="shadow-none border">
                 <MainPageHeader 
                     title="My Logbook" 

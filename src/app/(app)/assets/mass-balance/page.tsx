@@ -180,7 +180,7 @@ function WBCalculatorContent() {
   };
 
   if (isLoading) return (
-    <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+    <div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1">
         <Skeleton className="h-20 w-full" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Skeleton className="lg:col-span-2 h-[500px]" />
@@ -190,7 +190,7 @@ function WBCalculatorContent() {
   );
 
   if (!aircraft) return (
-    <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+    <div className="max-w-[1100px] mx-auto w-full text-center py-20 px-1">
         <div className="flex flex-col items-center gap-4 bg-muted/5 p-12 rounded-3xl border-2 border-dashed">
             <Scale className="h-16 w-16 text-muted-foreground opacity-20" />
             <div className="space-y-1">
@@ -211,7 +211,7 @@ function WBCalculatorContent() {
   const finalYMin = graphConfig.yMin;
   const finalYMax = graphConfig.yMax;
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-8 pt-4 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-8 pt-4 px-1">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-2">
         <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="h-10 w-10 border rounded-md bg-background hover:bg-muted shadow-sm" onClick={() => router.back()}>

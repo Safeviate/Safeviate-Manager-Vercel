@@ -319,7 +319,7 @@ export default function SafetyFileProjectPage({
 
   if (isLoading) {
     return (
-<div className="mx-auto w-full max-w-[1200px] space-y-6 px-1 pt-2">
+<div className="mx-auto w-full max-w-[1100px] space-y-6 px-1 pt-2">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-[620px] w-full" />
       </div>
@@ -328,14 +328,14 @@ export default function SafetyFileProjectPage({
 
   if (!project) {
     return (
-<div className="mx-auto w-full max-w-[1200px] px-1 pt-8 text-center text-muted-foreground">
+<div className="mx-auto w-full max-w-[1100px] px-1 pt-8 text-center text-muted-foreground">
         Safety file project not found.
       </div>
     );
   }
 
   return (
-<div className="mx-auto flex h-full w-full max-w-[1200px] flex-col gap-6 overflow-hidden px-1 pt-2">
+<div className="mx-auto flex h-full w-full max-w-[1100px] flex-col gap-6 overflow-hidden px-1 pt-2">
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
         <Tabs
           value={activeTab}

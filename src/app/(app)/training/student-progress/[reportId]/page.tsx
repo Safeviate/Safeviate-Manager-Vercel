@@ -47,7 +47,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full gap-6 pt-4">
+      <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full gap-6 pt-4">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="flex-1 w-full" />
       </div>
@@ -57,11 +57,11 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
 
   
   if (!student) {
-      return <div className="max-w-[1200px] mx-auto w-full text-center py-10">Student not found.</div>
+      return <div className="max-w-[1100px] mx-auto w-full text-center py-10">Student not found.</div>
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pt-4">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pt-4">
       
       <div className="flex-1 min-h-0 overflow-hidden px-1">
         <TrainingRecords studentId={studentId} tenantId={tenantId || ''} />

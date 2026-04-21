@@ -52,20 +52,20 @@ export default function MyDashboardPage() {
     }, [availableTabs, activeTab]);
 
     if (isLoading) return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-64 w-full" />
         </div>
     );
 
     if (availableTabs.length === 0) return (
-        <div className="max-w-[1200px] mx-auto w-full text-center py-20">
+        <div className="max-w-[1100px] mx-auto w-full text-center py-20">
             <p className="text-muted-foreground italic">No dashboard modules are currently enabled for your account.</p>
         </div>
     );
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6 px-1">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6 px-1">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col h-full overflow-hidden">
                 <ResponsiveTabRow
                     value={activeTab}

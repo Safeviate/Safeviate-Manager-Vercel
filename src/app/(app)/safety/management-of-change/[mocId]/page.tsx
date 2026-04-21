@@ -110,7 +110,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (isLoading) {
     return (
-<div className="max-w-[1200px] mx-auto w-full space-y-6 pt-4 px-1 h-full">
+<div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1 h-full">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="flex-1 w-full" />
       </div>
@@ -119,7 +119,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
 
   if (error || !moc) {
     return (
-<div className="max-w-[1200px] mx-auto w-full text-center py-20 px-1">
+<div className="max-w-[1100px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground">{error ? `Error: ${error.message}` : 'MOC not found.'}</p>
           <Button asChild variant="link" className="mt-4">
             <Link
@@ -138,7 +138,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
   }
 
   return (
-<div className="max-w-[1200px] mx-auto w-full flex flex-col min-h-screen overflow-y-auto pt-4 px-1">
+<div className="max-w-[1100px] mx-auto w-full flex flex-col min-h-screen overflow-y-auto pt-4 px-1">
       <Tabs
         value={activeTab}
         onValueChange={(nextTab) => {
@@ -297,7 +297,7 @@ export default function MocDetailPage({ params }: MocDetailPageProps) {
       </Tabs>
 
       {/* --- Dedicated Print Layout (Hidden in UI) --- */}
-      <div className="hidden print:block space-y-8 max-w-[1200px] mx-auto w-full">
+      <div className="hidden print:block space-y-8 max-w-[1100px] mx-auto w-full">
         <div className="border-b pb-4 mb-6">
           <h1 className="text-3xl font-bold font-headline uppercase">Management of Change Proposal</h1>
           <p className="text-muted-foreground text-xs font-black uppercase tracking-widest">Document ID: {moc.mocNumber}</p>

@@ -57,7 +57,7 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
 
     if (isLoading) {
         return (
-            <div className="mx-auto flex h-full w-full max-w-[1200px] min-h-0 flex-col gap-6">
+            <div className="mx-auto flex h-full w-full max-w-[1100px] min-h-0 flex-col gap-6">
                 <Skeleton className="h-10 w-48" />
                 <Skeleton className="min-h-0 flex-1 w-full" />
             </div>
@@ -66,7 +66,7 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
 
     if (error || !booking) {
         return (
-            <div className="max-w-[1200px] mx-auto w-full text-center py-10">
+            <div className="max-w-[1100px] mx-auto w-full text-center py-10">
                 <p className="text-destructive mb-4">
                     {error ? `Error: ${error}` : "Booking not found."}
                 </p>
@@ -75,7 +75,7 @@ export default function BookingHistoryDetailPage({ params }: BookingDetailPagePr
     }
 
     return (
-        <div className="flex flex-col h-full min-h-0 w-full max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
+        <div className="flex flex-col h-full min-h-0 w-full max-w-[1100px] mx-auto p-4 md:p-6 lg:p-8">
             <ViewBookingDetails
                 booking={booking}
             />

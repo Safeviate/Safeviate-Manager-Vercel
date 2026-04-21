@@ -342,7 +342,7 @@ export default function SafetyReportsPage() {
 
   if (isLoading) {
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6 pt-4 px-1">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-[500px] w-full" />
         </div>
@@ -352,7 +352,7 @@ export default function SafetyReportsPage() {
   const showTabs = shouldShowOrganizationTabs;
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 pt-2 px-1 h-full overflow-hidden">
+        <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 pt-2 px-1 h-full overflow-hidden">
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (

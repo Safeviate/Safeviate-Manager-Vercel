@@ -629,7 +629,7 @@ export default function TableBuilderPage() {
 
 
   return (
-    <div className="p-8 space-y-12">
+    <div className="mx-auto w-full max-w-[1100px] p-8 space-y-12">
       <div className="flex items-center justify-between">
           <div className="space-y-4 text-left">
               <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/30 bg-primary/5 px-4 h-7 tracking-widest">

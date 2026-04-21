@@ -158,7 +158,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 pt-4 px-1">
+      <div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -167,7 +167,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
   if (!aircraft) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+      <div className="max-w-[1100px] mx-auto w-full text-center py-20 px-1">
         <div className="flex flex-col items-center gap-4 bg-muted/5 p-12 rounded-3xl border-2 border-dashed">
             <Plane className="h-16 w-16 text-muted-foreground opacity-20" />
             <div className="space-y-1">
@@ -186,7 +186,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const timeTo100 = (aircraft.tachoAtNext100Inspection || 0) - (aircraft.currentTacho || 0);
 
   return (
-    <div className={cn("max-w-[1400px] mx-auto w-full flex flex-col pt-2 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+    <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col pt-2 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className={cn("w-full flex-1 flex flex-col", isMobile ? "overflow-visible" : "overflow-hidden")}>
         
         <div className={cn("flex-1 pb-10", isMobile ? "overflow-visible" : "overflow-y-auto no-scrollbar")}>

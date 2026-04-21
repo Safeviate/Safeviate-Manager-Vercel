@@ -276,7 +276,7 @@ function LedgerConcept() {
 
 export default function MocLabPage() {
   return (
-    <div className="mx-auto flex w-full max-w-[1680px] flex-col space-y-6 px-4 pb-12 lg:px-6">
+    <div className="mx-auto flex w-full max-w-[1100px] flex-col space-y-6 px-4 pb-12 lg:px-6">
       <MainPageHeader
         title="MOC Lab"
         actions={

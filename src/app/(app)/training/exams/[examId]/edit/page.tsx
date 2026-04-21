@@ -73,12 +73,12 @@ export default function EditExamPage({ params }: EditExamPageProps) {
   };
 
   if (isLoading) {
-    return <div className="p-8 space-y-6 max-w-[1400px] mx-auto w-full"><Skeleton className="h-20 w-full" /><Skeleton className="h-[600px] w-full" /></div>;
+    return <div className="p-8 space-y-6 max-w-[1100px] mx-auto w-full"><Skeleton className="h-20 w-full" /><Skeleton className="h-[600px] w-full" /></div>;
   }
 
   if (!exam) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full text-center py-20 px-1">
+      <div className="max-w-[1100px] mx-auto w-full text-center py-20 px-1">
         <p className="text-destructive font-black uppercase tracking-tight mb-4">Exam template not found.</p>
         <Button onClick={() => router.push('/training/exams')}>Return to Exams</Button>
       </div>
@@ -86,7 +86,7 @@ export default function EditExamPage({ params }: EditExamPageProps) {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col h-full overflow-hidden pt-2 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-2 px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
         <div className="sticky top-0 z-30 bg-card">
             <MainPageHeader 

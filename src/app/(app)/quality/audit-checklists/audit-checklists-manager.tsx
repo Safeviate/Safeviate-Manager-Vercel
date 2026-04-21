@@ -72,7 +72,7 @@ export default function AuditChecklistsManager() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1">
+      <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full px-1">
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-[500px] w-full" />
       </div>
@@ -80,7 +80,7 @@ export default function AuditChecklistsManager() {
   }
 
   return (
-    <div className={cn("max-w-[1200px] mx-auto w-full flex flex-col gap-4 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+    <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col gap-4 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
       <Card className={cn("flex flex-col shadow-none border", isMobile ? "min-h-0 overflow-visible" : "h-full overflow-hidden")}>
         <MainPageHeader 
           title="Audit Checklists"

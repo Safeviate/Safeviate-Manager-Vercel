@@ -120,7 +120,7 @@ export default function GraphTestPage() {
   };
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-6 overflow-y-auto px-2 pb-8">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-6 overflow-y-auto px-2 pb-8">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-black uppercase tracking-tight">Graph Test</h1>

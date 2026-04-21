@@ -23,13 +23,13 @@ export default function TasksPage() {
     const { myTasks, isLoading } = useDashboardData();
 
     if (isLoading) return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6">
             <Skeleton className="h-64 w-full" />
         </div>
     );
 
     return (
-        <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        <div className="max-w-[1100px] mx-auto w-full space-y-6">
             <Card className="shadow-none border">
                 <MainPageHeader 
                     title="My Outstanding Tasks" 

@@ -383,14 +383,14 @@ export default function SchedulePage() {
   const extraLanes = hasAircraft ? ['', '', ''] : [];
 
   if (isLoading) {
-    return <div className="max-w-[1200px] mx-auto w-full px-1"><Skeleton className="h-[600px] w-full" /></div>;
+      return <div className="max-w-[1100px] mx-auto w-full px-1"><Skeleton className="h-[600px] w-full" /></div>;
   }
 
   const isTodaySelected = isSameDay(selectedDate, startOfToday());
   const isPastDaySelected = isBefore(selectedDate, startOfToday());
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
         <Card className="overflow-hidden flex-grow flex flex-col shadow-none border">
             <MainPageHeader 
                 title="Daily Schedule"
