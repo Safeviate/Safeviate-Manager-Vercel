@@ -15,15 +15,6 @@ const normalizeNextAuthUrl = () => {
     if (!current || current.includes('vercel.app')) {
       return '';
     }
-
-    try {
-      const parsed = new URL(current);
-      if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-        return '';
-      }
-    } catch {
-      return '';
-    }
   }
 
   return current;
