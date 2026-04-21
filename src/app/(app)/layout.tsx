@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { AuthGuard } from '@/components/auth-guard';
 
 let chunkReloadAttempted = false;
+const CHUNK_RELOAD_STORAGE_KEY = 'safeviate:chunk-reload-attempted';
 
 export default function AppLayout({
   children,
@@ -17,10 +18,24 @@ export default function AppLayout({
   const isMobile = useIsMobile();
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const currentUrl = new URL(window.location.href);
+    const hasChunkReloadParam = currentUrl.searchParams.has('__chunk_reload');
+
+    if (hasChunkReloadParam) {
+      window.sessionStorage.setItem(CHUNK_RELOAD_STORAGE_KEY, '1');
+      currentUrl.searchParams.delete('__chunk_reload');
+      window.history.replaceState(window.history.state, '', currentUrl.toString());
+    } else {
+      window.sessionStorage.removeItem(CHUNK_RELOAD_STORAGE_KEY);
+    }
+
     const handleChunkError = (message: string) => {
       if (!message.includes('ChunkLoadError') && !message.includes('Loading chunk')) return;
       if (typeof window === 'undefined') return;
       if (chunkReloadAttempted) return;
+      if (window.sessionStorage.getItem(CHUNK_RELOAD_STORAGE_KEY) === '1') return;
 
       chunkReloadAttempted = true;
       const url = new URL(window.location.href);
