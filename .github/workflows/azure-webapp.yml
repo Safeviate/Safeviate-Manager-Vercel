@@ -53,9 +53,18 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
+      - name: Prepare standalone deployment package
+        run: |
+          rm -rf deploy
+          mkdir -p deploy/.next
+          cp -R .next/standalone/. deploy/
+          cp -R .next/static deploy/.next/static
+          cp -R public deploy/public
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: safeviate
-          package: .
+          package: deploy
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          startup-command: 'node server.js'
