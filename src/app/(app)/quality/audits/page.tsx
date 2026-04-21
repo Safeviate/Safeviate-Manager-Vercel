@@ -267,7 +267,7 @@ export default function AuditsPage() {
 
     if (isLoading) {
         return (
-            <div className="space-y-6 max-w-[1100px] mx-auto w-full px-1">
+            <div className="space-y-6 max-w-[1100px] mx-auto w-full px-1 pt-4">
                 <Skeleton className="h-14 w-full" />
                 <Card className="shadow-none border">
                     <CardContent className="p-6 space-y-4">
@@ -281,7 +281,7 @@ export default function AuditsPage() {
     }
 
     return (
-        <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+        <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1 pt-4">
             {!showTabs ? (
                 renderOrgCard(scopedOrganizationId)
             ) : (

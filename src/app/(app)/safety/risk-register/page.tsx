@@ -370,7 +370,7 @@ export default function RiskRegisterPage() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-4 px-1">
       {!showTabs ? (
         renderOrgCard(scopedOrganizationId)
       ) : (

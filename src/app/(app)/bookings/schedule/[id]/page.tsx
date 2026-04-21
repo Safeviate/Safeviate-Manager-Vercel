@@ -58,7 +58,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
     if (isLoading) {
         return (
-        <div className="mx-auto flex h-full w-full max-w-[1100px] min-h-0 flex-col gap-6">
+        <div className="mx-auto flex h-full w-full max-w-[1100px] min-h-0 flex-col gap-6 pt-4">
                 <Skeleton className="h-10 w-48" />
                 <Skeleton className="min-h-0 flex-1 w-full" />
             </div>
@@ -67,7 +67,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
 
     if (error || !booking) {
         return (
-        <div className="max-w-[1100px] mx-auto w-full text-center py-10">
+        <div className="max-w-[1100px] mx-auto w-full text-center py-10 pt-4">
                 <p className="text-destructive mb-4">
                     {error ? `Error: ${error}` : "Booking not found."}
                 </p>
@@ -77,7 +77,7 @@ export default function BookingDetailPage({ params }: BookingDetailPageProps) {
     }
 
     return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-4 sm:gap-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-4 sm:gap-6 pt-4">
             <div className="min-h-[calc(100dvh-11rem)] flex-1 overflow-hidden">
             <ViewBookingDetails
                 booking={booking}

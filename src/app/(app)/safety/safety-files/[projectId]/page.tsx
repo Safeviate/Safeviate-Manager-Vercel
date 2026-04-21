@@ -319,7 +319,7 @@ export default function SafetyFileProjectPage({
 
   if (isLoading) {
     return (
-<div className="mx-auto w-full max-w-[1100px] space-y-6 px-1 pt-2">
+<div className="mx-auto w-full max-w-[1100px] space-y-6 px-1 pt-4">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-[620px] w-full" />
       </div>
@@ -335,7 +335,7 @@ export default function SafetyFileProjectPage({
   }
 
   return (
-<div className="mx-auto flex h-full w-full max-w-[1100px] flex-col gap-6 overflow-hidden px-1 pt-2">
+<div className="mx-auto flex h-full w-full max-w-[1100px] flex-col gap-6 overflow-hidden px-1 pt-4">
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none">
         <Tabs
           value={activeTab}

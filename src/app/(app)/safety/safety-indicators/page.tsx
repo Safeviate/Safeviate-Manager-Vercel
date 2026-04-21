@@ -243,7 +243,7 @@ export default function SafetyIndicatorsPage() {
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
       {!showTabs ? renderOrgCard(scopedOrganizationId) : <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full flex-1 flex flex-col overflow-hidden"><div className="flex-1 min-h-0 overflow-hidden flex flex-col"><TabsContent value="internal" className="mt-0 h-full flex flex-col flex-1 overflow-hidden">{renderOrgCard('internal')}</TabsContent>{organizations.map(org => (<TabsContent key={org.id} value={org.id} className="mt-0 h-full flex flex-col flex-1 overflow-hidden">{renderOrgCard(org.id)}</TabsContent>))}</div></Tabs>}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>{selectedSpi?.id === 'new-spi' ? 'Create New Indicator' : `Edit Indicator: ${selectedSpi?.name}`}</DialogTitle><DialogDescription>Define targets and alert thresholds for this performance indicator.</DialogDescription></DialogHeader>{selectedSpi && <EditSpiForm spi={selectedSpi} onSave={handleSave} onCancel={() => setIsEditDialogOpen(false)} />}</DialogContent></Dialog>
     </div>

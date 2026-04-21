@@ -114,7 +114,7 @@ export default function AlertsPage() {
 
   if (isLoading) {
     return (
-      <div className="lg:max-w-[1100px] mx-auto w-full px-1">
+      <div className="lg:max-w-[1100px] mx-auto w-full px-1 pt-4">
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-64 w-full mt-6" />
       </div>
@@ -122,7 +122,7 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden px-1">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden px-1 pt-4">
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
           <ResponsiveTabRow

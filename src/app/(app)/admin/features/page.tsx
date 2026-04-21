@@ -199,7 +199,7 @@ export default function FeaturesPage() {
 
   if (isLoading) {
       return (
-          <div className="max-w-[1100px] mx-auto w-full px-1 space-y-6">
+          <div className="max-w-[1100px] mx-auto w-full px-1 pt-4 space-y-6">
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-64 w-full" />
           </div>
@@ -207,7 +207,7 @@ export default function FeaturesPage() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden pb-10">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full px-1 pt-4 overflow-hidden pb-10">
       <Card className="flex flex-col shadow-none border overflow-hidden">
         <MainPageHeader title="Feature Management" />
         <CardContent className="p-4 lg:p-6 space-y-8 bg-muted/5">

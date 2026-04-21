@@ -130,11 +130,11 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
         
         {/* --- MAIN CONTENT CARD --- */}
-        <div className="flex-1 overflow-hidden pb-10 no-print pt-0">
+        <div className="flex-1 overflow-hidden pb-10 no-print pt-4">
           <div className="rounded-xl border overflow-hidden flex flex-col bg-card shadow-none h-full">
             <div className="sticky top-0 z-30 bg-card">
               <CardHeader className="bg-muted/5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3 shrink-0">

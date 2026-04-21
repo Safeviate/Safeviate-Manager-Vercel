@@ -335,7 +335,7 @@ export default function VehicleUsagePage() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-4">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader
           title="Vehicle Usage"

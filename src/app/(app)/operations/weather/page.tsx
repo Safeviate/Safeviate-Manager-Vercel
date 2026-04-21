@@ -366,7 +366,7 @@ export default function WeatherPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 pt-6 md:p-8 lg:max-w-[1100px] w-full mx-auto">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 pt-4 md:p-8 lg:max-w-[1100px] w-full mx-auto">
       <Card className="flex-1 flex min-h-0 flex-col overflow-hidden shadow-none border">
         <MainPageHeader
           title="Weather Center"

@@ -106,7 +106,7 @@ export default function EmergencyResponsePage() {
   ) : null;
 
   return (
-    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-3 h-full overflow-hidden px-2 sm:px-4 pt-2">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-3 h-full overflow-hidden px-2 sm:px-4 pt-4">
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
           {isMobile ? (

@@ -116,7 +116,7 @@ export default function VehicleDetailPage({ params }: VehicleDetailPageProps) {
   }
 
   return (
-    <div className={cn('max-w-[1100px] mx-auto w-full flex flex-col pt-2 px-1', isMobile ? 'min-h-0 overflow-y-auto' : 'h-full overflow-hidden')}>
+    <div className={cn('max-w-[1100px] mx-auto w-full flex flex-col pt-4 px-1', isMobile ? 'min-h-0 overflow-y-auto' : 'h-full overflow-hidden')}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className={cn('w-full flex-1 flex flex-col', isMobile ? 'overflow-visible' : 'overflow-hidden')}>
         <div className={cn('flex-1 pb-10', isMobile ? 'overflow-visible' : 'overflow-y-auto no-scrollbar')}>
           <Card className="shadow-none border rounded-xl overflow-hidden flex flex-col">

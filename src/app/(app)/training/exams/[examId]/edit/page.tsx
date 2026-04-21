@@ -86,7 +86,7 @@ export default function EditExamPage({ params }: EditExamPageProps) {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-2 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
         <div className="sticky top-0 z-30 bg-card">
             <MainPageHeader 

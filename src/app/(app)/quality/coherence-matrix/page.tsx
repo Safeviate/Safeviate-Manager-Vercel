@@ -737,7 +737,7 @@ export default function CoherenceMatrixPage() {
                                             <ChevronDown className="h-4 w-4 transition-transform duration-200" />
                                         </div>
                                     </CollapsibleTrigger>
-                                    <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                                    <div className="flex shrink-0 items-center gap-2 pt-1">
                                         {canManageMatrix ? (
                                             <>
                                                 <Button variant="outline" size="icon" className="h-8 w-8 border-slate-300" onClick={() => handleOpenForm(child)}>
@@ -1042,7 +1042,7 @@ export default function CoherenceMatrixPage() {
   }
 
   return (
-    <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col pt-0 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+    <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col pt-4 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-xl border border-card-border bg-card shadow-none">
             {!shouldShowOrganizationTabs ? (
                 renderOrgContext(scopedOrganizationId)

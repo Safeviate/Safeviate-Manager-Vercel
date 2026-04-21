@@ -249,7 +249,7 @@ export default function TaskTrackerPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1100px] mx-auto w-full space-y-6 px-1">
+      <div className="max-w-[1100px] mx-auto w-full space-y-6 px-1 pt-4">
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-[400px] w-full" />
       </div>
@@ -259,7 +259,7 @@ export default function TaskTrackerPage() {
   const showTabs = shouldShowOrganizationTabs;
 
   return (
-    <div className={cn('max-w-[1100px] mx-auto w-full flex flex-col gap-6 px-1', isMobile ? 'min-h-0 overflow-y-auto' : 'h-full')}>
+    <div className={cn('max-w-[1100px] mx-auto w-full flex flex-col gap-6 px-1 pt-4', isMobile ? 'min-h-0 overflow-y-auto' : 'h-full')}>
       {!showTabs ? (
         renderOrgCard(scopedOrganizationId)
       ) : (

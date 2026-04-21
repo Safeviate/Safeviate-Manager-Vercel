@@ -134,7 +134,7 @@ export default function QuestionBankPage() {
 
   if (isLoadingTopics || (isLoading && !poolItems)) {
     return (
-      <div className="lg:max-w-[1100px] mx-auto w-full p-8 space-y-6">
+      <div className="lg:max-w-[1100px] mx-auto w-full p-8 pt-4 space-y-6">
         <Skeleton className="h-14 w-full px-1" />
         <Skeleton className="h-[400px] w-full px-1" />
       </div>
@@ -142,7 +142,7 @@ export default function QuestionBankPage() {
   }
 
   return (
-    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1 pt-4">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader 
           title="Question Bank Manager"

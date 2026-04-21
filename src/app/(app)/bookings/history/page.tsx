@@ -350,7 +350,7 @@ export default function BookingsHistoryPage() {
   ];
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full min-h-0 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full min-h-0 px-1 pt-4">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
           <ResponsiveTabRow

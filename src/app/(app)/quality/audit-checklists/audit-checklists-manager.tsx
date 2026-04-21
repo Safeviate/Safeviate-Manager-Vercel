@@ -80,7 +80,7 @@ export default function AuditChecklistsManager() {
   }
 
   return (
-    <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col gap-4 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
+    <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col gap-4 px-1 pt-4", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
       <Card className={cn("flex flex-col shadow-none border", isMobile ? "min-h-0 overflow-visible" : "h-full overflow-hidden")}>
         <MainPageHeader 
           title="Audit Checklists"

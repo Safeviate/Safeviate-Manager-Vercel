@@ -352,7 +352,7 @@ export default function SafetyReportsPage() {
   const showTabs = shouldShowOrganizationTabs;
 
     return (
-        <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 pt-2 px-1 h-full overflow-hidden">
+        <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 pt-4 px-1 h-full overflow-hidden">
         {!showTabs ? (
             renderOrgCard(scopedOrganizationId)
         ) : (

@@ -281,7 +281,7 @@ export default function CompanyDocumentsPage() {
   };
 
   return (
-    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-4">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <CardHeader className="shrink-0 border-b bg-muted/5 px-2 py-1.5 md:px-3 md:py-2">
           <div className="flex justify-center">

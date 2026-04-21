@@ -214,7 +214,7 @@ export default function ManagementOfChangePage() {
     const showTabs = shouldShowOrganizationTabs;
 
     return (
-    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-2 px-1">
+    <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden pt-4 px-1">
             {!showTabs ? (
                 renderOrgCard(scopedOrganizationId)
             ) : (

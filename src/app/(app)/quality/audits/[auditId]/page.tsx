@@ -112,7 +112,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     : "bg-red-500";
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-0 px-1">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
         <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
           <div className="space-y-1">

@@ -100,7 +100,7 @@ export default function ExternalCompaniesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full min-h-0 lg:max-w-[1100px] mx-auto w-full">
+    <div className="flex flex-col gap-6 h-full min-h-0 lg:max-w-[1100px] mx-auto w-full pt-4">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
         <CardHeader className={CARD_HEADER_BAND_CLASS}>
           {canManage && (

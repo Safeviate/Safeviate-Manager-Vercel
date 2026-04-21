@@ -186,7 +186,7 @@ export default function AccountingPage() {
   if (isLoading) return <div className="p-8 space-y-6 px-1"><Skeleton className="h-14 w-full" /><Skeleton className="h-[400px] w-full" /></div>;
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full px-1 overflow-hidden">
+    <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full px-1 pt-4 overflow-hidden">
       <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
         <Tabs defaultValue="unbilled" onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
           <MainPageHeader 

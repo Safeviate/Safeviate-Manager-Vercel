@@ -215,7 +215,7 @@ export default function TrainingRoutesPage() {
   }
 
   return (
-    <div className={cn('mx-auto flex w-full lg:max-w-[1100px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
+    <div className={cn('mx-auto flex w-full lg:max-w-[1100px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-4 md:p-8', isModern && 'gap-7')}>
       <Card className={cn('flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
         <CardHeader className={cn(CARD_HEADER_BAND_CLASS, isModern && 'bg-transparent')}>
           <div className="flex flex-wrap items-center justify-center gap-2">
