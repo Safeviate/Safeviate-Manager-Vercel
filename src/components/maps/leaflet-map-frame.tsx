@@ -28,7 +28,6 @@ export function LeafletMapFrame({
   style,
   children,
 }: LeafletMapFrameProps) {
-  const mapKey = `${minZoom ?? 'min'}-${maxZoom ?? 'max'}`;
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -47,7 +46,6 @@ export function LeafletMapFrame({
 
   return (
     <MapContainer
-      key={mapKey}
       center={center}
       zoom={zoom}
       minZoom={minZoom}
