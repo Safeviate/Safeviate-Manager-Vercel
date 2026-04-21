@@ -366,19 +366,19 @@ export default function WeatherPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 pt-6 md:p-8 max-w-[1200px] w-full mx-auto">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 pt-6 md:p-8 lg:max-w-[1100px] w-full mx-auto">
       <Card className="flex-1 flex min-h-0 flex-col overflow-hidden shadow-none border">
         <MainPageHeader
           title="Weather Center"
           description="Multi-source METAR, TAF, decoded weather, and live operations mapping."
           actions={
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-              <form onSubmit={fetchWeather} className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+              <form onSubmit={fetchWeather} className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                 <Input
                   placeholder="Enter ICAO (e.g. KJFK, EGLL)"
                   value={icao}
                   onChange={(e) => setIcao(e.target.value)}
-                  className="w-full sm:w-64 font-mono uppercase font-black bg-background h-11"
+                  className="w-full sm:w-64 h-8 font-mono uppercase font-black text-[10px] bg-background"
                   maxLength={4}
                 />
                 <Button type="submit" disabled={loading} className={HEADER_ACTION_BUTTON_CLASS}>
@@ -386,7 +386,7 @@ export default function WeatherPage() {
                   {loading ? 'Fetching' : 'Search Updates'}
                 </Button>
               </form>
-              <div className="h-10 w-px bg-border hidden sm:block mx-1" />
+              <div className="h-8 w-px bg-border hidden sm:block mx-1" />
               <Button 
                 variant="outline" 
                 onClick={() => setIsSyncDialogOpen(true)}
@@ -413,7 +413,7 @@ export default function WeatherPage() {
               </div>
             )}
 
-            {unifiedObservation.icaoId && !loading && (
+              {unifiedObservation.icaoId && !loading && (
                 <Tabs defaultValue="overview" className="flex flex-col space-y-6 p-4 md:p-6">
                   <div className="flex items-center gap-2">
                     <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest text-foreground">Multi-Source</p>
@@ -427,7 +427,7 @@ export default function WeatherPage() {
                   </div>
 
                   <div className="space-y-6 pt-2">
-                    <div className="grid grid-cols-2 md:grid-cols-4 overflow-hidden rounded-xl border-2 border-card-border bg-card shadow-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-4 overflow-hidden rounded-xl border-2 border-card-border bg-card shadow-sm">
                       <div className="p-4 flex flex-col items-center justify-center text-center">
                         <Wind className="w-5 h-5 text-blue-500 mb-2" />
                         <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Wind</span>
@@ -789,8 +789,7 @@ export default function WeatherPage() {
                     />
                   </Card>
                 </div>
-              </div>
-
+                  </div>
                 </Tabs>
             )}
           </div>

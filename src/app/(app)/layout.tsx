@@ -55,7 +55,7 @@ export default function AppLayout({
           <div className="flex flex-1 min-w-0 h-full overflow-hidden overflow-x-hidden">
               {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
               <SidebarInset className="flex-1 min-h-0 overflow-hidden overflow-x-hidden flex flex-col p-3 md:pb-4 md:p-4 lg:p-6">
-              <div className="mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col overflow-hidden overflow-x-hidden">
+              <div className="mx-auto flex w-full min-w-0 flex-1 max-w-none flex-col overflow-hidden overflow-x-hidden">
                   {children}
               </div>
               </SidebarInset>

@@ -1,12 +1,12 @@
 import { PersonnelDirectoryPage } from '../../personnel-directory-page';
 
 type DepartmentPageProps = {
-  params: {
+  params: Promise<{
     departmentId: string;
-  };
+  }>;
 };
 
-export default function DepartmentPersonnelPage({ params }: DepartmentPageProps) {
-  const { departmentId } = params;
+export default async function DepartmentPersonnelPage({ params }: DepartmentPageProps) {
+  const { departmentId } = await params;
   return <PersonnelDirectoryPage selectedDepartmentId={departmentId} defaultDepartmentId={departmentId} title="Department Users" />;
 }

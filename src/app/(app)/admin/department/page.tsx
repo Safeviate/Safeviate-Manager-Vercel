@@ -86,7 +86,7 @@ export default function DepartmentPage() {
   );
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
         <MainPageHeader 
           title="Departments"

@@ -56,7 +56,7 @@ export default function AccessOverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-[1400px] mx-auto w-full px-1">
+      <div className="space-y-6 lg:max-w-[1100px] mx-auto w-full px-1">
         <Skeleton className="h-14 w-full" />
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 h-[500px]">
           <Skeleton className="h-full w-full" />
@@ -67,7 +67,7 @@ export default function AccessOverviewPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex flex-col h-full overflow-hidden shadow-none border">
         <MainPageHeader title="Access Overview" />
 

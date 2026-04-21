@@ -42,7 +42,7 @@ export default function NewExamPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4">
       <MainPageHeader
         title="New Exam Template"
         description="Define questions and subject matter for official or mock assessments."

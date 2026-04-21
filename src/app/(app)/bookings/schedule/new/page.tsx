@@ -12,6 +12,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { broadcastBookingUpdate } from '@/lib/booking-updates';
+import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 
 export default function NewBookingPage() {
   const router = useRouter();
@@ -78,6 +79,8 @@ export default function NewBookingPage() {
     const { date, startTime, endTime, resourceId, ...rest } = values;
     const startDateTime = new Date(`${format(date, 'yyyy-MM-dd')}T${startTime}`);
     const endDateTime = new Date(`${format(date, 'yyyy-MM-dd')}T${endTime}`);
+    const selectedAircraft = aircrafts.find((aircraft) => aircraft.id === resourceId);
+    const aircraftSnapshot = selectedAircraft ? getAircraftHourSnapshot(selectedAircraft) : undefined;
 
     // Clean data to avoid undefined values in Firestore
     const bookingData: any = {
@@ -97,6 +100,11 @@ export default function NewBookingPage() {
         createdById: userProfile?.id || null,
         createdByName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : null,
     };
+    if (aircraftSnapshot) {
+        bookingData.preFlightData = { ...aircraftSnapshot };
+    }
+    bookingData.preFlight = false;
+    bookingData.postFlight = false;
 
     try {
         const response = await fetch('/api/bookings', {

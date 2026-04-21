@@ -24,7 +24,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { CardControlHeader, MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { CardControlHeader, HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -74,13 +74,17 @@ function ManageAreasDialog({ settings, trigger, onAreasChange }: { settings: str
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
-            <Settings2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Manage Areas</span>
-          </Button>
-        )}
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'min-w-[160px] justify-between px-3')}
+            >
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Manage Areas</span>
+            </Button>
+          )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -228,62 +232,72 @@ export default function RiskRegisterPage() {
         <CardControlHeader
           isMobile={isMobile}
           context={showTabs ? (
-            <OrganizationTabsRow
-              organizations={organizations || []}
-              activeTab={activeOrgTab}
-              onTabChange={setActiveOrgTab}
-              className="border-0 bg-transparent px-0 py-0"
-            />
+            <div className="space-y-2">
+              <OrganizationTabsRow
+                organizations={organizations || []}
+                activeTab={activeOrgTab}
+                onTabChange={setActiveOrgTab}
+                className="border-0 bg-transparent px-0 py-0"
+              />
+            </div>
           ) : undefined}
           mobileContext={showTabs ? (
-            <OrganizationTabsRow
-              organizations={organizations || []}
-              activeTab={activeOrgTab}
-              onTabChange={setActiveOrgTab}
-              className="border-0 bg-transparent px-0 py-0"
-            />
+            <div className="space-y-2">
+              <OrganizationTabsRow
+                organizations={organizations || []}
+                activeTab={activeOrgTab}
+                onTabChange={setActiveOrgTab}
+                className="border-0 bg-transparent px-0 py-0"
+              />
+            </div>
           ) : undefined}
-        />
-        <div className="sticky top-0 z-30 bg-card">
-          <MainPageHeader
-            title="Risk Register"
-            description="Central log for identifying, assessing, and mitigating operational hazards."
-            actions={
-              isMobile ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className={HEADER_SECONDARY_BUTTON_CLASS}>
-                      <span className="flex items-center gap-2">
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                        Actions
-                      </span>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {canManageAreas && <ManageAreasDialog settings={hazardAreas} onAreasChange={setHazardAreas} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}><Settings2 className="mr-2 h-4 w-4" />Manage Areas</DropdownMenuItem>} />}
-                    <DropdownMenuItem asChild>
-                      <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Hazard
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex w-full items-center gap-3 sm:w-auto">
-                  {canManageAreas && <ManageAreasDialog settings={hazardAreas} onAreasChange={setHazardAreas} />}
-                  <Button asChild size="sm" className={HEADER_ACTION_BUTTON_CLASS}>
+          actions={
+            isMobile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'w-full justify-between px-3')}
+                  >
+                    <span className="flex items-center gap-2">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                      Actions
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]"
+                >
+                  {canManageAreas && <ManageAreasDialog settings={hazardAreas} onAreasChange={setHazardAreas} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}><Settings2 className="mr-2 h-4 w-4" />Manage Areas</DropdownMenuItem>} />}
+                  <DropdownMenuItem asChild>
                     <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
-                      <PlusCircle className="h-4 w-4" />
+                      <PlusCircle className="mr-2 h-4 w-4" />
                       Add Hazard
                     </Link>
-                  </Button>
-                </div>
-              )
-            }
-          />
-        </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex w-full items-center gap-3 sm:w-auto">
+                {canManageAreas && <ManageAreasDialog settings={hazardAreas} onAreasChange={setHazardAreas} />}
+                <Button asChild size="sm" className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS)}>
+                  <Link href={`/safety/risk-register/new?orgId=${orgId}`}>
+                    <PlusCircle className="h-4 w-4" />
+                    Add Hazard
+                  </Link>
+                </Button>
+              </div>
+            )
+          }
+          navigation={
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Central log for identifying, assessing, and mitigating operational hazards.
+            </p>
+          }
+        />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
           <Tabs value={activeAreaTab} onValueChange={setActiveAreaTab} className="h-full flex flex-col">
             {displayAreas.length > 0 ? (
@@ -295,7 +309,7 @@ export default function RiskRegisterPage() {
                 options={displayAreas.map((area) => ({ value: area, label: area, icon: LayoutGrid }))}
               />
             ) : (
-              <div className="border-b bg-muted/5 px-3 py-4 text-center">
+              <div className="bg-muted/5 px-3 py-4 text-center">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">No Risk Areas Configured</p>
                 <p className="mt-1 text-sm text-muted-foreground">Use Manage Areas to add the tabs you want for this register.</p>
               </div>

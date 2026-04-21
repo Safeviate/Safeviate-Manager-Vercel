@@ -952,7 +952,7 @@ export default function ActiveFlightPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-8 w-full justify-between border-input bg-background px-2.5 py-1 text-[13px] font-medium text-foreground shadow-sm hover:bg-accent/40"
+                    className="h-8 w-full justify-between border-input bg-background px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-sm hover:bg-accent/40"
                   >
                     <span className="truncate">{mobileSelectorSummary}</span>
                     <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', isMobileSelectorOpen && 'rotate-180')} />
@@ -962,7 +962,7 @@ export default function ActiveFlightPage() {
                   <div className="space-y-1">
                     <Label htmlFor="active-flight-aircraft-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft Registration</Label>
                     <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
-                      <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-7 font-semibold text-[13px]">
+                      <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
                         <SelectValue placeholder="Select an aircraft" />
                       </SelectTrigger>
                       <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
@@ -971,7 +971,7 @@ export default function ActiveFlightPage() {
                   <div className="space-y-1">
                     <Label htmlFor="active-flight-booking-filter-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booking</Label>
                     <Select value={selectedBookingFilterValue} onValueChange={handleBookingFilterSelectionChange}>
-                      <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-7 font-semibold text-[13px]">
+                      <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
                         <SelectValue placeholder="Select a booking" />
                       </SelectTrigger>
                       <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
@@ -980,7 +980,7 @@ export default function ActiveFlightPage() {
                   <div className="space-y-1">
                     <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
                     <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
-                      <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-7 font-semibold text-[13px]">
+                      <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
                         <SelectValue placeholder="Optional: select a booking with a navlog" />
                       </SelectTrigger>
                       <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
@@ -994,7 +994,7 @@ export default function ActiveFlightPage() {
               <div className="min-w-[220px] flex-1 space-y-1">
                 <Label htmlFor="active-flight-aircraft-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft Registration</Label>
                 <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
-                  <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-8 font-semibold text-[13px]">
+                  <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
                     <SelectValue placeholder="Select an aircraft" />
                   </SelectTrigger>
                   <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
@@ -1003,7 +1003,7 @@ export default function ActiveFlightPage() {
               <div className="min-w-[220px] flex-1 space-y-1">
                 <Label htmlFor="active-flight-booking-filter-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booking</Label>
                 <Select value={selectedBookingFilterValue} onValueChange={handleBookingFilterSelectionChange}>
-                  <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-8 font-semibold text-[13px]">
+                  <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
                     <SelectValue placeholder="Select a booking" />
                   </SelectTrigger>
                   <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
@@ -1012,7 +1012,7 @@ export default function ActiveFlightPage() {
               <div className="min-w-[240px] flex-1 space-y-1">
                 <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
                 <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
-                  <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-8 font-semibold text-[13px]">
+                  <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
                     <SelectValue placeholder="Optional: select a booking with a navlog" />
                   </SelectTrigger>
                   <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
@@ -1030,7 +1030,7 @@ export default function ActiveFlightPage() {
                     type="button"
                     variant="outline"
                     aria-label="Select flight action"
-                    className="h-8 w-full justify-between border-input bg-background px-2.5 py-1 text-[13px] font-medium shadow-sm hover:bg-accent/40"
+                      className="h-8 w-full justify-between border-input bg-background px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] shadow-sm hover:bg-accent/40"
                   >
                     <span>Select Action</span>
                     <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />

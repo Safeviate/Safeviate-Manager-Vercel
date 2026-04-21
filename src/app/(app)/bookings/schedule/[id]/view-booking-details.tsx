@@ -438,19 +438,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         void fetch('/api/bookings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                booking: {
-                    ...booking,
-                    checkApprovals,
-                    preFlightData: stripUndefinedDeep(preFlight),
-                    postFlightData: stripUndefinedDeep(postFlight),
-                    preFlight: true,
-                    postFlight: (postFlight.hobbs || 0) > 0,
-                    workflowCompletion: {
-                        ...workflowCompletion,
-                        checks: true,
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        checkApprovals,
+                        preFlightData: stripUndefinedDeep(preFlight),
+                        postFlightData: stripUndefinedDeep(postFlight),
+                        preFlight: true,
+                        postFlight: (postFlight.hobbs || 0) > 0,
+                        status: 'Completed',
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            checks: true,
+                        },
                     },
-                },
             }),
         }).then(async (res) => {
             if (!res.ok) {
@@ -458,6 +459,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 throw new Error(payload.error || 'Save failed.');
             }
             setWorkflowCompletion((current) => ({ ...current, checks: true }));
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
+            window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
             toast({ title: 'Checks Saved' });
         }).catch((error: unknown) => {
             toast({ variant: 'destructive', title: 'Save Failed', description: error instanceof Error ? error.message : 'Save failed.' });
@@ -655,7 +658,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <ScrollArea className="min-h-0 flex-1">
                             <CardContent className="pt-4 pb-20 space-y-6">
-                                <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                <div className="rounded-xl bg-muted/20 p-4 space-y-3">
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
                                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Overview</p>

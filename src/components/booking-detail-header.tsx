@@ -41,7 +41,7 @@ export function BookingDetailHeader({
 
   return (
     <>
-      <Card className="overflow-hidden border-b-0 shadow-none rounded-none">
+      <Card className="overflow-hidden border-0 shadow-none rounded-none">
         <CardContent className="px-3 py-3 md:px-4">
           <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 space-y-1">
@@ -90,7 +90,7 @@ export function BookingDetailHeader({
       {/* Navigation Sub-header (Muted background strip like Filter pins) */}
       <div className="sticky top-0 z-20 backdrop-blur-sm bg-transparent">
         <ResponsiveTabRow
-          className="relative shrink-0 rounded-none border-b bg-muted/5 px-3 py-2 md:px-4"
+          className="relative shrink-0 rounded-none border-t border-b border-card-border/70 bg-muted/5 px-3 py-2 md:px-4"
           value={activeTab}
           onValueChange={onTabChange}
           placeholder="Select Section"

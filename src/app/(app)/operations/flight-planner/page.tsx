@@ -93,7 +93,7 @@ export default function FlightPlannerPage() {
   };
 
   return (
-    <div className={cn('mx-auto flex w-full max-w-[1400px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
+    <div className={cn('mx-auto flex w-full lg:max-w-[1100px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
       <Card className={cn('border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
         <CardHeader className={cn('border-b bg-muted/20', isModern && 'bg-transparent')}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

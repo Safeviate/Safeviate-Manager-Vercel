@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff, Pencil } from 'lucide-react';
-import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { CARD_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +53,16 @@ export default function TrainingRoutesPage() {
   const [isMapZoomPanelOpen, setIsMapZoomPanelOpen] = useState(false);
   const [isMapLayersPanelOpen, setIsMapLayersPanelOpen] = useState(false);
   const isModern = uiMode === 'modern';
+  const routePlannerCompactButtonClass =
+    'h-8 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0';
+  const routePlannerSecondaryButtonClass = cn(
+    routePlannerCompactButtonClass,
+    'border border-input bg-background text-foreground hover:bg-muted/50',
+  );
+  const routePlannerPrimaryButtonClass = cn(
+    routePlannerCompactButtonClass,
+    'border border-slate-900 bg-slate-900 text-white hover:bg-slate-800',
+  );
 
     useEffect(() => {
       const loadRoutes = async () => {
@@ -205,25 +215,28 @@ export default function TrainingRoutesPage() {
   }
 
   return (
-    <div className={cn('mx-auto flex w-full max-w-[1400px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
+    <div className={cn('mx-auto flex w-full lg:max-w-[1100px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-6 md:p-8', isModern && 'gap-7')}>
       <Card className={cn('flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-        <CardHeader className={cn('border-b bg-muted/20 px-4 py-3 sm:px-5', isModern && 'bg-transparent')}>
-          <div className="flex justify-center gap-2">
+        <CardHeader className={cn(CARD_HEADER_BAND_CLASS, isModern && 'bg-transparent')}>
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
               variant="outline"
               onClick={() => setIsMapZoomPanelOpen(true)}
-              className={cn(HEADER_ACTION_BUTTON_CLASS, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+              className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
             >
               Map Zoom
             </Button>
             <Button
               variant="outline"
               onClick={() => setIsMapLayersPanelOpen(true)}
-              className={cn(HEADER_ACTION_BUTTON_CLASS, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+              className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
             >
               Map Layers
             </Button>
-            <Button onClick={handleCreateNew} className={cn(HEADER_ACTION_BUTTON_CLASS, isModern && 'border-slate-200 bg-slate-800 text-white hover:bg-slate-700')}>
+            <Button
+              onClick={handleCreateNew}
+              className={cn(routePlannerPrimaryButtonClass, isModern && 'border-slate-200 bg-slate-800 text-white hover:bg-slate-700')}
+            >
               <Plus size={14} className="mr-2" /> New Route
             </Button>
           </div>

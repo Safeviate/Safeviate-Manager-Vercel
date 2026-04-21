@@ -19,10 +19,13 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Building2, ChevronDown, Play } from 'lucide-react';
 import { HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { CARD_HEADER_BAND_CLASS } from '@/components/page-header';
 
 export default function EmergencyResponsePage() {
   const { tenantId } = useUserProfile();
   const { hasPermission } = usePermissions();
+  const isMobile = useIsMobile();
   const [activeCompanyTab, setActiveCompanyTab] = useState('internal');
   const [activeTab, setActiveTab] = useState('diary');
   const [isStartOpen, setIsStartOpen] = useState(false);
@@ -53,61 +56,90 @@ export default function EmergencyResponsePage() {
       ? 'Internal'
       : organizations.find((organization) => organization.id === activeCompanyTab)?.name || 'Select Company';
   const canManageErp = hasPermission('operations-erp-manage');
+  const erpDesktopButtonWidth = 'w-[240px]';
+  const companySelector = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={
+            isMobile
+              ? 'h-8 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100'
+              : `${HEADER_SECONDARY_BUTTON_CLASS} h-8 px-3 ${erpDesktopButtonWidth} justify-between`
+          }
+        >
+          <Building2 className="h-4 w-4" />
+          <span className="min-w-0 truncate">{activeCompanyLabel}</span>
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="z-[7000] min-w-[240px]">
+        <DropdownMenuItem onClick={() => setActiveCompanyTab('internal')}>
+          Internal
+        </DropdownMenuItem>
+        {organizations.map((organization) => (
+          <DropdownMenuItem
+            key={organization.id}
+            onClick={() => setActiveCompanyTab(organization.id)}
+          >
+            {organization.name}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  const startSessionButton = canManageErp ? (
+    <Button
+      type="button"
+      variant="destructive"
+      className={
+        isMobile
+          ? 'h-8 w-full justify-center gap-2 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm'
+          : `h-8 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm ${erpDesktopButtonWidth} justify-center`
+      }
+      onClick={() => setIsStartOpen(true)}
+    >
+      <Play className={isMobile ? 'h-4 w-4' : 'mr-2 h-4 w-4'} />
+      Start ERP Session
+    </Button>
+  ) : null;
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-3 h-full overflow-hidden px-2 sm:px-4 pt-2">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-3 h-full overflow-hidden px-2 sm:px-4 pt-2">
       <Card className="w-full flex-1 flex flex-col min-h-0 overflow-hidden shadow-none border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-          <ResponsiveTabRow
-            value={activeTab}
-            onValueChange={setActiveTab}
-            placeholder="Select Section"
-            className="border-b bg-transparent px-2 py-1.5 shrink-0"
-            leadingAction={
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`${HEADER_SECONDARY_BUTTON_CLASS} h-8 px-3`}
-                  >
-                    <Building2 className="h-4 w-4" />
-                    {activeCompanyLabel}
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="z-[7000] min-w-[240px]">
-                  <DropdownMenuItem onClick={() => setActiveCompanyTab('internal')}>
-                    Internal
-                  </DropdownMenuItem>
-                  {organizations.map((organization) => (
-                    <DropdownMenuItem
-                      key={organization.id}
-                      onClick={() => setActiveCompanyTab(organization.id)}
-                    >
-                      {organization.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            }
-            action={
-              canManageErp ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="h-8 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm"
-                  onClick={() => setIsStartOpen(true)}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Start ERP Session
-                </Button>
-              ) : null
-            }
-            centerTabs
-            buttonLikeTabs
-            options={tabs}
-          />
+          {isMobile ? (
+            <ResponsiveTabRow
+              value={activeTab}
+              onValueChange={setActiveTab}
+              placeholder="Select Section"
+              className="border-b bg-transparent px-2 py-1.5 shrink-0"
+              leadingAction={companySelector}
+              action={startSessionButton}
+              centerTabs
+              buttonLikeTabs
+              options={tabs}
+            />
+          ) : (
+            <div className="flex flex-col shrink-0">
+              <div className={CARD_HEADER_BAND_CLASS}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="shrink-0">{companySelector}</div>
+                  <div className="shrink-0">{startSessionButton}</div>
+                </div>
+              </div>
+              <ResponsiveTabRow
+                value={activeTab}
+                onValueChange={setActiveTab}
+                placeholder="Select Section"
+                className={`${CARD_HEADER_BAND_CLASS} bg-transparent shrink-0`}
+                centerTabs
+                buttonLikeTabs
+                options={tabs}
+              />
+            </div>
+          )}
 
           <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
             <TabsContent value="diary" className="m-0 h-full min-h-0 overflow-y-auto no-scrollbar pb-10">

@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getCompletedAircraftHourPatch } from '@/lib/aircraft-hours';
 import { ensureBookingsSchema } from '@/lib/server/bootstrap-db';
 import { allocateNextBookingNumber } from '@/lib/server/booking-sequence';
 import { getServerSession } from 'next-auth';
@@ -91,6 +92,44 @@ export async function POST(request: Request) {
           data: nextData,
         },
       });
+
+      const postFlightData = incoming.postFlightData;
+      const shouldMirrorAircraftHours =
+        nextData.status === 'Completed' &&
+        nextData.aircraftId &&
+        postFlightData &&
+        typeof postFlightData.hobbs === 'number' &&
+        typeof postFlightData.tacho === 'number';
+
+      if (shouldMirrorAircraftHours) {
+        const aircraftRow = await tx.aircraftRecord.findFirst({
+          where: { id: nextData.aircraftId, tenantId },
+          select: { data: true },
+        });
+
+        const existingAircraft = (aircraftRow?.data as Record<string, unknown> | null) || { id: nextData.aircraftId };
+        const completedPatch = getCompletedAircraftHourPatch(postFlightData.hobbs, postFlightData.tacho);
+
+        await tx.aircraftRecord.upsert({
+          where: { id: nextData.aircraftId },
+          create: {
+            id: nextData.aircraftId,
+            tenantId,
+            data: {
+              ...existingAircraft,
+              ...completedPatch,
+            },
+          },
+          update: {
+            tenantId,
+            data: {
+              ...existingAircraft,
+              ...completedPatch,
+            },
+            updatedAt: new Date(),
+          },
+        });
+      }
 
       return nextData;
     });

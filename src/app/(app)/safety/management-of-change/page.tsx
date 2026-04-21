@@ -15,7 +15,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { MocActions } from './moc-actions';
-import { HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { CARD_HEADER_BAND_CLASS, HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
@@ -49,6 +49,11 @@ export default function ManagementOfChangePage() {
     const [error, setError] = useState<Error | null>(null);
 
     const canViewAll = hasPermission('moc-manage');
+    const mocProposeButtonClass = cn(
+        HEADER_SECONDARY_BUTTON_CLASS,
+        HEADER_COMPACT_CONTROL_CLASS,
+        'min-w-[160px] justify-between px-3',
+    );
 
     const load = useCallback(async () => {
         let cancelled = false;
@@ -123,7 +128,7 @@ export default function ManagementOfChangePage() {
             ) : (
                 <Button
                     asChild
-                    className={HEADER_ACTION_BUTTON_CLASS}
+                    className={mocProposeButtonClass}
                 >
                     <Link href={`/safety/management-of-change/new?orgId=${orgId}`}>
                         <PlusCircle className="h-4 w-4" />
@@ -135,8 +140,8 @@ export default function ManagementOfChangePage() {
 
         return (
             <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl max-w-[1200px] w-full mx-auto">
-                <div className="flex flex-col bg-muted/5">
-                    <div className="w-full border-b border-border px-4 py-3" style={headerBandBorderStyle}>
+                <div className={cn('flex items-center justify-between gap-3 bg-muted/5', CARD_HEADER_BAND_CLASS)} style={headerBandBorderStyle}>
+                    <div className="min-w-0 shrink-0">
                         {shouldShowOrganizationTabs && (
                             <OrganizationTabsRow
                                 organizations={organizations || []}
@@ -146,7 +151,7 @@ export default function ManagementOfChangePage() {
                             />
                         )}
                     </div>
-                    <div className="w-full border-b border-border px-4 py-3 flex justify-end" style={headerBandBorderStyle}>
+                    <div className="shrink-0">
                         {proposeChangeAction}
                     </div>
                 </div>

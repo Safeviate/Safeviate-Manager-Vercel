@@ -2180,6 +2180,10 @@ export default function AeronauticalMap({
         .active-flight-map-airspace-label:before {
           display: none !important;
         }
+
+        .leaflet-control-layers {
+          display: none !important;
+        }
       `}</style>
     </div>
   );

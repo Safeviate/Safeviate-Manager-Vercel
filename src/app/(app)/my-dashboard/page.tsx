@@ -1,6 +1,7 @@
 'use client';
 
 import { useDashboardData } from '@/hooks/use-dashboard-data';
+import { MainPageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -76,17 +77,17 @@ export default function MyDashboardPage() {
                         label: tab.id === 'messages' && myMessages.length > 0 ? `${tab.label} (${myMessages.length})` : tab.label,
                         icon: LayoutDashboard,
                     }))}
-                />
+                /> 
 
                 <TabsContent value="tasks" className="mt-0">
                     <Card className="shadow-none border">
-                        <CardHeader>
-                            <CardTitle>My Outstanding Tasks</CardTitle>
-                            <CardDescription>A list of all tasks assigned to you across all modules.</CardDescription>
-                        </CardHeader>
-                        <CardContent className={isMobile ? "p-0 overflow-x-auto" : ""}>
+                        <MainPageHeader
+                            title="My Outstanding Tasks"
+                            description="A list of all tasks assigned to you across all modules."
+                        />
+                        <CardContent className="p-0 overflow-hidden">
                             <Table>
-                                <TableHeader>
+                                <TableHeader className="[&_tr]:h-11">
                                     <TableRow>
                                         <TableHead className="w-[40%] text-[10px] uppercase font-bold tracking-wider">Task</TableHead>
                                         <TableHead className="text-[10px] uppercase font-bold tracking-wider">Source</TableHead>
@@ -98,7 +99,7 @@ export default function MyDashboardPage() {
                                 <TableBody>
                                     {myTasks.length > 0 ? (
                                         myTasks.map(task => (
-                                            <TableRow key={task.id}>
+                                            <TableRow key={task.id} className="h-11">
                                                 <TableCell className="font-medium text-xs">{task.description}</TableCell>
                                                 <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase">{task.sourceIdentifier}</Badge></TableCell>
                                                 <TableCell className={cn("text-xs whitespace-nowrap", isMobile && "hidden")}>{format(parseLocalDate(task.dueDate), 'dd MMM yy')}</TableCell>
@@ -114,8 +115,8 @@ export default function MyDashboardPage() {
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={isMobile ? 4 : 5} className="h-24 text-center text-muted-foreground italic text-sm">
+                                        <TableRow className="h-11">
+                                            <TableCell colSpan={isMobile ? 4 : 5} className="h-11 py-0 text-center text-muted-foreground italic text-sm">
                                                 You have no outstanding tasks.
                                             </TableCell>
                                         </TableRow>

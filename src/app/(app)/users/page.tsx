@@ -45,7 +45,7 @@ export default function UsersPage() {
   }, []);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader
           title="Users by Role"

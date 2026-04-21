@@ -8,7 +8,8 @@ import type { SafetyReport } from '@/types/safety-report';
 import type { Booking } from '@/types/booking';
 import { SPICard } from './spi-card';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { SpiConfig, SpiConfigurations } from '@/types/spi';
@@ -17,7 +18,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { HEADER_ACTION_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 
@@ -115,40 +116,73 @@ export default function SafetyIndicatorsPage() {
 
   const renderOrgCard = (orgId: string | 'internal') => {
     const contextOrgId = orgId === 'internal' ? null : orgId;
+    const addIndicatorButton = (
+      <Button
+        size="sm"
+        variant={isMobile ? 'outline' : 'default'}
+        className={
+          isMobile
+            ? cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'w-full justify-center px-2')
+            : cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'min-w-[160px] justify-center px-3')
+        }
+        onClick={() => {
+          setSelectedSpi({
+            id: 'new-spi',
+            name: '',
+            comparison: 'lower-is-better',
+            unit: 'Count',
+            periodLabel: 'Month',
+            description: '',
+            target: 0,
+            levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
+            monthlyData: Array(12).fill(0),
+          });
+          setIsEditDialogOpen(true);
+        }}
+        aria-label={isMobile ? 'Add indicator' : undefined}
+      >
+        <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
+        {!isMobile ? 'Add New Indicator' : null}
+      </Button>
+    );
     return (
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl h-full">
         <div className="sticky top-0 z-30 bg-card">
-          <MainPageHeader title={isAviation ? 'Safety Performance Indicators' : 'Health & Safety Indicators'}
-            description={isAviation ? 'Track and monitor key safety metrics against organizational targets.' : 'Monitor critical occupational safety KPIs and target levels.'}
-            actions={
-              <Button
-                size="sm"
-                variant={isMobile ? "outline" : "default"}
-                className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`}
-                onClick={() => {
-                  setSelectedSpi({
-                    id: 'new-spi',
-                    name: '',
-                    comparison: 'lower-is-better',
-                    unit: 'Count',
-                    periodLabel: 'Month',
-                    description: '',
-                    target: 0,
-                    levels: { acceptable: 0, monitor: 1, actionRequired: 2, urgentAction: 3 },
-                    monthlyData: Array(12).fill(0),
-                  });
-                  setIsEditDialogOpen(true);
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <PlusCircle className={isMobile ? "h-3.5 w-3.5" : "mr-2 h-4 w-4"} />
-                  {isMobile ? 'Add' : 'Add New Indicator'}
-                </span>
-                {isMobile ? <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-              </Button>
-            }
-          />
-          {shouldShowOrganizationTabs && <OrganizationTabsRow organizations={organizations} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} />}
+          <div className="border-b bg-muted/5 px-3 py-2">
+            <p className="text-[10px] font-medium text-muted-foreground">
+              {isAviation
+                ? 'Track and monitor key safety metrics against organizational targets.'
+                : 'Monitor critical occupational safety KPIs and target levels.'}
+            </p>
+          </div>
+          {isMobile ? (
+            <div className="border-b bg-muted/5 px-3 py-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                {shouldShowOrganizationTabs ? (
+                  <div className="min-w-0">
+                    <OrganizationTabsRow
+                      organizations={organizations}
+                      activeTab={activeOrgTab}
+                      onTabChange={setActiveOrgTab}
+                      className="border-0 bg-transparent px-0 py-0"
+                    />
+                  </div>
+                ) : null}
+                <div className="min-w-[88px]">
+                  {addIndicatorButton}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="border-b bg-muted/5 px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                {shouldShowOrganizationTabs ? (
+                  <OrganizationTabsRow organizations={organizations} activeTab={activeOrgTab} onTabChange={setActiveOrgTab} className="border-0 bg-transparent px-0 py-0" />
+                ) : null}
+                {addIndicatorButton}
+              </div>
+            </div>
+          )}
         </div>
         <CardContent className="flex-1 p-6 overflow-y-auto no-scrollbar bg-background min-h-0">
           {spiConfig.length > 0 ? (

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Responsive Control Rows"
+  short_description: "Keep desktop control rows, row heights, and mobile button stacks consistent"
+  default_prompt: "Use this skill to build and maintain pages that keep desktop controls in rows, match multi-row header heights to the tab strip, and collapse selectors, tabs, and primary actions into clear mobile stacks or full-width controls."

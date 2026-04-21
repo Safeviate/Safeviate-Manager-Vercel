@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Building2 } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -16,6 +16,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ExternalOrganization } from '@/types/quality';
 import { ChevronsUpDown } from 'lucide-react';
 import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
+import { cn } from '@/lib/utils';
+import { CARD_HEADER_BAND_CLASS, HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 export default function ExternalCompaniesPage() {
   const { toast } = useToast();
@@ -98,16 +100,21 @@ export default function ExternalCompaniesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full min-h-0 max-w-[1200px] mx-auto w-full">
+    <div className="flex flex-col gap-6 h-full min-h-0 lg:max-w-[1100px] mx-auto w-full">
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 p-4">
+        <CardHeader className={CARD_HEADER_BAND_CLASS}>
           {canManage && (
-            <div className="flex flex-col gap-1 sm:items-end w-full sm:w-auto">
+            <div className="flex items-center justify-end gap-3">
               <Button
                 onClick={() => handleOpenForm()}
-                variant={isMobile ? 'outline' : 'default'}
+                variant="outline"
                 size={isMobile ? 'sm' : 'default'}
-                className={isMobile ? 'h-9 w-full justify-between border-slate-200 bg-white px-3 text-[10px] font-bold uppercase text-slate-900 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100' : undefined}
+                className={cn(
+                  HEADER_SECONDARY_BUTTON_CLASS,
+                  HEADER_COMPACT_CONTROL_CLASS,
+                  'bg-white text-slate-900 border-slate-200 hover:bg-slate-50 hover:text-slate-900',
+                  isMobile ? 'w-full justify-between px-3' : 'min-w-[160px] justify-center px-3',
+                )}
               >
                 <span className="flex items-center gap-2">
                   <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />

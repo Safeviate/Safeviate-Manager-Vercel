@@ -20,7 +20,7 @@ export const HEADER_COMPACT_CONTROL_CLASS =
   "h-8 rounded-md border border-input bg-background px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0";
 
 export const CARD_HEADER_BAND_CLASS =
-  "border-b bg-muted/5 px-3 py-2 shrink-0 md:px-4";
+  "border-b bg-muted/5 px-2 py-1.5 min-h-11 shrink-0 md:px-4";
 
 export const CARD_HEADER_TOP_ROW_CLASS =
   "flex items-start justify-between gap-4";

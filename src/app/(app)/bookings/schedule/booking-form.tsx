@@ -19,7 +19,7 @@ import { DocumentUploader } from '@/components/document-uploader';
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
-import type { Booking, OverrideLog, TrainingRoute, ChecklistPhoto } from '@/types/booking';
+import type { Booking, OverrideLog, TrainingRoute, ChecklistPhoto, PreFlightData } from '@/types/booking';
 import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, CheckCircle2, PlaneTakeoff } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -29,6 +29,7 @@ import { parseJsonResponse } from '@/lib/safe-json';
 import { cn } from '@/lib/utils';
 import { broadcastBookingUpdate } from '@/lib/booking-updates';
 import { getBlockingBookingForTracking, isBookingEligibleForTracking } from '@/lib/booking-tracking';
+import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 
 const parseLocalDate = (value?: string | null) => {
     if (!value) return undefined;
@@ -103,14 +104,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const canEditBooking = hasPermission('bookings-schedule-manage');
-    const [preFlight, setPreFlight] = useState(existingBooking?.preFlightData || {
-        hobbs: 0,
-        tacho: 0,
-        fuelUpliftGallons: 0,
-        fuelUpliftLitres: 0,
-        oilUplift: 0,
-        documentsChecked: false,
-    });
+    const aircraftSnapshot = useMemo<PreFlightData>(() => getAircraftHourSnapshot(aircraft), [aircraft]);
+    const [preFlight, setPreFlight] = useState(existingBooking?.preFlightData || aircraftSnapshot);
     const [postFlight, setPostFlight] = useState(existingBooking?.postFlightData || {
         hobbs: 0,
         tacho: 0,
@@ -181,9 +176,20 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     useEffect(() => {
         if (isOpen) {
             form.reset(defaultValues);
+            setPreFlight(existingBooking?.preFlightData || aircraftSnapshot);
+            setPostFlight(existingBooking?.postFlightData || {
+                hobbs: 0,
+                tacho: 0,
+                fuelUpliftGallons: 0,
+                fuelUpliftLitres: 0,
+                oilUplift: 0,
+                defects: existingBooking?.postFlightData?.defects || '',
+            });
+            setPreFlightPhotos(((existingBooking?.preFlightData as { photos?: ChecklistPhoto[] } | undefined)?.photos || []) as ChecklistPhoto[]);
+            setPostFlightPhotos(existingBooking?.postFlightData?.photos || []);
             setRequireWeatherPlanningNavlog(!!existingBooking?.workflowCompletion?.weatherPlanningNavlogRequired);
         }
-    }, [isOpen, defaultValues, form, existingBooking?.workflowCompletion?.weatherPlanningNavlogRequired]);
+    }, [isOpen, defaultValues, form, existingBooking, aircraftSnapshot]);
 
     const isOvernight = form.watch('isOvernight');
     const watchStatus = form.watch('status');
@@ -283,8 +289,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 fuelUpliftLitres: postFlight.fuelUpliftLitres || 0,
                 photos: postFlightPhotos,
             };
-        bookingData.preFlight = !!preFlight.documentsChecked || (preFlight.hobbs > 0 || preFlight.tacho > 0);
-        bookingData.postFlight = (postFlight.hobbs || 0) > 0;
+        bookingData.preFlight = existingBooking ? !!existingBooking.preFlight || !!preFlight.documentsChecked : false;
+        bookingData.postFlight = existingBooking ? !!existingBooking.postFlight || (postFlight.hobbs || 0) > 0 : false;
         bookingData.workflowCompletion = {
             ...(existingBooking?.workflowCompletion || {}),
             weatherPlanningNavlogRequired: requireWeatherPlanningNavlog,

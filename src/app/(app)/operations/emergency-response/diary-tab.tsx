@@ -160,7 +160,7 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
 
     const formData = new FormData(e.currentTarget);
     const isMock = formData.get('isMock') === 'on';
-    const triggerId = formData.get('triggerId') as string;
+    const triggerId = selectedTriggerId || '';
     const trigger = triggers?.find(t => t.id === triggerId);
     
     const title = formData.get('title') as string || (trigger ? `ERP: ${trigger.eventType}` : 'Emergency Response');
@@ -304,6 +304,65 @@ export function DiaryTab({ tenantId, startOpen, onStartOpenChange }: DiaryTabPro
 
   return (
     <div className="flex flex-col h-full gap-6">
+      <Dialog open={startOpen} onOpenChange={onStartOpenChange}>
+        <DialogContent className="sm:max-w-2xl">
+          <form onSubmit={handleStartERP}>
+            <input type="hidden" name="triggerId" value={selectedTriggerId || ''} />
+            <DialogHeader>
+              <DialogTitle>Start ERP Session</DialogTitle>
+              <DialogDescription>
+                Create a new live response or mock exercise entry before switching into the active diary view.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="erp-title">Session Title</Label>
+                <Input
+                  id="erp-title"
+                  name="title"
+                  placeholder="e.g. Aircraft overdue, VFR return, runway excursion"
+                  disabled={!canManage}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="erp-trigger">Trigger</Label>
+                <Select value={selectedTriggerId || ''} onValueChange={setSelectedTriggerId}>
+                  <SelectTrigger id="erp-trigger">
+                    <SelectValue placeholder="Select a trigger or leave blank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(triggers || []).map((trigger) => (
+                      <SelectItem key={trigger.id} value={trigger.id}>
+                        {trigger.eventType}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-3">
+                <Checkbox id="erp-mock" name="isMock" />
+                <div className="space-y-0.5">
+                  <Label htmlFor="erp-mock" className="cursor-pointer">
+                    Mock Exercise
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Use this when starting a practice session instead of a live response.</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="submit" variant="destructive" className={HEADER_ACTION_BUTTON_CLASS}>
+                Start ERP
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Conditionally render header row only if active/viewing session */}
       {currentActiveOrViewing && (
         <div className="flex justify-between items-center px-1">

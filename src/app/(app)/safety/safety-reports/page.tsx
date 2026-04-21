@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, ChevronDown } from 'lucide-react';
+import { PlusCircle, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,7 +28,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/generate-safety-protocol-recommendations';
-import { HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { CARD_HEADER_BAND_CLASS, HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
 import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
@@ -286,39 +286,51 @@ export default function SafetyReportsPage() {
         orgId === 'internal' ? !r.organizationId : r.organizationId === orgId
     );
     const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };
+    const fileReportButton = (
+      <Button
+        asChild
+        variant={isMobile ? 'outline' : 'default'}
+        size="sm"
+        className={
+          isMobile
+            ? cn(
+                HEADER_SECONDARY_BUTTON_CLASS,
+                HEADER_COMPACT_CONTROL_CLASS,
+                'w-full justify-center px-2 text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
+              )
+            : cn(
+                HEADER_SECONDARY_BUTTON_CLASS,
+                HEADER_COMPACT_CONTROL_CLASS,
+                'w-full sm:w-auto justify-center text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
+              )
+        }
+      >
+        <Link href={`/safety/new-report?orgId=${orgId}`} aria-label={isMobile ? 'File new report' : undefined}>
+          <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
+          {!isMobile ? 'File New Report' : null}
+        </Link>
+      </Button>
+    );
 
     return (
         <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
             <div className="flex flex-col bg-muted/5">
-                {shouldShowOrganizationTabs && (
-                    <div className="w-full border-b border-border px-4 py-3" style={headerBandBorderStyle}>
-                        <OrganizationTabsRow
-                            organizations={organizations || []}
-                            activeTab={activeOrgTab}
-                            onTabChange={setActiveOrgTab}
-                            className="border-0 bg-transparent px-0 py-0 shrink-0"
-                        />
+                <div className={CARD_HEADER_BAND_CLASS} style={headerBandBorderStyle}>
+                    <div className="flex items-center gap-3">
+                        {shouldShowOrganizationTabs ? (
+                            <div className="min-w-0 flex-1">
+                                <OrganizationTabsRow
+                                    organizations={organizations || []}
+                                    activeTab={activeOrgTab}
+                                    onTabChange={setActiveOrgTab}
+                                    className="border-0 bg-transparent px-0 py-0 shrink-0"
+                                />
+                            </div>
+                        ) : null}
+                        <div className={cn('shrink-0', isMobile ? 'w-[92px]' : 'w-auto')}>
+                            {fileReportButton}
+                        </div>
                     </div>
-                )}
-                <div className="w-full border-b border-border px-4 py-3 flex justify-end" style={headerBandBorderStyle}>
-                    <Button
-                        asChild
-                        variant={isMobile ? 'outline' : 'default'}
-                        size="sm"
-                        className={cn(
-                          isMobile
-                            ? HEADER_MOBILE_ACTION_BUTTON_CLASS
-                            : `w-full sm:w-auto ${HEADER_ACTION_BUTTON_CLASS}`
-                        )}
-                    >
-                        <Link href={`/safety/new-report?orgId=${orgId}`}>
-                            <span className="flex items-center gap-2">
-                                <PlusCircle className="h-4 w-4" />
-                                {isMobile ? 'File' : 'File New Report'}
-                            </span>
-                            {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-                        </Link>
-                    </Button>
                 </div>
             </div>
             <CardContent className="flex-1 p-0 bg-background overflow-y-auto">

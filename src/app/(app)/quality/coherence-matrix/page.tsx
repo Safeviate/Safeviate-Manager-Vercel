@@ -951,7 +951,11 @@ export default function CoherenceMatrixPage() {
                             <Button
                                 variant="outline"
                                 aria-label="Open coherence matrix actions"
-                                className="h-9 w-full justify-between rounded-xl border-slate-300 bg-background px-4 text-[10px] font-black uppercase shadow-sm hover:bg-muted"
+                                className={cn(
+                                    HEADER_SECONDARY_BUTTON_CLASS,
+                                    HEADER_COMPACT_CONTROL_CLASS,
+                                    'w-full justify-between text-foreground hover:bg-accent/40',
+                                )}
                             >
                                 <span className="flex items-center gap-2">
                                     <MoreHorizontal className="h-3.5 w-3.5" />

@@ -23,7 +23,7 @@ export default function PageFormatPage() {
 
   if ((!canManage && isPermissionsLoading) || isProfileLoading || !userProfile) {
     return (
-      <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+      <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-[600px] w-full" />
       </div>
@@ -39,7 +39,7 @@ export default function PageFormatPage() {
   }
 
   return (
-    <div className="max-w-[1350px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <MainPageHeader

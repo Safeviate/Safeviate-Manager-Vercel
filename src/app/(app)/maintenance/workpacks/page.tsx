@@ -39,7 +39,7 @@ export default function WorkpacksPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full space-y-6 px-1">
+      <div className="lg:max-w-[1100px] mx-auto w-full space-y-6 px-1">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-[500px] w-full" />
       </div>
@@ -47,7 +47,7 @@ export default function WorkpacksPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader
           title="Maintenance Workpacks"

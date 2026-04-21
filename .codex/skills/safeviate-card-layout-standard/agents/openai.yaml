@@ -1,0 +1,4 @@
+interface:
+  display_name: "Safeviate Card Layout Standard"
+  short_description: "Standardize card shells, header bands, and compact control rows"
+  default_prompt: "Use this skill to keep Safeviate cards consistent: apply the shared card shell, header band, row hierarchy, border tokens, and compact control layout from the coherence matrix specimen."

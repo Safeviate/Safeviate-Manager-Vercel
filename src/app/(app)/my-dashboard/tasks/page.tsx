@@ -34,9 +34,9 @@ export default function TasksPage() {
                 <MainPageHeader 
                     title="My Outstanding Tasks" 
                 />
-                <CardContent>
+                <CardContent className="p-0 overflow-hidden">
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="[&_tr]:h-11">
                             <TableRow>
                                 <TableHead className="w-[40%] text-[10px] uppercase font-bold tracking-wider">Task</TableHead>
                                 <TableHead className="text-[10px] uppercase font-bold tracking-wider">Source</TableHead>
@@ -48,7 +48,7 @@ export default function TasksPage() {
                         <TableBody>
                             {myTasks.length > 0 ? (
                                 myTasks.map(task => (
-                                    <TableRow key={task.id}>
+                                    <TableRow key={task.id} className="h-11">
                                         <TableCell className="font-bold text-sm text-foreground">{task.description}</TableCell>
                                         <TableCell>
                                             <span className="text-sm font-black uppercase text-foreground tracking-tight">
@@ -72,8 +72,8 @@ export default function TasksPage() {
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic text-sm">
+                                <TableRow className="h-11">
+                                    <TableCell colSpan={5} className="h-11 py-0 text-center text-muted-foreground italic text-sm">
                                         You have no outstanding tasks.
                                     </TableCell>
                                 </TableRow>

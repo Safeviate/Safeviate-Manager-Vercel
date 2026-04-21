@@ -6,7 +6,7 @@ import { ShieldAlert } from 'lucide-react';
 
 export default function defectsPage() {
   return (
-    <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden p-4">
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden p-4">
       <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
         <MainPageHeader
           title="Defect Reports (Snags)"

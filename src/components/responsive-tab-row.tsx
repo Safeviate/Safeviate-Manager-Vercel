@@ -65,6 +65,7 @@ export function ResponsiveTabRow({
     <div className={className || 'border-b bg-muted/5 px-3 py-2 shrink-0'}>
       {isMobile ? (
         <div className="space-y-1.5">
+          {leadingAction ? <div className="flex justify-start">{leadingAction}</div> : null}
           <Select value={value} onValueChange={onValueChange}>
             <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground h-8 px-3 py-1.5 text-[10px] font-medium shadow-sm hover:bg-accent/40">
               <SelectValue placeholder={placeholder} />
@@ -83,9 +84,9 @@ export function ResponsiveTabRow({
                       {option.label}
                     </div>
                   </SelectItem>
-                );
-              })}
-            </SelectContent>
+              );
+            })}
+          </SelectContent>
           </Select>
           {action ? <div className="flex justify-end">{action}</div> : null}
         </div>
@@ -149,6 +150,7 @@ export function OrganizationTabsRow({
   buttonLikeTabs = false,
   centerTabs = false,
 }: OrganizationTabsRowProps) {
+  const isMobile = useIsMobile();
   const activeOrganizationLabel =
     activeTab === 'internal'
       ? 'Internal'
@@ -165,7 +167,7 @@ export function OrganizationTabsRow({
               className={cn(
                 HEADER_SECONDARY_BUTTON_CLASS,
                 HEADER_COMPACT_CONTROL_CLASS,
-                'min-w-[220px] max-w-full justify-between',
+                isMobile ? 'w-full min-w-0 justify-between' : 'min-w-[220px] max-w-full justify-between',
                 flatTabs && 'bg-transparent',
                 buttonLikeTabs && 'font-black'
               )}
@@ -177,7 +179,10 @@ export function OrganizationTabsRow({
               <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="z-[7000] min-w-[220px] max-w-[360px]">
+          <DropdownMenuContent
+            align="start"
+            className={cn('z-[7000] max-w-[360px]', isMobile ? 'w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]' : 'min-w-[220px]')}
+          >
             <DropdownMenuItem onClick={() => onTabChange('internal')} className="text-[10px] font-bold uppercase">
               <Building className="h-3.5 w-3.5" />
               Internal

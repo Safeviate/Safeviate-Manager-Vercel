@@ -18,7 +18,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const getLoginErrorMessage = (errorMessage?: string) => {
+  const getLoginErrorMessage = (errorMessage?: string | null) => {
     if (!errorMessage) return 'Incorrect email or password.';
     if (errorMessage === 'CredentialsSignin') {
       return 'Login failed. Check the database password for this user or confirm the seed credentials are configured.';
@@ -45,11 +45,19 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email,
         password,
+        callbackUrl: '/dashboard',
         redirect: false,
       });
 
-      if (result?.error) {
-        throw new Error(result.error);
+      if (!result || result.error) {
+        const message = getLoginErrorMessage(result?.error);
+        setErrorMessage(message);
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: message,
+        });
+        return;
       }
 
       toast({
