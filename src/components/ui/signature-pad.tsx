@@ -8,13 +8,14 @@ import { cn } from '@/lib/utils';
 interface SignaturePadProps {
   onSignatureEnd: (dataUrl: string) => void;
   initialDataUrl?: string | null;
+  resetSignal?: number;
   width?: number | string;
   height?: number;
   className?: string;
   isReadOnly?: boolean;
 }
 
-export function SignaturePad({ onSignatureEnd, initialDataUrl, width = "100%", height = 200, className, isReadOnly = false }: SignaturePadProps) {
+export function SignaturePad({ onSignatureEnd, initialDataUrl, resetSignal, width = "100%", height = 200, className, isReadOnly = false }: SignaturePadProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -113,6 +114,11 @@ export function SignaturePad({ onSignatureEnd, initialDataUrl, width = "100%", h
     window.addEventListener('resize', initCanvas);
     return () => window.removeEventListener('resize', initCanvas);
   }, [initCanvas]);
+
+  useEffect(() => {
+    if (typeof resetSignal !== 'number') return;
+    clearSignature();
+  }, [resetSignal]);
 
   return (
     <div ref={containerRef} className={cn("relative overflow-hidden w-full", className)} style={{ height }}>

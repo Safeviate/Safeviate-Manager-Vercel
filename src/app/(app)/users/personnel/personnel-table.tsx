@@ -46,7 +46,13 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
                     {person.firstName} {person.lastName}
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex flex-col items-end gap-2">
+                  {person.suspendedAt && (
+                    <Badge variant="destructive" className="h-5 text-[9px] font-black uppercase tracking-[0.12em]">
+                      Suspended
+                    </Badge>
+                  )}
+                  <div className="flex gap-1">
                   {person.isErpIncerfaContact && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -63,6 +69,7 @@ export function PersonnelTable({ data, rolesMap, departmentsMap, tenantId }: Per
                       <TooltipContent>Designated ERP ALERFA Contact</TooltipContent>
                     </Tooltip>
                   )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 px-4 py-4">

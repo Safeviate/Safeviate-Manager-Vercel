@@ -23,6 +23,7 @@ import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { BookingDetailHeader } from '@/components/booking-detail-header';
+import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import { BackNavButton } from '@/components/back-nav-button';
 import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -300,6 +301,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             }
         }
     }, [aircraft, booking.massAndBalance?.stations]);
+
+    useEffect(() => {
+        if (booking.preFlightData) return;
+        if (!aircraft) return;
+        setPreFlight(getAircraftHourSnapshot(aircraft));
+    }, [aircraft, booking.id, booking.preFlightData]);
 
     useEffect(() => {
         let totalMom = parseFloat(String(basicEmpty.moment)) || 0;
@@ -869,27 +876,27 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">
                                                     <UILabel className="text-[9px] font-bold uppercase">Hobbs Start</UILabel>
-                                                    <Input type="number" step="0.1" value={booking.preFlightData?.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                    <Input type="number" step="0.1" value={preFlight.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                                 </div>
                                                 <div className="space-y-1.5">
                                                     <UILabel className="text-[9px] font-bold uppercase">Tacho Start</UILabel>
-                                                    <Input type="number" step="0.1" value={booking.preFlightData?.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                    <Input type="number" step="0.1" value={preFlight.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                                 </div>
                                                 <div className="space-y-1.5">
                                                     <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</UILabel>
-                                                    <Input type="number" value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                    <Input type="number" value={preFlight.fuelUpliftGallons ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                                 </div>
                                                 <div className="space-y-1.5">
                                                     <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</UILabel>
-                                                    <Input type="number" value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                    <Input type="number" value={preFlight.fuelUpliftLitres ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                                 </div>
                                                 <div className="space-y-1.5">
                                                     <UILabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</UILabel>
-                                                    <Input type="number" value={booking.preFlightData?.oilUplift ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                    <Input type="number" value={preFlight.oilUplift ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-3 p-3 bg-background border rounded-lg">
-                                                <Checkbox id="docs-checks" checked={!!booking.preFlightData?.documentsChecked} disabled />
+                                                <Checkbox id="docs-checks" checked={!!preFlight.documentsChecked} disabled />
                                                 <label htmlFor="docs-checks" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
                                             </div>
                                         </div>

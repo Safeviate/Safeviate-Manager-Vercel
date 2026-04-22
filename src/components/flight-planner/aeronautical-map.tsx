@@ -2048,7 +2048,7 @@ export default function AeronauticalMap({
       </LeafletMapFrame>
 
       {isZoomPanelOpen ? (
-      <div className="pointer-events-auto absolute right-4 top-4 z-[1000] w-[280px] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
+      <div className="pointer-events-auto absolute left-2 right-2 top-4 z-[1000] w-auto rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur sm:left-auto sm:right-4 sm:w-[280px]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Zoom</p>
@@ -2110,7 +2110,7 @@ export default function AeronauticalMap({
       ) : null}
 
       {isLayersPanelOpen ? (
-        <div className="pointer-events-auto absolute right-4 top-4 z-[1000] w-[320px] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
+        <div className="pointer-events-auto absolute left-2 right-2 top-4 z-[1000] w-auto rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur sm:left-auto sm:right-4 sm:w-[320px]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Layers</p>
@@ -2127,7 +2127,7 @@ export default function AeronauticalMap({
             </button>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {[
               { label: 'Labels', active: labelsVisible, setActive: setLabelsVisible },
               { label: 'Master Chart', active: masterVisible, setActive: setMasterVisible },
@@ -2149,11 +2149,11 @@ export default function AeronauticalMap({
                 key={item.label}
                 type="button"
                 variant="outline"
-                className={`h-9 justify-start px-3 text-[10px] font-black uppercase ${
-                  item.active
-                    ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
+                  className={`h-9 justify-center px-2 text-[9px] font-black uppercase sm:justify-start sm:px-3 sm:text-[10px] ${
+                    item.active
+                      ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
                 onClick={() => item.setActive(!item.active)}
               >
                 {item.label}

@@ -1,3 +1,5 @@
+type PasswordSetupEmailVariant = 'welcome' | 'reset';
+
 /**
  * Interface for standard welcome email inputs
  */
@@ -5,7 +7,7 @@ interface WelcomeEmailOptions {
   email: string;
   name: string;
   setupLink: string;
-  tempPassword?: string;
+  variant?: PasswordSetupEmailVariant;
 }
 
 type WelcomeEmailResult = {
@@ -21,10 +23,10 @@ type WelcomeEmailResult = {
 };
 
 /**
- * Sends a branded welcome email to new users.
+ * Sends a branded password-setup email to new users or for admin resets.
  * Uses the Resend API via fetch to avoid dependency bloating.
  */
-export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }: WelcomeEmailOptions): Promise<WelcomeEmailResult> {
+export async function sendWelcomeEmail({ email, name, setupLink, variant = 'welcome' }: WelcomeEmailOptions): Promise<WelcomeEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail =
     process.env.MAIL_FROM ||
@@ -126,14 +128,17 @@ export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }:
           </div>
           <div class="content">
             <p>Hello <strong>${name}</strong>,</p>
-            <p>Your account has been successfully established in the Safeviate Aviation Management system.</p>
-            <p>To finalize your setup and gain access to your flight operations dashboard, please click the secure link below and sign in with the temporary password shown here.</p>
-            ${tempPassword ? `<p><strong>Temporary password:</strong> <code>${tempPassword}</code></p>` : ''}
+            <p>${
+              variant === 'reset'
+                ? 'An administrator has requested a password reset for your Safeviate account.'
+                : 'Your account has been successfully established in the Safeviate Aviation Management system.'
+            }</p>
+            <p>To continue, please click the secure link below and choose your password.</p>
             <center>
-              <a href="${setupLink}" class="button">Open Safeviate</a>
+              <a href="${setupLink}" class="button">${variant === 'reset' ? 'Reset Password' : 'Set Your Password'}</a>
             </center>
             <p style="margin-top: 32px; font-size: 13px; color: #64748b;">
-              If you did not expect this invitation, please disregard this email.
+              If you did not expect this message, please disregard this email.
             </p>
           </div>
           <div class="footer">
@@ -154,7 +159,7 @@ export async function sendWelcomeEmail({ email, name, setupLink, tempPassword }:
       body: JSON.stringify({
         from: `Safeviate <${fromEmail}>`,
         to: [email],
-      subject: 'Welcome to Safeviate - Account Ready',
+        subject: variant === 'reset' ? 'Safeviate Password Reset' : 'Welcome to Safeviate - Account Ready',
         html,
       }),
     });

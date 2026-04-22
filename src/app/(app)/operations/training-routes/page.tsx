@@ -19,6 +19,7 @@ import { useTheme } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
+import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -215,8 +216,8 @@ export default function TrainingRoutesPage() {
   }
 
   return (
-    <div className={cn('mx-auto flex w-full lg:max-w-[1100px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-4 md:p-8', isModern && 'gap-7')}>
-      <Card className={cn('flex min-h-0 flex-1 flex-col overflow-hidden border shadow-none', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
+    <div className={cn('mx-auto flex h-full min-h-0 w-full lg:max-w-[1100px] flex-1 flex-col gap-4 overflow-hidden px-1 pt-4', isModern && 'gap-4')}>
+      <Card className={cn(OPERATIONS_MAP_CARD_CLASS, isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
         <CardHeader className={cn(CARD_HEADER_BAND_CLASS, isModern && 'bg-transparent')}>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
@@ -243,11 +244,11 @@ export default function TrainingRoutesPage() {
         </CardHeader>
 
         <CardContent className="flex-1 overflow-hidden p-0">
-          <div className="grid min-h-[70vh] grid-cols-1 overflow-hidden lg:h-full lg:grid-cols-[minmax(0,1fr)_350px]">
-            <div className={cn('relative order-1 flex min-h-[320px] flex-col overflow-hidden bg-slate-900 lg:h-full lg:min-h-0', isModern && 'bg-white')}>
-              <AeronauticalMap
-                legs={activeRoute?.legs || []}
-                hazards={activeRoute?.hazards || []}
+          <div className={cn('grid grid-cols-1 overflow-hidden lg:h-full lg:grid-cols-[minmax(0,1fr)_350px]', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
+              <div className={cn('relative order-1 flex flex-col overflow-hidden bg-slate-900', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'bg-white')}>
+                <AeronauticalMap
+                  legs={activeRoute?.legs || []}
+                  hazards={activeRoute?.hazards || []}
                 onAddWaypoint={handleAddWaypoint}
                 onMoveWaypoint={handleMoveWaypoint}
                 onAddHazard={handleAddHazardRequest}
@@ -260,7 +261,7 @@ export default function TrainingRoutesPage() {
               {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
-            <div className={cn('order-2 flex max-h-[70vh] min-h-0 flex-col overflow-hidden border-t bg-background lg:h-full lg:max-h-none lg:border-l lg:border-t-0', isModern && 'border-slate-200/80 bg-white')}>
+            <div className={cn('order-2 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:h-full lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
               {activeRoute ? (
                 <ScrollArea className="flex-1">
                   <div className="space-y-8 p-6 pb-12">

@@ -386,6 +386,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   Tenant: 'Tenant',
   User: 'User',
+  PasswordSetupInvite: 'PasswordSetupInvite',
+  BetaNdaAcceptance: 'BetaNdaAcceptance',
   Role: 'Role',
   Department: 'Department',
   Personnel: 'Personnel',
@@ -407,6 +409,7 @@ export const ModelName = {
   MaintenanceTaskCardRecord: 'MaintenanceTaskCardRecord',
   ToolRecord: 'ToolRecord',
   ActiveFlightSessionRecord: 'ActiveFlightSessionRecord',
+  ActiveFlightSessionBlock: 'ActiveFlightSessionBlock',
   AlertRecord: 'AlertRecord'
 } as const
 
@@ -423,7 +426,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "tenant" | "user" | "role" | "department" | "personnel" | "tenantConfig" | "managementOfChange" | "qualityAudit" | "safetyReport" | "correctiveActionPlan" | "risk" | "aircraftRecord" | "vehicleRecord" | "vehicleUsageRecord" | "bookingRecord" | "trainingRouteRecord" | "companyDocument" | "externalOrganization" | "erpState" | "workpackRecord" | "maintenanceTaskCardRecord" | "toolRecord" | "activeFlightSessionRecord" | "alertRecord"
+    modelProps: "tenant" | "user" | "passwordSetupInvite" | "betaNdaAcceptance" | "role" | "department" | "personnel" | "tenantConfig" | "managementOfChange" | "qualityAudit" | "safetyReport" | "correctiveActionPlan" | "risk" | "aircraftRecord" | "vehicleRecord" | "vehicleUsageRecord" | "bookingRecord" | "trainingRouteRecord" | "companyDocument" | "externalOrganization" | "erpState" | "workpackRecord" | "maintenanceTaskCardRecord" | "toolRecord" | "activeFlightSessionRecord" | "activeFlightSessionBlock" | "alertRecord"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -572,6 +575,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    PasswordSetupInvite: {
+      payload: Prisma.$PasswordSetupInvitePayload<ExtArgs>
+      fields: Prisma.PasswordSetupInviteFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PasswordSetupInviteFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PasswordSetupInviteFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>
+        }
+        findFirst: {
+          args: Prisma.PasswordSetupInviteFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PasswordSetupInviteFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>
+        }
+        findMany: {
+          args: Prisma.PasswordSetupInviteFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>[]
+        }
+        create: {
+          args: Prisma.PasswordSetupInviteCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>
+        }
+        createMany: {
+          args: Prisma.PasswordSetupInviteCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PasswordSetupInviteCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>[]
+        }
+        delete: {
+          args: Prisma.PasswordSetupInviteDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>
+        }
+        update: {
+          args: Prisma.PasswordSetupInviteUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>
+        }
+        deleteMany: {
+          args: Prisma.PasswordSetupInviteDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PasswordSetupInviteUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PasswordSetupInviteUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>[]
+        }
+        upsert: {
+          args: Prisma.PasswordSetupInviteUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordSetupInvitePayload>
+        }
+        aggregate: {
+          args: Prisma.PasswordSetupInviteAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePasswordSetupInvite>
+        }
+        groupBy: {
+          args: Prisma.PasswordSetupInviteGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordSetupInviteGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PasswordSetupInviteCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordSetupInviteCountAggregateOutputType> | number
+        }
+      }
+    }
+    BetaNdaAcceptance: {
+      payload: Prisma.$BetaNdaAcceptancePayload<ExtArgs>
+      fields: Prisma.BetaNdaAcceptanceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BetaNdaAcceptanceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BetaNdaAcceptanceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>
+        }
+        findFirst: {
+          args: Prisma.BetaNdaAcceptanceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BetaNdaAcceptanceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>
+        }
+        findMany: {
+          args: Prisma.BetaNdaAcceptanceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>[]
+        }
+        create: {
+          args: Prisma.BetaNdaAcceptanceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>
+        }
+        createMany: {
+          args: Prisma.BetaNdaAcceptanceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BetaNdaAcceptanceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>[]
+        }
+        delete: {
+          args: Prisma.BetaNdaAcceptanceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>
+        }
+        update: {
+          args: Prisma.BetaNdaAcceptanceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>
+        }
+        deleteMany: {
+          args: Prisma.BetaNdaAcceptanceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BetaNdaAcceptanceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BetaNdaAcceptanceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>[]
+        }
+        upsert: {
+          args: Prisma.BetaNdaAcceptanceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BetaNdaAcceptancePayload>
+        }
+        aggregate: {
+          args: Prisma.BetaNdaAcceptanceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBetaNdaAcceptance>
+        }
+        groupBy: {
+          args: Prisma.BetaNdaAcceptanceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BetaNdaAcceptanceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BetaNdaAcceptanceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BetaNdaAcceptanceCountAggregateOutputType> | number
         }
       }
     }
@@ -2129,6 +2280,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ActiveFlightSessionBlock: {
+      payload: Prisma.$ActiveFlightSessionBlockPayload<ExtArgs>
+      fields: Prisma.ActiveFlightSessionBlockFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ActiveFlightSessionBlockFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ActiveFlightSessionBlockFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>
+        }
+        findFirst: {
+          args: Prisma.ActiveFlightSessionBlockFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ActiveFlightSessionBlockFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>
+        }
+        findMany: {
+          args: Prisma.ActiveFlightSessionBlockFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>[]
+        }
+        create: {
+          args: Prisma.ActiveFlightSessionBlockCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>
+        }
+        createMany: {
+          args: Prisma.ActiveFlightSessionBlockCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ActiveFlightSessionBlockCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>[]
+        }
+        delete: {
+          args: Prisma.ActiveFlightSessionBlockDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>
+        }
+        update: {
+          args: Prisma.ActiveFlightSessionBlockUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>
+        }
+        deleteMany: {
+          args: Prisma.ActiveFlightSessionBlockDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ActiveFlightSessionBlockUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ActiveFlightSessionBlockUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>[]
+        }
+        upsert: {
+          args: Prisma.ActiveFlightSessionBlockUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActiveFlightSessionBlockPayload>
+        }
+        aggregate: {
+          args: Prisma.ActiveFlightSessionBlockAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateActiveFlightSessionBlock>
+        }
+        groupBy: {
+          args: Prisma.ActiveFlightSessionBlockGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ActiveFlightSessionBlockGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ActiveFlightSessionBlockCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ActiveFlightSessionBlockCountAggregateOutputType> | number
+        }
+      }
+    }
     AlertRecord: {
       payload: Prisma.$AlertRecordPayload<ExtArgs>
       fields: Prisma.AlertRecordFieldRefs
@@ -2257,6 +2482,7 @@ export const UserScalarFieldEnum = {
   tenantId: 'tenantId',
   email: 'email',
   passwordHash: 'passwordHash',
+  suspendedAt: 'suspendedAt',
   firstName: 'firstName',
   lastName: 'lastName',
   role: 'role',
@@ -2266,6 +2492,38 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const PasswordSetupInviteScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  userId: 'userId',
+  email: 'email',
+  name: 'name',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordSetupInviteScalarFieldEnum = (typeof PasswordSetupInviteScalarFieldEnum)[keyof typeof PasswordSetupInviteScalarFieldEnum]
+
+
+export const BetaNdaAcceptanceScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  email: 'email',
+  name: 'name',
+  ndaVersion: 'ndaVersion',
+  agreementText: 'agreementText',
+  signatureDataUrl: 'signatureDataUrl',
+  acceptedAt: 'acceptedAt',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+} as const
+
+export type BetaNdaAcceptanceScalarFieldEnum = (typeof BetaNdaAcceptanceScalarFieldEnum)[keyof typeof BetaNdaAcceptanceScalarFieldEnum]
 
 
 export const RoleScalarFieldEnum = {
@@ -2520,6 +2778,16 @@ export const ActiveFlightSessionRecordScalarFieldEnum = {
 export type ActiveFlightSessionRecordScalarFieldEnum = (typeof ActiveFlightSessionRecordScalarFieldEnum)[keyof typeof ActiveFlightSessionRecordScalarFieldEnum]
 
 
+export const ActiveFlightSessionBlockScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ActiveFlightSessionBlockScalarFieldEnum = (typeof ActiveFlightSessionBlockScalarFieldEnum)[keyof typeof ActiveFlightSessionBlockScalarFieldEnum]
+
+
 export const AlertRecordScalarFieldEnum = {
   id: 'id',
   tenantId: 'tenantId',
@@ -2744,6 +3012,8 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   tenant?: Prisma.TenantOmit
   user?: Prisma.UserOmit
+  passwordSetupInvite?: Prisma.PasswordSetupInviteOmit
+  betaNdaAcceptance?: Prisma.BetaNdaAcceptanceOmit
   role?: Prisma.RoleOmit
   department?: Prisma.DepartmentOmit
   personnel?: Prisma.PersonnelOmit
@@ -2765,6 +3035,7 @@ export type GlobalOmitConfig = {
   maintenanceTaskCardRecord?: Prisma.MaintenanceTaskCardRecordOmit
   toolRecord?: Prisma.ToolRecordOmit
   activeFlightSessionRecord?: Prisma.ActiveFlightSessionRecordOmit
+  activeFlightSessionBlock?: Prisma.ActiveFlightSessionBlockOmit
   alertRecord?: Prisma.AlertRecordOmit
 }
 

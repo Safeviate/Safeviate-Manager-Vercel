@@ -18,8 +18,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { menuConfig } from '@/lib/menu-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { TENANT_OVERRIDE_COOKIE } from '@/lib/tenant-constants';
 import { 
     Building2, 
     CheckCircle2, 
@@ -35,14 +37,26 @@ import {
 } from 'lucide-react';
 import type { Tenant, IndustryType } from '@/types/quality';
 import { cn } from '@/lib/utils';
+import { HEADER_TAB_LIST_CLASS, HEADER_TAB_TRIGGER_CLASS } from '@/components/page-header';
 
 const DEFAULT_MAIN = { background: '#ebf5fb', primary: '#7cc4f7', 'primary-foreground': '#1e293b', accent: '#63b2a7' };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
 const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
+const TENANT_SETUP_PRIMARY_BUTTON_CLASS = 'h-10 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest shadow-sm';
 type MainTheme = typeof DEFAULT_MAIN;
 type MenuNode = {
   href: string;
   subItems?: MenuNode[];
+};
+
+type BetaNdaAcceptanceRecord = {
+  id: string;
+  email: string;
+  name: string;
+  ndaVersion: string;
+  acceptedAt: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
 };
 
 const INDUSTRY_TYPES: IndustryType[] = [
@@ -51,6 +65,24 @@ const INDUSTRY_TYPES: IndustryType[] = [
   'Aviation: Maintenance (AMO)',
   'General: Occupational Health & Safety (OHS)'
 ];
+
+const collectIndustryEnabledHrefs = (items: MenuNode[], industry: IndustryType) => {
+  const enabled = new Set<string>();
+
+  const walk = (nodes: MenuNode[]) => {
+    nodes.forEach((node) => {
+      if (isHrefEnabledForIndustry(node.href, industry)) {
+        enabled.add(node.href);
+        if (node.subItems) {
+          walk(node.subItems);
+        }
+      }
+    });
+  };
+
+  walk(items);
+  return enabled;
+};
 
 export function DatabaseForm() {
   const { toast } = useToast();
@@ -66,7 +98,12 @@ export function DatabaseForm() {
   const [localIndustryOverride, setLocalIndustryOverride] = useState<string>('');
   
   const [mainTheme, setMainTheme] = useState<MainTheme>(DEFAULT_MAIN);
-  const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(new Set());
+  const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(
+    () => collectIndustryEnabledHrefs(menuConfig as MenuNode[], 'Aviation: Flight Training (ATO)')
+  );
+  const [ndaAcceptances, setNdaAcceptances] = useState<BetaNdaAcceptanceRecord[]>([]);
+  const [isLoadingNdaAcceptances, setIsLoadingNdaAcceptances] = useState(false);
+  const [ndaAcceptancesError, setNdaAcceptancesError] = useState<string | null>(null);
 
   const normalizeMainTheme = (main?: Record<string, string> | null): MainTheme => ({
     background: main?.background || DEFAULT_MAIN.background,
@@ -133,25 +170,17 @@ export function DatabaseForm() {
         background: t.theme?.backgroundColour || DEFAULT_MAIN.background,
         accent: t.theme?.accentColour || DEFAULT_MAIN.accent
     }));
-    setEnabledHrefs(new Set(t.enabledMenus || []));
+    const industryDefaults = collectIndustryEnabledHrefs(menuConfig as MenuNode[], t.industry || 'Aviation: Flight Training (ATO)');
+    const tenantMenus = new Set(t.enabledMenus || []);
+    setEnabledHrefs(new Set([...industryDefaults, ...tenantMenus]));
 
     toast({ title: 'System Context Loaded', description: `Configuration for "${t.name}" inherited.` });
   };
 
   const handleIndustryChange = (newIndustry: IndustryType) => {
     setIndustry(newIndustry);
-    
-    const newEnabled = new Set<string>();
-    const walk = (items: MenuNode[]) => {
-        items.forEach(i => {
-            if (isHrefEnabledForIndustry(i.href, newIndustry)) {
-                newEnabled.add(i.href);
-                if (i.subItems) walk(i.subItems);
-            }
-        });
-    };
-    walk(menuConfig as MenuNode[]);
-    setEnabledHrefs(newEnabled);
+
+    setEnabledHrefs(collectIndustryEnabledHrefs(menuConfig as MenuNode[], newIndustry));
     toast({ title: 'Logic Presets Calibrated', description: `Module permissions synthesized for ${newIndustry}.` });
   };
 
@@ -171,6 +200,7 @@ export function DatabaseForm() {
     if (typeof window === 'undefined') return;
 
     window.localStorage.setItem(TENANT_OVERRIDE_STORAGE_KEY, tenant.id);
+    window.document.cookie = `${TENANT_OVERRIDE_COOKIE}=${encodeURIComponent(tenant.id)}; path=/; max-age=${60 * 60 * 24 * 365}`;
     window.dispatchEvent(new Event('safeviate-tenant-switch'));
 
     toast({
@@ -179,13 +209,57 @@ export function DatabaseForm() {
     });
   };
 
+  const tenantContextId = selectedTenantId || activeTenantId || 'safeviate';
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadNdaAcceptances = async () => {
+      if (!tenantContextId) {
+        setNdaAcceptances([]);
+        return;
+      }
+
+      setIsLoadingNdaAcceptances(true);
+      setNdaAcceptancesError(null);
+
+      try {
+        const params = new URLSearchParams({ tenantId: tenantContextId });
+        const response = await fetch(`/api/beta-nda-acceptances?${params.toString()}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+        if (cancelled) return;
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load NDA acceptances.');
+        }
+
+        setNdaAcceptances(Array.isArray(payload?.acceptances) ? payload.acceptances : []);
+      } catch (error) {
+        if (!cancelled) {
+          setNdaAcceptances([]);
+          setNdaAcceptancesError(error instanceof Error ? error.message : 'Failed to load NDA acceptances.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingNdaAcceptances(false);
+        }
+      }
+    };
+
+    void loadNdaAcceptances();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantContextId]);
+
   const handleClearForm = () => {
     setSelectedTenantId(null);
     setTenantName('');
     setIndustry('Aviation: Flight Training (ATO)');
     setLogoPreview(null);
     setMainTheme(DEFAULT_MAIN);
-    setEnabledHrefs(new Set());
+    setEnabledHrefs(collectIndustryEnabledHrefs(menuConfig as MenuNode[], 'Aviation: Flight Training (ATO)'));
   };
 
   const toggleMenu = (href: string, subHrefs?: string[]) => {
@@ -234,7 +308,10 @@ export function DatabaseForm() {
             accentColour: mainTheme.accent,
             main: mainTheme,
           },
-          enabledMenus: Array.from(enabledHrefs),
+          enabledMenus: Array.from(new Set([
+            ...collectIndustryEnabledHrefs(menuConfig as MenuNode[], industry),
+            ...enabledHrefs,
+          ])),
       };
 
       if (index >= 0) {
@@ -264,202 +341,277 @@ export function DatabaseForm() {
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden border-0 shadow-2xl rounded-3xl bg-background">
-      <CardHeader className="shrink-0 border-b p-8 bg-muted/5 relative overflow-hidden">
+    <Card className="flex h-full flex-col overflow-hidden rounded-3xl border bg-background shadow-none">
+      <CardHeader className="relative shrink-0 overflow-hidden border-b bg-muted/5 p-8">
         <div className="absolute right-0 top-0 p-8 opacity-5">
             <Building2 className="h-32 w-32 rotate-12" />
         </div>
-        <div className="flex items-center justify-between relative z-10">
+        <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-4 text-left">
-                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/30 bg-primary/5 px-4 h-7 tracking-widest">
-                    <ShieldCheck className="h-3.5 w-3.5 mr-2" />
+                <Badge variant="outline" className="h-7 px-4 text-[10px] font-black uppercase tracking-widest text-primary border-primary/30 bg-primary/5">
+                    <ShieldCheck className="mr-2 h-3.5 w-3.5" />
                     Corporate Registry Admin
                 </Badge>
                 <div>
-                    <CardTitle className="text-4xl font-black uppercase tracking-tighter leading-none">Axiom Registry Console</CardTitle>
-                    <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-2 opacity-70">
+                    <CardTitle className="text-4xl font-black uppercase leading-none tracking-tighter">Axiom Registry Console</CardTitle>
+                    <CardDescription className="mt-2 text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-70">
                         Synthesize organization profiles and parameterize logic distribution.
                     </CardDescription>
                 </div>
             </div>
-            <Button onClick={handleClearForm} className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
-              <PlusCircle className="mr-3 h-5 w-5" /> Initialize Profile
+            <Button onClick={handleClearForm} className={TENANT_SETUP_PRIMARY_BUTTON_CLASS}>
+              <PlusCircle className="mr-3 h-4 w-4" /> Initialize Profile
             </Button>
         </div>
       </CardHeader>
-      
-      <div className="p-8 pb-4 border-b bg-muted/10 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                  <div className="space-y-2.5 text-left">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Inherit Registry Entry</Label>
-                      <Select onValueChange={handleLoadTenant} value={selectedTenantId || undefined}>
-                          <SelectTrigger className="h-12 border-2 rounded-xl font-bold uppercase text-xs bg-background shadow-sm hover:border-primary/50 transition-colors">
-                            <SelectValue placeholder={isLoadingTenants ? "Accessing Core..." : "Choose Profile..."} />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-2">
-                              {sortedTenants.map(t => (<SelectItem key={t.id} value={t.id} className="font-bold uppercase text-[10px]">{t.name}</SelectItem>))}
-                          </SelectContent>
-                      </Select>
-                  </div>
-                  <div className="space-y-2.5 text-left">
-                      <Label htmlFor="tenant-name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Registry Label</Label>
-                      <Input id="tenant-name" placeholder="Safeviate Aviation" className="h-12 border-2 rounded-xl font-black uppercase tracking-tight text-sm focus-visible:ring-primary/20" value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2.5 text-left col-span-full">
-                      <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                        <Briefcase className="h-3.5 w-3.5 text-primary" />
-                        Industry Logic Profile
-                      </Label>
-                      <Select onValueChange={(v) => handleIndustryChange(v as IndustryType)} value={industry}>
-                          <SelectTrigger className="h-14 border-2 rounded-xl font-black uppercase tracking-tight text-sm bg-background shadow-md">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-2">
-                              {INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t} className="font-black uppercase text-xs">{t}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                  </div>
-              </div>
-          </div>
 
-          <div className="space-y-6">
-              <div className="rounded-3xl border-2 bg-background p-6 shadow-xl relative overflow-hidden group">
-                  <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                      <LayoutDashboard className="h-20 w-20" />
-                  </div>
-                  <div className="flex flex-col gap-2 relative z-10 text-left">
-                      <div>
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 mb-1">
-                            <MonitorSmartphone className="h-4 w-4" />
-                            Interface Vector Simulation
-                          </h3>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50">Local override for aesthetic validation.</p>
-                      </div>
-                      <div className="pt-4">
-                        <Select value={localIndustryOverride} onValueChange={handleApplyIndustryOverride}>
-                            <SelectTrigger className="h-12 border-2 border-dashed rounded-xl font-bold uppercase text-[10px] bg-muted/5 group-hover:border-primary/50">
-                                <SelectValue placeholder="Bypass Active" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                <SelectItem value="none" className="font-bold uppercase text-[10px]">No Simulation (Default)</SelectItem>
-                                {INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t} className="font-bold uppercase text-[10px]">{t}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                      </div>
-                  </div>
-              </div>
+      <Tabs defaultValue="setup" className="flex min-h-0 flex-1 flex-col">
+        <div className="border-b bg-muted/5 px-4 py-3 sm:px-8">
+          <TabsList className={cn(HEADER_TAB_LIST_CLASS, 'w-full overflow-x-auto')}>
+            <TabsTrigger value="setup" className={cn(HEADER_TAB_TRIGGER_CLASS, 'text-[10px]')}>Setup</TabsTrigger>
+            <TabsTrigger value="access" className={cn(HEADER_TAB_TRIGGER_CLASS, 'text-[10px]')}>Access & Visibility</TabsTrigger>
+          </TabsList>
+        </div>
 
-              <div className="rounded-3xl border-2 bg-background p-6 shadow-xl relative overflow-hidden">
-                  <div className="flex flex-col gap-2 text-left">
-                      <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                              <ArrowRightLeft className="h-4 w-4" />
-                              System Impersonation
-                          </h3>
-                          <Badge variant="outline" className="gap-2 h-6 px-3 rounded-full border-2 border-primary/20 text-[9px] font-black uppercase tracking-widest text-primary">
-                              <CheckCircle2 className="h-3 w-3" />
-                              {(sortedTenants.find((tenant) => tenant.id === activeTenantId)?.name) || activeTenantId || 'None'}
-                          </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-2 pt-2">
-                          {sortedTenants.slice(0, 4).map((tenant) => {
-                              const isActive = tenant.id === activeTenantId;
-                              return (
-                                  <Button
-                                      key={tenant.id}
-                                      variant={isActive ? 'secondary' : 'outline'}
-                                      size="sm"
-                                      className={cn(
-                                          "h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                                          isActive ? "bg-primary text-white shadow-lg scale-105" : "hover:border-primary/50 hover:bg-primary/5 shadow-sm"
-                                      )}
-                                      onClick={() => handleSwitchTenant(tenant)}
-                                      disabled={isActive}
-                                  >
-                                      {tenant.name}
-                                  </Button>
-                              );
-                          })}
+        <CardContent className="flex-1 min-h-0 overflow-hidden bg-muted/5 p-0">
+          <ScrollArea className="h-full">
+            <div className="space-y-8 p-8 pb-6">
+              <TabsContent value="setup" className="mt-0 space-y-8">
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                  <div className="space-y-6">
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-end">
+                          <div className="space-y-2.5 text-left">
+                              <Label className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inherit Registry Entry</Label>
+                              <Select onValueChange={handleLoadTenant} value={selectedTenantId || undefined}>
+                                  <SelectTrigger className="h-10 rounded-xl border-2 bg-background text-[10px] font-bold uppercase shadow-none transition-colors hover:border-primary/50">
+                                    <SelectValue placeholder={isLoadingTenants ? "Accessing Core..." : "Choose Profile..."} />
+                                  </SelectTrigger>
+                                  <SelectContent className="rounded-xl border-2">
+                                      {sortedTenants.map(t => (<SelectItem key={t.id} value={t.id} className="text-[10px] font-bold uppercase">{t.name}</SelectItem>))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className="space-y-2.5 text-left">
+                              <Label htmlFor="tenant-name" className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Registry Label</Label>
+                              <Input id="tenant-name" placeholder="Safeviate Aviation" className="h-10 rounded-xl border-2 text-sm font-black uppercase tracking-tight focus-visible:ring-primary/20" value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
+                          </div>
+                          <div className="col-span-full space-y-2.5 text-left">
+                              <Label className="ml-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                <Briefcase className="h-3.5 w-3.5 text-primary" />
+                                Industry Logic Profile
+                              </Label>
+                              <Select onValueChange={(v) => handleIndustryChange(v as IndustryType)} value={industry}>
+                                  <SelectTrigger className="h-10 rounded-xl border-2 bg-background text-[10px] font-black uppercase tracking-tight shadow-none">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="rounded-xl border-2">
+                                      {INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t} className="text-[10px] font-black uppercase">{t}</SelectItem>)}
+                                  </SelectContent>
+                              </Select>
+                          </div>
                       </div>
                   </div>
-              </div>
-          </div>
-      </div>
 
-      <CardContent className="flex-1 min-h-0 p-0 overflow-hidden bg-muted/5">
-        <ScrollArea className="h-full">
-          <div className="p-10 space-y-12">
-            <div className="space-y-8">
-                <div className="flex items-center gap-4 text-left">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm border border-primary/20">
-                        <Users className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter">Logic Distribution Matrix</h3>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">Authorize specific system verticals for this registry profile.</p>
-                    </div>
+                  <div className="space-y-6">
+                      <div className="group relative overflow-hidden rounded-3xl border bg-background p-6 shadow-none">
+                          <div className="absolute right-0 top-0 p-4 opacity-5 transition-opacity group-hover:opacity-10">
+                              <LayoutDashboard className="h-20 w-20" />
+                          </div>
+                          <div className="relative z-10 flex flex-col gap-2 text-left">
+                              <div>
+                                  <h3 className="mb-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                                    <MonitorSmartphone className="h-4 w-4" />
+                                    Interface Vector Simulation
+                                  </h3>
+                                  <p className="text-[10px] font-bold uppercase opacity-50 text-muted-foreground">Local override for aesthetic validation.</p>
+                              </div>
+                              <div className="pt-4">
+                                <Select value={localIndustryOverride} onValueChange={handleApplyIndustryOverride}>
+                                    <SelectTrigger className="h-10 rounded-xl border-2 border-dashed bg-muted/5 text-[10px] font-bold uppercase shadow-none group-hover:border-primary/50">
+                                        <SelectValue placeholder="Bypass Active" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="none" className="text-[10px] font-bold uppercase">No Simulation (Default)</SelectItem>
+                                        {INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t} className="text-[10px] font-bold uppercase">{t}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="relative overflow-hidden rounded-3xl border bg-background p-6 shadow-none">
+                          <div className="flex flex-col gap-2 text-left">
+                              <div className="mb-2 flex items-center justify-between">
+                                  <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                                      <ArrowRightLeft className="h-4 w-4" />
+                                      System Impersonation
+                                  </h3>
+                                  <Badge variant="outline" className="h-6 gap-2 rounded-full border-2 border-primary/20 px-3 text-[9px] font-black uppercase tracking-widest text-primary">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      {(sortedTenants.find((tenant) => tenant.id === activeTenantId)?.name) || activeTenantId || 'None'}
+                                  </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-2 pt-2">
+                                  {sortedTenants.slice(0, 4).map((tenant) => {
+                                      const isActive = tenant.id === activeTenantId;
+                                      return (
+                                          <Button
+                                              key={tenant.id}
+                                              variant={isActive ? 'secondary' : 'outline'}
+                                              size="sm"
+                                              className={cn(
+                                                  'h-8 rounded-xl px-3 text-[9px] font-black uppercase tracking-widest shadow-none transition-all',
+                                                  isActive ? 'bg-primary text-white' : 'hover:border-primary/50 hover:bg-primary/5'
+                                              )}
+                                              onClick={() => handleSwitchTenant(tenant)}
+                                              disabled={isActive}
+                                          >
+                                              {tenant.name}
+                                          </Button>
+                                  );
+                              })}
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="relative overflow-hidden rounded-3xl border bg-background p-6 shadow-none">
+                          <div className="flex items-start justify-between gap-4 text-left">
+                              <div>
+                                  <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                                      <ShieldCheck className="h-4 w-4" />
+                                      NDA Acceptances
+                                  </h3>
+                                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">
+                                      Signed beta access records for the selected tenant.
+                                  </p>
+                              </div>
+                              <Badge variant="outline" className="h-6 rounded-full border-2 border-primary/20 px-3 text-[9px] font-black uppercase tracking-widest text-primary">
+                                  {tenantContextId}
+                              </Badge>
+                          </div>
+
+                          <div className="mt-4 space-y-3">
+                              {isLoadingNdaAcceptances ? (
+                                  <div className="rounded-2xl border border-dashed border-slate-200 bg-muted/5 px-4 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                      Loading signed records...
+                                  </div>
+                              ) : ndaAcceptancesError ? (
+                                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+                                      {ndaAcceptancesError}
+                                  </div>
+                              ) : ndaAcceptances.length > 0 ? (
+                                  ndaAcceptances.map((acceptance) => (
+                                      <div key={acceptance.id} className="rounded-2xl border border-slate-200 bg-muted/5 px-4 py-4">
+                                          <div className="flex flex-wrap items-start justify-between gap-3">
+                                              <div>
+                                                  <div className="text-sm font-black uppercase tracking-tight text-foreground">{acceptance.name}</div>
+                                                  <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{acceptance.email}</div>
+                                              </div>
+                                              <Badge variant="outline" className="h-6 rounded-full border-2 border-primary/20 px-3 text-[9px] font-black uppercase tracking-widest text-primary">
+                                                  {acceptance.ndaVersion}
+                                              </Badge>
+                                          </div>
+                                          <div className="mt-3 grid grid-cols-1 gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:grid-cols-2">
+                                              <div>
+                                                  Accepted
+                                                  <div className="mt-1 text-[11px] font-black tracking-tight text-foreground">
+                                                      {new Date(acceptance.acceptedAt).toLocaleString()}
+                                                  </div>
+                                              </div>
+                                              <div>
+                                                  Signature
+                                                  <div className="mt-1 text-[11px] font-black tracking-tight text-foreground">
+                                                      Recorded electronically
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  ))
+                              ) : (
+                                  <div className="rounded-2xl border border-dashed border-slate-200 bg-muted/5 px-4 py-5 text-sm text-muted-foreground">
+                                      No NDA acceptances recorded for this tenant yet.
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {menuConfig.map((menu) => {
-                        const subHrefs = menu.subItems?.map(s => s.href) || [];
-                        const isEnabled = enabledHrefs.has(menu.href);
-                        return (
-                            <div 
-                                key={menu.href} 
-                                className={cn(
-                                    "space-y-4 p-6 rounded-3xl border-2 transition-all group/menu",
-                                    isEnabled ? "bg-background border-primary shadow-xl ring-4 ring-primary/5" : "bg-muted/10 border-slate-100 hover:border-primary/30"
-                                )}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                        <div className={cn("p-2 rounded-lg transition-colors", isEnabled ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover/menu:bg-primary/10 group-hover/menu:text-primary")}>
-                                            <menu.icon className="h-5 w-5" />
-                                        </div>
-                                        <Label htmlFor={`menu-${menu.href}`} className="font-black uppercase tracking-tight text-sm cursor-pointer leading-none">
-                                            {menu.label}
-                                        </Label>
-                                    </div>
-                                    <Checkbox 
-                                        id={`menu-${menu.href}`} 
-                                        checked={isEnabled} 
-                                        onCheckedChange={() => toggleMenu(menu.href, subHrefs)}
-                                        className="h-6 w-6 border-2 data-[state=checked]:bg-primary"
-                                    />
-                                </div>
-                                
-                                {menu.subItems && (
-                                    <div className="pl-4 space-y-3 pt-4 border-t border-slate-100">
-                                        {menu.subItems.map((sub) => (
-                                            <div key={sub.href} className="flex items-center justify-between group/sub">
-                                                <div className="flex items-center gap-2">
-                                                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-30" />
-                                                    <Label htmlFor={`sub-${sub.href}`} className="text-[11px] font-bold uppercase tracking-widest cursor-pointer opacity-60 group-hover/sub:opacity-100 transition-opacity">{sub.label}</Label>
-                                                </div>
-                                                <Checkbox 
-                                                    id={`sub-${sub.href}`} 
-                                                    checked={enabledHrefs.has(sub.href)} 
-                                                    onCheckedChange={() => toggleSubMenu(menu.href, sub.href)}
-                                                    className="h-4 w-4 border-2 data-[state=checked]:bg-primary"
-                                                />
+              </TabsContent>
+
+              <TabsContent value="access" className="mt-0 space-y-8">
+                <div className="space-y-8">
+                    <div className="flex items-center gap-4 text-left">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-none">
+                            <Users className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black uppercase tracking-tighter">Access & Visibility</h3>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">Authorize modules and linked pages for the selected tenant profile.</p>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {menuConfig.map((menu) => {
+                            const subHrefs = menu.subItems?.map(s => s.href) || [];
+                            const isEnabled = enabledHrefs.has(menu.href);
+                            return (
+                                <div 
+                                    key={menu.href} 
+                                    className={cn(
+                                        'group/menu space-y-4 rounded-3xl border bg-background p-6 shadow-none transition-all',
+                                        isEnabled ? 'border-primary bg-primary/5' : 'border-slate-200'
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                            <div className={cn('rounded-lg p-2 transition-colors', isEnabled ? 'bg-primary text-white' : 'bg-muted text-muted-foreground group-hover/menu:bg-primary/10 group-hover/menu:text-primary')}>
+                                                <menu.icon className="h-5 w-5" />
                                             </div>
-                                        ))}
+                                            <Label htmlFor={`menu-${menu.href}`} className="cursor-pointer text-sm font-black uppercase tracking-tight leading-none">
+                                                {menu.label}
+                                            </Label>
+                                        </div>
+                                        <Checkbox 
+                                            id={`menu-${menu.href}`} 
+                                            checked={isEnabled} 
+                                            onCheckedChange={() => toggleMenu(menu.href, subHrefs)}
+                                            className="h-6 w-6 border-2 data-[state=checked]:bg-primary"
+                                        />
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                                    
+                                    {menu.subItems && (
+                                        <div className="space-y-3 border-t border-slate-100 pl-4 pt-4">
+                                            {menu.subItems.map((sub) => (
+                                                <div key={sub.href} className="group/sub flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-30" />
+                                                        <Label htmlFor={`sub-${sub.href}`} className="cursor-pointer text-[11px] font-bold uppercase tracking-widest opacity-60 transition-opacity group-hover/sub:opacity-100">{sub.label}</Label>
+                                                    </div>
+                                                    <Checkbox 
+                                                        id={`sub-${sub.href}`} 
+                                                        checked={enabledHrefs.has(sub.href)} 
+                                                        onCheckedChange={() => toggleSubMenu(menu.href, sub.href)}
+                                                        className="h-4 w-4 border-2 data-[state=checked]:bg-primary"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
+              </TabsContent>
             </div>
-          </div>
-        </ScrollArea>
-      </CardContent>
+          </ScrollArea>
+        </CardContent>
+      </Tabs>
+
       <Separator />
-      <div className="shrink-0 p-8 flex justify-end bg-background">
-          <Button onClick={handleSaveTenant} className="w-full sm:w-72 h-16 rounded-2xl shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] font-black uppercase tracking-widest gap-3 text-lg">
-              {selectedTenantId ? <><Save className="h-6 w-6" /> Commit Update</> : <><PlusCircle className="h-6 w-6" /> Finalize Registry</>}
+      <div className="shrink-0 bg-background p-6 sm:p-8 flex justify-end">
+          <Button onClick={handleSaveTenant} className={cn(TENANT_SETUP_PRIMARY_BUTTON_CLASS, 'w-full gap-3 sm:w-72')}>
+              {selectedTenantId ? <><Save className="h-4 w-4" /> Commit Update</> : <><PlusCircle className="h-4 w-4" /> Finalize Registry</>}
           </Button>
       </div>
     </Card>

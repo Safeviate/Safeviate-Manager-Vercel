@@ -52,6 +52,16 @@ export type Tenant = Prisma.TenantModel
  */
 export type User = Prisma.UserModel
 /**
+ * Model PasswordSetupInvite
+ * 
+ */
+export type PasswordSetupInvite = Prisma.PasswordSetupInviteModel
+/**
+ * Model BetaNdaAcceptance
+ * 
+ */
+export type BetaNdaAcceptance = Prisma.BetaNdaAcceptanceModel
+/**
  * Model Role
  * 
  */
@@ -156,6 +166,11 @@ export type ToolRecord = Prisma.ToolRecordModel
  * 
  */
 export type ActiveFlightSessionRecord = Prisma.ActiveFlightSessionRecordModel
+/**
+ * Model ActiveFlightSessionBlock
+ * 
+ */
+export type ActiveFlightSessionBlock = Prisma.ActiveFlightSessionBlockModel
 /**
  * Model AlertRecord
  * 

@@ -191,12 +191,15 @@ export type TenantWhereInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordListRelationFilter
   companyDocuments?: Prisma.CompanyDocumentListRelationFilter
   externalOrganizations?: Prisma.ExternalOrganizationListRelationFilter
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceListRelationFilter
   erpStates?: Prisma.ErpStateListRelationFilter
   workpacks?: Prisma.WorkpackRecordListRelationFilter
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordListRelationFilter
   tools?: Prisma.ToolRecordListRelationFilter
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordListRelationFilter
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockListRelationFilter
   alerts?: Prisma.AlertRecordListRelationFilter
+  passwordSetupInvites?: Prisma.PasswordSetupInviteListRelationFilter
 }
 
 export type TenantOrderByWithRelationInput = {
@@ -221,12 +224,15 @@ export type TenantOrderByWithRelationInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordOrderByRelationAggregateInput
   companyDocuments?: Prisma.CompanyDocumentOrderByRelationAggregateInput
   externalOrganizations?: Prisma.ExternalOrganizationOrderByRelationAggregateInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceOrderByRelationAggregateInput
   erpStates?: Prisma.ErpStateOrderByRelationAggregateInput
   workpacks?: Prisma.WorkpackRecordOrderByRelationAggregateInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordOrderByRelationAggregateInput
   tools?: Prisma.ToolRecordOrderByRelationAggregateInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordOrderByRelationAggregateInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockOrderByRelationAggregateInput
   alerts?: Prisma.AlertRecordOrderByRelationAggregateInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteOrderByRelationAggregateInput
 }
 
 export type TenantWhereUniqueInput = Prisma.AtLeast<{
@@ -254,12 +260,15 @@ export type TenantWhereUniqueInput = Prisma.AtLeast<{
   trainingRoutes?: Prisma.TrainingRouteRecordListRelationFilter
   companyDocuments?: Prisma.CompanyDocumentListRelationFilter
   externalOrganizations?: Prisma.ExternalOrganizationListRelationFilter
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceListRelationFilter
   erpStates?: Prisma.ErpStateListRelationFilter
   workpacks?: Prisma.WorkpackRecordListRelationFilter
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordListRelationFilter
   tools?: Prisma.ToolRecordListRelationFilter
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordListRelationFilter
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockListRelationFilter
   alerts?: Prisma.AlertRecordListRelationFilter
+  passwordSetupInvites?: Prisma.PasswordSetupInviteListRelationFilter
 }, "id">
 
 export type TenantOrderByWithAggregationInput = {
@@ -304,12 +313,15 @@ export type TenantCreateInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateInput = {
@@ -334,12 +346,15 @@ export type TenantUncheckedCreateInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUpdateInput = {
@@ -364,12 +379,15 @@ export type TenantUpdateInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateInput = {
@@ -394,12 +412,15 @@ export type TenantUncheckedUpdateInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateManyInput = {
@@ -469,6 +490,34 @@ export type TenantUpdateOneRequiredWithoutUsersNestedInput = {
   upsert?: Prisma.TenantUpsertWithoutUsersInput
   connect?: Prisma.TenantWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutUsersInput, Prisma.TenantUpdateWithoutUsersInput>, Prisma.TenantUncheckedUpdateWithoutUsersInput>
+}
+
+export type TenantCreateNestedOneWithoutPasswordSetupInvitesInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutPasswordSetupInvitesInput, Prisma.TenantUncheckedCreateWithoutPasswordSetupInvitesInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutPasswordSetupInvitesInput
+  connect?: Prisma.TenantWhereUniqueInput
+}
+
+export type TenantUpdateOneRequiredWithoutPasswordSetupInvitesNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutPasswordSetupInvitesInput, Prisma.TenantUncheckedCreateWithoutPasswordSetupInvitesInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutPasswordSetupInvitesInput
+  upsert?: Prisma.TenantUpsertWithoutPasswordSetupInvitesInput
+  connect?: Prisma.TenantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutPasswordSetupInvitesInput, Prisma.TenantUpdateWithoutPasswordSetupInvitesInput>, Prisma.TenantUncheckedUpdateWithoutPasswordSetupInvitesInput>
+}
+
+export type TenantCreateNestedOneWithoutBetaNdaAcceptancesInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutBetaNdaAcceptancesInput, Prisma.TenantUncheckedCreateWithoutBetaNdaAcceptancesInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutBetaNdaAcceptancesInput
+  connect?: Prisma.TenantWhereUniqueInput
+}
+
+export type TenantUpdateOneRequiredWithoutBetaNdaAcceptancesNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutBetaNdaAcceptancesInput, Prisma.TenantUncheckedCreateWithoutBetaNdaAcceptancesInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutBetaNdaAcceptancesInput
+  upsert?: Prisma.TenantUpsertWithoutBetaNdaAcceptancesInput
+  connect?: Prisma.TenantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutBetaNdaAcceptancesInput, Prisma.TenantUpdateWithoutBetaNdaAcceptancesInput>, Prisma.TenantUncheckedUpdateWithoutBetaNdaAcceptancesInput>
 }
 
 export type TenantCreateNestedOneWithoutRolesInput = {
@@ -765,6 +814,20 @@ export type TenantUpdateOneRequiredWithoutActiveFlightSessionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutActiveFlightSessionsInput, Prisma.TenantUpdateWithoutActiveFlightSessionsInput>, Prisma.TenantUncheckedUpdateWithoutActiveFlightSessionsInput>
 }
 
+export type TenantCreateNestedOneWithoutActiveFlightSessionBlocksInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutActiveFlightSessionBlocksInput, Prisma.TenantUncheckedCreateWithoutActiveFlightSessionBlocksInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutActiveFlightSessionBlocksInput
+  connect?: Prisma.TenantWhereUniqueInput
+}
+
+export type TenantUpdateOneRequiredWithoutActiveFlightSessionBlocksNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutActiveFlightSessionBlocksInput, Prisma.TenantUncheckedCreateWithoutActiveFlightSessionBlocksInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutActiveFlightSessionBlocksInput
+  upsert?: Prisma.TenantUpsertWithoutActiveFlightSessionBlocksInput
+  connect?: Prisma.TenantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutActiveFlightSessionBlocksInput, Prisma.TenantUpdateWithoutActiveFlightSessionBlocksInput>, Prisma.TenantUncheckedUpdateWithoutActiveFlightSessionBlocksInput>
+}
+
 export type TenantCreateNestedOneWithoutAlertsInput = {
   create?: Prisma.XOR<Prisma.TenantCreateWithoutAlertsInput, Prisma.TenantUncheckedCreateWithoutAlertsInput>
   connectOrCreate?: Prisma.TenantCreateOrConnectWithoutAlertsInput
@@ -800,12 +863,15 @@ export type TenantCreateWithoutUsersInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutUsersInput = {
@@ -829,12 +895,15 @@ export type TenantUncheckedCreateWithoutUsersInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutUsersInput = {
@@ -874,12 +943,15 @@ export type TenantUpdateWithoutUsersInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutUsersInput = {
@@ -903,12 +975,303 @@ export type TenantUncheckedUpdateWithoutUsersInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantCreateWithoutPasswordSetupInvitesInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+}
+
+export type TenantUncheckedCreateWithoutPasswordSetupInvitesInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentUncheckedCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelUncheckedCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditUncheckedCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportUncheckedCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordUncheckedCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+}
+
+export type TenantCreateOrConnectWithoutPasswordSetupInvitesInput = {
+  where: Prisma.TenantWhereUniqueInput
+  create: Prisma.XOR<Prisma.TenantCreateWithoutPasswordSetupInvitesInput, Prisma.TenantUncheckedCreateWithoutPasswordSetupInvitesInput>
+}
+
+export type TenantUpsertWithoutPasswordSetupInvitesInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutPasswordSetupInvitesInput, Prisma.TenantUncheckedUpdateWithoutPasswordSetupInvitesInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutPasswordSetupInvitesInput, Prisma.TenantUncheckedCreateWithoutPasswordSetupInvitesInput>
+  where?: Prisma.TenantWhereInput
+}
+
+export type TenantUpdateToOneWithWhereWithoutPasswordSetupInvitesInput = {
+  where?: Prisma.TenantWhereInput
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutPasswordSetupInvitesInput, Prisma.TenantUncheckedUpdateWithoutPasswordSetupInvitesInput>
+}
+
+export type TenantUpdateWithoutPasswordSetupInvitesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantUncheckedUpdateWithoutPasswordSetupInvitesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUncheckedUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUncheckedUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUncheckedUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUncheckedUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUncheckedUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUncheckedUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantCreateWithoutBetaNdaAcceptancesInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+}
+
+export type TenantUncheckedCreateWithoutBetaNdaAcceptancesInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentUncheckedCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelUncheckedCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditUncheckedCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportUncheckedCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordUncheckedCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+}
+
+export type TenantCreateOrConnectWithoutBetaNdaAcceptancesInput = {
+  where: Prisma.TenantWhereUniqueInput
+  create: Prisma.XOR<Prisma.TenantCreateWithoutBetaNdaAcceptancesInput, Prisma.TenantUncheckedCreateWithoutBetaNdaAcceptancesInput>
+}
+
+export type TenantUpsertWithoutBetaNdaAcceptancesInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutBetaNdaAcceptancesInput, Prisma.TenantUncheckedUpdateWithoutBetaNdaAcceptancesInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutBetaNdaAcceptancesInput, Prisma.TenantUncheckedCreateWithoutBetaNdaAcceptancesInput>
+  where?: Prisma.TenantWhereInput
+}
+
+export type TenantUpdateToOneWithWhereWithoutBetaNdaAcceptancesInput = {
+  where?: Prisma.TenantWhereInput
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutBetaNdaAcceptancesInput, Prisma.TenantUncheckedUpdateWithoutBetaNdaAcceptancesInput>
+}
+
+export type TenantUpdateWithoutBetaNdaAcceptancesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantUncheckedUpdateWithoutBetaNdaAcceptancesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUncheckedUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUncheckedUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUncheckedUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUncheckedUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUncheckedUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUncheckedUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutRolesInput = {
@@ -932,12 +1295,15 @@ export type TenantCreateWithoutRolesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutRolesInput = {
@@ -961,12 +1327,15 @@ export type TenantUncheckedCreateWithoutRolesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutRolesInput = {
@@ -1006,12 +1375,15 @@ export type TenantUpdateWithoutRolesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutRolesInput = {
@@ -1035,12 +1407,15 @@ export type TenantUncheckedUpdateWithoutRolesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutDepartmentsInput = {
@@ -1064,12 +1439,15 @@ export type TenantCreateWithoutDepartmentsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutDepartmentsInput = {
@@ -1093,12 +1471,15 @@ export type TenantUncheckedCreateWithoutDepartmentsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutDepartmentsInput = {
@@ -1138,12 +1519,15 @@ export type TenantUpdateWithoutDepartmentsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutDepartmentsInput = {
@@ -1167,12 +1551,15 @@ export type TenantUncheckedUpdateWithoutDepartmentsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutPersonnelInput = {
@@ -1196,12 +1583,15 @@ export type TenantCreateWithoutPersonnelInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutPersonnelInput = {
@@ -1225,12 +1615,15 @@ export type TenantUncheckedCreateWithoutPersonnelInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutPersonnelInput = {
@@ -1270,12 +1663,15 @@ export type TenantUpdateWithoutPersonnelInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutPersonnelInput = {
@@ -1299,12 +1695,15 @@ export type TenantUncheckedUpdateWithoutPersonnelInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutTenantConfigsInput = {
@@ -1328,12 +1727,15 @@ export type TenantCreateWithoutTenantConfigsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutTenantConfigsInput = {
@@ -1357,12 +1759,15 @@ export type TenantUncheckedCreateWithoutTenantConfigsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutTenantConfigsInput = {
@@ -1402,12 +1807,15 @@ export type TenantUpdateWithoutTenantConfigsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutTenantConfigsInput = {
@@ -1431,12 +1839,15 @@ export type TenantUncheckedUpdateWithoutTenantConfigsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutManagementOfChangesInput = {
@@ -1460,12 +1871,15 @@ export type TenantCreateWithoutManagementOfChangesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutManagementOfChangesInput = {
@@ -1489,12 +1903,15 @@ export type TenantUncheckedCreateWithoutManagementOfChangesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutManagementOfChangesInput = {
@@ -1534,12 +1951,15 @@ export type TenantUpdateWithoutManagementOfChangesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutManagementOfChangesInput = {
@@ -1563,12 +1983,15 @@ export type TenantUncheckedUpdateWithoutManagementOfChangesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutQualityAuditsInput = {
@@ -1592,12 +2015,15 @@ export type TenantCreateWithoutQualityAuditsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutQualityAuditsInput = {
@@ -1621,12 +2047,15 @@ export type TenantUncheckedCreateWithoutQualityAuditsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutQualityAuditsInput = {
@@ -1666,12 +2095,15 @@ export type TenantUpdateWithoutQualityAuditsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutQualityAuditsInput = {
@@ -1695,12 +2127,15 @@ export type TenantUncheckedUpdateWithoutQualityAuditsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutSafetyReportsInput = {
@@ -1724,12 +2159,15 @@ export type TenantCreateWithoutSafetyReportsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutSafetyReportsInput = {
@@ -1753,12 +2191,15 @@ export type TenantUncheckedCreateWithoutSafetyReportsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutSafetyReportsInput = {
@@ -1798,12 +2239,15 @@ export type TenantUpdateWithoutSafetyReportsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutSafetyReportsInput = {
@@ -1827,12 +2271,15 @@ export type TenantUncheckedUpdateWithoutSafetyReportsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutCorrectiveActionPlansInput = {
@@ -1856,12 +2303,15 @@ export type TenantCreateWithoutCorrectiveActionPlansInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutCorrectiveActionPlansInput = {
@@ -1885,12 +2335,15 @@ export type TenantUncheckedCreateWithoutCorrectiveActionPlansInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutCorrectiveActionPlansInput = {
@@ -1930,12 +2383,15 @@ export type TenantUpdateWithoutCorrectiveActionPlansInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutCorrectiveActionPlansInput = {
@@ -1959,12 +2415,15 @@ export type TenantUncheckedUpdateWithoutCorrectiveActionPlansInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutRisksInput = {
@@ -1988,12 +2447,15 @@ export type TenantCreateWithoutRisksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutRisksInput = {
@@ -2017,12 +2479,15 @@ export type TenantUncheckedCreateWithoutRisksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutRisksInput = {
@@ -2062,12 +2527,15 @@ export type TenantUpdateWithoutRisksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutRisksInput = {
@@ -2091,12 +2559,15 @@ export type TenantUncheckedUpdateWithoutRisksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutAircraftsInput = {
@@ -2120,12 +2591,15 @@ export type TenantCreateWithoutAircraftsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutAircraftsInput = {
@@ -2149,12 +2623,15 @@ export type TenantUncheckedCreateWithoutAircraftsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutAircraftsInput = {
@@ -2194,12 +2671,15 @@ export type TenantUpdateWithoutAircraftsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutAircraftsInput = {
@@ -2223,12 +2703,15 @@ export type TenantUncheckedUpdateWithoutAircraftsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutVehiclesInput = {
@@ -2252,12 +2735,15 @@ export type TenantCreateWithoutVehiclesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutVehiclesInput = {
@@ -2281,12 +2767,15 @@ export type TenantUncheckedCreateWithoutVehiclesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutVehiclesInput = {
@@ -2326,12 +2815,15 @@ export type TenantUpdateWithoutVehiclesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutVehiclesInput = {
@@ -2355,12 +2847,15 @@ export type TenantUncheckedUpdateWithoutVehiclesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutVehicleUsageRecordsInput = {
@@ -2384,12 +2879,15 @@ export type TenantCreateWithoutVehicleUsageRecordsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutVehicleUsageRecordsInput = {
@@ -2413,12 +2911,15 @@ export type TenantUncheckedCreateWithoutVehicleUsageRecordsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutVehicleUsageRecordsInput = {
@@ -2458,12 +2959,15 @@ export type TenantUpdateWithoutVehicleUsageRecordsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutVehicleUsageRecordsInput = {
@@ -2487,12 +2991,15 @@ export type TenantUncheckedUpdateWithoutVehicleUsageRecordsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutBookingsInput = {
@@ -2516,12 +3023,15 @@ export type TenantCreateWithoutBookingsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutBookingsInput = {
@@ -2545,12 +3055,15 @@ export type TenantUncheckedCreateWithoutBookingsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutBookingsInput = {
@@ -2590,12 +3103,15 @@ export type TenantUpdateWithoutBookingsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutBookingsInput = {
@@ -2619,12 +3135,15 @@ export type TenantUncheckedUpdateWithoutBookingsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutTrainingRoutesInput = {
@@ -2648,12 +3167,15 @@ export type TenantCreateWithoutTrainingRoutesInput = {
   bookings?: Prisma.BookingRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutTrainingRoutesInput = {
@@ -2677,12 +3199,15 @@ export type TenantUncheckedCreateWithoutTrainingRoutesInput = {
   bookings?: Prisma.BookingRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutTrainingRoutesInput = {
@@ -2722,12 +3247,15 @@ export type TenantUpdateWithoutTrainingRoutesInput = {
   bookings?: Prisma.BookingRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutTrainingRoutesInput = {
@@ -2751,12 +3279,15 @@ export type TenantUncheckedUpdateWithoutTrainingRoutesInput = {
   bookings?: Prisma.BookingRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutCompanyDocumentsInput = {
@@ -2780,12 +3311,15 @@ export type TenantCreateWithoutCompanyDocumentsInput = {
   bookings?: Prisma.BookingRecordCreateNestedManyWithoutTenantInput
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutCompanyDocumentsInput = {
@@ -2809,12 +3343,15 @@ export type TenantUncheckedCreateWithoutCompanyDocumentsInput = {
   bookings?: Prisma.BookingRecordUncheckedCreateNestedManyWithoutTenantInput
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutCompanyDocumentsInput = {
@@ -2854,12 +3391,15 @@ export type TenantUpdateWithoutCompanyDocumentsInput = {
   bookings?: Prisma.BookingRecordUpdateManyWithoutTenantNestedInput
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutCompanyDocumentsInput = {
@@ -2883,12 +3423,15 @@ export type TenantUncheckedUpdateWithoutCompanyDocumentsInput = {
   bookings?: Prisma.BookingRecordUncheckedUpdateManyWithoutTenantNestedInput
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutExternalOrganizationsInput = {
@@ -2912,12 +3455,15 @@ export type TenantCreateWithoutExternalOrganizationsInput = {
   bookings?: Prisma.BookingRecordCreateNestedManyWithoutTenantInput
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutExternalOrganizationsInput = {
@@ -2941,12 +3487,15 @@ export type TenantUncheckedCreateWithoutExternalOrganizationsInput = {
   bookings?: Prisma.BookingRecordUncheckedCreateNestedManyWithoutTenantInput
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutExternalOrganizationsInput = {
@@ -2986,12 +3535,15 @@ export type TenantUpdateWithoutExternalOrganizationsInput = {
   bookings?: Prisma.BookingRecordUpdateManyWithoutTenantNestedInput
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutExternalOrganizationsInput = {
@@ -3015,12 +3567,15 @@ export type TenantUncheckedUpdateWithoutExternalOrganizationsInput = {
   bookings?: Prisma.BookingRecordUncheckedUpdateManyWithoutTenantNestedInput
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutErpStatesInput = {
@@ -3045,11 +3600,14 @@ export type TenantCreateWithoutErpStatesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutErpStatesInput = {
@@ -3074,11 +3632,14 @@ export type TenantUncheckedCreateWithoutErpStatesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutErpStatesInput = {
@@ -3119,11 +3680,14 @@ export type TenantUpdateWithoutErpStatesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutErpStatesInput = {
@@ -3148,11 +3712,14 @@ export type TenantUncheckedUpdateWithoutErpStatesInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutWorkpacksInput = {
@@ -3177,11 +3744,14 @@ export type TenantCreateWithoutWorkpacksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutWorkpacksInput = {
@@ -3206,11 +3776,14 @@ export type TenantUncheckedCreateWithoutWorkpacksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutWorkpacksInput = {
@@ -3251,11 +3824,14 @@ export type TenantUpdateWithoutWorkpacksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutWorkpacksInput = {
@@ -3280,11 +3856,14 @@ export type TenantUncheckedUpdateWithoutWorkpacksInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutMaintenanceTaskCardsInput = {
@@ -3309,11 +3888,14 @@ export type TenantCreateWithoutMaintenanceTaskCardsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutMaintenanceTaskCardsInput = {
@@ -3338,11 +3920,14 @@ export type TenantUncheckedCreateWithoutMaintenanceTaskCardsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutMaintenanceTaskCardsInput = {
@@ -3383,11 +3968,14 @@ export type TenantUpdateWithoutMaintenanceTaskCardsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutMaintenanceTaskCardsInput = {
@@ -3412,11 +4000,14 @@ export type TenantUncheckedUpdateWithoutMaintenanceTaskCardsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutToolsInput = {
@@ -3441,11 +4032,14 @@ export type TenantCreateWithoutToolsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutToolsInput = {
@@ -3470,11 +4064,14 @@ export type TenantUncheckedCreateWithoutToolsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutToolsInput = {
@@ -3515,11 +4112,14 @@ export type TenantUpdateWithoutToolsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutToolsInput = {
@@ -3544,11 +4144,14 @@ export type TenantUncheckedUpdateWithoutToolsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutActiveFlightSessionsInput = {
@@ -3573,11 +4176,14 @@ export type TenantCreateWithoutActiveFlightSessionsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutActiveFlightSessionsInput = {
@@ -3602,11 +4208,14 @@ export type TenantUncheckedCreateWithoutActiveFlightSessionsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutActiveFlightSessionsInput = {
@@ -3647,11 +4256,14 @@ export type TenantUpdateWithoutActiveFlightSessionsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutActiveFlightSessionsInput = {
@@ -3676,11 +4288,158 @@ export type TenantUncheckedUpdateWithoutActiveFlightSessionsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantCreateWithoutActiveFlightSessionBlocksInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+}
+
+export type TenantUncheckedCreateWithoutActiveFlightSessionBlocksInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentUncheckedCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelUncheckedCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditUncheckedCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportUncheckedCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordUncheckedCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+}
+
+export type TenantCreateOrConnectWithoutActiveFlightSessionBlocksInput = {
+  where: Prisma.TenantWhereUniqueInput
+  create: Prisma.XOR<Prisma.TenantCreateWithoutActiveFlightSessionBlocksInput, Prisma.TenantUncheckedCreateWithoutActiveFlightSessionBlocksInput>
+}
+
+export type TenantUpsertWithoutActiveFlightSessionBlocksInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutActiveFlightSessionBlocksInput, Prisma.TenantUncheckedUpdateWithoutActiveFlightSessionBlocksInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutActiveFlightSessionBlocksInput, Prisma.TenantUncheckedCreateWithoutActiveFlightSessionBlocksInput>
+  where?: Prisma.TenantWhereInput
+}
+
+export type TenantUpdateToOneWithWhereWithoutActiveFlightSessionBlocksInput = {
+  where?: Prisma.TenantWhereInput
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutActiveFlightSessionBlocksInput, Prisma.TenantUncheckedUpdateWithoutActiveFlightSessionBlocksInput>
+}
+
+export type TenantUpdateWithoutActiveFlightSessionBlocksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantUncheckedUpdateWithoutActiveFlightSessionBlocksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUncheckedUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUncheckedUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUncheckedUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUncheckedUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUncheckedUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUncheckedUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutAlertsInput = {
@@ -3705,11 +4464,14 @@ export type TenantCreateWithoutAlertsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutAlertsInput = {
@@ -3734,11 +4496,14 @@ export type TenantUncheckedCreateWithoutAlertsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
   erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
   workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
   tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutAlertsInput = {
@@ -3779,11 +4544,14 @@ export type TenantUpdateWithoutAlertsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutAlertsInput = {
@@ -3808,11 +4576,14 @@ export type TenantUncheckedUpdateWithoutAlertsInput = {
   trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
   companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
   externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
   erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
   workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 
@@ -3838,12 +4609,15 @@ export type TenantCountOutputType = {
   trainingRoutes: number
   companyDocuments: number
   externalOrganizations: number
+  betaNdaAcceptances: number
   erpStates: number
   workpacks: number
   maintenanceTaskCards: number
   tools: number
   activeFlightSessions: number
+  activeFlightSessionBlocks: number
   alerts: number
+  passwordSetupInvites: number
 }
 
 export type TenantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3864,12 +4638,15 @@ export type TenantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   trainingRoutes?: boolean | TenantCountOutputTypeCountTrainingRoutesArgs
   companyDocuments?: boolean | TenantCountOutputTypeCountCompanyDocumentsArgs
   externalOrganizations?: boolean | TenantCountOutputTypeCountExternalOrganizationsArgs
+  betaNdaAcceptances?: boolean | TenantCountOutputTypeCountBetaNdaAcceptancesArgs
   erpStates?: boolean | TenantCountOutputTypeCountErpStatesArgs
   workpacks?: boolean | TenantCountOutputTypeCountWorkpacksArgs
   maintenanceTaskCards?: boolean | TenantCountOutputTypeCountMaintenanceTaskCardsArgs
   tools?: boolean | TenantCountOutputTypeCountToolsArgs
   activeFlightSessions?: boolean | TenantCountOutputTypeCountActiveFlightSessionsArgs
+  activeFlightSessionBlocks?: boolean | TenantCountOutputTypeCountActiveFlightSessionBlocksArgs
   alerts?: boolean | TenantCountOutputTypeCountAlertsArgs
+  passwordSetupInvites?: boolean | TenantCountOutputTypeCountPasswordSetupInvitesArgs
 }
 
 /**
@@ -4004,6 +4781,13 @@ export type TenantCountOutputTypeCountExternalOrganizationsArgs<ExtArgs extends 
 /**
  * TenantCountOutputType without action
  */
+export type TenantCountOutputTypeCountBetaNdaAcceptancesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BetaNdaAcceptanceWhereInput
+}
+
+/**
+ * TenantCountOutputType without action
+ */
 export type TenantCountOutputTypeCountErpStatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ErpStateWhereInput
 }
@@ -4039,8 +4823,22 @@ export type TenantCountOutputTypeCountActiveFlightSessionsArgs<ExtArgs extends r
 /**
  * TenantCountOutputType without action
  */
+export type TenantCountOutputTypeCountActiveFlightSessionBlocksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ActiveFlightSessionBlockWhereInput
+}
+
+/**
+ * TenantCountOutputType without action
+ */
 export type TenantCountOutputTypeCountAlertsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AlertRecordWhereInput
+}
+
+/**
+ * TenantCountOutputType without action
+ */
+export type TenantCountOutputTypeCountPasswordSetupInvitesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PasswordSetupInviteWhereInput
 }
 
 
@@ -4066,12 +4864,15 @@ export type TenantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   trainingRoutes?: boolean | Prisma.Tenant$trainingRoutesArgs<ExtArgs>
   companyDocuments?: boolean | Prisma.Tenant$companyDocumentsArgs<ExtArgs>
   externalOrganizations?: boolean | Prisma.Tenant$externalOrganizationsArgs<ExtArgs>
+  betaNdaAcceptances?: boolean | Prisma.Tenant$betaNdaAcceptancesArgs<ExtArgs>
   erpStates?: boolean | Prisma.Tenant$erpStatesArgs<ExtArgs>
   workpacks?: boolean | Prisma.Tenant$workpacksArgs<ExtArgs>
   maintenanceTaskCards?: boolean | Prisma.Tenant$maintenanceTaskCardsArgs<ExtArgs>
   tools?: boolean | Prisma.Tenant$toolsArgs<ExtArgs>
   activeFlightSessions?: boolean | Prisma.Tenant$activeFlightSessionsArgs<ExtArgs>
+  activeFlightSessionBlocks?: boolean | Prisma.Tenant$activeFlightSessionBlocksArgs<ExtArgs>
   alerts?: boolean | Prisma.Tenant$alertsArgs<ExtArgs>
+  passwordSetupInvites?: boolean | Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs>
   _count?: boolean | Prisma.TenantCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tenant"]>
 
@@ -4115,12 +4916,15 @@ export type TenantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   trainingRoutes?: boolean | Prisma.Tenant$trainingRoutesArgs<ExtArgs>
   companyDocuments?: boolean | Prisma.Tenant$companyDocumentsArgs<ExtArgs>
   externalOrganizations?: boolean | Prisma.Tenant$externalOrganizationsArgs<ExtArgs>
+  betaNdaAcceptances?: boolean | Prisma.Tenant$betaNdaAcceptancesArgs<ExtArgs>
   erpStates?: boolean | Prisma.Tenant$erpStatesArgs<ExtArgs>
   workpacks?: boolean | Prisma.Tenant$workpacksArgs<ExtArgs>
   maintenanceTaskCards?: boolean | Prisma.Tenant$maintenanceTaskCardsArgs<ExtArgs>
   tools?: boolean | Prisma.Tenant$toolsArgs<ExtArgs>
   activeFlightSessions?: boolean | Prisma.Tenant$activeFlightSessionsArgs<ExtArgs>
+  activeFlightSessionBlocks?: boolean | Prisma.Tenant$activeFlightSessionBlocksArgs<ExtArgs>
   alerts?: boolean | Prisma.Tenant$alertsArgs<ExtArgs>
+  passwordSetupInvites?: boolean | Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs>
   _count?: boolean | Prisma.TenantCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TenantIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -4146,12 +4950,15 @@ export type $TenantPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     trainingRoutes: Prisma.$TrainingRouteRecordPayload<ExtArgs>[]
     companyDocuments: Prisma.$CompanyDocumentPayload<ExtArgs>[]
     externalOrganizations: Prisma.$ExternalOrganizationPayload<ExtArgs>[]
+    betaNdaAcceptances: Prisma.$BetaNdaAcceptancePayload<ExtArgs>[]
     erpStates: Prisma.$ErpStatePayload<ExtArgs>[]
     workpacks: Prisma.$WorkpackRecordPayload<ExtArgs>[]
     maintenanceTaskCards: Prisma.$MaintenanceTaskCardRecordPayload<ExtArgs>[]
     tools: Prisma.$ToolRecordPayload<ExtArgs>[]
     activeFlightSessions: Prisma.$ActiveFlightSessionRecordPayload<ExtArgs>[]
+    activeFlightSessionBlocks: Prisma.$ActiveFlightSessionBlockPayload<ExtArgs>[]
     alerts: Prisma.$AlertRecordPayload<ExtArgs>[]
+    passwordSetupInvites: Prisma.$PasswordSetupInvitePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -4569,12 +5376,15 @@ export interface Prisma__TenantClient<T, Null = never, ExtArgs extends runtime.T
   trainingRoutes<T extends Prisma.Tenant$trainingRoutesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$trainingRoutesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TrainingRouteRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   companyDocuments<T extends Prisma.Tenant$companyDocumentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$companyDocumentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyDocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   externalOrganizations<T extends Prisma.Tenant$externalOrganizationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$externalOrganizationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ExternalOrganizationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  betaNdaAcceptances<T extends Prisma.Tenant$betaNdaAcceptancesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$betaNdaAcceptancesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BetaNdaAcceptancePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   erpStates<T extends Prisma.Tenant$erpStatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$erpStatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ErpStatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   workpacks<T extends Prisma.Tenant$workpacksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$workpacksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkpackRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   maintenanceTaskCards<T extends Prisma.Tenant$maintenanceTaskCardsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$maintenanceTaskCardsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MaintenanceTaskCardRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tools<T extends Prisma.Tenant$toolsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$toolsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ToolRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   activeFlightSessions<T extends Prisma.Tenant$activeFlightSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$activeFlightSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActiveFlightSessionRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  activeFlightSessionBlocks<T extends Prisma.Tenant$activeFlightSessionBlocksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$activeFlightSessionBlocksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActiveFlightSessionBlockPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   alerts<T extends Prisma.Tenant$alertsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$alertsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AlertRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  passwordSetupInvites<T extends Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordSetupInvitePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5409,6 +6219,30 @@ export type Tenant$externalOrganizationsArgs<ExtArgs extends runtime.Types.Exten
 }
 
 /**
+ * Tenant.betaNdaAcceptances
+ */
+export type Tenant$betaNdaAcceptancesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BetaNdaAcceptance
+   */
+  select?: Prisma.BetaNdaAcceptanceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BetaNdaAcceptance
+   */
+  omit?: Prisma.BetaNdaAcceptanceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BetaNdaAcceptanceInclude<ExtArgs> | null
+  where?: Prisma.BetaNdaAcceptanceWhereInput
+  orderBy?: Prisma.BetaNdaAcceptanceOrderByWithRelationInput | Prisma.BetaNdaAcceptanceOrderByWithRelationInput[]
+  cursor?: Prisma.BetaNdaAcceptanceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BetaNdaAcceptanceScalarFieldEnum | Prisma.BetaNdaAcceptanceScalarFieldEnum[]
+}
+
+/**
  * Tenant.erpStates
  */
 export type Tenant$erpStatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5529,6 +6363,30 @@ export type Tenant$activeFlightSessionsArgs<ExtArgs extends runtime.Types.Extens
 }
 
 /**
+ * Tenant.activeFlightSessionBlocks
+ */
+export type Tenant$activeFlightSessionBlocksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ActiveFlightSessionBlock
+   */
+  select?: Prisma.ActiveFlightSessionBlockSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ActiveFlightSessionBlock
+   */
+  omit?: Prisma.ActiveFlightSessionBlockOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ActiveFlightSessionBlockInclude<ExtArgs> | null
+  where?: Prisma.ActiveFlightSessionBlockWhereInput
+  orderBy?: Prisma.ActiveFlightSessionBlockOrderByWithRelationInput | Prisma.ActiveFlightSessionBlockOrderByWithRelationInput[]
+  cursor?: Prisma.ActiveFlightSessionBlockWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ActiveFlightSessionBlockScalarFieldEnum | Prisma.ActiveFlightSessionBlockScalarFieldEnum[]
+}
+
+/**
  * Tenant.alerts
  */
 export type Tenant$alertsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5550,6 +6408,30 @@ export type Tenant$alertsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.AlertRecordScalarFieldEnum | Prisma.AlertRecordScalarFieldEnum[]
+}
+
+/**
+ * Tenant.passwordSetupInvites
+ */
+export type Tenant$passwordSetupInvitesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PasswordSetupInvite
+   */
+  select?: Prisma.PasswordSetupInviteSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PasswordSetupInvite
+   */
+  omit?: Prisma.PasswordSetupInviteOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PasswordSetupInviteInclude<ExtArgs> | null
+  where?: Prisma.PasswordSetupInviteWhereInput
+  orderBy?: Prisma.PasswordSetupInviteOrderByWithRelationInput | Prisma.PasswordSetupInviteOrderByWithRelationInput[]
+  cursor?: Prisma.PasswordSetupInviteWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PasswordSetupInviteScalarFieldEnum | Prisma.PasswordSetupInviteScalarFieldEnum[]
 }
 
 /**

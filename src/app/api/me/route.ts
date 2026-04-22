@@ -1,13 +1,15 @@
 import { authOptions } from '@/auth';
 import { isDatabaseAvailable, prisma } from '@/lib/prisma';
+import { resolveTenantOverride, isMasterTenantEmail, MASTER_TENANT_ID } from '@/lib/server/tenant-access';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
-const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
-
-const buildSuperUserProfile = (sessionUser: { id?: string | null; email?: string | null; name?: string | null }) => ({
+const buildSuperUserProfile = (
+  sessionUser: { id?: string | null; email?: string | null; name?: string | null },
+  tenantId: string
+) => ({
   id: sessionUser.id || sessionUser.email || 'safeviate-super-user',
-  tenantId: 'safeviate',
+  tenantId,
   email: sessionUser.email?.trim().toLowerCase() || '',
   firstName: sessionUser.name?.split(' ')[0] ?? 'User',
   lastName: sessionUser.name?.split(' ').slice(1).join(' ') || '',
@@ -15,7 +17,7 @@ const buildSuperUserProfile = (sessionUser: { id?: string | null; email?: string
   permissions: ['*'],
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const email = session?.user?.email?.trim().toLowerCase();
@@ -25,15 +27,16 @@ export async function GET() {
       return NextResponse.json({ profile: null }, { status: 200 });
     }
 
-    if (SUPER_USERS.includes(email)) {
+    if (isMasterTenantEmail(email)) {
+      const selectedTenantId = await resolveTenantOverride(request, email, MASTER_TENANT_ID);
       return NextResponse.json(
         {
           profile: buildSuperUserProfile({
             id: session?.user?.id,
             email,
             name: session?.user?.name,
-          }),
-          tenant: { id: 'safeviate', name: 'Safeviate' },
+          }, selectedTenantId),
+          tenant: { id: selectedTenantId, name: selectedTenantId === MASTER_TENANT_ID ? 'Safeviate' : selectedTenantId },
           rolePermissions: ['*'],
         },
         { status: 200 }
@@ -77,10 +80,15 @@ export async function GET() {
       return NextResponse.json({ profile: null }, { status: 200 });
     }
 
-    const tenant = await prisma.tenant.findUnique({ where: { id: profile.tenantId } }).catch(() => null);
+    if (profile.suspendedAt) {
+      return NextResponse.json({ profile: null }, { status: 200 });
+    }
+
+    const selectedTenantId = await resolveTenantOverride(request, email, profile.tenantId);
+    const tenant = await prisma.tenant.findUnique({ where: { id: selectedTenantId } }).catch(() => null);
     const role = await prisma.role.findFirst({
       where: {
-        tenantId: profile.tenantId,
+        tenantId: selectedTenantId,
         OR: [
           { id: profile.role },
           { name: profile.role },

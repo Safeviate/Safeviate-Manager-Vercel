@@ -22,7 +22,7 @@ function NewMocContent() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const orgId = searchParams.get('orgId');
+  const orgId = searchParams?.get('orgId') ?? null;
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);

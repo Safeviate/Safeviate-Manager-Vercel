@@ -53,6 +53,8 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   Tenant: 'Tenant',
   User: 'User',
+  PasswordSetupInvite: 'PasswordSetupInvite',
+  BetaNdaAcceptance: 'BetaNdaAcceptance',
   Role: 'Role',
   Department: 'Department',
   Personnel: 'Personnel',
@@ -74,6 +76,7 @@ export const ModelName = {
   MaintenanceTaskCardRecord: 'MaintenanceTaskCardRecord',
   ToolRecord: 'ToolRecord',
   ActiveFlightSessionRecord: 'ActiveFlightSessionRecord',
+  ActiveFlightSessionBlock: 'ActiveFlightSessionBlock',
   AlertRecord: 'AlertRecord'
 } as const
 
@@ -108,6 +111,7 @@ export const UserScalarFieldEnum = {
   tenantId: 'tenantId',
   email: 'email',
   passwordHash: 'passwordHash',
+  suspendedAt: 'suspendedAt',
   firstName: 'firstName',
   lastName: 'lastName',
   role: 'role',
@@ -117,6 +121,38 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const PasswordSetupInviteScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  userId: 'userId',
+  email: 'email',
+  name: 'name',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordSetupInviteScalarFieldEnum = (typeof PasswordSetupInviteScalarFieldEnum)[keyof typeof PasswordSetupInviteScalarFieldEnum]
+
+
+export const BetaNdaAcceptanceScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  email: 'email',
+  name: 'name',
+  ndaVersion: 'ndaVersion',
+  agreementText: 'agreementText',
+  signatureDataUrl: 'signatureDataUrl',
+  acceptedAt: 'acceptedAt',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+} as const
+
+export type BetaNdaAcceptanceScalarFieldEnum = (typeof BetaNdaAcceptanceScalarFieldEnum)[keyof typeof BetaNdaAcceptanceScalarFieldEnum]
 
 
 export const RoleScalarFieldEnum = {
@@ -369,6 +405,16 @@ export const ActiveFlightSessionRecordScalarFieldEnum = {
 } as const
 
 export type ActiveFlightSessionRecordScalarFieldEnum = (typeof ActiveFlightSessionRecordScalarFieldEnum)[keyof typeof ActiveFlightSessionRecordScalarFieldEnum]
+
+
+export const ActiveFlightSessionBlockScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ActiveFlightSessionBlockScalarFieldEnum = (typeof ActiveFlightSessionBlockScalarFieldEnum)[keyof typeof ActiveFlightSessionBlockScalarFieldEnum]
 
 
 export const AlertRecordScalarFieldEnum = {

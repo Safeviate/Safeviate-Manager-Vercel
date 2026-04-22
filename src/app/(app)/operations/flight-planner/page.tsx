@@ -14,6 +14,7 @@ import { calculateRouteTotals, createNavlogLegFromCoordinates } from '@/lib/flig
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useTheme } from '@/components/theme-provider';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
+import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
   ssr: false,
@@ -93,8 +94,8 @@ export default function FlightPlannerPage() {
   };
 
   return (
-    <div className={cn('mx-auto flex w-full lg:max-w-[1100px] flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-4 pt-4 md:p-8', isModern && 'gap-7')}>
-      <Card className={cn('border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
+    <div className={cn('mx-auto flex h-full min-h-0 w-full lg:max-w-[1100px] flex-1 flex-col gap-4 overflow-hidden px-1 pt-4', isModern && 'gap-4')}>
+      <Card className={cn(OPERATIONS_MAP_CARD_CLASS, isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
         <CardHeader className={cn('border-b bg-muted/20', isModern && 'bg-transparent')}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
@@ -130,12 +131,12 @@ export default function FlightPlannerPage() {
         </CardHeader>
 
         <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.3fr_0.7fr]">
-          <Card className={cn('self-start min-h-[70vh] border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
+          <Card className={cn('self-stretch border shadow-none', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'overflow-hidden border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
             <CardHeader>
               <CardTitle className="text-sm font-black uppercase tracking-widest">Planning Map Surface</CardTitle>
               <CardDescription>Search, click, and build the route directly on the aeronautical chart.</CardDescription>
             </CardHeader>
-            <CardContent className="relative h-full min-h-[60vh] p-0">
+            <CardContent className={cn('relative h-full p-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
               <AeronauticalMap legs={legs} onAddWaypoint={handleAddWaypoint} />
             </CardContent>
           </Card>

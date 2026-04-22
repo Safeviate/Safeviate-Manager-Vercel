@@ -1,18 +1,27 @@
-import { NextResponse } from 'next/server';
+import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { ensureTenantConfigSchema } from '@/lib/server/bootstrap-db';
+import { MASTER_TENANT_ID, isMasterTenantEmail, resolveTenantOverride } from '@/lib/server/tenant-access';
+import { getServerSession } from 'next-auth';
+import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const auth = await authenticateAiRequest();
-    if (!auth.ok) {
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!email) {
       return NextResponse.json({ config: null }, { status: 200 });
     }
 
     await ensureTenantConfigSchema();
+
+    const baseTenantId = (await prisma.user.findUnique({ where: { email }, select: { tenantId: true } }))?.tenantId || MASTER_TENANT_ID;
+    const tenantId = isMasterTenantEmail(email)
+      ? await resolveTenantOverride(request, email, baseTenantId)
+      : baseTenantId;
+
     const configRow = await prisma.tenantConfig.findUnique({
-      where: { tenantId: auth.tenantId },
+      where: { tenantId },
       select: { data: true },
     });
 
@@ -25,14 +34,21 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const auth = await authenticateAiRequest();
-    if (!auth.ok) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!email) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    const role = auth.userProfile.role?.toLowerCase();
+    const currentUser = await prisma.user.findUnique({ where: { email } });
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+    }
+
+    const role = currentUser.role?.toLowerCase();
     const isDeveloper = role === 'dev' || role === 'developer';
-    if (!isDeveloper && !auth.effectivePermissions.has('admin-settings-manage')) {
+    const isMaster = isMasterTenantEmail(email) || currentUser.tenantId === MASTER_TENANT_ID;
+    if (!isDeveloper && !isMaster) {
       return NextResponse.json({ error: 'Unauthorized to update tenant configuration.' }, { status: 403 });
     }
 
@@ -44,13 +60,15 @@ export async function PUT(request: Request) {
 
     await ensureTenantConfigSchema();
 
-    // Fetch existing config to avoid wiping out other settings (e.g. enabledMenus)
+    const resolvedTenantId = isMaster
+      ? await resolveTenantOverride(request, email, currentUser.tenantId || MASTER_TENANT_ID)
+      : currentUser.tenantId;
+
     const existingRow = await prisma.tenantConfig.findUnique({
-      where: { tenantId: auth.tenantId },
+      where: { tenantId: resolvedTenantId },
       select: { data: true },
     });
-    
-    // Perform a shallow merge of the config data
+
     const existingData = (existingRow?.data as Record<string, unknown>) || {};
     const mergedData = {
       ...existingData,
@@ -58,9 +76,9 @@ export async function PUT(request: Request) {
     };
 
     await prisma.tenantConfig.upsert({
-      where: { tenantId: auth.tenantId },
+      where: { tenantId: resolvedTenantId },
       create: {
-        tenantId: auth.tenantId,
+        tenantId: resolvedTenantId,
         data: mergedData,
       },
       update: {

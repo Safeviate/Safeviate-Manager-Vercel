@@ -26,9 +26,9 @@ function WBCalculatorContent() {
   const router = useRouter();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  
-  const aircraftId = searchParams.get('aircraftId');
-  const bookingId = searchParams.get('bookingId');
+
+  const aircraftId = searchParams?.get('aircraftId') ?? '';
+  const bookingId = searchParams?.get('bookingId') ?? '';
 
   const [aircraft, setAircraft] = useState<Aircraft | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);

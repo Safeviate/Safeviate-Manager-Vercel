@@ -447,10 +447,6 @@ export type CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput = {
   deleteMany?: Prisma.CompanyDocumentScalarWhereInput | Prisma.CompanyDocumentScalarWhereInput[]
 }
 
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
 export type CompanyDocumentCreateWithoutTenantInput = {
   id: string
   name: string

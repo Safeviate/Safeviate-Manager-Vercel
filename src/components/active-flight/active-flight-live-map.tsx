@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ActiveFlightMapLibreShell } from '@/components/active-flight/active-flight-maplibre-shell';
+import { OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 import { OPENAIP_VECTOR_TILE_URL } from '@/lib/maplibre-map-config';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
@@ -1982,7 +1983,7 @@ export function ActiveFlightLiveMap({
           </div>
         ) : null}
 
-        <div className="nose-up-map relative h-full min-h-[360px] flex-1">
+        <div className={cn('nose-up-map relative h-full flex-1', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
           <ActiveFlightMapLibreShell
             className="h-full w-full rounded-2xl"
             center={center}

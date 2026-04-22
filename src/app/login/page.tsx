@@ -1,16 +1,19 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { signIn } from 'next-auth/react';
-import { ShieldCheck, LockKeyhole, ArrowRight } from 'lucide-react';
+import { ShieldCheck, LockKeyhole, ArrowRight, KeyRound } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoginLoading, setIsLoginLoading] = useState(false);
@@ -18,12 +21,32 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  useEffect(() => {
+    const nextEmail = searchParams?.get('email')?.trim();
+    if (nextEmail) {
+      setEmail(nextEmail);
+    }
+  }, [searchParams]);
+
   const getLoginErrorMessage = (errorMessage?: string | null) => {
     if (!errorMessage) return 'Incorrect email or password.';
     if (errorMessage === 'CredentialsSignin') {
-      return 'Login failed. Check the database password for this user or confirm the seed credentials are configured.';
+      return 'Login failed. Check the password, or complete the beta NDA if this is a tester account.';
     }
     return errorMessage;
+  };
+
+  const redirectToNdaIfNeeded = async () => {
+    const response = await fetch(`/api/auth/nda-status?email=${encodeURIComponent(email)}`, {
+      cache: 'no-store',
+    });
+    const payload = await response.json().catch(() => null);
+    if (payload?.accepted === false) {
+      const tenantQuery = payload?.tenantId ? `&tenantId=${encodeURIComponent(String(payload.tenantId))}` : '';
+      router.push(`/beta-nda?email=${encodeURIComponent(email)}${tenantQuery}`);
+      return true;
+    }
+    return false;
   };
 
   const handleUserLogin = async (event: FormEvent<HTMLFormElement>) => {
@@ -50,6 +73,11 @@ export default function LoginPage() {
       });
 
       if (!result || result.error) {
+        const ndaRedirected = await redirectToNdaIfNeeded();
+        if (ndaRedirected) {
+          return;
+        }
+
         const message = getLoginErrorMessage(result?.error);
         setErrorMessage(message);
         toast({
@@ -125,7 +153,11 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <CardTitle className="text-2xl font-black tracking-tight text-white">Welcome back</CardTitle>
                 <CardDescription className="text-sm text-slate-300">
-                  Sign in to continue to the Safeviate operations portal.
+                  {searchParams?.get('setup')
+                    ? 'Your password has been saved. Sign in to continue.'
+                    : searchParams?.get('nda')
+                      ? 'Your NDA has been recorded. Sign in to continue.'
+                      : 'Sign in to continue to the Safeviate operations portal.'}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -183,8 +215,20 @@ export default function LoginPage() {
                     </span>
                   )}
                 </Button>
+                <Button asChild variant="ghost" className="h-10 w-full text-slate-300 hover:bg-white/5 hover:text-white">
+                  <Link href="/forgot-password" className="inline-flex items-center justify-center gap-2">
+                    <KeyRound className="h-4 w-4" />
+                    Forgot Password?
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost" className="h-10 w-full text-slate-300 hover:bg-white/5 hover:text-white">
+                  <Link href="/beta-nda" className="inline-flex items-center justify-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    Beta NDA
+                  </Link>
+                </Button>
                 <p className="text-center text-[11px] font-medium leading-5 text-slate-400">
-                  Use the account provisioned in your database or seeded runtime credentials.
+                  Testers must accept the beta NDA before signing in.
                 </p>
               </CardFooter>
             </form>

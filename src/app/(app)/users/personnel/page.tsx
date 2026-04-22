@@ -11,11 +11,13 @@ export type {
 
 export default function UsersPersonnelPage() {
   const searchParams = useSearchParams();
+  const selectedDepartmentId = searchParams?.get('department') ?? null;
+  const selectedRoleId = searchParams?.get('role') ?? null;
   return (
     <PersonnelDirectoryPage
       title="All Users"
-      selectedDepartmentId={searchParams.get('department')}
-      selectedRoleId={searchParams.get('role')}
+      selectedDepartmentId={selectedDepartmentId}
+      selectedRoleId={selectedRoleId}
     />
   );
 }

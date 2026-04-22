@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { useSession } from 'next-auth/react';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { MASTER_TENANT_ID } from '@/lib/tenant-constants';
 
 type UserProfile = PilotProfile | Personnel;
 type DbUserProfile = {
@@ -87,10 +88,13 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
     const tenantId = useMemo(() => {
         if (!dbProfile) return null;
-        const profileTenantId = dbProfile.tenantId || 'safeviate';
+        const profileTenantId = dbProfile.tenantId || MASTER_TENANT_ID;
         
         // Developer role bypass for tenant switching
-        const isDeveloper = dbProfile.role?.toLowerCase() === 'dev' || dbProfile.role?.toLowerCase() === 'developer';
+        const isDeveloper =
+            dbProfile.role?.toLowerCase() === 'dev' ||
+            dbProfile.role?.toLowerCase() === 'developer' ||
+            profileTenantId === MASTER_TENANT_ID;
         const overrideTenantId = isDeveloper ? tenantOverride : null;
         
         return overrideTenantId || profileTenantId;
@@ -128,7 +132,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             email: authUser.email ?? '',
             role: 'developer',
         } as UserProfile) : null),
-        tenantId: tenantId || 'safeviate',
+        tenantId: tenantId || MASTER_TENANT_ID,
         isLoading,
         error,
     }), [dbProfile, authUser, tenantId, isLoading, error]);

@@ -41,7 +41,7 @@ type FormValues = z.infer<typeof debriefSchema>;
 function NewDebriefContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const bookingId = searchParams.get('bookingId');
+    const bookingId = searchParams?.get('bookingId') ?? '';
     const { toast } = useToast();
     const tenantId = 'safeviate';
 

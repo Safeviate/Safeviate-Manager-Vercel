@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
-import { getPublicBaseUrl } from '@/lib/server/site-url';
 import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
 import { prisma } from '@/lib/prisma';
-import { hash } from 'bcryptjs';
 import { Prisma } from '@/generated/prisma/client';
+import { createPasswordSetupInvite } from '@/lib/server/password-setup';
 
 export async function POST(request: Request) {
   try {
@@ -33,8 +32,6 @@ export async function POST(request: Request) {
       ? canBeStudent
       : normalizedUserType === 'Student';
 
-    const password = body.password || Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-
     if (!tenantId || !email || !firstName || !lastName || !role) {
       return NextResponse.json({ error: 'Missing required user information.' }, { status: 400 });
     }
@@ -48,15 +45,13 @@ export async function POST(request: Request) {
     await ensurePersonnelSchema();
 
     const uid = `user_${email.replace(/[^a-z0-9]+/g, '_')}`;
-    const tempPassword = password;
-    const passwordHash = await hash(tempPassword, 12);
 
     await prisma.user.upsert({
       where: { email },
       update: {
         id: uid,
         tenantId,
-        passwordHash,
+        passwordHash: null,
         firstName,
         lastName,
         role,
@@ -67,7 +62,7 @@ export async function POST(request: Request) {
         id: uid,
         tenantId,
         email,
-        passwordHash,
+        passwordHash: null,
         firstName,
         lastName,
         role,
@@ -115,10 +110,14 @@ export async function POST(request: Request) {
       },
     });
 
-    const baseUrl = getPublicBaseUrl(request);
-    const setupLink = `${baseUrl}/login`;
+    const invite = await createPasswordSetupInvite(request, {
+      tenantId,
+      email,
+      name: `${firstName} ${lastName}`,
+      userId: uid,
+    });
 
-    const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink, tempPassword });
+    const emailResult = await sendWelcomeEmail({ email, name: `${firstName} ${lastName}`, setupLink: invite.setupLink });
 
     if (!emailResult.success) {
       return NextResponse.json(
@@ -134,9 +133,9 @@ export async function POST(request: Request) {
       ok: true,
       uid,
       message: emailResult.diagnostics?.hasApiKey === false
-        ? 'User created. Email invite was skipped because mail is not configured.'
-        : 'User created and invite sent.',
-      diagnostics: emailResult.diagnostics || null,
+        ? 'User created. Invite email was skipped because mail is not configured.'
+        : 'User created and setup link sent.',
+      diagnostics: { ...(emailResult.diagnostics || {}), inviteLink: invite.setupLink },
     });
   } catch (error: any) {
     console.error('User creation failed:', error);

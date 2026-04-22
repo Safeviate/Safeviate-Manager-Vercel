@@ -19,12 +19,25 @@ export const users = pgTable('users', {
   tenantId: varchar('tenant_id', { length: 128 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash'),
+  suspendedAt: timestamp('suspended_at', { withTimezone: true }),
   firstName: text('first_name').notNull().default(''),
   lastName: text('last_name').notNull().default(''),
   role: text('role').notNull().default('developer'),
   profilePath: text('profile_path'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const passwordSetupInvites = pgTable('password_setup_invites', {
+  id: varchar('id', { length: 128 }).primaryKey(),
+  tenantId: varchar('tenant_id', { length: 128 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 128 }).references(() => users.id, { onDelete: 'set null' }),
+  email: text('email').notNull(),
+  name: text('name'),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const roles = pgTable('roles', {

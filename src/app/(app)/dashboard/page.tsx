@@ -50,6 +50,8 @@ const parseLocalDate = (value: string) => {
 import { cn } from '@/lib/utils';
 
 type AttentionItemTone = 'danger' | 'warning' | 'neutral';
+const DASHBOARD_SECTION_CARD_CLASS = 'overflow-hidden rounded-3xl border bg-background shadow-none';
+const DASHBOARD_SECTION_HEADER_CLASS = 'border-b bg-muted/5 px-4 py-3';
 
 function MetricCard({
   title,
@@ -67,11 +69,11 @@ function MetricCard({
   return (
     <Card
       className={cn(
-        'border shadow-none',
-        modern && 'overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]'
+        DASHBOARD_SECTION_CARD_CLASS,
+        modern && 'border-slate-200/80 bg-white/95'
       )}
     >
-      <CardHeader className={cn('flex flex-row items-center justify-between space-y-0 pb-2', modern && 'pb-3')}>
+      <CardHeader className={cn(DASHBOARD_SECTION_HEADER_CLASS, 'flex flex-row items-center justify-between space-y-0')}>
         <CardTitle className="text-xs font-black uppercase text-muted-foreground tracking-widest">{title}</CardTitle>
         <div
           className={cn(
@@ -82,7 +84,7 @@ function MetricCard({
           <Icon className="h-4 w-4" />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 py-4">
         <div className={cn('text-2xl font-black', modern && 'text-[2rem] leading-none tracking-tight text-slate-900')}>{value}</div>
         <p className={cn('mt-1 text-[10px] font-medium text-muted-foreground uppercase', modern && 'mt-2 text-[11px] tracking-wide text-slate-500')}>{hint}</p>
       </CardContent>
@@ -108,12 +110,12 @@ function AttentionList({
   };
 
   return (
-    <Card className={cn('shadow-none border', modern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-      <CardHeader className={cn(modern && 'pb-4')}>
+    <Card className={cn(DASHBOARD_SECTION_CARD_CLASS, modern && 'border-slate-200/80 bg-white/95')}>
+      <CardHeader className={cn(DASHBOARD_SECTION_HEADER_CLASS, modern && 'py-4')}>
         <CardTitle className={cn('text-sm font-black uppercase tracking-tight', modern && 'text-[15px] tracking-[0.14em] text-slate-900')}>{title}</CardTitle>
         <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-4 py-4">
         {items.length > 0 ? (
           items.map((item) => (
             <div
@@ -121,9 +123,9 @@ function AttentionList({
               className={cn(
                 'rounded-lg border px-4 py-3',
                 modern && 'rounded-2xl border-slate-200/90 bg-slate-50/70 shadow-sm',
-                toneClassMap[item.tone || 'neutral']
-              )}
-            >
+              toneClassMap[item.tone || 'neutral']
+            )}
+          >
               <p className="text-sm font-bold">{item.title}</p>
               <p className="mt-1 text-[10px] text-muted-foreground font-medium uppercase">{item.detail}</p>
             </div>
@@ -355,295 +357,297 @@ export default function DashboardPage() {
         isModern && 'gap-7 px-2 md:px-1'
       )}
     >
-      {isModern && (
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_38%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.96)_45%,_rgba(15,23,42,0.94))] px-6 py-6 text-white shadow-[0_24px_60px_rgba(15,23,42,0.22)] md:px-8 md:py-7">
-          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_center,_rgba(148,163,184,0.18),_transparent_62%)] md:block" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <Card className={cn(DASHBOARD_SECTION_CARD_CLASS, isModern && 'border-slate-200/80 bg-white/95')}>
+        <CardHeader className={cn(DASHBOARD_SECTION_HEADER_CLASS, 'px-6 py-5 md:px-8')}>
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-2xl space-y-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-sky-100/80">Company Dashboard</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary/70">Company Dashboard</p>
               <div className="space-y-2">
                 <h1 className="text-3xl font-black tracking-tight md:text-4xl">Operational clarity for today&apos;s work.</h1>
-                <p className="max-w-xl text-sm text-slate-200/85 md:text-[15px]">
+                <p className="max-w-xl text-sm text-muted-foreground md:text-[15px]">
                   Monitor flights, compliance posture, and management attention from one cleaner command surface.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
+                <Badge className="border border-card-border/70 bg-muted/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-muted/10">
                   {stats.todayBookings} flights today
                 </Badge>
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
+                <Badge className="border border-card-border/70 bg-muted/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-muted/10">
                   {stats.averageComplianceScore}% compliance score
                 </Badge>
-                <Badge className="border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/10">
+                <Badge className="border border-card-border/70 bg-muted/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-muted/10">
                   {stats.openCapsCount} open actions
                 </Badge>
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
               <Link href="/bookings/schedule" className="block">
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md transition hover:bg-white/14">
+                <div className="rounded-2xl border border-card-border/70 bg-background p-4 transition hover:bg-muted/5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-200">Flight Operations</p>
-                    <Plane className="h-4 w-4 text-sky-200" />
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">Flight Operations</p>
+                    <Plane className="h-4 w-4 text-primary" />
                   </div>
-                  <p className="mt-3 text-lg font-black text-white">Open Schedule</p>
-                  <p className="mt-1 text-xs text-slate-200/80">Review today&apos;s movement plan.</p>
+                  <p className="mt-3 text-lg font-black text-foreground">Open Schedule</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Review today&apos;s movement plan.</p>
                 </div>
               </Link>
               <Link href="/quality/coherence-matrix" className="block">
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md transition hover:bg-white/14">
+                <div className="rounded-2xl border border-card-border/70 bg-background p-4 transition hover:bg-muted/5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-200">Quality & Safety</p>
-                    <ShieldAlert className="h-4 w-4 text-emerald-200" />
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">Quality & Safety</p>
+                    <ShieldAlert className="h-4 w-4 text-primary" />
                   </div>
-                  <p className="mt-3 text-lg font-black text-white">Review Signals</p>
-                  <p className="mt-1 text-xs text-slate-200/80">See unresolved reports and hazards.</p>
+                  <p className="mt-3 text-lg font-black text-foreground">Review Signals</p>
+                  <p className="mt-1 text-xs text-muted-foreground">See unresolved reports and hazards.</p>
                 </div>
               </Link>
             </div>
           </div>
-        </section>
-      )}
+        </CardHeader>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {isAviation ? (
-          <MetricCard
-            title="Today's Flights"
-            value={String(stats.todayBookings)}
-            hint={`${stats.tomorrowBookings} scheduled for tomorrow`}
-            icon={CalendarRange}
-            modern={isModern}
-          />
-        ) : (
-          <MetricCard
-            title="Active Tasks"
-            value={String(stats.openCapsCount)}
-            hint="Corrective actions in progress"
-            icon={LayoutList}
-            modern={isModern}
-          />
-        )}
-        <MetricCard
-          title="Attention Required"
-          value={String(stats.openSafetyReportsCount + stats.openHazardsCount)}
-          hint="Reports and hazards requiring review"
-          icon={Siren}
-          modern={isModern}
-        />
-        <MetricCard
-          title="Compliance Score"
-          value={`${stats.averageComplianceScore}%`}
-          hint={`${stats.openCapsCount} open corrective actions`}
-          icon={ClipboardCheck}
-          modern={isModern}
-        />
-        <MetricCard
-          title={isAviation ? "Pending Revenue" : "Safety Submissions"}
-          value={isAviation ? `$${stats.pendingRevenue.toFixed(2)}` : String(stats.openSafetyReportsCount)}
-          hint={isAviation ? "Unbilled completed flights" : "Total reports filed this period"}
-          icon={isAviation ? DollarSign : AlertCircle}
-          modern={isModern}
-        />
-      </div>
+        <CardContent className="space-y-6 p-6 md:p-8">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {isAviation ? (
+              <MetricCard
+                title="Today's Flights"
+                value={String(stats.todayBookings)}
+                hint={`${stats.tomorrowBookings} scheduled for tomorrow`}
+                icon={CalendarRange}
+                modern={isModern}
+              />
+            ) : (
+              <MetricCard
+                title="Active Tasks"
+                value={String(stats.openCapsCount)}
+                hint="Corrective actions in progress"
+                icon={LayoutList}
+                modern={isModern}
+              />
+            )}
+            <MetricCard
+              title="Attention Required"
+              value={String(stats.openSafetyReportsCount + stats.openHazardsCount)}
+              hint="Reports and hazards requiring review"
+              icon={Siren}
+              modern={isModern}
+            />
+            <MetricCard
+              title="Compliance Score"
+              value={`${stats.averageComplianceScore}%`}
+              hint={`${stats.openCapsCount} open corrective actions`}
+              icon={ClipboardCheck}
+              modern={isModern}
+            />
+            <MetricCard
+              title={isAviation ? 'Pending Revenue' : 'Safety Submissions'}
+              value={isAviation ? `$${stats.pendingRevenue.toFixed(2)}` : String(stats.openSafetyReportsCount)}
+              hint={isAviation ? 'Unbilled completed flights' : 'Total reports filed this period'}
+              icon={isAviation ? DollarSign : AlertCircle}
+              modern={isModern}
+            />
+          </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-        <AttentionList
-          title="Management Attention"
-          description="Priority items for organizational oversight."
-          items={stats.attentionItems}
-          modern={isModern}
-        />
-        <Card className={cn('shadow-none border', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-          <CardHeader>
-            <CardTitle className="text-sm font-black uppercase tracking-tight">Organization Snapshot</CardTitle>
-            <CardDescription className="text-xs">High-level operational profile.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <div className={cn('rounded-lg border border-card-border/70 bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/80')}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assets</p>
-              <p className="mt-2 text-2xl font-black">{isAviation ? stats.activeFleet : (aircrafts?.length ?? 0)}</p>
-              <p className="text-[10px] text-muted-foreground font-medium uppercase mt-1">{isAviation ? 'Active Fleet Count' : 'Registered Equipment'}</p>
-            </div>
-            <div className={cn('rounded-lg border border-card-border/70 bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/80')}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Compliance Rating</p>
-              <p className="mt-2 text-2xl font-black">{stats.averageComplianceScore}%</p>
-              <p className="text-[10px] text-muted-foreground font-medium uppercase mt-1">Avg. Audit performance</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        {isAviation ? (
-          <Card className={cn('flex flex-col shadow-none border', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-            <CardHeader>
-              <CardTitle>Fleet Utilization</CardTitle>
-              <CardDescription>Top aircraft by logged Hobbs time.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[320px] pb-0">
-              <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.aircraftChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
-                    <XAxis
-                      dataKey="name"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${value}h`}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="hours" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className={cn('flex flex-col shadow-none border', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-            <CardHeader>
-              <CardTitle>Occurrence Types</CardTitle>
-              <CardDescription>Breakdown of reported safety events.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[320px] pb-0">
-              <ChartContainer config={{ value: { label: 'Reports', color: 'hsl(var(--chart-4))' } }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.reportsChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
-                    <XAxis
-                      dataKey="name"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={10}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className={cn('flex flex-col shadow-none border', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-          <CardHeader>
-            <CardTitle>Status Mix</CardTitle>
-            <CardDescription>How {isAviation ? 'bookings' : 'items'} are resolving.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex h-[320px] flex-col justify-center">
-            <ChartContainer
-              config={{
-                Completed: { label: 'Completed', color: 'hsl(var(--chart-2))' },
-                Cancelled: { label: 'Cancelled', color: 'hsl(var(--chart-1))' },
-                Active: { label: 'Active', color: 'hsl(var(--chart-3))' },
-              }}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Pie
-                    data={stats.statusChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    strokeWidth={5}
-                  >
-                    {stats.statusChartData.map((entry, index) => (
-                      <Cell key={`status-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-            <div className="flex flex-wrap justify-center gap-4 py-4 text-xs">
-              {stats.statusChartData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.fill }} />
-                  <span className="font-medium uppercase text-muted-foreground">
-                    {item.name}: {item.value}
-                  </span>
+          <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+            <AttentionList
+              title="Management Attention"
+              description="Priority items for organizational oversight."
+              items={stats.attentionItems}
+              modern={isModern}
+            />
+            <Card className={cn(DASHBOARD_SECTION_CARD_CLASS, isModern && 'border-slate-200/80 bg-white/95')}>
+              <CardHeader className={DASHBOARD_SECTION_HEADER_CLASS}>
+                <CardTitle className="text-sm font-black uppercase tracking-tight">Organization Snapshot</CardTitle>
+                <CardDescription className="text-xs">High-level operational profile.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 px-4 py-4 sm:grid-cols-2 xl:grid-cols-1">
+                <div className={cn('rounded-lg border border-card-border/70 bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/80')}>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assets</p>
+                  <p className="mt-2 text-2xl font-black">{isAviation ? stats.activeFleet : (aircrafts?.length ?? 0)}</p>
+                  <p className="mt-1 text-[10px] font-medium uppercase text-muted-foreground">{isAviation ? 'Active Fleet Count' : 'Registered Equipment'}</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                <div className={cn('rounded-lg border border-card-border/70 bg-muted/10 p-4', isModern && 'rounded-2xl border-slate-200/90 bg-slate-50/80')}>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Compliance Rating</p>
+                  <p className="mt-2 text-2xl font-black">{stats.averageComplianceScore}%</p>
+                  <p className="mt-1 text-[10px] font-medium uppercase text-muted-foreground">Avg. Audit performance</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr_1fr]">
-        <Card className={cn('flex flex-col overflow-hidden shadow-none border', isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
-          <CardHeader>
-            <CardTitle>Compliance Trend</CardTitle>
-            <CardDescription>Latest finalized audit performance over time.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[320px] overflow-hidden pt-2">
-            <ChartContainer
-              className="h-full w-full overflow-hidden aspect-auto"
-              config={{ score: { label: 'Compliance %', color: 'hsl(var(--chart-2))' } }}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.auditTrendData} margin={{ top: 12, right: 12, left: 8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    stroke="var(--color-score)"
-                    strokeWidth={3}
-                    dot={{ r: 5, fill: 'var(--color-score)' }}
-                    activeDot={{ r: 7 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+          <div className="grid gap-6 xl:grid-cols-2">
+            {isAviation ? (
+              <Card className={cn(DASHBOARD_SECTION_CARD_CLASS, 'flex flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                <CardHeader className={DASHBOARD_SECTION_HEADER_CLASS}>
+                  <CardTitle>Fleet Utilization</CardTitle>
+                  <CardDescription>Top aircraft by logged Hobbs time.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[320px] px-4 pb-0 pt-3">
+                  <ChartContainer config={{ hours: { label: 'Hours', color: 'hsl(var(--primary))' } }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stats.aircraftChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+                        <XAxis
+                          dataKey="name"
+                          stroke="hsl(var(--muted-foreground))"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          stroke="hsl(var(--muted-foreground))"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `${value}h`}
+                        />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="hours" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className={cn(DASHBOARD_SECTION_CARD_CLASS, 'flex flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                <CardHeader className={DASHBOARD_SECTION_HEADER_CLASS}>
+                  <CardTitle>Occurrence Types</CardTitle>
+                  <CardDescription>Breakdown of reported safety events.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[320px] px-4 pb-0 pt-3">
+                  <ChartContainer config={{ value: { label: 'Reports', color: 'hsl(var(--chart-4))' } }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stats.reportsChartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+                        <XAxis
+                          dataKey="name"
+                          stroke="hsl(var(--muted-foreground))"
+                          fontSize={10}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          stroke="hsl(var(--muted-foreground))"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
 
-        <AttentionList
-          title="Upcoming Audits"
-          description="Scheduled oversight already on the radar."
-          items={stats.upcomingAudits.map((audit) => ({
-            id: audit.id,
-            title: `${audit.auditNumber} • ${audit.title}`,
-            detail: `${format(parseLocalDate(audit.auditDate), 'dd MMM yyyy')} • ${audit.status}`,
-            tone: 'warning',
-          }))}
-          modern={isModern}
-        />
+            <Card className={cn(DASHBOARD_SECTION_CARD_CLASS, 'flex flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+              <CardHeader className={DASHBOARD_SECTION_HEADER_CLASS}>
+                <CardTitle>Status Mix</CardTitle>
+                <CardDescription>How {isAviation ? 'bookings' : 'items'} are resolving.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex h-[320px] flex-col justify-center px-4 py-4">
+                <ChartContainer
+                  config={{
+                    Completed: { label: 'Completed', color: 'hsl(var(--chart-2))' },
+                    Cancelled: { label: 'Cancelled', color: 'hsl(var(--chart-1))' },
+                    Active: { label: 'Active', color: 'hsl(var(--chart-3))' },
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                      <Pie
+                        data={stats.statusChartData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={60}
+                        strokeWidth={5}
+                      >
+                        {stats.statusChartData.map((entry, index) => (
+                          <Cell key={`status-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+                <div className="flex flex-wrap justify-center gap-4 py-4 text-xs">
+                  {stats.statusChartData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.fill }} />
+                      <span className="font-medium uppercase text-muted-foreground">
+                        {item.name}: {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        <AttentionList
-          title="High Risks"
-          description="Open hazards with high or critical exposure."
-          items={stats.criticalRiskItems}
-          modern={isModern}
-        />
-      </div>
+          <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr_1fr]">
+            <Card className={cn(DASHBOARD_SECTION_CARD_CLASS, 'flex flex-col overflow-hidden', isModern && 'border-slate-200/80 bg-white/95')}>
+              <CardHeader className={DASHBOARD_SECTION_HEADER_CLASS}>
+                <CardTitle>Compliance Trend</CardTitle>
+                <CardDescription>Latest finalized audit performance over time.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[320px] overflow-hidden px-4 pt-3">
+                <ChartContainer
+                  className="h-full w-full overflow-hidden aspect-auto"
+                  config={{ score: { label: 'Compliance %', color: 'hsl(var(--chart-2))' } }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={stats.auditTrendData} margin={{ top: 12, right: 12, left: 8, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="var(--color-score)"
+                        strokeWidth={3}
+                        dot={{ r: 5, fill: 'var(--color-score)' }}
+                        activeDot={{ r: 7 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <AttentionList
+              title="Upcoming Audits"
+              description="Scheduled oversight already on the radar."
+              items={stats.upcomingAudits.map((audit) => ({
+                id: audit.id,
+                title: `${audit.auditNumber} • ${audit.title}`,
+                detail: `${format(parseLocalDate(audit.auditDate), 'dd MMM yyyy')} • ${audit.status}`,
+                tone: 'warning',
+              }))}
+              modern={isModern}
+            />
+
+            <AttentionList
+              title="High Risks"
+              description="Open hazards with high or critical exposure."
+              items={stats.criticalRiskItems}
+              modern={isModern}
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
+
 }

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { sendWelcomeEmail } from '@/lib/server/mail';
-import { getPublicBaseUrl } from '@/lib/server/site-url';
+import { createPasswordSetupInvite } from '@/lib/server/password-setup';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
@@ -15,17 +16,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized to trigger onboarding.' }, { status: 403 });
     }
 
-    const { email, name } = await request.json();
+    const { email, name, userId, tenantId } = await request.json();
 
     if (!email) {
       return NextResponse.json({ error: 'Email is required.' }, { status: 400 });
     }
 
-    const baseUrl = getPublicBaseUrl(request);
-    const setupLink = `${baseUrl}/login`;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const inviteTenantId = String(tenantId || authResult.tenantId || 'safeviate');
+    const existingUser = userId
+      ? await prisma.user.findFirst({ where: { id: String(userId), tenantId: inviteTenantId } })
+      : await prisma.user.findFirst({ where: { email: normalizedEmail, tenantId: inviteTenantId } });
+
+    const finalTenantId = String(existingUser?.tenantId || inviteTenantId);
+    const variant = existingUser?.suspendedAt || existingUser?.passwordHash ? 'reset' : 'welcome';
+    const invite = await createPasswordSetupInvite(request, {
+      tenantId: finalTenantId,
+      email: normalizedEmail,
+      name: String(name || existingUser?.firstName || normalizedEmail.split('@')[0] || 'User'),
+      userId: existingUser?.id || (typeof userId === 'string' ? userId : null),
+    });
 
     // Dispatch the actual email
-    const result = await sendWelcomeEmail({ email, name, setupLink });
+    const result = await sendWelcomeEmail({ email: normalizedEmail, name: String(name || existingUser?.firstName || 'User'), setupLink: invite.setupLink, variant });
 
     if (!result.success) {
       return NextResponse.json(
@@ -37,10 +50,10 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ 
-        ok: true, 
-        message: 'Welcome email dispatched.',
-        diagnostics: result.diagnostics || null,
+    return NextResponse.json({
+      ok: true,
+      message: 'Setup link dispatched.',
+      diagnostics: { ...(result.diagnostics || {}), inviteLink: invite.setupLink },
     });
   } catch (error: any) {
     console.error('Onboarding dispatch failed:', error);

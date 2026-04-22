@@ -57,7 +57,8 @@ export function AppHeader() {
   const router = useRouter();
   const isMobile = useIsMobile();
   const { userProfile } = useUserProfile();
-  const title = getTitle(pathname);
+  const currentPathname = pathname ?? '';
+  const title = getTitle(currentPathname);
   const [headerOpacity, setHeaderOpacity] = useState(0.8);
 
   useEffect(() => {

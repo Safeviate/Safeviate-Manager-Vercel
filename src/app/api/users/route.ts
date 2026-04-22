@@ -38,19 +38,25 @@ export async function GET() {
     const tenantId = currentUser?.tenantId || 'safeviate';
 
     await ensurePersonnelSchema();
-    const [roleRows, departmentRows, userRows] = await Promise.all([
+    const [roleRows, departmentRows, userRows, authRows] = await Promise.all([
       prisma.role.findMany({ where: { tenantId } }),
       prisma.department.findMany({ where: { tenantId } }),
       prisma.personnel.findMany({ where: { tenantId } }),
+      prisma.user.findMany({ where: { tenantId }, select: { email: true, suspendedAt: true } }),
     ]);
 
     const instructors = userRows.filter((row) => row.canBeInstructor || INSTRUCTOR_TYPES.has(row.userType || ''));
     const students = userRows.filter((row) => row.canBeStudent || STUDENT_TYPES.has(row.userType || ''));
     const privatePilots = userRows.filter((row) => PRIVATE_PILOT_TYPES.has(row.userType || ''));
+    const authMap = new Map(authRows.map((row) => [row.email.trim().toLowerCase(), row.suspendedAt]));
+    const mergedUsers = userRows.map((row) => ({
+      ...row,
+      suspendedAt: authMap.get(row.email.trim().toLowerCase()) || null,
+    }));
 
     return NextResponse.json({
-      users: userRows,
-      personnel: userRows,
+      users: mergedUsers,
+      personnel: mergedUsers,
       instructors,
       students,
       privatePilots,

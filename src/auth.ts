@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare, hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { assertRequiredEnv } from '@/lib/server/env';
+import { BETA_NDA_VERSION } from '@/lib/server/beta-nda';
 
 assertRequiredEnv(['NEXTAUTH_SECRET'], 'authentication');
 
@@ -72,6 +73,29 @@ export const authOptions: NextAuthOptions = {
           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
         }
 
+        if (dbUser?.suspendedAt) {
+          console.warn('[AUTH] Login denied because the account is suspended.', { email });
+          return null;
+        }
+
+        if (dbUser) {
+          const ndaAcceptance = await prisma.betaNdaAcceptance.findUnique({
+            where: {
+              tenantId_email_ndaVersion: {
+                tenantId: dbUser.tenantId.trim() || 'safeviate',
+                email: dbUser.email.trim().toLowerCase(),
+                ndaVersion: BETA_NDA_VERSION,
+              },
+            },
+            select: { id: true },
+          });
+
+          if (!ndaAcceptance) {
+            console.warn('[AUTH] Login denied because the NDA has not been accepted.', { email });
+            return null;
+          }
+        }
+
         if (dbUser?.passwordHash) {
           const looksHashed = /^\$2[aby]\$\d{2}\$/.test(dbUser.passwordHash);
           const ok = looksHashed ? await compare(password, dbUser.passwordHash) : password === dbUser.passwordHash;
@@ -130,12 +154,35 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.name = user.name || token.name;
+      }
+
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { email: true, suspendedAt: true },
+          });
+
+          if (!dbUser || dbUser.suspendedAt) {
+            token.id = '';
+            token.email = '';
+            token.name = '';
+          } else {
+            token.email = dbUser.email;
+          }
+        } catch (error) {
+          console.error('[AUTH] Session validation failed.', error);
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string | undefined;
+        session.user.id = (token.id as string | undefined) || undefined;
+        session.user.email = (token.email as string | undefined) || undefined;
+        session.user.name = (token.name as string | undefined) || undefined;
       }
       return session;
     },

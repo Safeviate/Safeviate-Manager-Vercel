@@ -1,17 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Palette, Layers } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { usePermissions } from '@/hooks/use-permissions';
 import { MainPageHeader } from '@/components/page-header';
-import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ColorThemeForm } from '../../settings/color-theme-form';
-import { VisibilityManager } from './visibility-manager';
 
 export default function PageFormatPage() {
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
@@ -19,11 +13,10 @@ export default function PageFormatPage() {
   const isDeveloperRole = ((userProfile as { role?: string } | null)?.role || '').toLowerCase() === 'dev'
     || ((userProfile as { role?: string } | null)?.role || '').toLowerCase() === 'developer';
   const canManage = isDeveloperRole || hasPermission('admin-settings-manage');
-  const [activeTab, setActiveTab] = useState('branding');
 
   if ((!canManage && isPermissionsLoading) || isProfileLoading || !userProfile) {
     return (
-      <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
+      <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 min-h-0 overflow-y-auto px-1 pb-4">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-[600px] w-full" />
       </div>
@@ -39,43 +32,15 @@ export default function PageFormatPage() {
   }
 
   return (
-    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1">
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <MainPageHeader
-            title="Page Formatting"
-            description="Refine the tenant look and access rules from one place. Start with quick palettes, then tune the advanced component colors only if needed."
-          />
-
-          <ResponsiveTabRow
-            value={activeTab}
-            onValueChange={setActiveTab}
-            placeholder="Select Section"
-            className="border-b bg-muted/5 px-3 py-2 shrink-0"
-            options={[
-              { value: 'branding', label: 'Branding & Colors', icon: Palette },
-              { value: 'visibility', label: 'Access & Visibility', icon: Layers },
-            ]}
-          />
-
-          <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-            <TabsContent value="branding" className="m-0 h-full">
-              <ScrollArea className="h-full">
-                <div className="p-4 lg:p-6">
-                  <ColorThemeForm showHeader={false} />
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="visibility" className="m-0 h-full">
-              <ScrollArea className="h-full">
-                <div className="p-4 lg:p-6">
-                  <VisibilityManager />
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          </CardContent>
-        </Tabs>
+    <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 min-h-0 overflow-y-auto px-1 pb-4">
+      <Card className="flex flex-col overflow-hidden border shadow-none">
+        <MainPageHeader
+          title="Page Formatting"
+          description="Refine the tenant look from one place. Start with quick palettes, then tune the advanced component colors only if needed."
+        />
+        <div className="bg-background">
+          <ColorThemeForm showHeader={false} />
+        </div>
       </Card>
     </div>
   );

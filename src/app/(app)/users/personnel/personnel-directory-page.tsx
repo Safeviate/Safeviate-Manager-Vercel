@@ -29,6 +29,7 @@ export type PilotProfile = {
   firstName: string;
   lastName: string;
   email: string;
+  suspendedAt?: string | null;
   role: string;
   department?: string;
   organizationId?: string | null;
@@ -75,6 +76,7 @@ export type Personnel = {
   firstName: string;
   lastName: string;
   email: string;
+  suspendedAt?: string | null;
   contactNumber?: string;
   organizationId?: string | null;
   department?: string;

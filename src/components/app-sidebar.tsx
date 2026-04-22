@@ -75,6 +75,7 @@ const SidebarItems = () => {
     const router = useRouter();
     const { setOpenMobile } = useSidebar();
     const { canAccessMenuItem } = usePermissions();
+    const currentPathname = pathname ?? '';
     const lastSubmenuByParent = useMemo(() => getLastSubmenuByParent(), [pathname]);
     const [openParents, setOpenParents] = useState<Record<string, boolean>>({});
     const [dismissedParents, setDismissedParents] = useState<Record<string, boolean>>({});
@@ -122,7 +123,7 @@ const SidebarItems = () => {
             const next = { ...current };
             for (const item of menuConfig) {
                 if (!item.subItems?.length) continue;
-                const shouldBeOpen = pathname.startsWith(item.href) && pathname !== item.href;
+                const shouldBeOpen = currentPathname.startsWith(item.href) && currentPathname !== item.href;
                 if (shouldBeOpen) {
                     next[item.href] = true;
                 } else if (next[item.href] === undefined) {
@@ -165,7 +166,7 @@ const SidebarItems = () => {
                     ? (roleBasedUserSubItems.length > 0 ? roleBasedUserSubItems : item.subItems || [])
                     : item.subItems || [];
                 const subItems = configuredSubItems.filter((sub) => canAccessMenuItem(sub, item));
-                const activeSubItem = subItems.find((sub) => normalizePath(pathname) === normalizePath(sub.href));
+                const activeSubItem = subItems.find((sub) => normalizePath(currentPathname) === normalizePath(sub.href));
                 const rememberedSubHref = lastSubmenuByParent[item.href];
                 const rememberedSubItem = subItems.find((sub) => sub.href === rememberedSubHref);
                 const isOpen = openParents[item.href] ?? false;
@@ -209,7 +210,7 @@ const SidebarItems = () => {
                                         <SidebarMenuSubItem key={subItem.href} className="border-b-0">
                                             <SidebarMenuSubButton
                                               asChild
-                                              isActive={normalizePath(pathname) === normalizePath(subItem.href) || selectedSubItem?.href === subItem.href}
+                                              isActive={normalizePath(currentPathname) === normalizePath(subItem.href) || selectedSubItem?.href === subItem.href}
                                               className="h-9 w-full translate-x-0 rounded-md bg-transparent px-3.5 py-0 text-sm leading-none font-medium tracking-[-0.01em] text-sidebar-foreground/76 transition-[background-color,color] hover:bg-sidebar-accent/20 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent/20 focus-visible:text-sidebar-foreground data-[active=true]:bg-sidebar-accent/20 data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-none data-[active=true]:hover:bg-sidebar-accent/20"
                                             >
                                                 <Link
@@ -234,7 +235,7 @@ const SidebarItems = () => {
                     content = (
                         <SidebarMenuButton
                             asChild
-                            isActive={normalizePath(pathname) === normalizePath(item.href)}
+                            isActive={normalizePath(currentPathname) === normalizePath(item.href)}
                             tooltip={item.label}
                             className="justify-start pl-2.5 pr-3"
                         >

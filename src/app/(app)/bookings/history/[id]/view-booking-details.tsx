@@ -28,6 +28,7 @@ import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 
 // Dynamic import for Leaflet to avoid SSR issues
@@ -288,14 +289,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [basicEmpty, setBasicEmpty] = useState(DEFAULT_BASIC_EMPTY);
     const [stations, setStations] = useState<BookingStationState[]>(DEFAULT_STATIONS);
     const [results, setResults] = useState({ cg: 0, weight: 0, isSafe: false });
-    const [preFlight, setPreFlight] = useState(booking.preFlightData || {
-        hobbs: 0,
-        tacho: 0,
-        fuelUpliftGallons: 0,
-        fuelUpliftLitres: 0,
-        oilUplift: 0,
-        documentsChecked: false,
-    });
+    const [preFlight, setPreFlight] = useState(booking.preFlightData || getAircraftHourSnapshot(aircraft || {
+        id: booking.aircraftId,
+        make: '',
+        model: '',
+        tailNumber: '',
+    } as Aircraft));
     const [postFlight, setPostFlight] = useState(booking.postFlightData || {
         hobbs: 0,
         tacho: 0,
@@ -362,6 +361,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     useEffect(() => {
         setWorkflowApprovals(booking.workflowApprovals || {});
     }, [booking.workflowApprovals, booking.id]);
+
+    useEffect(() => {
+        if (booking.preFlightData) return;
+        if (!aircraft) return;
+        setPreFlight(getAircraftHourSnapshot(aircraft));
+    }, [aircraft, booking.id, booking.preFlightData]);
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
@@ -1246,27 +1251,27 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
                                                 <UILabel className="text-[9px] font-bold uppercase">Hobbs Start</UILabel>
-                                                <Input type="number" step="0.1" value={booking.preFlightData?.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                <Input type="number" step="0.1" value={preFlight.hobbs ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                             </div>
                                             <div className="space-y-1.5">
                                                 <UILabel className="text-[9px] font-bold uppercase">Tacho Start</UILabel>
-                                                <Input type="number" step="0.1" value={booking.preFlightData?.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                <Input type="number" step="0.1" value={preFlight.tacho ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                             </div>
                                             <div className="space-y-1.5">
                                                 <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</UILabel>
-                                                <Input type="number" value={booking.preFlightData?.fuelUpliftGallons ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                <Input type="number" value={preFlight.fuelUpliftGallons ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                             </div>
                                             <div className="space-y-1.5">
                                                 <UILabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</UILabel>
-                                                <Input type="number" value={booking.preFlightData?.fuelUpliftLitres ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                <Input type="number" value={preFlight.fuelUpliftLitres ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                             </div>
                                             <div className="space-y-1.5">
                                                 <UILabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</UILabel>
-                                                <Input type="number" value={booking.preFlightData?.oilUplift ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
+                                                <Input type="number" value={preFlight.oilUplift ?? 0} readOnly className="font-bold h-10 bg-muted/30" />
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-3 p-3 bg-background border rounded-lg">
-                                            <Checkbox id="docs-checks" checked={!!booking.preFlightData?.documentsChecked} disabled />
+                                            <Checkbox id="docs-checks" checked={!!preFlight.documentsChecked} disabled />
                                             <label htmlFor="docs-checks" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
                                         </div>
                                     </div>

@@ -24,7 +24,8 @@ export function IndustryRouteGuard({
 }: IndustryRouteGuardProps) {
   const pathname = usePathname();
   const { tenant, isLoading } = useTenantConfig();
-  const isExplicitlyEnabled = tenant?.enabledMenus?.includes(pathname) ?? false;
+  const currentPathname = pathname ?? '';
+  const isExplicitlyEnabled = tenant?.enabledMenus?.includes(currentPathname) ?? false;
   const bypassIndustryRestrictions = shouldBypassIndustryRestrictions(tenant?.id);
 
   if (isLoading) {
@@ -38,7 +39,7 @@ export function IndustryRouteGuard({
     );
   }
 
-  if (!bypassIndustryRestrictions && !isHrefEnabledForIndustry(pathname, tenant?.industry) && !isExplicitlyEnabled) {
+  if (!bypassIndustryRestrictions && !isHrefEnabledForIndustry(currentPathname, tenant?.industry) && !isExplicitlyEnabled) {
     return (
       <Card className="mx-auto w-full max-w-3xl border shadow-none">
         <CardHeader>

@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
 import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -57,7 +58,7 @@ interface LocationCalibration {
 const ActiveFlightLiveMap = dynamic(() => import('@/components/active-flight/active-flight-live-map').then((module) => module.ActiveFlightLiveMap), {
   ssr: false,
   loading: () => (
-    <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-slate-950 px-6 py-12 text-center text-slate-100">
+    <div className={cn('flex items-center justify-center rounded-2xl border border-dashed bg-slate-950 px-6 py-12 text-center text-slate-100', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
       <div className="space-y-4">
         <Loader2 className="mx-auto h-8 w-8 animate-spin text-sky-400" />
         <p className="text-sm font-black uppercase tracking-widest">Loading Pilot Map</p>
@@ -894,7 +895,7 @@ export default function ActiveFlightPage() {
   }
 
   return (
-    <div className={cn('mx-auto flex min-h-full w-full max-w-[1100px] flex-1 flex-col gap-6 overflow-y-auto p-4 pt-4 md:p-8', isModern && 'gap-7')}>
+    <div className={cn('mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-4 overflow-hidden px-1 pt-4', isModern && 'gap-4')}>
       {isModern && (
         <section className="relative overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.15),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(15,23,42,0.95)_40%,_rgba(30,41,59,0.94))] px-6 py-6 text-white shadow-[0_24px_60px_rgba(15,23,42,0.22)] md:px-8 md:py-7">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_center,_rgba(45,212,191,0.16),_transparent_62%)] md:block" />
@@ -1134,9 +1135,9 @@ export default function ActiveFlightPage() {
                 onMapZoomCardOpenChange={setIsMapZoomCardOpen}
               />
             ) : (
-              <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground">
-                Full screen map is open. Close it to restore the compact pilot map.
-              </div>
+                <div className={cn('flex items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
+                  Full screen map is open. Close it to restore the compact pilot map.
+                </div>
             )}
           </div>
         </CardContent>

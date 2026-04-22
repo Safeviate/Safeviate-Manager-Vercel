@@ -15,6 +15,7 @@ import type { FlightSession } from '@/types/flight-session';
 import { getFlightSessionFreshnessLabel, isFlightSessionStale } from '@/lib/flight-session-status';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { OPERATIONS_MAP_CARD_CLASS } from '@/components/operations/operations-map-layout';
 import { MOBILE_ACTION_MENU_ITEM_CLASS, MOBILE_ACTION_MENU_STATE_ITEM_CLASS, MobileActionDropdown } from '@/components/mobile-action-dropdown';
 
 const FleetTrackerMap = dynamic(() => import('@/components/fleet-tracker/fleet-tracker-map').then((module) => module.FleetTrackerMap), {
@@ -185,79 +186,110 @@ export default function FleetTrackerPage() {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-1">
-        <Card className="flex h-full flex-col overflow-hidden border shadow-none">
-          <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
-            <div className="sticky top-0 z-[1350] border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
-              <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Fleet tracker action bar">
-                <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
-                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => void loadSessions()} disabled={isRefreshing}>
-                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    {isRefreshing ? 'Refreshing' : 'Refresh'}
-                  </Button>
-                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerSelectorOpen((current) => !current)}>
-                    <Layers3 className="h-4 w-4" />
-                    Layers
-                  </Button>
-                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerLevelsOpen((current) => !current)}>
-                    <SlidersHorizontal className="h-4 w-4" />
-                    Map Zoom
-                  </Button>
-                  <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setActiveBroadcastsOpen(true)}>
-                    <RadioTower className="h-4 w-4" />
-                    Active Broadcasts
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
-                    onClick={() => void clearAllStaleSessions()}
-                    disabled={staleSessionCount === 0 || isEndingStaleSessions}
-                  >
-                    {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
-                  </Button>
-                </div>
-                <div className="w-full md:hidden">
-                  <MobileActionDropdown icon={RadioTower} label="Actions">
-                    <DropdownMenuItem
-                      onClick={() => void loadSessions()}
-                      disabled={isRefreshing}
-                      className={MOBILE_ACTION_MENU_ITEM_CLASS}
-                    >
-                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      {isRefreshing ? 'Refreshing' : 'Refresh'}
-                    </DropdownMenuItem>
-                    <DropdownMenuCheckboxItem
-                      checked={showLayerSelectorOpen}
-                      onCheckedChange={(checked) => setShowLayerSelectorOpen(Boolean(checked))}
-                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
-                    >
-                      <Layers3 className="h-4 w-4" />
-                      Layers
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={showLayerLevelsOpen}
-                      onCheckedChange={(checked) => setShowLayerLevelsOpen(Boolean(checked))}
-                      className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
-                    >
-                      <SlidersHorizontal className="h-4 w-4" />
-                      Map Zoom
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuItem onClick={() => setActiveBroadcastsOpen(true)} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
-                      <RadioTower className="h-4 w-4" />
-                      Active Broadcasts
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => void clearAllStaleSessions()}
-                      disabled={staleSessionCount === 0 || isEndingStaleSessions}
-                      className={MOBILE_ACTION_MENU_ITEM_CLASS}
-                    >
-                      {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
-                    </DropdownMenuItem>
-                  </MobileActionDropdown>
-                </div>
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-col gap-4 overflow-hidden px-1">
+        <Card className={OPERATIONS_MAP_CARD_CLASS}>
+          <CardHeader className="border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
+            <div className="flex items-start justify-between gap-3">
+              <CardTitle className="text-sm font-black uppercase tracking-widest">Fleet Tracker</CardTitle>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest">
+                  {activeSessionCount} active
+                </Badge>
+                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest">
+                  {staleSessionCount} stale
+                </Badge>
+                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest">
+                  {lastRefreshedAt ? `Updated ${lastRefreshedAt}` : 'Waiting'}
+                </Badge>
               </div>
             </div>
+          </CardHeader>
+          <div className="border-b bg-background px-2 py-1.5 md:px-3 md:py-2">
+            <div className="flex items-center justify-center gap-1.5 md:gap-2" aria-label="Fleet tracker action bar">
+              <div className="hidden items-center justify-center gap-1.5 md:flex md:gap-2">
+                <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => void loadSessions()} disabled={isRefreshing}>
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Refreshing' : 'Refresh'}
+                </Button>
+                <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerSelectorOpen((current) => !current)}>
+                  <Layers3 className="h-4 w-4" />
+                  Layers
+                </Button>
+                <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setShowLayerLevelsOpen((current) => !current)}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Map Zoom
+                </Button>
+                <Button type="button" variant="outline" className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur" onClick={() => setActiveBroadcastsOpen(true)}>
+                  <RadioTower className="h-4 w-4" />
+                  Active Broadcasts
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 gap-1.5 border bg-background/90 px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm backdrop-blur"
+                  onClick={() => void clearAllStaleSessions()}
+                  disabled={staleSessionCount === 0 || isEndingStaleSessions}
+                >
+                  {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
+                </Button>
+              </div>
+              <div className="w-full md:hidden">
+                <MobileActionDropdown icon={RadioTower} label="Actions">
+                  <DropdownMenuItem
+                    onClick={() => void loadSessions()}
+                    disabled={isRefreshing}
+                    className={MOBILE_ACTION_MENU_ITEM_CLASS}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    {isRefreshing ? 'Refreshing' : 'Refresh'}
+                  </DropdownMenuItem>
+                  <DropdownMenuCheckboxItem
+                    checked={showLayerSelectorOpen}
+                    onCheckedChange={(checked) => setShowLayerSelectorOpen(Boolean(checked))}
+                    className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                  >
+                    <Layers3 className="h-4 w-4" />
+                    Layers
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={showLayerLevelsOpen}
+                    onCheckedChange={(checked) => setShowLayerLevelsOpen(Boolean(checked))}
+                    className={MOBILE_ACTION_MENU_STATE_ITEM_CLASS}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Map Zoom
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuItem onClick={() => setActiveBroadcastsOpen(true)} className={MOBILE_ACTION_MENU_ITEM_CLASS}>
+                    <RadioTower className="h-4 w-4" />
+                    Active Broadcasts
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => void clearAllStaleSessions()}
+                    disabled={staleSessionCount === 0 || isEndingStaleSessions}
+                    className={MOBILE_ACTION_MENU_ITEM_CLASS}
+                  >
+                    {isEndingStaleSessions ? 'Ending Stale...' : 'End Stale Sessions'}
+                  </DropdownMenuItem>
+                </MobileActionDropdown>
+              </div>
+            </div>
+          </div>
+          <div className="border-b bg-white">
+            <div className="grid grid-cols-2 gap-px bg-slate-200/80 md:grid-cols-4">
+              {[
+                { label: 'Active', value: `${activeSessionCount}` },
+                { label: 'Stale', value: `${staleSessionCount}` },
+                { label: 'Visible', value: `${sortedSessions.length}` },
+                { label: 'Refresh', value: lastRefreshedAt || 'Waiting' },
+              ].map((item) => (
+                <div key={item.label} className="flex min-w-0 items-center gap-1 bg-white px-2 py-1.5 md:px-3">
+                  <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">{item.label}</span>
+                  <span className="min-w-0 truncate text-[10px] font-black leading-none text-foreground">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/5 p-0">
             <div className="relative min-h-0 flex-1 overflow-hidden">
               <div className="absolute inset-0">
                 <FleetTrackerMap
