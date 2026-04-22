@@ -1,0 +1,40 @@
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url
+(node:5560) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[me] fallback to empty profile: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.user.upsert()` invocation:
+
+
+Unique constraint failed on the fields: (`id`)
+    at async GET (src\app\api\me\route.ts:56:17)
+  54 |
+  55 |     if (!profile && email) {
+> 56 |       profile = await prisma.user.upsert({
+     |                 ^
+  57 |         where: { email },
+  58 |         update: {
+  59 |           tenantId: 'safeviate', {
+  code: 'P2002',
+  meta: [Object],
+  clientVersion: '7.7.0'
+}
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url
+[next-auth][warn][NEXTAUTH_URL] 
+https://next-auth.js.org/warnings#nextauth_url

@@ -1,0 +1,13 @@
+
+> nextn@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.110.123:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.7s
+   Reload env: .env.local
+[?25h

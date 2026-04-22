@@ -1,0 +1,200 @@
+
+> nextn@0.1.0 dev
+> next dev -p 9002
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:9002
+   - Network:      http://192.168.110.123:9002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ○ Compiling /api/me ...
+ ✓ Compiled /api/me in 2.2s (594 modules)
+ GET /api/me 200 in 2781ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 855ms (577 modules)
+ GET /api/auth/csrf 200 in 1895ms
+ POST /api/auth/callback/credentials 200 in 106ms
+ ✓ Compiled /middleware in 417ms (159 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 5.5s (1007 modules)
+ GET / 307 in 6950ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1884ms (1024 modules)
+ GET /login 200 in 1129ms
+ GET /api/auth/session 200 in 232ms
+ ✓ Compiled /api/me in 254ms (729 modules)
+ GET /api/me 200 in 827ms
+ GET /api/auth/providers 200 in 128ms
+ GET /api/auth/csrf 200 in 154ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+ POST /api/auth/callback/credentials 401 in 536ms
+ GET /api/auth/providers 200 in 93ms
+ GET /api/auth/csrf 200 in 157ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+ POST /api/auth/callback/credentials 401 in 176ms
+ GET /api/auth/csrf 200 in 177ms
+ POST /api/auth/callback/credentials 200 in 130ms
+ GET /api/auth/csrf 200 in 94ms
+[AUTH] Credentials login attempt received. {
+  email: 'admin@local.test',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 285ms
+ GET /api/auth/csrf 200 in 73ms
+[AUTH] Credentials login attempt received. {
+  email: 'admin@local.test',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 99ms
+prisma:error 
+Invalid `prisma.user.upsert()` invocation:
+
+
+Unique constraint failed on the fields: (`id`)
+ GET /api/me 200 in 458ms
+ ✓ Compiled in 1564ms (1042 modules)
+ GET /login 200 in 405ms
+ GET /api/auth/csrf 200 in 373ms
+[AUTH] Credentials login attempt received. {
+  email: 'admin@local.test',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 254ms
+ ✓ Compiled in 846ms (1042 modules)
+ GET /login 200 in 187ms
+ GET /api/auth/csrf 200 in 300ms
+[AUTH] Credentials login attempt received. {
+  email: 'admin@local.test',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 347ms
+ GET /login 200 in 510ms
+ GET /api/auth/session 200 in 172ms
+ GET /api/me 200 in 178ms
+ GET /api/auth/providers 200 in 181ms
+ GET /api/auth/csrf 200 in 171ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+ POST /api/auth/callback/credentials 401 in 221ms
+   Reload env: .env.local
+ ✓ Compiled in 670ms (1187 modules)
+ GET /login 200 in 273ms
+ GET /api/auth/csrf 200 in 367ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 413ms
+ GET /api/auth/csrf 200 in 86ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 156ms
+ GET /api/me 200 in 110ms
+ GET /api/auth/providers 200 in 122ms
+ GET /api/auth/csrf 200 in 152ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 401 in 323ms
+ GET /login 200 in 511ms
+ GET /api/auth/session 200 in 147ms
+ GET /api/me 200 in 129ms
+ GET /api/auth/providers 200 in 123ms
+ GET /api/auth/csrf 200 in 136ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 401 in 123ms
+ GET /api/auth/csrf 200 in 132ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 200 in 655ms
+ GET /login 200 in 256ms
+ GET /api/auth/session 200 in 140ms
+ GET /api/me 200 in 101ms
+ GET /api/auth/providers 200 in 115ms
+ GET /api/auth/csrf 200 in 112ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 401 in 218ms
+ GET /login 200 in 365ms
+ GET /api/auth/session 200 in 167ms
+ GET /api/me 200 in 163ms
+ GET /api/auth/providers 200 in 111ms
+ GET /api/auth/csrf 200 in 124ms
+[AUTH] Credentials login attempt received. {
+  email: 'barry@safeviate.com',
+  seedEmailConfigured: true,
+  seedHashConfigured: false,
+  seedPasswordConfigured: true,
+  nextAuthUrl: ''
+}
+[AUTH] Plain seed password configured; comparing directly.
+ POST /api/auth/callback/credentials 401 in 250ms
