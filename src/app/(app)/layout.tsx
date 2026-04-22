@@ -67,10 +67,11 @@ export default function AppLayout({
     <AuthGuard>
         <SidebarProvider className="h-svh flex-col overflow-hidden overflow-x-hidden">
           <AppHeader />
+          <div className="h-[36px] shrink-0" aria-hidden="true" />
           <div className="flex flex-1 min-w-0 h-full overflow-hidden overflow-x-hidden">
               {isMobile ? <AppSidebarMobile /> : <AppSidebar />}
               <SidebarInset className="flex-1 min-h-0 overflow-hidden overflow-x-hidden flex flex-col p-3 md:pb-4 md:p-4 lg:p-6">
-              <div className="mx-auto flex w-full min-w-0 flex-1 max-w-none flex-col overflow-hidden overflow-x-hidden">
+              <div className="mx-auto flex w-full min-w-0 flex-1 min-h-0 max-w-none flex-col overflow-x-hidden">
                   {children}
               </div>
               </SidebarInset>

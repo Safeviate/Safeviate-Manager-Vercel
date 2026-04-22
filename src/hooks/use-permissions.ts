@@ -92,18 +92,23 @@ export const usePermissions = () => {
     [effectivePermissions, isLoading, userProfile]
   );
 
-  const canAccessMenuItem = useCallback(
+    const canAccessMenuItem = useCallback(
     (item: MenuItem | SubMenuItem, parentItem?: MenuItem) => {
       if (isLoading || !userProfile) return false;
 
       const tenant = payload?.tenant;
       const itemHref = item.href;
       const userRole = (userProfile as Personnel).role?.toLowerCase();
+      const isCompanyDashboard = itemHref === '/dashboard';
       if (userRole === 'dev' || userRole === 'developer') {
         return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
       }
 
       if (effectivePermissions.has('*')) {
+        return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
+      }
+
+      if (isCompanyDashboard) {
         return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
       }
 

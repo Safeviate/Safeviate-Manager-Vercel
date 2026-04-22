@@ -43,7 +43,6 @@ export const menuConfig: MenuItem[] = [
     href: '/dashboard',
     label: 'Company Dashboard',
     icon: GaugeCircle,
-    permissionId: 'dashboard-view',
   },
   {
     href: '/my-dashboard',

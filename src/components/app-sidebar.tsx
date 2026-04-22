@@ -135,7 +135,7 @@ const SidebarItems = () => {
     }, [pathname]);
   
     const filteredItems = useMemo(() => {
-      return menuConfig.filter((item) => canAccessMenuItem(item));
+      return menuConfig.filter((item) => item.href === '/dashboard' || canAccessMenuItem(item));
     }, [canAccessMenuItem]);
 
     useEffect(() => {
@@ -357,7 +357,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="top-0 h-svh">
-      <SidebarContent className="pt-[44px] sm:pt-[48px]">
+      <SidebarContent className="pt-[36px]">
         <SidebarItems />
       </SidebarContent>
       <SidebarFooter>

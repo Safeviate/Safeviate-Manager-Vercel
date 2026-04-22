@@ -85,7 +85,7 @@ export function AppHeader() {
   return (
     <header 
       style={{ '--header-opacity': headerOpacity } as React.CSSProperties}
-      className="app-topbar sticky top-0 z-20 flex h-[36px] min-w-0 items-center justify-between gap-2 border-b border-white/5 bg-header pr-3 text-header-foreground shadow-[inset_0_-1px_0_rgba(255,255,255,0.03)] sm:pr-4"
+      className="app-topbar fixed inset-x-0 top-0 z-50 flex h-[36px] min-w-0 items-center justify-between gap-2 border-b border-white/5 bg-header pr-3 text-header-foreground shadow-[inset_0_-1px_0_rgba(255,255,255,0.03)] sm:pr-4"
     >
       <div className="flex min-w-0 items-center h-full">
         <div className="flex h-full w-auto shrink-0 items-center gap-2 px-4 sm:w-[--sidebar-width] md:px-4">
