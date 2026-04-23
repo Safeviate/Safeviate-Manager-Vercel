@@ -46,6 +46,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 
 const USERS_STATIC_SUB_ITEMS: SubMenuItem[] = [
   { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
+  { href: '/users/attendance', label: 'Attendance', permissionId: 'users-view' },
 ];
 
 let lastSubmenuByParentMemory: Record<string, string> = {};

@@ -36,6 +36,9 @@ export function SignaturePad({ onSignatureEnd, initialDataUrl, resetSignal, widt
 
   const startDrawing = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (isReadOnly) return;
+    if ('touches' in event) {
+      event.preventDefault();
+    }
     const { x, y } = getPosition(event.nativeEvent);
     const context = canvasRef.current?.getContext('2d');
     if (context) {
@@ -48,6 +51,9 @@ export function SignaturePad({ onSignatureEnd, initialDataUrl, resetSignal, widt
 
   const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || isReadOnly) return;
+    if ('touches' in event) {
+      event.preventDefault();
+    }
     const { x, y } = getPosition(event.nativeEvent);
     const context = canvasRef.current?.getContext('2d');
     if (context) {
@@ -116,15 +122,31 @@ export function SignaturePad({ onSignatureEnd, initialDataUrl, resetSignal, widt
   }, [initCanvas]);
 
   useEffect(() => {
+    if (!isDrawing) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [isDrawing]);
+
+  useEffect(() => {
     if (typeof resetSignal !== 'number') return;
     clearSignature();
   }, [resetSignal]);
 
   return (
-    <div ref={containerRef} className={cn("relative overflow-hidden w-full", className)} style={{ height }}>
+    <div ref={containerRef} className={cn("relative w-full overflow-hidden touch-none overscroll-contain select-none", className)} style={{ height }}>
       <canvas
         ref={canvasRef}
-        className={cn("border rounded-md bg-white block w-full h-full", isReadOnly ? "cursor-not-allowed" : "cursor-crosshair")}
+        className={cn("border rounded-md bg-white block w-full h-full touch-none", isReadOnly ? "cursor-not-allowed" : "cursor-crosshair")}
+        style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={endDrawing}

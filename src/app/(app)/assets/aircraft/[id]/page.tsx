@@ -79,6 +79,24 @@ type AircraftDocumentUpload = {
   expirationDate: string | null;
 };
 
+type AircraftUsageBooking = {
+  aircraftId?: string;
+  date?: string;
+  preFlightData?: {
+    hobbs?: number;
+    fuelUpliftGallons?: number;
+    fuelUpliftLitres?: number;
+    oilUplift?: number;
+  };
+  postFlightData?: {
+    hobbs?: number;
+  };
+};
+
+type UsageSummaryPayload = {
+  bookings?: AircraftUsageBooking[];
+};
+
 const editAircraftSchema = z.object({
   make: z.string().min(1),
   model: z.string().min(1),
@@ -129,6 +147,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
   const [aircraft, setAircraft] = useState<Aircraft | null>(null);
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
   const [inspectionSettings, setInspectionSettings] = useState<AircraftInspectionWarningSettings | null>(null);
+  const [usageSummary, setUsageSummary] = useState<UsageSummaryPayload>({});
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -142,6 +161,10 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
         const configResponse = await fetch('/api/tenant-config', { cache: 'no-store' });
         const configPayload = await configResponse.json().catch(() => ({ config: null }));
         setInspectionSettings((configPayload?.config?.['inspection-warning-settings'] as AircraftInspectionWarningSettings | undefined) || null);
+
+        const summaryResponse = await fetch('/api/dashboard-summary', { cache: 'no-store' });
+        const summaryPayload = await summaryResponse.json().catch(() => ({ bookings: [] }));
+        setUsageSummary(summaryPayload as UsageSummaryPayload);
     } catch (e) {
         console.error("Failed to load aircraft details", e);
     } finally {
@@ -184,6 +207,17 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
 
   const timeTo50 = (aircraft.tachoAtNext50Inspection || 0) - (aircraft.currentTacho || 0);
   const timeTo100 = (aircraft.tachoAtNext100Inspection || 0) - (aircraft.currentTacho || 0);
+  const aircraftBookings = (usageSummary.bookings || []).filter((booking) => booking.aircraftId === aircraft.id);
+  const totalFlightHours = aircraftBookings.reduce((sum, booking) => {
+    const pre = booking.preFlightData?.hobbs;
+    const post = booking.postFlightData?.hobbs;
+    if (pre === undefined || post === undefined) return sum;
+    return sum + Math.max(0, post - pre);
+  }, 0);
+  const totalFuelLitres = aircraftBookings.reduce((sum, booking) => sum + (booking.preFlightData?.fuelUpliftLitres || 0), 0);
+  const totalFuelGallons = aircraftBookings.reduce((sum, booking) => sum + (booking.preFlightData?.fuelUpliftGallons || 0), 0);
+  const totalOilUplift = aircraftBookings.reduce((sum, booking) => sum + (booking.preFlightData?.oilUplift || 0), 0);
+  const utilisationCount = aircraftBookings.length;
 
   return (
     <div className={cn("max-w-[1100px] mx-auto w-full flex flex-col pt-4 px-1", isMobile ? "min-h-0 overflow-y-auto" : "h-full overflow-hidden")}>
@@ -275,6 +309,21 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                       </CardContent>
                     </Card>
                   </div>
+
+                  <Card className="shadow-none border overflow-hidden">
+                    <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Gauge className="h-3.5 w-3.5" />
+                        Utilisation Summary
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <DetailItem label="Flight Time" value={`${totalFlightHours.toFixed(1)}h`} />
+                      <DetailItem label="Fuel Used" value={`${totalFuelLitres.toFixed(1)}L / ${totalFuelGallons.toFixed(1)} gal`} />
+                      <DetailItem label="Oil Used" value={`${totalOilUplift.toFixed(1)}`} />
+                      <DetailItem label="Bookings Count" value={utilisationCount} />
+                    </CardContent>
+                  </Card>
 
                   <Card className="shadow-none border overflow-hidden">
                     <CardHeader className="border-b bg-muted/20 px-4 py-3">

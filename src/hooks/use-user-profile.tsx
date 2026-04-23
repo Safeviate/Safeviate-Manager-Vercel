@@ -14,6 +14,11 @@ type DbUserProfile = {
     firstName: string;
     lastName: string;
     role: string;
+    permissions?: string[];
+    accessOverrides?: {
+        hiddenMenus?: string[];
+        hiddenTabs?: string[];
+    };
 };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
 
@@ -125,12 +130,16 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             lastName: dbProfile.lastName,
             email: dbProfile.email,
             role: dbProfile.role,
+            permissions: dbProfile.permissions,
+            accessOverrides: dbProfile.accessOverrides,
         } as UserProfile) : (authUser ? ({
             id: authUser.id ?? authUser.email ?? 'vercel-user',
             firstName: authUser.name?.split(' ')[0] ?? 'User',
             lastName: authUser.name?.split(' ').slice(1).join(' ') || '',
             email: authUser.email ?? '',
             role: 'developer',
+            permissions: ['*'],
+            accessOverrides: {},
         } as UserProfile) : null),
         tenantId: tenantId || MASTER_TENANT_ID,
         isLoading,

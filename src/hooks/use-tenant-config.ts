@@ -48,6 +48,23 @@ const mergeTenantConfig = (
   };
 };
 
+const stripIndustryFromConfig = (config: Record<string, unknown> | null) => {
+  if (!config) return null;
+  const { industry: _industry, ...rest } = config;
+  return rest;
+};
+
+const normalizeIndustry = (value: unknown): IndustryType | null => {
+  return value === 'Aviation: Flight Training (ATO)' ||
+    value === 'Aviation: Charter / Ops (AOC)' ||
+    value === 'Aviation: Maintenance (AMO)' ||
+    value === 'General: Occupational Health & Safety (OHS)'
+    ? value
+    : null;
+};
+
+const DEFAULT_SAFEVIATE_INDUSTRY: IndustryType = 'Aviation: Flight Training (ATO)';
+
 /**
  * A custom hook to fetch the configuration for the current tenant.
  * Supports a developer override for testing industry-specific layouts.
@@ -72,11 +89,11 @@ export const useTenantConfig = () => {
     const syncOverride = () => {
         try {
         const stored = window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY);
-        setIndustryOverride(stored as IndustryType | null);
+        setIndustryOverride(normalizeIndustry(stored));
         const tenantConfigStored = window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
         setLocalOverride(tenantConfigStored ? safeJsonParse<Record<string, unknown>>(tenantConfigStored) : null);
       } catch {
-        setIndustryOverride(null);
+        setIndustryOverride(DEFAULT_SAFEVIATE_INDUSTRY);
         setLocalOverride(null);
       }
     };
@@ -126,12 +143,13 @@ export const useTenantConfig = () => {
             : null,
           localOverride
         );
+        const tenantConfigWithoutIndustry = stripIndustryFromConfig(mergedConfig);
 
         if (!cancelled) {
           if (tenantFromApi) {
             setTenantData({
               ...tenantFromApi,
-              ...(mergedConfig || {}),
+              ...(tenantConfigWithoutIndustry || {}),
             });
           } else if (localOverride) {
             setTenantData(buildLocalTenant(localOverride));
@@ -163,8 +181,9 @@ export const useTenantConfig = () => {
                 : null,
               localOverride
             );
-            if (nextConfig && Object.keys(nextConfig).length > 0) {
-              setTenantData((current) => (current ? { ...current, ...nextConfig } : buildLocalTenant(nextConfig)));
+            const nextConfigWithoutIndustry = stripIndustryFromConfig(nextConfig);
+            if (nextConfigWithoutIndustry && Object.keys(nextConfigWithoutIndustry).length > 0) {
+              setTenantData((current) => (current ? { ...current, ...nextConfigWithoutIndustry } : buildLocalTenant(nextConfigWithoutIndustry)));
             }
           }
         } catch {
@@ -184,8 +203,15 @@ export const useTenantConfig = () => {
 
   const modifiedTenant = useMemo(() => {
     if (!tenantData) return null;
-    if (isDeveloper && industryOverride) {
-      return { ...tenantData, industry: industryOverride };
+    if (isDeveloper) {
+      const nextIndustry =
+        tenantData.id === FALLBACK_TENANT_ID
+          ? industryOverride && industryOverride !== 'General: Occupational Health & Safety (OHS)'
+            ? industryOverride
+            : DEFAULT_SAFEVIATE_INDUSTRY
+          : industryOverride || tenantData.industry || DEFAULT_SAFEVIATE_INDUSTRY;
+
+      return { ...tenantData, industry: nextIndustry };
     }
     return tenantData;
   }, [tenantData, isDeveloper, industryOverride]);

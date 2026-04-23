@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useDebounce } from '@/hooks/use-debounce';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { StudentMilestoneSettings } from '@/types/training';
+import type { InstructorHourWarning, InstructorHourWarningSettings, StudentMilestoneSettings } from '@/types/training';
 import type { AircraftInspectionWarningSettings, HourWarning } from '@/types/inspection';
 
 export type WarningPeriod = {
@@ -39,6 +39,13 @@ const defaultMilestones = [
     { milestone: 40, warningHours: 37 },
 ];
 
+const defaultInstructorWarnings = [
+  { hours: 20, warningHours: 10, color: '#60a5fa', foregroundColor: '#ffffff' },
+  { hours: 40, warningHours: 30, color: '#facc15', foregroundColor: '#000000' },
+  { hours: 60, warningHours: 50, color: '#f97316', foregroundColor: '#ffffff' },
+  { hours: 80, warningHours: 70, color: '#ef4444', foregroundColor: '#ffffff' },
+];
+
 const defaultFiftyHourWarnings: HourWarning[] = [
     { hours: 20, color: '#60a5fa', foregroundColor: '#ffffff' },
     { hours: 10, color: '#facc15', foregroundColor: '#000000' },
@@ -53,12 +60,16 @@ const defaultHundredHourWarnings: HourWarning[] = [
     { hours: 5, color: '#ef4444', foregroundColor: '#ffffff' },
 ];
 
+const defaultFleetTargetHours = 20;
+
 export default function DocumentDatesPage() {
   const { toast } = useToast();
   
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
   const [milestoneSettings, setMilestoneSettings] = useState<StudentMilestoneSettings | null>(null);
+  const [instructorWarningSettings, setInstructorWarningSettings] = useState<InstructorHourWarningSettings | null>(null);
   const [inspectionSettings, setInspectionSettings] = useState<AircraftInspectionWarningSettings | null>(null);
+  const [fleetTargetHours, setFleetTargetHours] = useState(String(defaultFleetTargetHours));
   const [isLoading, setIsLoading] = useState(true);
 
   const [newPeriod, setNewPeriod] = useState('');
@@ -68,6 +79,7 @@ export default function DocumentDatesPage() {
   const [periodColors, setPeriodColors] = useState<Record<number, string>>({});
   
   const [milestoneState, setMilestoneState] = useState(defaultMilestones);
+  const [instructorWarningState, setInstructorWarningState] = useState<InstructorHourWarning[]>(defaultInstructorWarnings);
   const [fiftyHourWarnings, setFiftyHourWarnings] = useState<HourWarning[]>([]);
   const [hundredHourWarnings, setHundredHourWarnings] = useState<HourWarning[]>([]);
   
@@ -77,6 +89,10 @@ export default function DocumentDatesPage() {
   const [newHundredHour, setNewHundredHour] = useState('');
   const [newHundredHourColor, setNewHundredHourColor] = useState('#f97316');
   const [newHundredHourFgColor, setNewHundredHourFgColor] = useState('#ffffff');
+  const [newInstructorHour, setNewInstructorHour] = useState('');
+  const [newInstructorWarningHour, setNewInstructorWarningHour] = useState('');
+  const [newInstructorColor, setNewInstructorColor] = useState('#60a5fa');
+  const [newInstructorFgColor, setNewInstructorFgColor] = useState('#ffffff');
 
   const persistTenantConfig = useCallback(async (config: Record<string, unknown>) => {
     const response = await fetch('/api/tenant-config', {
@@ -108,7 +124,9 @@ export default function DocumentDatesPage() {
 
         const exp = readSection<DocumentExpirySettings>('document-expiry-settings', { id: 'document-expiry', defaultColor: defaultSafeColor, expiredColor: defaultExpiredColor, warningPeriods: [] });
         const mile = readSection<StudentMilestoneSettings>('student-milestone-settings', { id: 'student-milestones', milestones: defaultMilestones });
+        const inst = readSection<InstructorHourWarningSettings>('instructor-hour-warnings', { id: 'instructor-hour-warnings', warnings: defaultInstructorWarnings });
         const insp = readSection<AircraftInspectionWarningSettings>('inspection-warning-settings', { id: 'inspection-warnings', fiftyHourWarnings: defaultFiftyHourWarnings, oneHundredHourWarnings: defaultHundredHourWarnings });
+        const fleetTarget = readSection<number>('fleet-target-hours', defaultFleetTargetHours);
 
         setExpirySettings(exp);
         setDefaultColorState(exp.defaultColor || defaultSafeColor);
@@ -121,9 +139,20 @@ export default function DocumentDatesPage() {
         setMilestoneSettings(mile);
         setMilestoneState(mile.milestones || defaultMilestones);
 
+        const normalizedInstructorWarnings = (inst.warnings || defaultInstructorWarnings).map((warning) => ({
+          hours: warning.hours,
+          warningHours: warning.warningHours,
+          color: warning.color || '#60a5fa',
+          foregroundColor: warning.foregroundColor || '#ffffff',
+        }));
+        const normalizedInstructorSettings: InstructorHourWarningSettings = { ...inst, warnings: normalizedInstructorWarnings };
+        setInstructorWarningSettings(normalizedInstructorSettings);
+        setInstructorWarningState(normalizedInstructorWarnings);
+
         setInspectionSettings(insp);
         setFiftyHourWarnings(insp.fiftyHourWarnings || []);
         setHundredHourWarnings(insp.oneHundredHourWarnings || []);
+        setFleetTargetHours(String(fleetTarget || defaultFleetTargetHours));
     } catch (e) {
         console.error("Failed to load settings", e);
     } finally {
@@ -135,10 +164,12 @@ export default function DocumentDatesPage() {
     void loadData();
     window.addEventListener('safeviate-document-expiry-settings-updated', loadData);
     window.addEventListener('safeviate-student-milestone-settings-updated', loadData);
+    window.addEventListener('safeviate-instructor-hour-warnings-updated', loadData);
     window.addEventListener('safeviate-inspection-warning-settings-updated', loadData);
     return () => {
         window.removeEventListener('safeviate-document-expiry-settings-updated', loadData);
         window.removeEventListener('safeviate-student-milestone-settings-updated', loadData);
+        window.removeEventListener('safeviate-instructor-hour-warnings-updated', loadData);
         window.removeEventListener('safeviate-inspection-warning-settings-updated', loadData);
     };
   }, [loadData]);
@@ -147,6 +178,8 @@ export default function DocumentDatesPage() {
   const debouncedExpiredColor = useDebounce(expiredColorState, 500);
   const debouncedPeriodColors = useDebounce(periodColors, 500);
   const debouncedMilestoneState = useDebounce(milestoneState, 500);
+  const debouncedInstructorWarningState = useDebounce(instructorWarningState, 500);
+  const debouncedFleetTargetHours = useDebounce(fleetTargetHours, 500);
 
   useEffect(() => {
      if (isLoading || !expirySettings) return;
@@ -173,7 +206,7 @@ export default function DocumentDatesPage() {
  }, [debouncedExpiredColor, isLoading, expirySettings]);
 
  useEffect(() => {
-    if (isLoading || !expirySettings || Object.keys(debouncedPeriodColors).length === 0) return;
+     if (isLoading || !expirySettings || Object.keys(debouncedPeriodColors).length === 0) return;
     const newPeriods = (expirySettings.warningPeriods || []).map((p) => ({ ...p, color: debouncedPeriodColors[p.period] || p.color }));
     if (JSON.stringify(expirySettings.warningPeriods) !== JSON.stringify(newPeriods)) {
         fetch('/api/tenant-config', {
@@ -191,11 +224,42 @@ export default function DocumentDatesPage() {
         fetch('/api/tenant-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': { ...milestoneSettings, milestones: debouncedMilestoneState }, 'inspection-warning-settings': inspectionSettings } }),
+          body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': { ...milestoneSettings, milestones: debouncedMilestoneState }, 'instructor-hour-warnings': instructorWarningSettings, 'inspection-warning-settings': inspectionSettings } }),
         }).catch(() => {});
         window.dispatchEvent(new Event('safeviate-student-milestone-settings-updated'));
     }
  }, [debouncedMilestoneState, isLoading, milestoneSettings]);
+
+ useEffect(() => {
+    if (isLoading || !instructorWarningSettings) return;
+    if (JSON.stringify(instructorWarningSettings.warnings) !== JSON.stringify(debouncedInstructorWarningState)) {
+        fetch('/api/tenant-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': { ...instructorWarningSettings, warnings: debouncedInstructorWarningState }, 'inspection-warning-settings': inspectionSettings } }),
+        }).catch(() => {});
+        window.dispatchEvent(new Event('safeviate-instructor-hour-warnings-updated'));
+    }
+ }, [debouncedInstructorWarningState, isLoading, instructorWarningSettings]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const parsed = parseInt(debouncedFleetTargetHours, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) return;
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        config: {
+          'document-expiry-settings': expirySettings,
+          'student-milestone-settings': milestoneSettings,
+          'instructor-hour-warnings': instructorWarningSettings,
+          'inspection-warning-settings': inspectionSettings,
+          'fleet-target-hours': parsed,
+        },
+      }),
+    }).catch(() => {});
+  }, [debouncedFleetTargetHours, isLoading]);
 
   const handleAddPeriod = async () => {
     const period = parseInt(newPeriod, 10);
@@ -218,6 +282,7 @@ export default function DocumentDatesPage() {
       await persistTenantConfig({
         'document-expiry-settings': updatedExpirySettings,
         'student-milestone-settings': milestoneSettings,
+        'instructor-hour-warnings': instructorWarningSettings,
         'inspection-warning-settings': inspectionSettings,
       });
       setExpirySettings(updatedExpirySettings);
@@ -242,6 +307,7 @@ export default function DocumentDatesPage() {
       await persistTenantConfig({
         'document-expiry-settings': updatedExpirySettings,
         'student-milestone-settings': milestoneSettings,
+        'instructor-hour-warnings': instructorWarningSettings,
         'inspection-warning-settings': inspectionSettings,
       });
       setExpirySettings(updatedExpirySettings);
@@ -263,6 +329,80 @@ export default function DocumentDatesPage() {
         setMilestoneState(prev => prev.map(m => m.milestone === milestoneValue ? { ...m, warningHours: hours } : m));
     }
   }
+
+  const handleInstructorWarningChange = (hours: number, warningHours: string) => {
+    const parsed = parseInt(warningHours, 10);
+    if (!isNaN(parsed)) {
+      setInstructorWarningState((prev) =>
+        prev.map((warning) => (warning.hours === hours ? { ...warning, warningHours: parsed } : warning))
+      );
+    }
+  };
+
+  const handleAddInstructorWarning = () => {
+    const maxHours = parseInt(newInstructorHour || '0', 10);
+    const warningHours = parseInt(newInstructorWarningHour || '0', 10);
+    if (isNaN(maxHours) || maxHours <= 0 || isNaN(warningHours) || warningHours < 0 || warningHours >= maxHours) {
+      toast({ variant: 'destructive', title: 'Invalid Number', description: 'Please enter valid instructor hour values.' });
+      return;
+    }
+    if (!instructorWarningSettings) {
+      toast({ variant: 'destructive', title: 'Save Failed', description: 'Instructor warning settings are not loaded yet.' });
+      return;
+    }
+    if (instructorWarningSettings.warnings.some((w) => w.hours === maxHours)) {
+      toast({ variant: 'destructive', title: 'Duplicate Threshold', description: `A threshold at ${maxHours} hours already exists.` });
+      return;
+    }
+    const next = [...instructorWarningSettings.warnings, { hours: maxHours, warningHours, color: newInstructorColor, foregroundColor: newInstructorFgColor }].sort((a, b) => a.hours - b.hours);
+    const updatedInstructorSettings: InstructorHourWarningSettings = { ...instructorWarningSettings, warnings: next };
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': updatedInstructorSettings, 'inspection-warning-settings': inspectionSettings } }),
+    }).catch(() => {});
+    setInstructorWarningSettings(updatedInstructorSettings);
+    setInstructorWarningState(next);
+    window.dispatchEvent(new Event('safeviate-instructor-hour-warnings-updated'));
+    toast({ title: 'Instructor Hour Threshold Added', description: `Threshold at ${maxHours} hours has been added.` });
+    setNewInstructorHour('');
+    setNewInstructorWarningHour('');
+    setNewInstructorColor('#60a5fa');
+    setNewInstructorFgColor('#ffffff');
+  };
+
+  const handleRemoveInstructorWarning = (hours: number) => {
+    if (!instructorWarningSettings) {
+      return;
+    }
+    const next = instructorWarningSettings.warnings.filter((warning) => warning.hours !== hours);
+    const updatedInstructorSettings: InstructorHourWarningSettings = { ...instructorWarningSettings, warnings: next };
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': updatedInstructorSettings, 'inspection-warning-settings': inspectionSettings } }),
+    }).catch(() => {});
+    setInstructorWarningSettings(updatedInstructorSettings);
+    setInstructorWarningState(next);
+    window.dispatchEvent(new Event('safeviate-instructor-hour-warnings-updated'));
+    toast({ title: 'Instructor Hour Threshold Removed' });
+  };
+
+  const updateInstructorWarningColor = (hours: number, field: 'color' | 'foregroundColor', value: string) => {
+    if (!instructorWarningSettings) {
+      return;
+    }
+    const next = instructorWarningSettings.warnings.map((warning) => (warning.hours === hours ? { ...warning, [field]: value } : warning));
+    const updatedInstructorSettings: InstructorHourWarningSettings = { ...instructorWarningSettings, warnings: next };
+    fetch('/api/tenant-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': updatedInstructorSettings, 'inspection-warning-settings': inspectionSettings } }),
+    }).catch(() => {});
+    setInstructorWarningSettings(updatedInstructorSettings);
+    setInstructorWarningState(next);
+    window.dispatchEvent(new Event('safeviate-instructor-hour-warnings-updated'));
+  };
 
   const handleAddInspectionWarning = (type: '50hr' | '100hr') => {
     const is50hr = type === '50hr';
@@ -287,7 +427,7 @@ export default function DocumentDatesPage() {
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: updatedWarnings } } }),
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': instructorWarningSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: updatedWarnings } } }),
     }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-inspection-warning-settings-updated'));
 
@@ -310,7 +450,7 @@ export default function DocumentDatesPage() {
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: newWarnings } } }),
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': instructorWarningSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: newWarnings } } }),
     }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-inspection-warning-settings-updated'));
     toast({ title: 'Inspection Warning Removed' });
@@ -322,7 +462,7 @@ export default function DocumentDatesPage() {
     fetch('/api/tenant-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: updated } } }),
+      body: JSON.stringify({ config: { 'document-expiry-settings': expirySettings, 'student-milestone-settings': milestoneSettings, 'instructor-hour-warnings': instructorWarningSettings, 'inspection-warning-settings': { ...inspectionSettings, [fieldKey]: updated } } }),
     }).catch(() => {});
     window.dispatchEvent(new Event('safeviate-inspection-warning-settings-updated'));
   };
@@ -445,6 +585,101 @@ export default function DocumentDatesPage() {
                     <p className="text-[9px] font-black uppercase leading-relaxed text-primary italic">
                       Warning hours determine when the milestone progress bar changes color in the student profile view to indicate a target is approaching.
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* --- Section 1b: Instructor Hour Warnings --- */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Instructor Hour Warnings</h2>
+                </div>
+
+                <div className="space-y-3 p-5 border rounded-2xl bg-muted/5 shadow-inner">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-foreground/75">
+                    Set warning bands for instructor hours so admin and dashboard views can flag approaching load before it becomes pressure.
+                  </p>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto] gap-2">
+                    <Input
+                      type="number"
+                      value={newInstructorHour}
+                      onChange={(e) => setNewInstructorHour(e.target.value)}
+                      placeholder="Instructor hours..."
+                      className="h-10 font-bold"
+                    />
+                    <Input
+                      type="number"
+                      value={newInstructorWarningHour}
+                      onChange={(e) => setNewInstructorWarningHour(e.target.value)}
+                      placeholder="Warn at hours..."
+                      className="h-10 font-bold"
+                    />
+                    <div className="flex gap-1 bg-background border rounded-md p-1 px-2">
+                      <Label className="text-[8px] uppercase font-black pt-2 pr-1 text-foreground/75">BG</Label>
+                      <Input type="color" value={newInstructorColor} onChange={(e) => setNewInstructorColor(e.target.value)} className="p-0 h-8 w-8 border-none" />
+                      <Separator orientation="vertical" className="h-4 mt-2 mx-1" />
+                      <Label className="text-[8px] uppercase font-black pt-2 pr-1 text-foreground/75">FG</Label>
+                      <Input type="color" value={newInstructorFgColor} onChange={(e) => setNewInstructorFgColor(e.target.value)} className="p-0 h-8 w-8 border-none" />
+                    </div>
+                    <Button onClick={handleAddInstructorWarning} className="h-10 px-6 font-black uppercase text-[10px]">Add</Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 mt-4">
+                    {(instructorWarningState || []).length > 0 ? instructorWarningState.map(({ hours, warningHours, color, foregroundColor }) => (
+                      <div key={hours} className="flex items-center justify-between p-3 rounded-xl bg-background border shadow-sm group hover:border-primary/20 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <Badge style={{ backgroundColor: color, color: foregroundColor }} className="border-none font-black text-[10px] px-4 py-1.5 uppercase">
+                            {hours} HOUR THRESHOLD
+                          </Badge>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-foreground/75">
+                            Warn at {warningHours} hours
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-1.5 p-1 bg-muted/20 rounded-md border">
+                            <Input type="color" value={color || '#60a5fa'} onChange={(e) => updateInstructorWarningColor(hours, 'color', e.target.value)} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
+                            <Input type="color" value={foregroundColor || '#ffffff'} onChange={(e) => updateInstructorWarningColor(hours, 'foregroundColor', e.target.value)} className="p-0 h-5 w-5 rounded-full border-none shadow-none" />
+                          </div>
+                          <Button size="icon" variant="ghost" aria-label={`Remove instructor warning at ${hours} hours`} className="h-8 w-8 text-destructive" onClick={() => handleRemoveInstructorWarning(hours)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] uppercase font-black tracking-widest bg-background/50 text-foreground/75">
+                        No instructor hour warnings defined
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* --- Section 1c: Fleet Target Hours --- */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-primary" />
+                  <h2 className="font-black text-[10px] uppercase tracking-widest text-primary">Fleet Target Hours</h2>
+                </div>
+
+                <div className="space-y-3 p-5 border rounded-2xl bg-muted/5 shadow-inner">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-foreground/75">
+                    Set the target hours used by the ATO fleet utilisation summary.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <Label className="text-[9px] font-black uppercase text-foreground/75">Target hours</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={fleetTargetHours}
+                      onChange={(e) => setFleetTargetHours(e.target.value)}
+                      className="w-28 h-8 text-xs font-black text-center px-1"
+                    />
                   </div>
                 </div>
               </div>

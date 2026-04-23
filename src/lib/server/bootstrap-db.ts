@@ -15,6 +15,7 @@ type TableName =
   | 'external_organizations'
   | 'training_routes'
   | 'bookings'
+  | 'attendance_records'
   | 'aircrafts'
   | 'active_flight_sessions'
   | 'active_flight_session_blocks'
@@ -294,6 +295,24 @@ export async function ensureBookingsSchema() {
     )
   `);
   tableCache.set('bookings', true);
+}
+
+export async function ensureAttendanceRecordsSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('attendance_records')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS attendance_records (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('attendance_records', true);
 }
 
 export async function ensureFlightSessionsSchema() {

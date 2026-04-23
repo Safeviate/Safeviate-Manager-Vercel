@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import {
+  ensureAttendanceRecordsSchema,
   ensureAircraftSchema,
   ensureBookingsSchema,
   ensureCorrectiveActionPlansSchema,
@@ -29,6 +30,14 @@ const EMPTY_SUMMARY = {
   reports: [],
   caps: [],
   risks: [],
+  attendanceRecords: [],
+  clockedInCount: 0,
+  openAttendanceSessions: 0,
+  totalDutyMinutes: 0,
+  totalDutyHours: 0,
+  studentProgressReports: [],
+  studentMilestones: null,
+  instructorDuty: [],
 };
 
 async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
@@ -37,6 +46,19 @@ async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> 
   } catch (error) {
     console.error(`[dashboard-summary] fallback for ${label}:`, error);
     return [];
+  }
+}
+
+async function readTenantConfig(tenantId: string) {
+  try {
+    const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+      `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
+      tenantId
+    );
+    return (rows[0]?.data as Record<string, unknown> | null) || {};
+  } catch (error) {
+    console.error('[dashboard-summary] fallback for tenant config:', error);
+    return {};
   }
 }
 
@@ -64,8 +86,10 @@ export async function GET() {
       select: { tenantId: true },
     });
     const tenantId = currentUser?.tenantId || 'safeviate';
+    const tenantConfig = await readTenantConfig(tenantId);
 
     await Promise.all([
+      ensureAttendanceRecordsSchema(),
       ensureAircraftSchema(),
       ensureBookingsSchema(),
       ensureManagementOfChangeSchema(),
@@ -84,6 +108,7 @@ export async function GET() {
       reportRows,
       capRows,
       riskRows,
+      attendanceRows,
     ] = await Promise.all([
       safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId }, select: { data: true } })),
       safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId }, select: { data: true } })),
@@ -93,12 +118,60 @@ export async function GET() {
       safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId }, select: { data: true } })),
       safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId }, select: { data: true } })),
       safeFindMany('risks', prisma.risk.findMany({ where: { tenantId }, select: { data: true } })),
+      safeFindMany(
+        'attendance_records',
+        prisma.$queryRawUnsafe<{ data: unknown }[]>(
+          `SELECT data FROM attendance_records WHERE tenant_id = $1 ORDER BY created_at DESC`,
+          tenantId
+        )
+      ),
     ]);
 
-    const personnelList = [];
-    const instructorList = [];
-    const studentList = [];
-    const privatePilotList = [];
+    const personnelList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null }> = [];
+    const instructorList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null }> = [];
+    const studentList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null }> = [];
+    const privatePilotList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null }> = [];
+    const studentTrainingReports = Array.isArray(tenantConfig['student-progress-reports'])
+      ? (tenantConfig['student-progress-reports'] as unknown[])
+      : [];
+    const studentMilestones = tenantConfig['student-milestones'] ?? null;
+    const attendanceRecords = attendanceRows.map((row) => row.data as {
+      id: string;
+      status?: 'clocked_in' | 'clocked_out';
+      clockIn?: string;
+      clockOut?: string | null;
+    });
+    const clockedInCount = attendanceRecords.filter((record) => record.status === 'clocked_in' && !record.clockOut).length;
+    const openAttendanceSessions = clockedInCount;
+    const totalDutyMinutes = attendanceRecords.reduce((sum, record) => {
+      if (!record.clockIn) return sum;
+      const start = new Date(record.clockIn).getTime();
+      const end = record.clockOut ? new Date(record.clockOut).getTime() : Date.now();
+      if (Number.isNaN(start) || Number.isNaN(end) || end < start) return sum;
+      return sum + Math.max(0, Math.round((end - start) / 60000));
+    }, 0);
+    const totalDutyHours = parseFloat((totalDutyMinutes / 60).toFixed(1));
+    const instructorDuty = instructorList.map((instructor) => {
+      const instructorBookings = bookingRows
+        .map((row) => row.data as { instructorId?: string | null; preFlightData?: { hobbs?: number }; postFlightData?: { hobbs?: number } })
+        .filter((booking) => booking.instructorId === instructor.id);
+      const bookingCount = instructorBookings.length;
+      const instructionHours = instructorBookings.reduce((sum, booking) => {
+        if (booking.postFlightData?.hobbs === undefined || booking.preFlightData?.hobbs === undefined) return sum;
+        return sum + Math.max(0, booking.postFlightData.hobbs - booking.preFlightData.hobbs);
+      }, 0);
+      const dutyPressure = bookingCount + instructionHours;
+      const status = dutyPressure >= 12 ? 'busy' : dutyPressure >= 6 ? 'pressure' : 'ok';
+
+      return {
+        id: instructor.id,
+        name: `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.id,
+        bookingCount,
+        instructionHours: parseFloat(instructionHours.toFixed(1)),
+        dutyPressure: parseFloat(dutyPressure.toFixed(1)),
+        status,
+      };
+    });
 
     for (const row of personnelRows) {
       const type = row.userType || 'Personnel';
@@ -131,6 +204,14 @@ export async function GET() {
         reports: reportRows.map((row) => row.data),
         caps: capRows.map((row) => row.data),
         risks: riskRows.map((row) => row.data),
+        attendanceRecords,
+        clockedInCount,
+        openAttendanceSessions,
+        totalDutyMinutes,
+        totalDutyHours,
+        studentProgressReports: studentTrainingReports,
+        studentMilestones,
+        instructorDuty,
       },
       { status: 200 }
     );

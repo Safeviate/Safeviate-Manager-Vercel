@@ -31,6 +31,18 @@ export interface StudentMilestoneSettings {
     milestones: MilestoneWarning[];
 }
 
+export interface InstructorHourWarning {
+    hours: number;
+    warningHours: number;
+    color?: string;
+    foregroundColor?: string;
+}
+
+export interface InstructorHourWarningSettings {
+    id: string;
+    warnings: InstructorHourWarning[];
+}
+
 export interface ExamOption {
     id: string;
     text: string;

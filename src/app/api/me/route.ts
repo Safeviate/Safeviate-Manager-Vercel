@@ -3,6 +3,7 @@ import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { resolveTenantOverride, isMasterTenantEmail, MASTER_TENANT_ID } from '@/lib/server/tenant-access';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 
 const buildSuperUserProfile = (
   sessionUser: { id?: string | null; email?: string | null; name?: string | null },
@@ -15,7 +16,19 @@ const buildSuperUserProfile = (
   lastName: sessionUser.name?.split(' ').slice(1).join(' ') || '',
   role: 'developer',
   permissions: ['*'],
+  accessOverrides: {},
 });
+
+const buildFallbackUserIdCandidates = (email: string, authUserId?: string | null) => {
+  const normalizedEmailSlug = email.replace(/[^a-z0-9]+/g, '_');
+  const candidates = [
+    authUserId?.trim(),
+    `user_${normalizedEmailSlug}`,
+    `user_${normalizedEmailSlug}_${randomUUID().slice(0, 8)}`,
+  ].filter((value): value is string => Boolean(value));
+
+  return [...new Set(candidates)];
+};
 
 export async function GET(request: Request) {
   try {
@@ -56,24 +69,39 @@ export async function GET(request: Request) {
     let profile = email ? await prisma.user.findUnique({ where: { email } }) : null;
 
     if (!profile && email) {
-      profile = await prisma.user.upsert({
-        where: { email },
-        update: {
-          tenantId: 'safeviate',
-          firstName: session?.user?.name?.split(' ')[0] ?? 'User',
-          lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
-          role: 'developer',
-          updatedAt: new Date(),
-        },
-        create: {
-          id: authUserId || `user_${email.replace(/[^a-z0-9]+/g, '_')}`,
-          tenantId: 'safeviate',
-          email,
-          firstName: session?.user?.name?.split(' ')[0] ?? 'User',
-          lastName: session?.user?.name?.split(' ').slice(1).join(' ') || '',
-          role: 'developer',
-        },
-      });
+      const firstName = session?.user?.name?.split(' ')[0] ?? 'User';
+      const lastName = session?.user?.name?.split(' ').slice(1).join(' ') || '';
+
+      for (const candidateId of buildFallbackUserIdCandidates(email, authUserId)) {
+        const existingById = await prisma.user.findUnique({
+          where: { id: candidateId },
+          select: { email: true },
+        });
+
+        if (existingById && existingById.email !== email) {
+          continue;
+        }
+
+        profile = await prisma.user.upsert({
+          where: { email },
+          update: {
+            tenantId: 'safeviate',
+            firstName,
+            lastName,
+            role: 'developer',
+            updatedAt: new Date(),
+          },
+          create: {
+            id: candidateId,
+            tenantId: 'safeviate',
+            email,
+            firstName,
+            lastName,
+            role: 'developer',
+          },
+        });
+        break;
+      }
     }
 
     if (!profile) {
@@ -86,6 +114,16 @@ export async function GET(request: Request) {
 
     const selectedTenantId = await resolveTenantOverride(request, email, profile.tenantId);
     const tenant = await prisma.tenant.findUnique({ where: { id: selectedTenantId } }).catch(() => null);
+    const personnelProfile = await prisma.personnel.findFirst({
+      where: {
+        tenantId: selectedTenantId,
+        email,
+      },
+      select: {
+        permissions: true,
+        accessOverrides: true,
+      },
+    }).catch(() => null);
     const role = await prisma.role.findFirst({
       where: {
         tenantId: selectedTenantId,
@@ -98,7 +136,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       {
-        profile,
+        profile: {
+          ...profile,
+          permissions: Array.isArray(personnelProfile?.permissions) ? (personnelProfile.permissions as string[]) : [],
+          accessOverrides: personnelProfile?.accessOverrides ?? {},
+        },
         tenant: tenant ?? null,
         rolePermissions: (role?.permissions as string[] | null) ?? [],
       },
