@@ -2,6 +2,7 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import { isMasterTenantEmail } from '@/lib/server/tenant-access';
 
 async function getTenantId() {
   const session = await getServerSession(authOptions);
@@ -22,13 +23,32 @@ export async function GET() {
     if (!tenantId) {
       return NextResponse.json({ roles: [] }, { status: 200 });
     }
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email?.trim().toLowerCase();
 
     const roles = await prisma.role.findMany({
       where: { tenantId },
       orderBy: { name: 'asc' },
     });
 
-    return NextResponse.json({ roles }, { status: 200 });
+    const rolesWithOverrides = roles.map((role) => ({
+      ...role,
+      accessOverrides: Array.isArray(((role as unknown as { accessOverrides?: { hiddenMenus?: unknown } | null }).accessOverrides)?.hiddenMenus)
+        ? {
+            hiddenMenus: ((role as unknown as { accessOverrides?: { hiddenMenus?: string[] } | null }).accessOverrides?.hiddenMenus || []),
+          }
+        : { hiddenMenus: [] as string[] },
+    }));
+
+    if (rolesWithOverrides.length === 0 && isMasterTenantEmail(email) && tenantId !== 'safeviate') {
+      const fallbackRoles = await prisma.role.findMany({
+        where: { tenantId: 'safeviate' },
+        orderBy: { name: 'asc' },
+      });
+      return NextResponse.json({ roles: fallbackRoles.map((role) => ({ ...role, accessOverrides: { hiddenMenus: [] } })) }, { status: 200 });
+    }
+
+    return NextResponse.json({ roles: rolesWithOverrides }, { status: 200 });
   } catch (error) {
     console.error('[roles] fallback to empty list:', error);
     return NextResponse.json({ roles: [] }, { status: 200 });
@@ -72,5 +92,16 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ role }, { status: 200 });
+  await prisma.$executeRawUnsafe(
+    `UPDATE roles
+     SET access_overrides = $4::jsonb,
+         updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $2`,
+    id,
+    tenantId,
+    name,
+    JSON.stringify({ hiddenMenus: Array.isArray(body.accessOverrides?.hiddenMenus) ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string') : [] }),
+  ).catch(() => null);
+
+  return NextResponse.json({ role: { ...role, accessOverrides: { hiddenMenus: Array.isArray(body.accessOverrides?.hiddenMenus) ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string') : [] } } }, { status: 200 });
 }

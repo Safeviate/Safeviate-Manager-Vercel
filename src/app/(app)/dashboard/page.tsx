@@ -11,6 +11,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { parseJsonResponse } from '@/lib/safe-json';
+import {
+  CARD_HEADER_ACTION_ZONE_CLASS,
+  CARD_HEADER_BAND_CLASS,
+  CARD_HEADER_SCOPE_ZONE_CLASS,
+  HEADER_COMPACT_CONTROL_CLASS,
+  HEADER_TAB_LIST_CLASS,
+  HEADER_TAB_TRIGGER_CLASS,
+} from '@/components/page-header';
 import { Area, ComposedChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
@@ -465,78 +473,72 @@ export default function DashboardPage() {
       )}
     >
       <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-0 flex-1 flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
-        <CardHeader
-          className={cn(
-            'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-            isModern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
-          )}
-        >
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle className="text-sm font-black uppercase tracking-tight">{INDUSTRY_TITLES[activeIndustry]}</CardTitle>
-              <Tabs value={activeIndustry} onValueChange={(value) => setActiveIndustry(value as DashboardIndustry)} className="w-full md:w-auto">
-                <TabsList className="grid h-auto w-full grid-cols-4 gap-2 rounded-none bg-transparent p-0 md:w-auto">
-                  {INDUSTRY_SWITCHER.map((item) => (
-                    <TabsTrigger
-                      key={item.value}
-                      value={item.value}
-                      className="rounded-none border border-input px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground"
-                    >
-                      {item.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-          <CardDescription className="text-xs">
-            {INDUSTRY_DESCRIPTIONS[activeIndustry]}
-            <span className="ml-2 font-black uppercase tracking-[0.18em] text-foreground/70">
-              Active: {tabs.find((tab) => tab.value === activeTab)?.label || tabs[0]?.label}
-            </span>
-            {activeIndustry === 'ATO' ? (
+        <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80', isModern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85')}>
+          <div className={CARD_HEADER_SCOPE_ZONE_CLASS}>
+            <CardTitle className="text-sm font-black uppercase tracking-tight">{INDUSTRY_TITLES[activeIndustry]}</CardTitle>
+            <CardDescription className="mt-1 text-xs">
+              {INDUSTRY_DESCRIPTIONS[activeIndustry]}
               <span className="ml-2 font-black uppercase tracking-[0.18em] text-foreground/70">
-                Period: {fleetPeriod === 'week' ? 'Last 7 days' : fleetPeriod === 'month' ? 'Last 30 days' : 'All time'}
+                Active: {tabs.find((tab) => tab.value === activeTab)?.label || tabs[0]?.label}
               </span>
-            ) : null}
-          </CardDescription>
+              {activeIndustry === 'ATO' ? (
+                <span className="ml-2 font-black uppercase tracking-[0.18em] text-foreground/70">
+                  Period: {fleetPeriod === 'week' ? 'Last 7 days' : fleetPeriod === 'month' ? 'Last 30 days' : 'All time'}
+                </span>
+              ) : null}
+            </CardDescription>
+          </div>
+          <div className={CARD_HEADER_ACTION_ZONE_CLASS}>
+            <Tabs value={activeIndustry} onValueChange={(value) => setActiveIndustry(value as DashboardIndustry)} className="w-full md:w-auto">
+              <TabsList className={HEADER_TAB_LIST_CLASS}>
+                {INDUSTRY_SWITCHER.map((item) => (
+                  <TabsTrigger key={item.value} value={item.value} className={HEADER_TAB_TRIGGER_CLASS}>
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
 
         <CardContent className="min-h-0 flex-1 p-0">
-          <ScrollArea className="h-full">
-            <div className="p-6 pb-10 md:p-8 md:pb-10">
-              <Tabs key={activeIndustry} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-none border-b bg-transparent p-0">
-                  {tabs.map((tab) => (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
-                      className="rounded-none border-b-2 border-transparent px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground"
-                    >
-                      {tab.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+          <Tabs key={activeIndustry} value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
+            <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent flex justify-center')}>
+              <TabsList className={cn(HEADER_TAB_LIST_CLASS, 'border-0 bg-transparent px-0 py-0 justify-center')}>
+                {tabs.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value} className={HEADER_TAB_TRIGGER_CLASS}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
+            {activeIndustry === 'ATO' && activeTab === 'fleet' ? (
+              <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
+                <div className="flex w-full flex-wrap items-center justify-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
+                  {(['week', 'month', 'all'] as FleetPeriod[]).map((period) => (
+                    <button
+                      key={period}
+                      type="button"
+                      onClick={() => setFleetPeriod(period)}
+                      className={cn(
+                        HEADER_COMPACT_CONTROL_CLASS,
+                        fleetPeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                      )}
+                    >
+                      {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <ScrollArea className="h-full flex-1">
+              <div className="p-6 pb-10 md:p-8 md:pb-10">
                 {activeIndustry === 'ATO' ? (
                   <>
                     <TabsContent value="fleet" className="m-0 space-y-6">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
-                        {(['week', 'month', 'all'] as FleetPeriod[]).map((period) => (
-                          <button
-                            key={period}
-                            type="button"
-                            onClick={() => setFleetPeriod(period)}
-                            className={cn(
-                              'rounded-none border px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em]',
-                              fleetPeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
-                            )}
-                          >
-                            {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
-                          </button>
-                        ))}
-                      </div>
                       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
                         <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[460px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
                           <CardHeader className="border-b bg-muted/5 px-4 py-3">
@@ -645,9 +647,9 @@ export default function DashboardPage() {
                     </TabsContent>
                   ))
                 )}
-              </Tabs>
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

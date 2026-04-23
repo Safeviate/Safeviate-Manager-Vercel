@@ -13,11 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { DocumentUploader } from '@/components/document-uploader';
 import { format, addMinutes, isBefore } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
+import type { AircraftMaintenanceWindow } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking, OverrideLog, TrainingRoute, ChecklistPhoto, PreFlightData } from '@/types/booking';
 import { Trash2, ShieldAlert, Lock, Eye, MapIcon, ClipboardCheck, Activity, CheckCircle2, PlaneTakeoff } from 'lucide-react';
@@ -42,6 +44,14 @@ const BOOKING_STATUS_OPTIONS = [
     { value: 'Tentative', label: 'Tentative' },
     { value: 'Confirmed', label: 'Confirmed' },
     { value: 'Completed', label: 'Complete' },
+] as const;
+
+const BOOKING_TYPE_OPTIONS = [
+    'Training Flight',
+    'Rental',
+    'Charter',
+    'Ferry Flight',
+    'Maintenance',
 ] as const;
 
 const bookingFormSchema = z.object({
@@ -142,6 +152,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     const canOverride = hasPermission('bookings-approve-override');
     // LOGIC: A booking is "underway" if it is Approved or tech logs have started
     const isUnderway = existingBooking?.status === 'Approved' || existingBooking?.status === 'Completed' || existingBooking?.preFlight;
+    const defaultActiveTab: 'details' | 'checks' = existingBooking && isUnderway ? 'checks' : 'details';
+    const [activeTab, setActiveTab] = useState<'details' | 'checks'>(defaultActiveTab);
     const canEditUnderway = canOverride; // If you have override, you can edit underway bookings
     const canTrackFlight = !!existingBooking
         && (existingBooking.navlog?.legs?.length || 0) > 0
@@ -175,6 +187,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
     
     useEffect(() => {
         if (isOpen) {
+            setActiveTab(defaultActiveTab);
             form.reset(defaultValues);
             setPreFlight(existingBooking?.preFlightData || aircraftSnapshot);
             setPostFlight(existingBooking?.postFlightData || {
@@ -189,10 +202,12 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             setPostFlightPhotos(existingBooking?.postFlightData?.photos || []);
             setRequireWeatherPlanningNavlog(!!existingBooking?.workflowCompletion?.weatherPlanningNavlogRequired);
         }
-    }, [isOpen, defaultValues, form, existingBooking, aircraftSnapshot]);
+    }, [isOpen, defaultActiveTab, defaultValues, form, existingBooking, aircraftSnapshot]);
 
     const isOvernight = form.watch('isOvernight');
     const watchStatus = form.watch('status');
+    const watchType = form.watch('type');
+    const isMaintenanceBooking = watchType === 'Maintenance';
 
     const onSubmit = async (data: z.infer<typeof bookingFormSchema>) => {
         if (!canEditBooking) {
@@ -206,6 +221,62 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
         const newStart = new Date(startIso);
         const newEnd = new Date(endIso);
+
+        if (data.type === 'Maintenance') {
+            const toDate = data.overnightBookingDate ? format(data.overnightBookingDate, 'yyyy-MM-dd') : format(data.date, 'yyyy-MM-dd');
+            if (toDate < format(data.date, 'yyyy-MM-dd')) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Invalid Dates',
+                    description: 'The maintenance end date must be on or after the start date.',
+                });
+                setIsSubmitting(false);
+                return;
+            }
+
+            try {
+                const nextWindow: AircraftMaintenanceWindow = {
+                    id: existingBooking?.id || crypto.randomUUID(),
+                    title: data.notes?.trim() || 'Maintenance',
+                    fromDate: format(data.date, 'yyyy-MM-dd'),
+                    toDate,
+                    notes: data.notes?.trim() || undefined,
+                    status: 'Scheduled',
+                };
+
+                const existingWindows = aircraft.maintenanceWindows || [];
+                const nextWindows = existingBooking
+                    ? existingWindows.map((window) => (window.id === existingBooking.id ? nextWindow : window))
+                    : [...existingWindows, nextWindow];
+
+                const response = await fetch(`/api/aircraft/${aircraft.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aircraft: { ...aircraft, maintenanceWindows: nextWindows } }),
+                });
+
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(payload.error || 'Failed to save maintenance window.');
+                }
+
+                toast({
+                    title: 'Maintenance Scheduled',
+                    description: `${aircraft.tailNumber} is blocked from ${format(data.date, 'PPP')} to ${format(data.overnightBookingDate || data.date, 'PPP')}.`,
+                });
+                refreshBookings();
+                setIsOpen(false);
+                return;
+            } catch (error: unknown) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Save Failed',
+                    description: error instanceof Error ? error.message : 'Failed to save maintenance window.',
+                });
+                setIsSubmitting(false);
+                return;
+            }
+        }
 
         // VALIDATION: Cannot book in the past
         if (!existingBooking && isBefore(newStart, new Date())) {
@@ -448,364 +519,456 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="type" render={({ field }) => ( <FormItem><FormLabel>Booking Type</FormLabel><FormControl><Input placeholder='e.g., Training, Rental' {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )}/>
-                            <FormField control={form.control} name="status" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Status</FormLabel>
-                                    <FormControl>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {BOOKING_STATUS_OPTIONS.map((option) => {
-                                                const active = field.value === option.value;
-                                                return (
-                                                    <Button
-                                                        key={option.value}
-                                                        type="button"
-                                                        variant={active ? 'default' : 'outline'}
-                                                        className={cn(
-                                                            'h-10 rounded-md px-3 text-[10px] font-black uppercase tracking-widest',
-                                                            active ? 'shadow-sm' : 'bg-background'
-                                                        )}
-                                                        onClick={() => field.onChange(option.value)}
-                                                        disabled={isLocked || !canEditBooking}
-                                                        aria-pressed={active}
-                                                    >
-                                                        {option.label}
-                                                    </Button>
-                                                );
-                                            })}
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                        </div>
+                        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'checks')} className="space-y-4">
+                            <TabsList className={cn("grid h-11 w-full grid-cols-2", isMaintenanceBooking && "grid-cols-1")}>
+                                <TabsTrigger value="details" className="text-[10px] font-black uppercase tracking-widest">
+                                    Booking Information
+                                </TabsTrigger>
+                                {!isMaintenanceBooking ? (
+                                    <TabsTrigger value="checks" className="text-[10px] font-black uppercase tracking-widest">
+                                        Pre / Post-Flight Checks
+                                    </TabsTrigger>
+                                ) : null}
+                            </TabsList>
 
-                        {watchStatus === 'Cancelled with Reason' && (
-                            <FormField control={form.control} name="cancellationReason" render={({ field }) => ( <FormItem><FormLabel>Reason for Cancellation</FormLabel><FormControl><Input placeholder='e.g., Weather, Maintenance' {...field} disabled={!canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="instructorId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Instructor</FormLabel>
-                                        <FormControl>
-                                            <select
-                                                value={field.value || ''}
-                                                onChange={(event) => field.onChange(event.target.value)}
-                                                disabled={isLocked || !canEditBooking}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">Select Instructor...</option>
-                                                {instructors.map((pilot) => (
-                                                    <option key={pilot.id} value={pilot.id}>
-                                                        {pilot.firstName} {pilot.lastName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="studentId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Student</FormLabel>
-                                        <FormControl>
-                                            <select
-                                                value={field.value || ''}
-                                                onChange={(event) => field.onChange(event.target.value)}
-                                                disabled={isLocked || !canEditBooking}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">Select Student...</option>
-                                                {students.map((pilot) => (
-                                                    <option key={pilot.id} value={pilot.id}>
-                                                        {pilot.firstName} {pilot.lastName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <div className="grid gap-4 lg:grid-cols-2">
-                            {!existingBooking ? (
-                                <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-4 space-y-4">
-                                    <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                                         <MapIcon className="h-3.5 w-3.5" /> Mission Profile
-                                    </p>
-                                    <FormField control={form.control} name="routeId" render={({ field }) => (
+                            <TabsContent value="details" className="space-y-6 mt-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="type"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Booking Type</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select booking type" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {BOOKING_TYPE_OPTIONS.map((option) => (
+                                                            <SelectItem key={option} value={option}>
+                                                                {option}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField control={form.control} name="status" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-[9px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}>
-                                                <FormControl>
-                                                    <SelectTrigger className="bg-background">
-                                                        <SelectValue placeholder="Select a training route to pre-fill navlog..." />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="none">None / Manual Entry</SelectItem>
-                                                    {trainingRoutes.map(r => (
-                                                        <SelectItem key={r.id} value={r.id}>
-                                                            {r.name} ({r.legs.length} Waypoints)
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <FormLabel>Status</FormLabel>
+                                            <FormControl>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {BOOKING_STATUS_OPTIONS.map((option) => {
+                                                        const active = field.value === option.value;
+                                                        return (
+                                                            <Button
+                                                                key={option.value}
+                                                                type="button"
+                                                                variant={active ? 'default' : 'outline'}
+                                                                className={cn(
+                                                                    'h-10 rounded-md px-3 text-[10px] font-black uppercase tracking-widest',
+                                                                    active ? 'shadow-sm' : 'bg-background'
+                                                                )}
+                                                                onClick={() => field.onChange(option.value)}
+                                                                disabled={isLocked || !canEditBooking}
+                                                                aria-pressed={active}
+                                                            >
+                                                                {option.label}
+                                                            </Button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
                                 </div>
-                            ) : (
-                                <div />
-                            )}
 
-                            <FormField control={form.control} name="notes" render={({ field }) => (
-                                <FormItem className={cn('rounded-xl border bg-background p-4 shadow-sm', existingBooking ? 'lg:col-span-2' : '')}>
-                                    <div className="space-y-1.5">
-                                        <FormLabel>Admin Notes</FormLabel>
-                                        <p className="text-xs text-muted-foreground">Add any relevant notes for dispatch or follow-up.</p>
-                                    </div>
-                                    <FormControl>
-                                        <Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} className="min-h-[120px]" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-                        </div>
+                                {watchStatus === 'Cancelled with Reason' && (
+                                    <FormField control={form.control} name="cancellationReason" render={({ field }) => ( <FormItem><FormLabel>Reason for Cancellation</FormLabel><FormControl><Input placeholder='e.g., Weather, Maintenance' {...field} disabled={!canManageSchedule} /></FormControl><FormMessage /></FormItem> )}/>
+                                )}
 
-                        <div className="rounded-xl border bg-muted/20 p-3 space-y-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planning Requirement</p>
-                                    <p className="text-xs font-semibold text-muted-foreground">Mark whether weather, planning map, and navlog are required for this flight.</p>
-                                </div>
-                                <Badge variant={requireWeatherPlanningNavlog ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                    {requireWeatherPlanningNavlog ? 'Required' : 'Optional'}
-                                </Badge>
-                            </div>
-                            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-3">
-                                <div className="space-y-0.5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Require Weather / Map / Navlog</p>
-                                    <p className="text-[10px] text-muted-foreground">Instructor can only approve after these are completed when enabled.</p>
-                                </div>
-                                <Switch
-                                    checked={requireWeatherPlanningNavlog}
-                                    onCheckedChange={setRequireWeatherPlanningNavlog}
-                                    disabled={!canEditBooking}
-                                />
-                            </div>
-                        </div>
+                                {isMaintenanceBooking ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border bg-amber-50/40 p-4">
+                                        <FormField control={form.control} name="date" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>From Date</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="date"
+                                                        value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                                                        onChange={(e) => field.onChange(parseLocalDate(e.target.value))}
+                                                        disabled={isLocked || !canEditBooking}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="overnightBookingDate" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>To Date</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="date"
+                                                        value={field.value ? format(field.value, 'yyyy-MM-dd') : format(form.getValues('date'), 'yyyy-MM-dd')}
+                                                        onChange={e => field.onChange(parseLocalDate(e.target.value))}
+                                                        disabled={isLocked || !canEditBooking}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                                        <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                                    </div>
+                                )}
 
-                        <div className="rounded-xl border bg-muted/20 p-3 space-y-4">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                    <ClipboardCheck className="h-4 w-4 text-primary" />
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre / Post-Flight Checks</p>
-                                        <p className="text-xs font-semibold text-muted-foreground">Complete these here in the booking popup.</p>
-                                    </div>
-                                </div>
-                                <Badge variant={(postFlight.hobbs || 0) > 0 ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                                    {(postFlight.hobbs || 0) > 0 ? 'Recorded' : 'Pending'}
-                                </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div className="space-y-3 rounded-lg border bg-background p-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                                            <Activity className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest">Pre-flight</p>
-                                            <p className="text-[10px] text-muted-foreground">Must be completed before approval.</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Hobbs Start</FormLabel>
-                                            <Input type="number" step="0.1" value={preFlight.hobbs} onChange={(e) => setPreFlight({ ...preFlight, hobbs: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Tacho Start</FormLabel>
-                                            <Input type="number" step="0.1" value={preFlight.tacho} onChange={(e) => setPreFlight({ ...preFlight, tacho: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</FormLabel>
-                                            <Input type="number" value={preFlight.fuelUpliftGallons} onChange={(e) => setPreFlight({ ...preFlight, fuelUpliftGallons: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</FormLabel>
-                                            <Input
-                                                type="number"
-                                                value={preFlight.fuelUpliftLitres}
-                                                onChange={(e) => {
-                                                    const litres = parseFloat(e.target.value) || 0;
-                                                    setPreFlight({
-                                                        ...preFlight,
-                                                        fuelUpliftLitres: litres,
-                                                        fuelUpliftGallons: Number((litres / 3.785).toFixed(1)),
-                                                    });
-                                                }}
-                                                className="h-9 font-bold"
-                                                disabled={!canEditBooking}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</FormLabel>
-                                            <Input type="number" value={preFlight.oilUplift} onChange={(e) => setPreFlight({ ...preFlight, oilUplift: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-3 rounded-lg border p-3">
-                                        <Checkbox id="popup-docs" checked={preFlight.documentsChecked} onCheckedChange={(val) => setPreFlight({ ...preFlight, documentsChecked: !!val })} disabled={!canEditBooking} />
-                                        <label htmlFor="popup-docs" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
-                                            <DocumentUploader
-                                                defaultFileName="Pre-flight photo"
-                                                restrictedMode="camera"
-                                                onDocumentUploaded={(photo) => setPreFlightPhotos((current) => [...current, { url: photo.url, description: photo.name }])}
-                                                trigger={(open) => (
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-8 text-[10px] font-black uppercase"
-                                                        disabled={!canEditBooking}
-                                                        onClick={() => open('camera')}
+                                {!isMaintenanceBooking ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="instructorId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Instructor</FormLabel>
+                                                <FormControl>
+                                                    <select
+                                                        value={field.value || ''}
+                                                        onChange={(event) => field.onChange(event.target.value)}
+                                                        disabled={isLocked || !canEditBooking}
+                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
-                                                        Add Photo
-                                                    </Button>
-                                                )}
-                                            />
-                                        </div>
-                                        {preFlightPhotos.length > 0 && (
-                                            <PhotoViewerDialog
-                                                title="Pre-flight Photos"
-                                                photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
-                                            />
+                                                        <option value="">Select Instructor...</option>
+                                                        {instructors.map((pilot) => (
+                                                            <option key={pilot.id} value={pilot.id}>
+                                                                {pilot.firstName} {pilot.lastName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
                                         )}
-                                    </div>
-                                </div>
-                                <div className="space-y-3 rounded-lg border bg-background p-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-7 w-7 rounded-full bg-orange-500/10 flex items-center justify-center">
-                                            <CheckCircle2 className="h-4 w-4 text-orange-600" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest">Post-flight</p>
-                                            <p className="text-[10px] text-muted-foreground">Complete this last after the flight.</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Hobbs End</FormLabel>
-                                            <Input type="number" step="0.1" value={postFlight.hobbs} onChange={(e) => setPostFlight({ ...postFlight, hobbs: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Tacho End</FormLabel>
-                                            <Input type="number" step="0.1" value={postFlight.tacho} onChange={(e) => setPostFlight({ ...postFlight, tacho: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</FormLabel>
-                                            <Input
-                                                type="number"
-                                                value={postFlight.fuelUpliftGallons}
-                                                onChange={(e) => {
-                                                    const gallons = parseFloat(e.target.value) || 0;
-                                                    setPostFlight({
-                                                        ...postFlight,
-                                                        fuelUpliftGallons: gallons,
-                                                        fuelUpliftLitres: Number((gallons * 3.785).toFixed(1)),
-                                                    });
-                                                }}
-                                                className="h-9 font-bold"
-                                                disabled={!canEditBooking}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</FormLabel>
-                                            <Input
-                                                type="number"
-                                                value={postFlight.fuelUpliftLitres}
-                                                onChange={(e) => {
-                                                    const litres = parseFloat(e.target.value) || 0;
-                                                    setPostFlight({
-                                                        ...postFlight,
-                                                        fuelUpliftLitres: litres,
-                                                        fuelUpliftGallons: Number((litres / 3.785).toFixed(1)),
-                                                    });
-                                                }}
-                                                className="h-9 font-bold"
-                                                disabled={!canEditBooking}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <FormLabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</FormLabel>
-                                            <Input type="number" value={postFlight.oilUplift} onChange={(e) => setPostFlight({ ...postFlight, oilUplift: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
-                                            <DocumentUploader
-                                                defaultFileName="Post-flight photo"
-                                                restrictedMode="camera"
-                                                onDocumentUploaded={(photo) => setPostFlightPhotos((current) => [...current, { url: photo.url, description: photo.name }])}
-                                                trigger={(open) => (
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-8 text-[10px] font-black uppercase"
-                                                        disabled={!canEditBooking}
-                                                        onClick={() => open('camera')}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="studentId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Student</FormLabel>
+                                                <FormControl>
+                                                    <select
+                                                        value={field.value || ''}
+                                                        onChange={(event) => field.onChange(event.target.value)}
+                                                        disabled={isLocked || !canEditBooking}
+                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
-                                                        Add Photo
-                                                    </Button>
-                                                )}
-                                            />
-                                        </div>
-                                        {postFlightPhotos.length > 0 && (
-                                            <PhotoViewerDialog
-                                                title="Post-flight Photos"
-                                                photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
-                                            />
+                                                        <option value="">Select Student...</option>
+                                                        {students.map((pilot) => (
+                                                            <option key={pilot.id} value={pilot.id}>
+                                                                {pilot.firstName} {pilot.lastName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
                                         )}
+                                    />
+                                </div>
+                                ) : null}
+
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    {!existingBooking ? (
+                                        !isMaintenanceBooking ? (
+                                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-4 space-y-4">
+                                            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                                                 <MapIcon className="h-3.5 w-3.5" /> Mission Profile
+                                            </p>
+                                            <FormField control={form.control} name="routeId" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-[9px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}>
+                                                        <FormControl>
+                                                            <SelectTrigger className="bg-background">
+                                                                <SelectValue placeholder="Select a training route to pre-fill navlog..." />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">None / Manual Entry</SelectItem>
+                                                            {trainingRoutes.map(r => (
+                                                                <SelectItem key={r.id} value={r.id}>
+                                                                    {r.name} ({r.legs.length} Waypoints)
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        </div>
+                                        ) : (
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2">
+                                            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-800">
+                                                <Lock className="h-3.5 w-3.5" /> Aircraft Maintenance Block
+                                            </p>
+                                            <p className="text-xs text-amber-900/80">
+                                                This creates an aircraft maintenance window instead of a flight booking and will block the aircraft on the schedule for every day in the selected range.
+                                            </p>
+                                        </div>
+                                        )
+                                    ) : (
+                                        <div />
+                                    )}
+
+                                    <FormField control={form.control} name="notes" render={({ field }) => (
+                                        <FormItem className={cn('rounded-xl border bg-background p-4 shadow-sm', existingBooking ? 'lg:col-span-2' : '')}>
+                                            <div className="space-y-1.5">
+                                                <FormLabel>Admin Notes</FormLabel>
+                                                <p className="text-xs text-muted-foreground">Add any relevant notes for dispatch or follow-up.</p>
+                                            </div>
+                                            <FormControl>
+                                                <Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} rows={2} className="min-h-[64px]" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                </div>
+
+                                {!isMaintenanceBooking ? (
+                                <div className="rounded-xl border bg-muted/20 p-3 space-y-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planning Requirement</p>
+                                            <p className="text-xs font-semibold text-muted-foreground">Mark whether weather, planning map, and navlog are required for this flight.</p>
+                                        </div>
+                                        <Badge variant={requireWeatherPlanningNavlog ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                            {requireWeatherPlanningNavlog ? 'Required' : 'Optional'}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-3">
+                                        <div className="space-y-0.5">
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Require Weather / Map / Navlog</p>
+                                            <p className="text-[10px] text-muted-foreground">Instructor can only approve after these are completed when enabled.</p>
+                                        </div>
+                                        <Switch
+                                            checked={requireWeatherPlanningNavlog}
+                                            onCheckedChange={setRequireWeatherPlanningNavlog}
+                                            disabled={!canEditBooking}
+                                        />
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                            <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" disabled={isLocked || !canEditBooking} /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
-                        </div>
+                                ) : null}
 
-                        {isOvernight && (
-                            <div className="grid grid-cols-2 gap-4 rounded-xl border p-3">
-                                <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(parseLocalDate(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
-                            </div>
-                        )}
+                                {!isMaintenanceBooking ? (
+                                <div className="flex items-center space-x-2">
+                                    <FormField control={form.control} name="isOvernight" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-2"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} id="isOvernight" disabled={isLocked || !canEditBooking} /></FormControl><FormLabel htmlFor="isOvernight">Overnight Booking</FormLabel></FormItem> )}/>
+                                </div>
+                                ) : null}
+
+                                {!isMaintenanceBooking && isOvernight && (
+                                    <div className="grid grid-cols-2 gap-4 rounded-xl border p-3">
+                                        <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(parseLocalDate(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                                        <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
+                                    </div>
+                                )}
+                            </TabsContent>
+
+                            {!isMaintenanceBooking ? (
+                            <TabsContent value="checks" className="space-y-6 mt-0">
+                                <div className="rounded-xl border bg-muted/20 p-3 space-y-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <ClipboardCheck className="h-4 w-4 text-primary" />
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre / Post-Flight Checks</p>
+                                                <p className="text-xs font-semibold text-muted-foreground">Complete these here in the booking popup.</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant={(postFlight.hobbs || 0) > 0 ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                                            {(postFlight.hobbs || 0) > 0 ? 'Recorded' : 'Pending'}
+                                        </Badge>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <div className="space-y-3 rounded-lg border bg-background p-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                                                    <Activity className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Pre-flight</p>
+                                                    <p className="text-[10px] text-muted-foreground">Must be completed before approval.</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Hobbs Start</FormLabel>
+                                                    <Input type="number" step="0.1" value={preFlight.hobbs} onChange={(e) => setPreFlight({ ...preFlight, hobbs: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Tacho Start</FormLabel>
+                                                    <Input type="number" step="0.1" value={preFlight.tacho} onChange={(e) => setPreFlight({ ...preFlight, tacho: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</FormLabel>
+                                                    <Input type="number" value={preFlight.fuelUpliftGallons} onChange={(e) => setPreFlight({ ...preFlight, fuelUpliftGallons: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</FormLabel>
+                                                    <Input
+                                                        type="number"
+                                                        value={preFlight.fuelUpliftLitres}
+                                                        onChange={(e) => {
+                                                            const litres = parseFloat(e.target.value) || 0;
+                                                            setPreFlight({
+                                                                ...preFlight,
+                                                                fuelUpliftLitres: litres,
+                                                                fuelUpliftGallons: Number((litres / 3.785).toFixed(1)),
+                                                            });
+                                                        }}
+                                                        className="h-9 font-bold"
+                                                        disabled={!canEditBooking}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</FormLabel>
+                                                    <Input type="number" value={preFlight.oilUplift} onChange={(e) => setPreFlight({ ...preFlight, oilUplift: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-3 rounded-lg border p-3">
+                                                <Checkbox id="popup-docs" checked={preFlight.documentsChecked} onCheckedChange={(val) => setPreFlight({ ...preFlight, documentsChecked: !!val })} disabled={!canEditBooking} />
+                                                <label htmlFor="popup-docs" className="text-[10px] font-black uppercase leading-none cursor-pointer">Documents & License Checked</label>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
+                                                    <DocumentUploader
+                                                        defaultFileName="Pre-flight photo"
+                                                        restrictedMode="camera"
+                                                        onDocumentUploaded={(photo) => setPreFlightPhotos((current) => [...current, { url: photo.url, description: photo.name }])}
+                                                        trigger={(open) => (
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 text-[10px] font-black uppercase"
+                                                                disabled={!canEditBooking}
+                                                                onClick={() => open('camera')}
+                                                            >
+                                                                Add Photo
+                                                            </Button>
+                                                        )}
+                                                    />
+                                                </div>
+                                                {preFlightPhotos.length > 0 && (
+                                                    <PhotoViewerDialog
+                                                        title="Pre-flight Photos"
+                                                        photos={preFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3 rounded-lg border bg-background p-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-full bg-orange-500/10 flex items-center justify-center">
+                                                    <CheckCircle2 className="h-4 w-4 text-orange-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Post-flight</p>
+                                                    <p className="text-[10px] text-muted-foreground">Complete this last after the flight.</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Hobbs End</FormLabel>
+                                                    <Input type="number" step="0.1" value={postFlight.hobbs} onChange={(e) => setPostFlight({ ...postFlight, hobbs: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Tacho End</FormLabel>
+                                                    <Input type="number" step="0.1" value={postFlight.tacho} onChange={(e) => setPostFlight({ ...postFlight, tacho: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (G)</FormLabel>
+                                                    <Input
+                                                        type="number"
+                                                        value={postFlight.fuelUpliftGallons}
+                                                        onChange={(e) => {
+                                                            const gallons = parseFloat(e.target.value) || 0;
+                                                            setPostFlight({
+                                                                ...postFlight,
+                                                                fuelUpliftGallons: gallons,
+                                                                fuelUpliftLitres: Number((gallons * 3.785).toFixed(1)),
+                                                            });
+                                                        }}
+                                                        className="h-9 font-bold"
+                                                        disabled={!canEditBooking}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Fuel Uplift (L)</FormLabel>
+                                                    <Input
+                                                        type="number"
+                                                        value={postFlight.fuelUpliftLitres}
+                                                        onChange={(e) => {
+                                                            const litres = parseFloat(e.target.value) || 0;
+                                                            setPostFlight({
+                                                                ...postFlight,
+                                                                fuelUpliftLitres: litres,
+                                                                fuelUpliftGallons: Number((litres / 3.785).toFixed(1)),
+                                                            });
+                                                        }}
+                                                        className="h-9 font-bold"
+                                                        disabled={!canEditBooking}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <FormLabel className="text-[9px] font-bold uppercase">Oil Uplift (Q)</FormLabel>
+                                                    <Input type="number" value={postFlight.oilUplift} onChange={(e) => setPostFlight({ ...postFlight, oilUplift: parseFloat(e.target.value) || 0 })} className="h-9 font-bold" disabled={!canEditBooking} />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Photos</p>
+                                                    <DocumentUploader
+                                                        defaultFileName="Post-flight photo"
+                                                        restrictedMode="camera"
+                                                        onDocumentUploaded={(photo) => setPostFlightPhotos((current) => [...current, { url: photo.url, description: photo.name }])}
+                                                        trigger={(open) => (
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 text-[10px] font-black uppercase"
+                                                                disabled={!canEditBooking}
+                                                                onClick={() => open('camera')}
+                                                            >
+                                                                Add Photo
+                                                            </Button>
+                                                        )}
+                                                    />
+                                                </div>
+                                                {postFlightPhotos.length > 0 && (
+                                                    <PhotoViewerDialog
+                                                        title="Post-flight Photos"
+                                                        photos={postFlightPhotos.map((photo) => ({ url: photo.url, name: photo.description }))}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+                            ) : null}
+                        </Tabs>
 
                         <DialogFooter className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:gap-2">
                             {existingBooking && canDelete && (
@@ -850,7 +1013,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 <DialogClose asChild><Button type="button" variant="outline" className="flex-1 sm:flex-none">Cancel</Button></DialogClose>
                                 {canManageSchedule && !isLocked && (
                                     <Button type="submit" disabled={isSubmitting || !canEditBooking} className="flex-1 sm:flex-none">
-                                        {isSubmitting ? 'Saving...' : 'Save Booking'}
+                                        {isSubmitting ? 'Saving...' : isMaintenanceBooking ? 'Save Maintenance' : 'Save Booking'}
                                     </Button>
                                 )}
                             </div>

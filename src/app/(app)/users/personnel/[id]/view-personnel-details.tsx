@@ -36,6 +36,7 @@ import { DeleteActionButton, ViewActionButton } from '@/components/record-action
 import { MainPageHeader } from '@/components/page-header';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { MASTER_TENANT_EMAILS } from '@/lib/tenant-constants';
 
 const parseLocalDate = (value?: string | null) => {
   if (!value) return null;
@@ -88,6 +89,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [hiddenMenus, setHiddenMenus] = useState<string[]>(user.accessOverrides?.hiddenMenus || []);
+  const [localPermissions, setLocalPermissions] = useState<string[]>(user.permissions || []);
   const [documents, setDocuments] = useState<Document[]>(user.documents || []);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -97,12 +99,17 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const isMobile = useIsMobile();
   const firestore = null; // Mock
   const { hasPermission } = usePermissions();
-  const { tenantId } = useUserProfile();
+  const { tenantId, userProfile } = useUserProfile();
 
-  const canEdit = hasPermission('users-edit');
+  const isCurrentUserSuperUser = MASTER_TENANT_EMAILS.includes((userProfile?.email || '').trim().toLowerCase());
+  const canEdit = isCurrentUserSuperUser || hasPermission('users-edit');
 
   useEffect(() => {
     setHiddenMenus(user.accessOverrides?.hiddenMenus || []);
+  }, [user]);
+
+  useEffect(() => {
+    setLocalPermissions(user.permissions || []);
   }, [user]);
 
   useEffect(() => {
@@ -362,7 +369,6 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
         body: JSON.stringify({ personnel: { ...user, accessOverrides: { ...user.accessOverrides, hiddenMenus: newHidden } } }),
       });
       setHiddenMenus(newHidden);
-      window.dispatchEvent(new Event('safeviate-profile-updated'));
       toast({ title: hidden ? "Access Restricted" : "Access Restored" });
     } catch {
       toast({
@@ -375,10 +381,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
 
   const handlePermissionToggle = async (permissionId: string, checked: boolean) => {
       if (!canEdit) return;
-      const currentPermissions = user.permissions || [];
+      const currentPermissions = localPermissions || [];
     const isInherited = roleGrantsPermission(role, permissionId);
 
-    if (!isInherited) {
+    if (!isInherited && !isCurrentUserSuperUser) {
         toast({
             variant: 'destructive',
             title: 'Role Required',
@@ -393,12 +399,17 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
         ? currentPermissions.filter(p => p !== `!${permissionId}`)
         : [...currentPermissions.filter(p => p !== permissionId), `!${permissionId}`];
 
+    if (isCurrentUserSuperUser && checked) {
+      newPermissions = Array.from(new Set([...newPermissions.filter((p) => p !== `!${permissionId}`), permissionId]));
+    }
+
     try {
       await fetch(`/api/personnel/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ personnel: { ...user, permissions: newPermissions } }),
       });
+      setLocalPermissions(newPermissions);
       toast({ title: "Access Level Updated" });
     } catch {
       toast({
@@ -668,17 +679,17 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                                     {resource.actions.map(action => {
                                                         const permissionId = `${resource.id}-${action}`;
                                                         const isInherited = roleGrantsPermission(role, permissionId);
-                                                        const isOverridden = user.permissions?.includes(permissionId);
-                                                        const isDenied = user.permissions?.includes(`!${permissionId}`);
+                                                        const isOverridden = localPermissions?.includes(permissionId);
+                                                        const isDenied = localPermissions?.includes(`!${permissionId}`);
                                                         const isEffective = (isInherited && !isDenied) || isOverridden;
                                                         return (
                                                             <div key={action} className="flex items-center space-x-3">
-                                                                <Checkbox
-                                                                  id={`perm-${permissionId}`}
-                                                                  checked={!!isEffective}
-                                                                  disabled={!canEdit || !isInherited}
+                                                                  <Checkbox
+                                                                    id={`perm-${permissionId}`}
+                                                                    checked={!!isEffective}
+                                                                  disabled={!canEdit || (!isInherited && !isCurrentUserSuperUser)}
                                                                   onCheckedChange={(checked) => handlePermissionToggle(permissionId, !!checked)}
-                                                                />
+                                                                  />
                                                                 <label htmlFor={`perm-${permissionId}`} className={cn("text-[11px] font-bold uppercase cursor-pointer", isInherited && !isDenied && !isOverridden && "text-muted-foreground italic")}>
                                                                     {action}
                                                                     {isInherited && !isDenied && !isOverridden && <span className="ml-2 text-[9px] opacity-70">(Role)</span>}

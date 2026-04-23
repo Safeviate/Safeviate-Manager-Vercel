@@ -24,6 +24,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { menuConfig } from '@/lib/menu-config';
 import type { Role } from './page';
 
 interface RoleFormProps {
@@ -32,6 +33,9 @@ interface RoleFormProps {
     id: string;
     name: string;
     permissions: string[];
+    accessOverrides?: {
+      hiddenMenus?: string[];
+    };
     requiredDocuments?: string[];
   };
   trigger?: React.ReactNode;
@@ -43,8 +47,10 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
   const isMobile = useIsMobile();
   const [roleName, setRoleName] = useState(existingRole?.name || '');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(existingRole?.permissions || []);
+  const [hiddenMenus, setHiddenMenus] = useState<string[]>(existingRole?.accessOverrides?.hiddenMenus || []);
   const [isOpen, setIsOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [isModulesOpen, setIsModulesOpen] = useState(false);
 
   // Required Documents state
   const [requiredDocuments, setRequiredDocuments] = useState<string[]>(existingRole?.requiredDocuments || []);
@@ -56,6 +62,7 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
     if (isOpen) {
       setRoleName(existingRole?.name || '');
       setSelectedPermissions(existingRole?.permissions || []);
+      setHiddenMenus(existingRole?.accessOverrides?.hiddenMenus || []);
       setRequiredDocuments(existingRole?.requiredDocuments || []);
     }
   }, [isOpen, existingRole]);
@@ -101,6 +108,7 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
         id: existingRole?.id || crypto.randomUUID(),
         name: roleName,
         permissions: selectedPermissions,
+        accessOverrides: { hiddenMenus },
         requiredDocuments,
     };
 
@@ -154,6 +162,16 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
 
   const handleRemoveDocument = (docToRemove: string) => {
     setRequiredDocuments(requiredDocuments.filter(doc => doc !== docToRemove));
+  };
+
+  const handleModuleToggle = (href: string, hidden: boolean, subHrefs?: string[]) => {
+    setHiddenMenus((prev) => {
+      if (hidden) {
+        return Array.from(new Set([...prev, href, ...(subHrefs || [])]));
+      }
+      const toShow = [href, ...(subHrefs || [])];
+      return prev.filter((menuHref) => !toShow.includes(menuHref));
+    });
   };
 
 
@@ -280,6 +298,63 @@ export function RoleForm({ tenantId, existingRole, trigger }: RoleFormProps) {
                             </div>
                         </ScrollArea>
                     </CollapsibleContent>
+                </Collapsible>
+
+                <Separator />
+
+                <Collapsible open={isModulesOpen} onOpenChange={setIsModulesOpen} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-md font-medium">Module Access</h4>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-9 p-0">
+                          <ChevronsUpDown className="h-4 w-4" />
+                          <span className="sr-only">Toggle</span>
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                  </div>
+                  <CollapsibleContent>
+                    <ScrollArea className="h-72 w-full rounded-md border mt-2">
+                      <div className="p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          {menuConfig.map((menu) => {
+                            const subHrefs = menu.subItems?.map((s) => s.href) || [];
+                            return (
+                              <div key={menu.href} className="space-y-3 rounded-xl border bg-muted/10 p-4">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`role-mod-${existingRole?.id || 'new'}-${menu.href}`}
+                                    checked={!hiddenMenus.includes(menu.href)}
+                                    onCheckedChange={(val) => handleModuleToggle(menu.href, !val, subHrefs)}
+                                  />
+                                  <Label htmlFor={`role-mod-${existingRole?.id || 'new'}-${menu.href}`} className="cursor-pointer text-[11px] font-black uppercase">
+                                    {menu.label}
+                                  </Label>
+                                </div>
+                                {menu.subItems && (
+                                  <div className="pl-6 space-y-2 border-l">
+                                    {menu.subItems.map((sub) => (
+                                      <div key={sub.href} className="flex items-center gap-2">
+                                        <Checkbox
+                                          id={`role-submod-${existingRole?.id || 'new'}-${sub.href}`}
+                                          checked={!hiddenMenus.includes(sub.href)}
+                                          onCheckedChange={(val) => handleModuleToggle(sub.href, !val)}
+                                        />
+                                        <Label htmlFor={`role-submod-${existingRole?.id || 'new'}-${sub.href}`} className="cursor-pointer text-[10px] font-bold uppercase text-muted-foreground">
+                                          {sub.label}
+                                        </Label>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </ScrollArea>
+                  </CollapsibleContent>
                 </Collapsible>
             </div>
         </ScrollArea>

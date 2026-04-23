@@ -100,6 +100,7 @@ model Role {
   tenantId          String   @map("tenant_id") @db.VarChar(128)
   name              String
   permissions       Json     @default("[]")
+  accessOverrides   Json?    @map("access_overrides")
   requiredDocuments Json?    @map("required_documents")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)

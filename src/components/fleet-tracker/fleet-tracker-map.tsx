@@ -15,6 +15,7 @@ import { getCachedOpenAipResponse, setCachedOpenAipResponse } from '@/lib/openai
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { X } from 'lucide-react';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -248,8 +249,10 @@ async function fetchOpenAipJson<T>(url: string, retries = 1): Promise<T | null> 
 
 function FitBounds({ sessions }: { sessions: FlightSession[] }) {
   const map = useMap();
+  const hasAutoFitRef = useRef(false);
 
   useEffect(() => {
+    if (hasAutoFitRef.current) return;
     const positionedSessions = sessions.filter(
       (session) => session.lastPosition?.latitude !== undefined && session.lastPosition?.longitude !== undefined
     );
@@ -257,12 +260,14 @@ function FitBounds({ sessions }: { sessions: FlightSession[] }) {
     if (positionedSessions.length === 1) {
       const session = positionedSessions[0];
       map.setView([session.lastPosition!.latitude, session.lastPosition!.longitude], 10);
+      hasAutoFitRef.current = true;
       return;
     }
     const bounds = L.latLngBounds(
       positionedSessions.map((session) => [session.lastPosition!.latitude, session.lastPosition!.longitude] as [number, number])
     );
     map.fitBounds(bounds.pad(0.3));
+    hasAutoFitRef.current = true;
   }, [map, sessions]);
 
   return null;
@@ -282,6 +287,36 @@ function MapZoomState({ onZoomChange }: { onZoomChange: (zoom: number) => void }
   });
 
   return null;
+}
+
+function RecenterMapControl({ sessions }: { sessions: FlightSession[] }) {
+  const map = useMap();
+
+  const recenter = useCallback(() => {
+    const positionedSessions = sessions.filter(
+      (session) => session.lastPosition?.latitude !== undefined && session.lastPosition?.longitude !== undefined
+    );
+    if (positionedSessions.length === 0) return;
+    if (positionedSessions.length === 1) {
+      const session = positionedSessions[0];
+      map.setView([session.lastPosition!.latitude, session.lastPosition!.longitude], Math.max(map.getZoom(), 10));
+      return;
+    }
+    const bounds = L.latLngBounds(
+      positionedSessions.map((session) => [session.lastPosition!.latitude, session.lastPosition!.longitude] as [number, number])
+    );
+    map.fitBounds(bounds.pad(0.3));
+  }, [map, sessions]);
+
+  return (
+    <button
+      type="button"
+      onClick={recenter}
+      className="absolute right-3 top-3 z-[1100] rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700 shadow-md backdrop-blur hover:bg-slate-50"
+    >
+      Recenter
+    </button>
+  );
 }
 
 function VisiblePointLoader({
@@ -576,6 +611,7 @@ export function FleetTrackerMap({
   });
 
   const [selectedBaseLayer, setSelectedBaseLayer] = useState<'light' | 'satellite'>(initialSettings.baseLayer);
+  const [layerPanelTab, setLayerPanelTab] = useState<'layers' | 'labels' | 'broadcasts'>('layers');
   const [showAircraftNames, setShowAircraftNames] = useState(initialSettings.showAircraftNames);
   const [showAircraftTrails, setShowAircraftTrails] = useState(initialSettings.showAircraftTrails);
   const [showNavlogRoutes, setShowNavlogRoutes] = useState(initialSettings.showNavlogRoutes);
@@ -755,14 +791,31 @@ export function FleetTrackerMap({
     });
   }, []);
 
+  useEffect(() => {
+    if (!layerSelectorOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onLayerSelectorOpenChange?.(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [layerSelectorOpen, onLayerSelectorOpenChange]);
+
+  useEffect(() => {
+    if (!layerSelectorOpen) {
+      setLayerPanelTab('layers');
+    }
+  }, [layerSelectorOpen]);
+
   return (
-    <div className="relative h-full overflow-hidden rounded-2xl" style={{ overscrollBehavior: 'none' }}>
+    <div className="relative h-full overflow-visible rounded-2xl" style={{ overscrollBehavior: 'none' }}>
       <LeafletMapFrame
         center={center}
         zoom={6}
         minZoom={mapMinZoom}
         maxZoom={mapMaxZoom}
-        className="h-[640px] w-full rounded-2xl xl:h-[700px]"
+        className="relative z-20 h-[640px] w-full rounded-2xl xl:h-[700px]"
         style={{ background: '#020617', touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <TileLayer
@@ -771,6 +824,7 @@ export function FleetTrackerMap({
         />
         <FitBounds sessions={positionedSessions} />
         <MapZoomState onZoomChange={setMapZoom} />
+        <RecenterMapControl sessions={positionedSessions} />
         <VisiblePointLoader
           airportsEnabled={airportsVisible}
           navaidsEnabled={navaidsVisible}
@@ -967,96 +1021,154 @@ export function FleetTrackerMap({
       </LeafletMapFrame>
 
       {layerSelectorOpen ? (
-        <div className="pointer-events-auto absolute bottom-4 left-4 z-[1200] flex max-h-[calc(100vh-2rem)] w-[340px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
-          <div className="border-b border-slate-100 px-3 py-3">
-            <div className="flex items-center justify-between gap-2">
+        <div className="pointer-events-auto absolute left-1/2 top-2 z-[1200] flex max-h-[calc(100vh-1rem)] w-[min(340px,calc(100%-0.75rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
+          <div className="border-b border-slate-100 px-2 py-1.5 sm:px-3 sm:py-3">
+            <div className="flex items-start justify-between gap-2">
               <button
                 type="button"
-                className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 hover:bg-slate-50"
+                aria-label="Close layer panel"
+                className="shrink-0 rounded-full border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-50"
                 onClick={() => onLayerSelectorOpenChange?.(false)}
               >
-                Close
+                <X className="h-3.5 w-3.5" />
               </button>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Layers</p>
-            </div>
-            <div className="mt-2 flex items-center justify-end gap-2">
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-700">
-                Base Layer
+              <div className="text-right leading-none">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Layers</p>
               </div>
             </div>
           </div>
-          <div className="px-3 py-3">
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                <input type="radio" checked={selectedBaseLayer === 'light'} onChange={() => setSelectedBaseLayer('light')} />
-                <span className="text-[10px] font-semibold">Light (Standard)</span>
-              </label>
-              <label className="flex min-w-[150px] items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                <input type="radio" checked={selectedBaseLayer === 'satellite'} onChange={() => setSelectedBaseLayer('satellite')} />
-                <span className="text-[10px] font-semibold">Satellite (Hybrid)</span>
-              </label>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 overflow-y-auto px-3 pb-3 pr-1">
-            <div className="space-y-2">
+          <div className="flex-1 overflow-y-auto px-2 py-2 sm:px-3 sm:py-3">
+            <div className="mb-2 grid grid-cols-3 gap-1">
               {[
-                ['OpenAIP Master Chart', masterVisible, setMasterVisible],
-                ['OpenAIP Airports', airportsVisible, setAirportsVisible],
-                ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
-                ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
-                ['Class E', classEVisible, setClassEVisible],
-                ['Class F', classFVisible, setClassFVisible],
-                ['Class G', classGVisible, setClassGVisible],
-                ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
-                ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
-                ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
-                ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
-                ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
-                ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
-              ].map(([label, checked, setter]) => (
-                <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                  <input type="checkbox" checked={checked as boolean} onChange={(event) => (setter as (value: boolean) => void)(event.target.checked)} />
-                  <span className="text-[10px] font-semibold">{label as string}</span>
-                </label>
+                { key: 'layers', label: 'Layers' },
+                { key: 'labels', label: 'Labels' },
+                { key: 'broadcasts', label: 'Broadcasts' },
+              ].map((tab) => (
+                <Button
+                  key={tab.key}
+                  type="button"
+                  variant="outline"
+                  aria-pressed={layerPanelTab === tab.key}
+                  className={`h-7 px-2 text-[8px] font-black uppercase ${
+                    layerPanelTab === tab.key
+                      ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                  onClick={() => setLayerPanelTab(tab.key as typeof layerPanelTab)}
+                >
+                  {tab.label}
+                </Button>
               ))}
             </div>
-            <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Labels</p>
-              {[
-                ['Airport Labels', airportLabelsVisible, setAirportLabelsVisible],
-                ['Navaid Labels', navaidLabelsVisible, setNavaidLabelsVisible],
-                ['Reporting Labels', reportingLabelsVisible, setReportingLabelsVisible],
-                ['Airspace Labels', airspaceLabelsVisible, setAirspaceLabelsVisible],
-                ['Class E Labels', classELabelsVisible, setClassELabelsVisible],
-                ['Class F Labels', classFLabelsVisible, setClassFLabelsVisible],
-                ['Class G Labels', classGLabelsVisible, setClassGLabelsVisible],
-                ['Military Labels', militaryLabelsVisible, setMilitaryLabelsVisible],
-                ['Training Labels', trainingLabelsVisible, setTrainingLabelsVisible],
-                ['Gliding Labels', glidingLabelsVisible, setGlidingLabelsVisible],
-                ['Hang Gliding Labels', hangGlidingLabelsVisible, setHangGlidingLabelsVisible],
-                ['Obstacle Labels', obstacleLabelsVisible, setObstacleLabelsVisible],
-              ].map(([label, checked, setter]) => (
-                <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                  <input type="checkbox" checked={checked as boolean} onChange={(event) => (setter as (value: boolean) => void)(event.target.checked)} />
-                  <span className="text-[10px] font-semibold">{label as string}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="border-t border-slate-100 px-3 py-3">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Broadcasts</p>
-            <div className="grid grid-cols-1 gap-2">
-              {[
-                ['Aircraft Names', showAircraftNames, setShowAircraftNames],
-                ['Aircraft Trails', showAircraftTrails, setShowAircraftTrails],
-                ['Navlog Routes', showNavlogRoutes, setShowNavlogRoutes],
-              ].map(([label, checked, setter]) => (
-                <label key={label as string} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5">
-                  <input type="checkbox" checked={checked as boolean} onChange={(event) => (setter as (value: boolean) => void)(event.target.checked)} />
-                  <span className="text-[10px] font-semibold">{label as string}</span>
-                </label>
-              ))}
-            </div>
+
+            {layerPanelTab === 'layers' ? (
+              <div className="space-y-1.5">
+                {[
+                  ['OpenAIP Master Chart', masterVisible, setMasterVisible],
+                  ['OpenAIP Airports', airportsVisible, setAirportsVisible],
+                  ['OpenAIP Navaids', navaidsVisible, setNavaidsVisible],
+                  ['OpenAIP Reporting Points', reportingVisible, setReportingVisible],
+                  ['Class E', classEVisible, setClassEVisible],
+                  ['Class F', classFVisible, setClassFVisible],
+                  ['Class G', classGVisible, setClassGVisible],
+                  ['Military Operations Areas', militaryAreasVisible, setMilitaryAreasVisible],
+                  ['Training Areas', trainingAreasVisible, setTrainingAreasVisible],
+                  ['Gliding Sectors', glidingSectorsVisible, setGlidingSectorsVisible],
+                  ['Hang Glidings', hangGlidingVisible, setHangGlidingVisible],
+                  ['OpenAIP Airspaces', airspacesVisible, setAirspacesVisible],
+                  ['OpenAIP Obstacles', obstaclesVisible, setObstaclesVisible],
+                ].map(([label, checked, setter]) => (
+                  <Button
+                    key={label as string}
+                    type="button"
+                    variant="outline"
+                    aria-pressed={checked as boolean}
+                    className={`h-7 w-full justify-start gap-1.5 px-2 text-[8px] font-black uppercase sm:h-9 sm:px-3 sm:text-[10px] ${
+                      checked
+                        ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => (setter as (value: boolean) => void)(!(checked as boolean))}
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full border-2 ${
+                        checked ? 'border-white bg-white' : 'border-slate-300 bg-transparent'
+                      }`}
+                    />
+                    <span className="text-[8px] font-semibold sm:text-[10px]">{label as string}</span>
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+
+            {layerPanelTab === 'labels' ? (
+              <div className="space-y-1.5">
+                {[
+                  ['Airport Labels', airportLabelsVisible, setAirportLabelsVisible],
+                  ['Navaid Labels', navaidLabelsVisible, setNavaidLabelsVisible],
+                  ['Reporting Labels', reportingLabelsVisible, setReportingLabelsVisible],
+                  ['Airspace Labels', airspaceLabelsVisible, setAirspaceLabelsVisible],
+                  ['Class E Labels', classELabelsVisible, setClassELabelsVisible],
+                  ['Class F Labels', classFLabelsVisible, setClassFLabelsVisible],
+                  ['Class G Labels', classGLabelsVisible, setClassGLabelsVisible],
+                  ['Military Labels', militaryLabelsVisible, setMilitaryLabelsVisible],
+                  ['Training Labels', trainingLabelsVisible, setTrainingLabelsVisible],
+                  ['Gliding Labels', glidingLabelsVisible, setGlidingLabelsVisible],
+                  ['Hang Gliding Labels', hangGlidingLabelsVisible, setHangGlidingLabelsVisible],
+                  ['Obstacle Labels', obstacleLabelsVisible, setObstacleLabelsVisible],
+                ].map(([label, checked, setter]) => (
+                  <Button
+                    key={label as string}
+                    type="button"
+                    variant="outline"
+                    aria-pressed={checked as boolean}
+                    className={`h-7 w-full justify-start gap-1.5 px-2 text-[8px] font-black uppercase sm:h-9 sm:px-3 sm:text-[10px] ${
+                      checked
+                        ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => (setter as (value: boolean) => void)(!(checked as boolean))}
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full border-2 ${
+                        checked ? 'border-white bg-white' : 'border-slate-300 bg-transparent'
+                      }`}
+                    />
+                    <span className="text-[8px] font-semibold sm:text-[10px]">{label as string}</span>
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+
+            {layerPanelTab === 'broadcasts' ? (
+              <div className="space-y-1.5">
+                {[
+                  ['Aircraft Names', showAircraftNames, setShowAircraftNames],
+                  ['Aircraft Trails', showAircraftTrails, setShowAircraftTrails],
+                  ['Navlog Routes', showNavlogRoutes, setShowNavlogRoutes],
+                ].map(([label, checked, setter]) => (
+                  <Button
+                    key={label as string}
+                    type="button"
+                    variant="outline"
+                    aria-pressed={checked as boolean}
+                    className={`h-7 w-full justify-start gap-1.5 px-2 text-[8px] font-black uppercase sm:h-9 sm:px-3 sm:text-[10px] ${
+                      checked
+                        ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => (setter as (value: boolean) => void)(!(checked as boolean))}
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full border-2 ${
+                        checked ? 'border-white bg-white' : 'border-slate-300 bg-transparent'
+                      }`}
+                    />
+                    <span className="text-[8px] font-semibold sm:text-[10px]">{label as string}</span>
+                  </Button>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

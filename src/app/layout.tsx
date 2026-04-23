@@ -94,6 +94,7 @@ function buildThemeBootstrapScript(serverTheme: TenantThemeConfig) {
   const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
   const SCALE_KEY = 'safeviate-scale';
   const serverTheme = ${serializedServerTheme};
+  const authRoutes = ['/login', '/forgot-password', '/setup-password', '/beta-nda'];
 
   const defaults = {
     main: {
@@ -203,6 +204,8 @@ function buildThemeBootstrapScript(serverTheme: TenantThemeConfig) {
   };
 
   try {
+    const pathname = window.location.pathname || '';
+    const isAuthRoute = authRoutes.some((route) => pathname === route || pathname.startsWith(route + '/'));
     const raw = window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
     const localTheme = parsed && parsed.theme && typeof parsed.theme === 'object' ? parsed.theme : null;
@@ -232,19 +235,24 @@ function buildThemeBootstrapScript(serverTheme: TenantThemeConfig) {
       typeof (localTheme && localTheme.headerBackgroundOpacity) === 'number'
         ? localTheme.headerBackgroundOpacity
         : (typeof (serverTheme && serverTheme.headerBackgroundOpacity) === 'number' ? serverTheme.headerBackgroundOpacity : 0.22);
-    const themeScale =
-      typeof (localTheme && localTheme.scale) === 'number'
-        ? localTheme.scale
-        : (typeof (serverTheme && serverTheme.scale) === 'number' ? serverTheme.scale : null);
-    const localScaleRaw = window.localStorage.getItem(SCALE_KEY);
-    const localScale = localScaleRaw ? JSON.parse(localScaleRaw) : null;
-    const scale = typeof themeScale === 'number' ? themeScale : (typeof localScale === 'number' ? localScale : 100);
 
     document.documentElement.style.setProperty('--sidebar-background-image', sidebarBackgroundImage ? \`url("\${sidebarBackgroundImage}")\` : 'none');
     document.documentElement.style.setProperty('--header-background-image', headerBackgroundImage ? \`url("\${headerBackgroundImage}")\` : 'none');
     document.documentElement.style.setProperty('--sidebar-background-opacity', String(sidebarBackgroundOpacity));
     document.documentElement.style.setProperty('--header-background-opacity', String(headerBackgroundOpacity));
-    document.documentElement.style.fontSize = \`\${scale}%\`;
+
+    if (!isAuthRoute) {
+      const themeScale =
+        typeof (localTheme && localTheme.scale) === 'number'
+          ? localTheme.scale
+          : (typeof (serverTheme && serverTheme.scale) === 'number' ? serverTheme.scale : null);
+      const localScaleRaw = window.localStorage.getItem(SCALE_KEY);
+      const localScale = localScaleRaw ? JSON.parse(localScaleRaw) : null;
+      const scale = typeof themeScale === 'number' ? themeScale : (typeof localScale === 'number' ? localScale : 100);
+      document.documentElement.style.fontSize = \`\${scale}%\`;
+    } else {
+      document.documentElement.style.fontSize = '100%';
+    }
   } catch {
     // Keep the CSS defaults when browser storage is unavailable or malformed.
   }

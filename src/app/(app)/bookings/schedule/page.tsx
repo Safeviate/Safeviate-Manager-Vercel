@@ -4,13 +4,14 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader } from "@/components/page-header";
 import type { Aircraft } from '@/types/aircraft';
+import type { AircraftMaintenanceWindow } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { format, startOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Lock } from 'lucide-react';
+import { CalendarIcon, Lock, Pencil, Trash2, Wrench } from 'lucide-react';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { BookingForm } from './booking-form';
 import type { Booking } from '@/types/booking';
@@ -20,7 +21,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { getBlockingBookingForTracking, isBookingEligibleForTracking } from '@/lib/booking-tracking';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const HOUR_HEIGHT_PX = 60;
 const TOTAL_HOURS = 24;
@@ -34,6 +41,15 @@ const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
         return new Date('invalid');
     }
     return parse(`${dateStr} ${timeStr}`, 'yyyy-MM-dd HH:mm', new Date());
+};
+
+const isDateWithinWindow = (date: string, window: Pick<AircraftMaintenanceWindow, 'fromDate' | 'toDate'>) =>
+  date >= window.fromDate && date <= window.toDate;
+
+const formatMaintenanceWindowRange = (window: Pick<AircraftMaintenanceWindow, 'fromDate' | 'toDate'>) => {
+  const from = parse(window.fromDate, 'yyyy-MM-dd', new Date());
+  const to = parse(window.toDate, 'yyyy-MM-dd', new Date());
+  return `${format(from, 'dd MMM')} - ${format(to, 'dd MMM')}`;
 };
 
 const BookingItem = ({
@@ -170,9 +186,15 @@ const BookingItem = ({
 
 export default function SchedulePage() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const { tenantId, userProfile } = useUserProfile();
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
-  const [selectedDate, setSelectedDate] = useState(startOfToday());
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const requestedDate = searchParams?.get('date');
+    if (!requestedDate) return startOfToday();
+    const parsedDate = parse(requestedDate, 'yyyy-MM-dd', new Date());
+    return Number.isNaN(parsedDate.getTime()) ? startOfToday() : startOfDay(parsedDate);
+  });
 
   const [now, setNow] = useState(new Date());
   const [nowLinePosition, setNowLinePosition] = useState(0);
@@ -181,6 +203,15 @@ export default function SchedulePage() {
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [bookingFormData, setBookingFormData] = useState<{ aircraft: Aircraft; startTime: Date; allBookingsForAircraft: Booking[]; booking?: Booking } | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
+  const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
+  const [selectedMaintenanceAircraftId, setSelectedMaintenanceAircraftId] = useState<string>('');
+  const [maintenanceTitle, setMaintenanceTitle] = useState('Maintenance');
+  const [maintenanceFromDate, setMaintenanceFromDate] = useState(format(startOfToday(), 'yyyy-MM-dd'));
+  const [maintenanceToDate, setMaintenanceToDate] = useState(format(startOfToday(), 'yyyy-MM-dd'));
+  const [maintenanceNotes, setMaintenanceNotes] = useState('');
+  const [editingMaintenanceWindowId, setEditingMaintenanceWindowId] = useState<string | null>(null);
+  const [isSavingMaintenance, setIsSavingMaintenance] = useState(false);
+  const highlightedAircraftId = searchParams?.get('aircraftId') || null;
 
   // PERMISSIONS
   const canManageSchedule = hasPermission('bookings-schedule-manage');
@@ -194,6 +225,15 @@ export default function SchedulePage() {
   const [privatePilots, setPrivatePilots] = useState<PilotProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [approvingBookingId, setApprovingBookingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const requestedDate = searchParams?.get('date');
+    if (!requestedDate) return;
+    const parsedDate = parse(requestedDate, 'yyyy-MM-dd', new Date());
+    if (Number.isNaN(parsedDate.getTime())) return;
+    const normalizedDate = startOfDay(parsedDate);
+    setSelectedDate((current) => (isSameDay(current, normalizedDate) ? current : normalizedDate));
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -333,6 +373,18 @@ export default function SchedulePage() {
   }, [selectedDate]);
   
   const handleSlotClick = (ac: Aircraft, hour: number) => {
+    const selectedDateKey = format(selectedDate, 'yyyy-MM-dd');
+    const activeMaintenance = (ac.maintenanceWindows || []).filter((window) => isDateWithinWindow(selectedDateKey, window));
+    if (activeMaintenance.length > 0) {
+      const nextMaintenance = activeMaintenance[0];
+      toast({
+        variant: 'destructive',
+        title: 'Aircraft In Maintenance',
+        description: `${ac.tailNumber} is blocked for ${nextMaintenance.title || 'maintenance'} through ${format(parse(nextMaintenance.toDate, 'yyyy-MM-dd', new Date()), 'PPP')}.`,
+      });
+      return;
+    }
+
     const slotTime = setMinutes(setHours(selectedDate, hour), 0);
     const currentTime = new Date();
     
@@ -382,6 +434,133 @@ export default function SchedulePage() {
   const hasAircraft = (aircraft || []).length > 0;
   const extraLanes = hasAircraft ? ['', '', ''] : [];
 
+  const resetMaintenanceDialog = useCallback(() => {
+    setSelectedMaintenanceAircraftId(aircraft[0]?.id || '');
+    setMaintenanceTitle('Maintenance');
+    const today = format(startOfToday(), 'yyyy-MM-dd');
+    setMaintenanceFromDate(today);
+    setMaintenanceToDate(today);
+    setMaintenanceNotes('');
+    setEditingMaintenanceWindowId(null);
+  }, [aircraft]);
+
+  useEffect(() => {
+    if (!selectedMaintenanceAircraftId && aircraft[0]?.id) {
+      setSelectedMaintenanceAircraftId(aircraft[0].id);
+    }
+  }, [aircraft, selectedMaintenanceAircraftId]);
+
+  const handleOpenMaintenanceDialog = useCallback(() => {
+    resetMaintenanceDialog();
+    setIsMaintenanceDialogOpen(true);
+  }, [resetMaintenanceDialog]);
+
+  const persistAircraftMaintenanceWindows = useCallback(async (aircraftRecord: Aircraft, windows: AircraftMaintenanceWindow[]) => {
+    const nextAircraft = {
+      ...aircraftRecord,
+      maintenanceWindows: windows,
+    };
+
+    const response = await fetch(`/api/aircraft/${aircraftRecord.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ aircraft: nextAircraft }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || 'Failed to save maintenance window.');
+    }
+
+    setAircraft((current) => current.map((entry) => (entry.id === aircraftRecord.id ? nextAircraft : entry)));
+    setDataVersion((value) => value + 1);
+    return nextAircraft;
+  }, []);
+
+  const handleEditMaintenanceWindow = useCallback((aircraftRecord: Aircraft, window: AircraftMaintenanceWindow) => {
+    setSelectedMaintenanceAircraftId(aircraftRecord.id);
+    setMaintenanceTitle(window.title);
+    setMaintenanceFromDate(window.fromDate);
+    setMaintenanceToDate(window.toDate);
+    setMaintenanceNotes(window.notes || '');
+    setEditingMaintenanceWindowId(window.id);
+    setIsMaintenanceDialogOpen(true);
+  }, []);
+
+  const handleDeleteMaintenanceWindow = useCallback(async (aircraftRecord: Aircraft, maintenanceWindow: AircraftMaintenanceWindow) => {
+    const confirmed = window.confirm(`Remove ${maintenanceWindow.title} from ${aircraftRecord.tailNumber}?`);
+    if (!confirmed) return;
+
+    setIsSavingMaintenance(true);
+    try {
+      await persistAircraftMaintenanceWindows(
+        aircraftRecord,
+        (aircraftRecord.maintenanceWindows || []).filter((entry) => entry.id !== maintenanceWindow.id)
+      );
+      toast({
+        title: 'Maintenance Removed',
+        description: `${aircraftRecord.tailNumber} is no longer blocked for ${maintenanceWindow.title}.`,
+      });
+    } catch (error: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error instanceof Error ? error.message : 'Failed to remove maintenance window.',
+      });
+    } finally {
+      setIsSavingMaintenance(false);
+    }
+  }, [persistAircraftMaintenanceWindows, toast]);
+
+  const handleSaveMaintenance = useCallback(async () => {
+    const selectedAircraft = aircraft.find((entry) => entry.id === selectedMaintenanceAircraftId);
+    if (!selectedAircraft) {
+      toast({ variant: 'destructive', title: 'Aircraft Required', description: 'Select the aircraft that will be in maintenance.' });
+      return;
+    }
+
+    if (!maintenanceFromDate || !maintenanceToDate) {
+      toast({ variant: 'destructive', title: 'Dates Required', description: 'Choose both the maintenance from and to dates.' });
+      return;
+    }
+
+    if (maintenanceToDate < maintenanceFromDate) {
+      toast({ variant: 'destructive', title: 'Invalid Dates', description: 'The maintenance end date must be on or after the start date.' });
+      return;
+    }
+
+    setIsSavingMaintenance(true);
+    try {
+      const nextWindow: AircraftMaintenanceWindow = {
+        id: editingMaintenanceWindowId || crypto.randomUUID(),
+        title: maintenanceTitle.trim() || 'Maintenance',
+        fromDate: maintenanceFromDate,
+        toDate: maintenanceToDate,
+        notes: maintenanceNotes.trim() || undefined,
+        status: 'Scheduled',
+      };
+      const existingWindows = selectedAircraft.maintenanceWindows || [];
+      const nextWindows = editingMaintenanceWindowId
+        ? existingWindows.map((entry) => (entry.id === editingMaintenanceWindowId ? nextWindow : entry))
+        : [...existingWindows, nextWindow];
+
+      await persistAircraftMaintenanceWindows(selectedAircraft, nextWindows);
+      setIsMaintenanceDialogOpen(false);
+      toast({
+        title: editingMaintenanceWindowId ? 'Maintenance Updated' : 'Maintenance Scheduled',
+        description: `${selectedAircraft.tailNumber} is blocked from ${format(parse(maintenanceFromDate, 'yyyy-MM-dd', new Date()), 'PPP')} to ${format(parse(maintenanceToDate, 'yyyy-MM-dd', new Date()), 'PPP')}.`,
+      });
+    } catch (error: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: error instanceof Error ? error.message : 'Failed to save maintenance window.',
+      });
+    } finally {
+      setIsSavingMaintenance(false);
+    }
+  }, [aircraft, editingMaintenanceWindowId, maintenanceFromDate, maintenanceNotes, maintenanceTitle, maintenanceToDate, persistAircraftMaintenanceWindows, selectedMaintenanceAircraftId, toast]);
+
   if (isLoading) {
       return <div className="max-w-[1100px] mx-auto w-full px-1 pt-4"><Skeleton className="h-[600px] w-full" /></div>;
   }
@@ -414,6 +593,12 @@ export default function SchedulePage() {
                             </PopoverContent>
                         </Popover>
                         <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>Next Day</Button>
+                        {canManageSchedule ? (
+                          <Button variant="outline" size="sm" onClick={handleOpenMaintenanceDialog}>
+                            <Wrench className="mr-2 h-4 w-4" />
+                            Schedule Maintenance
+                          </Button>
+                        ) : null}
                         {!canManageSchedule && (
                             <Badge variant="outline" className="h-9 gap-1.5 text-muted-foreground bg-muted/20 border-border px-3 uppercase text-[10px] font-bold">
                                 <Lock className="h-3.5 w-3.5" /> Read Only
@@ -444,7 +629,12 @@ export default function SchedulePage() {
                             {(aircraft || []).map((ac) => (
                                 <div 
                                     key={ac.id} 
-                                    className={cn(LANE_FLEX_CLASS, LANE_WIDTH_CLASS, "border-r flex items-center justify-center font-bold text-xs px-2 text-center text-swimlane-header-foreground h-12 bg-swimlane-header whitespace-normal leading-tight")}
+                                    className={cn(
+                                      LANE_FLEX_CLASS,
+                                      LANE_WIDTH_CLASS,
+                                      "border-r flex items-center justify-center font-bold text-xs px-2 text-center text-swimlane-header-foreground h-12 bg-swimlane-header whitespace-normal leading-tight",
+                                      highlightedAircraftId === ac.id && "bg-primary text-primary-foreground"
+                                    )}
                                 >
                                     {ac.tailNumber}
                                 </div>
@@ -472,12 +662,15 @@ export default function SchedulePage() {
                             </div>
 
                             {(aircraft || []).map((ac) => {
+                                const selectedDateKey = format(selectedDate, 'yyyy-MM-dd');
                                 const relevantBookings = (bookings || []).filter(b => {
                                     if (b.isOvernight) {
-                                        return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd') || b.overnightBookingDate === format(selectedDate, 'yyyy-MM-dd'));
+                                        return (b.aircraftId === ac.id) && (b.date === selectedDateKey || b.overnightBookingDate === selectedDateKey);
                                     }
-                                    return (b.aircraftId === ac.id) && (b.date === format(selectedDate, 'yyyy-MM-dd'));
+                                    return (b.aircraftId === ac.id) && (b.date === selectedDateKey);
                                 });
+                                const activeMaintenance = (ac.maintenanceWindows || []).filter((window) => isDateWithinWindow(selectedDateKey, window));
+                                const isAircraftInMaintenance = activeMaintenance.length > 0;
 
                                 return (
                                     <div 
@@ -491,14 +684,68 @@ export default function SchedulePage() {
                                                     key={hour} 
                                                     className={cn(
                                                         "border-b relative transition-colors",
-                                                        isPast ? "bg-red-500/[0.02] cursor-not-allowed" : "cursor-pointer hover:bg-accent/50",
-                                                        !canManageSchedule && !isPast && "cursor-default"
+                                                        isPast || isAircraftInMaintenance ? "bg-red-500/[0.02] cursor-not-allowed" : "cursor-pointer hover:bg-accent/50",
+                                                        !canManageSchedule && !isPast && !isAircraftInMaintenance && "cursor-default"
                                                     )} 
                                                     style={{ height: `${HOUR_HEIGHT_PX}px` }}
                                                     onClick={() => handleSlotClick(ac, hour)}
                                                 />
                                             )
                                         })}
+                                        {activeMaintenance.length > 0 ? (
+                                          <div className="absolute inset-x-1 top-1 bottom-1 z-20 rounded-md border-2 border-amber-600 bg-amber-100/90 px-2 py-2 shadow-sm">
+                                            <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-900">
+                                              <Wrench className="h-3 w-3" />
+                                              In Maintenance
+                                            </div>
+                                            <div className="mt-2 space-y-2">
+                                              {activeMaintenance.slice(0, 3).map((window) => (
+                                                <div key={window.id} className="rounded-md border border-amber-700/20 bg-white/70 px-2 py-1.5">
+                                                  <div className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-950">
+                                                    {window.title}
+                                                  </div>
+                                                  <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-amber-800">
+                                                    {formatMaintenanceWindowRange(window)}
+                                                  </div>
+                                                  {window.notes ? (
+                                                    <div className="mt-1 line-clamp-2 text-[10px] font-medium text-amber-950/80">
+                                                      {window.notes}
+                                                    </div>
+                                                  ) : null}
+                                                  {canManageSchedule ? (
+                                                    <div className="mt-2 flex items-center justify-end gap-1">
+                                                      <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-7 border-amber-700/30 bg-white/80 px-2 text-[9px] font-black uppercase text-amber-950 hover:bg-white"
+                                                        onClick={() => handleEditMaintenanceWindow(ac, window)}
+                                                      >
+                                                        <Pencil className="mr-1 h-3 w-3" />
+                                                        Edit
+                                                      </Button>
+                                                      <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-7 border-amber-700/30 bg-white/80 px-2 text-[9px] font-black uppercase text-amber-950 hover:bg-white"
+                                                        onClick={() => handleDeleteMaintenanceWindow(ac, window)}
+                                                      >
+                                                        <Trash2 className="mr-1 h-3 w-3" />
+                                                        Delete
+                                                      </Button>
+                                                    </div>
+                                                  ) : null}
+                                                </div>
+                                              ))}
+                                              {activeMaintenance.length > 3 ? (
+                                                <div className="text-[9px] font-black uppercase tracking-[0.14em] text-amber-900">
+                                                  +{activeMaintenance.length - 3} more windows
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                        ) : null}
                                         {relevantBookings.map((booking) => (
                                         <BookingItem 
                                             key={booking.id} 
@@ -565,6 +812,60 @@ export default function SchedulePage() {
                 refreshBookings={refreshBookings}
             />
         )}
+
+        <Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen}>
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-black uppercase tracking-tight">
+                {editingMaintenanceWindowId ? 'Edit Maintenance' : 'Schedule Maintenance'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest">Aircraft</Label>
+                <Select value={selectedMaintenanceAircraftId} onValueChange={setSelectedMaintenanceAircraftId}>
+                  <SelectTrigger className="h-11 font-bold">
+                    <SelectValue placeholder="Select aircraft" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {aircraft.map((entry) => (
+                      <SelectItem key={entry.id} value={entry.id}>
+                        {entry.tailNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maintenance-title" className="text-[10px] font-black uppercase tracking-widest">Maintenance Title</Label>
+                <Input id="maintenance-title" value={maintenanceTitle} onChange={(event) => setMaintenanceTitle(event.target.value)} className="h-11 font-bold" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-from" className="text-[10px] font-black uppercase tracking-widest">From Date</Label>
+                  <Input id="maintenance-from" type="date" value={maintenanceFromDate} onChange={(event) => setMaintenanceFromDate(event.target.value)} className="h-11 font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-to" className="text-[10px] font-black uppercase tracking-widest">To Date</Label>
+                  <Input id="maintenance-to" type="date" value={maintenanceToDate} onChange={(event) => setMaintenanceToDate(event.target.value)} className="h-11 font-bold" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maintenance-notes" className="text-[10px] font-black uppercase tracking-widest">Notes</Label>
+                <Textarea id="maintenance-notes" value={maintenanceNotes} onChange={(event) => setMaintenanceNotes(event.target.value)} className="min-h-[88px]" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsMaintenanceDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveMaintenance} disabled={isSavingMaintenance}>
+                {isSavingMaintenance ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wrench className="mr-2 h-4 w-4" />}
+                {editingMaintenanceWindowId ? 'Update Maintenance' : 'Save Maintenance'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

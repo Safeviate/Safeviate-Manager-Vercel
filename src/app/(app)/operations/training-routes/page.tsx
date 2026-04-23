@@ -245,7 +245,7 @@ export default function TrainingRoutesPage() {
 
         <CardContent className="flex-1 overflow-hidden p-0">
           <div className={cn('grid grid-cols-1 overflow-hidden lg:h-full lg:grid-cols-[minmax(0,1fr)_350px]', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
-              <div className={cn('relative order-1 flex flex-col overflow-hidden bg-slate-900', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'bg-white')}>
+              <div className={cn('relative order-1 z-20 flex flex-col overflow-visible bg-slate-900', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'bg-white')}>
                 <AeronauticalMap
                   legs={activeRoute?.legs || []}
                   hazards={activeRoute?.hazards || []}
@@ -261,7 +261,7 @@ export default function TrainingRoutesPage() {
               {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
-            <div className={cn('order-2 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:h-full lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
+            <div className={cn('relative order-2 z-10 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:h-full lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
               {activeRoute ? (
                 <ScrollArea className="flex-1">
                   <div className="space-y-8 p-6 pb-12">

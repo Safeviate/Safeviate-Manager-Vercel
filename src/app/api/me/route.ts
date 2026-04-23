@@ -133,6 +133,7 @@ export async function GET(request: Request) {
         ],
       },
     }).catch(() => null);
+    const roleData = role as unknown as { permissions?: unknown; accessOverrides?: { hiddenMenus?: unknown } } | null;
 
     return NextResponse.json(
       {
@@ -142,7 +143,10 @@ export async function GET(request: Request) {
           accessOverrides: personnelProfile?.accessOverrides ?? {},
         },
         tenant: tenant ?? null,
-        rolePermissions: (role?.permissions as string[] | null) ?? [],
+        rolePermissions: Array.isArray(roleData?.permissions) ? (roleData.permissions as string[]) : [],
+        roleHiddenMenus: Array.isArray(roleData?.accessOverrides?.hiddenMenus)
+          ? (roleData.accessOverrides?.hiddenMenus as string[])
+          : [],
       },
       { status: 200 }
     );

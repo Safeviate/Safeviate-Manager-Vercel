@@ -7,9 +7,11 @@ import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
+import { MASTER_TENANT_EMAILS } from '@/lib/tenant-constants';
 
 type MePayload = {
   rolePermissions?: string[];
+  roleHiddenMenus?: string[];
   tenant?: {
     id: string;
     industry?: string | null;
@@ -18,6 +20,9 @@ type MePayload = {
 };
 
 let permissionsCache: MePayload | null = null;
+
+const isSuperUserEmail = (email?: string | null) =>
+  MASTER_TENANT_EMAILS.includes((email || '').trim().toLowerCase());
 
 export const usePermissions = () => {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
@@ -72,11 +77,21 @@ export const usePermissions = () => {
     return grantedPermissions;
   }, [payload?.rolePermissions, userProfile]);
 
+  const hiddenMenus = useMemo(() => {
+    const roleHiddenMenus = payload?.roleHiddenMenus || [];
+    const userHiddenMenus = (userProfile as Personnel | null)?.accessOverrides?.hiddenMenus || [];
+    return new Set([...roleHiddenMenus, ...userHiddenMenus]);
+  }, [payload?.roleHiddenMenus, userProfile]);
+
   const isLoading = isProfileLoading || isPermissionsLoading;
 
   const hasPermission = useCallback(
     (permissionId: string) => {
       if (isLoading || !userProfile) return false;
+
+      if (isSuperUserEmail(userProfile.email)) {
+        return true;
+      }
 
       const userRole = (userProfile as Personnel).role?.toLowerCase();
       if (userRole === 'dev' || userRole === 'developer') {
@@ -98,18 +113,22 @@ export const usePermissions = () => {
 
       const tenant = payload?.tenant;
       const itemHref = item.href;
+      if (isSuperUserEmail(userProfile.email)) {
+        return true;
+      }
+
       const userRole = (userProfile as Personnel).role?.toLowerCase();
       const isCompanyDashboard = itemHref === '/dashboard';
       if (userRole === 'dev' || userRole === 'developer') {
-        return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
+        return !hiddenMenus.has(itemHref);
       }
 
       if (effectivePermissions.has('*')) {
-        return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
+        return !hiddenMenus.has(itemHref);
       }
 
       if (isCompanyDashboard) {
-        return !userProfile.accessOverrides?.hiddenMenus?.includes(itemHref);
+        return !hiddenMenus.has(itemHref);
       }
 
       const isExplicitlyEnabled = tenant?.enabledMenus?.includes(itemHref) ?? false;
@@ -118,7 +137,7 @@ export const usePermissions = () => {
         return false;
       }
 
-      if (userProfile.accessOverrides?.hiddenMenus?.includes(itemHref)) return false;
+      if (hiddenMenus.has(itemHref)) return false;
 
       const isEnabledByTenant =
         bypassIndustryRestrictions ||
@@ -131,7 +150,7 @@ export const usePermissions = () => {
 
       return true;
     },
-    [hasPermission, isLoading, payload?.tenant, userProfile]
+    [hasPermission, hiddenMenus, isLoading, payload?.tenant, userProfile]
   );
 
   return {

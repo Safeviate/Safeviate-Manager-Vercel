@@ -16,6 +16,9 @@ export type Role = {
   id: string;
   name: string;
   permissions: string[];
+  accessOverrides?: {
+    hiddenMenus?: string[];
+  };
   requiredDocuments?: string[];
 };
 
