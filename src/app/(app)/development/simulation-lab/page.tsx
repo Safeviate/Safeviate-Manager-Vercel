@@ -680,14 +680,20 @@ export default function SimulationLabPage() {
   }, [runs]);
 
   const comparison = useMemo(() => {
+    if (!showRunComparison) {
+      return { left: null, right: null };
+    }
     const left = runs.find((run) => run.id === compareLeftId) || null;
     const right = runs.find((run) => run.id === compareRightId) || null;
     return { left, right };
-  }, [compareLeftId, compareRightId, runs]);
+  }, [compareLeftId, compareRightId, runs, showRunComparison]);
 
-  const trendRuns = useMemo(() => runs.slice(0, 6).reverse(), [runs]);
+  const trendRuns = useMemo(() => (showRunTrends ? runs.slice(0, 6).reverse() : []), [runs, showRunTrends]);
 
   const filteredRuns = useMemo(() => {
+    if (!showRunLedger) {
+      return [];
+    }
     const search = runSearch.trim().toLowerCase();
     const nextRuns = runs.filter((run) => {
       const observedCount = run.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0;
@@ -726,9 +732,20 @@ export default function SimulationLabPage() {
     });
 
     return nextRuns;
-  }, [activeRunId, runFilter, runSearch, runSort, runs]);
+  }, [activeRunId, runFilter, runSearch, runSort, runs, showRunLedger]);
 
   const filteredSummary = useMemo(() => {
+    if (!showRunLedger) {
+      return {
+        runCount: 0,
+        totalWrites: 0,
+        totalFlightHours: 0,
+        totalEstimatedApi: 0,
+        totalObservedRequests: 0,
+        passCount: 0,
+        attentionCount: 0,
+      };
+    }
     return {
       runCount: filteredRuns.length,
       totalWrites: filteredRuns.reduce((sum, run) => sum + run.writes.total, 0),
@@ -741,7 +758,7 @@ export default function SimulationLabPage() {
       passCount: filteredRuns.filter((run) => getRunHealth(run) === 'pass').length,
       attentionCount: filteredRuns.filter((run) => getRunHealth(run) !== 'pass').length,
     };
-  }, [filteredRuns]);
+  }, [filteredRuns, showRunLedger]);
 
   const telemetryOverview = useMemo(() => {
     const sourceRuns = filteredRuns.length > 0 ? filteredRuns : runs;
@@ -766,7 +783,7 @@ export default function SimulationLabPage() {
   }, [filteredRuns, runs]);
 
   const comparisonSummary = useMemo(() => {
-    if (!comparison.left || !comparison.right) return null;
+    if (!showRunComparison || !comparison.left || !comparison.right) return null;
     const leftObserved = comparison.left.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0;
     const rightObserved = comparison.right.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0;
 
@@ -776,7 +793,7 @@ export default function SimulationLabPage() {
       estimatedApiDelta: comparison.left.telemetry.estimatedApiRequests - comparison.right.telemetry.estimatedApiRequests,
       observedDelta: leftObserved - rightObserved,
     };
-  }, [comparison.left, comparison.right]);
+  }, [comparison.left, comparison.right, showRunComparison]);
 
   const downloadFile = useCallback((filename: string, content: string, mimeType: string) => {
     if (typeof window === 'undefined') return;
