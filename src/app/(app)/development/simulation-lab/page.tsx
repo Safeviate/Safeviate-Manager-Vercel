@@ -888,13 +888,47 @@ export default function SimulationLabPage() {
   if (isLoading) {
     return (
       <div className="mx-auto flex h-full w-full max-w-[1220px] flex-col gap-6 px-1">
-        <Skeleton className="h-14 w-full" />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
+        <Card className="flex min-h-0 flex-col overflow-hidden border border-card-border shadow-none">
+          <div className="border-b px-4 py-4 md:px-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-[420px] max-w-full" />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-9 w-32" />
+                <Skeleton className="h-9 w-28" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+            </div>
+          </div>
+          <CardContent className="space-y-6 p-4 md:p-6">
+            <div className="rounded-2xl border bg-muted/5 px-4 py-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-5 w-64 max-w-full" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-7 w-28" />
+                  <Skeleton className="h-9 w-32" />
+                </div>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Skeleton className="h-28 w-full rounded-2xl" />
+              <Skeleton className="h-28 w-full rounded-2xl" />
+              <Skeleton className="h-28 w-full rounded-2xl" />
+              <Skeleton className="h-28 w-full rounded-2xl" />
+            </div>
+            <Skeleton className="h-80 w-full rounded-2xl" />
+            <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+              <Skeleton className="h-[720px] w-full rounded-2xl" />
+              <Skeleton className="h-[720px] w-full rounded-2xl" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
