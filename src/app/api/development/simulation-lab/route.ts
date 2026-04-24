@@ -911,18 +911,23 @@ async function persistSimulationRun(context: TenantContext, settings: Simulation
   const telemetryStages: SimulationRunSummary['telemetry']['stages'] = [];
   const recordStage = <T,>(label: string, counts: { reads?: number; writes?: number }, action: () => Promise<T>): Promise<T> => {
     const startedAt = Date.now();
-    return action().then((result) => {
-      const reads = counts.reads || 0;
-      const writes = counts.writes || 0;
-      telemetryStages.push({
-        label,
-        durationMs: Date.now() - startedAt,
-        reads,
-        writes,
-        operations: reads + writes,
+    return action()
+      .then((result) => {
+        const reads = counts.reads || 0;
+        const writes = counts.writes || 0;
+        telemetryStages.push({
+          label,
+          durationMs: Date.now() - startedAt,
+          reads,
+          writes,
+          operations: reads + writes,
+        });
+        return result;
+      })
+      .catch((error) => {
+        const detail = error instanceof Error ? error.message : 'Unknown stage failure.';
+        throw new Error(`${label} failed: ${detail}`);
       });
-      return result;
-    });
   };
 
   const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -990,150 +995,154 @@ async function persistSimulationRun(context: TenantContext, settings: Simulation
         risks.length,
     },
     async () => prisma.$transaction(async (tx) => {
-    for (const person of [...instructors, ...students, ...personnel]) {
-      await tx.user.upsert({
-        where: { email: person.email },
-        update: {
-          id: person.id,
-          tenantId: context.tenantId,
-          firstName: person.firstName,
-          lastName: person.lastName,
-          role: person.role,
-          passwordHash: null,
-          profilePath: `tenants/${context.tenantId}/personnel/${person.id}`,
-          updatedAt: new Date(),
-        },
-        create: {
-          id: person.id,
-          tenantId: context.tenantId,
-          email: person.email,
-          firstName: person.firstName,
-          lastName: person.lastName,
-          role: person.role,
-          passwordHash: null,
-          profilePath: `tenants/${context.tenantId}/personnel/${person.id}`,
-        },
-      });
+      for (const person of [...instructors, ...students, ...personnel]) {
+        await tx.user.upsert({
+          where: { email: person.email },
+          update: {
+            id: person.id,
+            tenantId: context.tenantId,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            role: person.role,
+            passwordHash: null,
+            profilePath: `tenants/${context.tenantId}/personnel/${person.id}`,
+            updatedAt: new Date(),
+          },
+          create: {
+            id: person.id,
+            tenantId: context.tenantId,
+            email: person.email,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            role: person.role,
+            passwordHash: null,
+            profilePath: `tenants/${context.tenantId}/personnel/${person.id}`,
+          },
+        });
 
-      await tx.personnel.upsert({
-        where: { id: person.id },
-        update: {
-          tenantId: context.tenantId,
-          userNumber: person.userNumber,
-          firstName: person.firstName,
-          lastName: person.lastName,
-          email: person.email,
-          department: person.department,
-          organizationId: context.tenantId,
-          role: person.role,
-          userType: person.userType,
-          canBeInstructor: person.canBeInstructor,
-          canBeStudent: person.canBeStudent,
-          permissions: [],
-          updatedAt: new Date(),
-        },
-        create: {
-          id: person.id,
-          tenantId: context.tenantId,
-          userNumber: person.userNumber,
-          firstName: person.firstName,
-          lastName: person.lastName,
-          email: person.email,
-          department: person.department,
-          organizationId: context.tenantId,
-          role: person.role,
-          userType: person.userType,
-          canBeInstructor: person.canBeInstructor,
-          canBeStudent: person.canBeStudent,
-          permissions: [],
-        },
-      });
-    }
+        await tx.personnel.upsert({
+          where: { id: person.id },
+          update: {
+            tenantId: context.tenantId,
+            userNumber: person.userNumber,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            email: person.email,
+            department: person.department,
+            organizationId: context.tenantId,
+            role: person.role,
+            userType: person.userType,
+            canBeInstructor: person.canBeInstructor,
+            canBeStudent: person.canBeStudent,
+            permissions: [],
+            updatedAt: new Date(),
+          },
+          create: {
+            id: person.id,
+            tenantId: context.tenantId,
+            userNumber: person.userNumber,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            email: person.email,
+            department: person.department,
+            organizationId: context.tenantId,
+            role: person.role,
+            userType: person.userType,
+            canBeInstructor: person.canBeInstructor,
+            canBeStudent: person.canBeStudent,
+            permissions: [],
+          },
+        });
+      }
 
-    for (const item of aircraft) {
-      await tx.aircraftRecord.upsert({
-        where: { id: item.id },
-        update: { tenantId: context.tenantId, data: item as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
-        create: { id: item.id, tenantId: context.tenantId, data: item as unknown as Prisma.InputJsonValue },
-      });
-    }
+      for (const item of aircraft) {
+        await tx.aircraftRecord.upsert({
+          where: { id: item.id },
+          update: { tenantId: context.tenantId, data: item as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
+          create: { id: item.id, tenantId: context.tenantId, data: item as unknown as Prisma.InputJsonValue },
+        });
+      }
 
-    if (hasVehiclesTable) {
-      for (const item of vehicles) {
+      if (hasVehiclesTable) {
+        for (const item of vehicles) {
+          await tx.$executeRawUnsafe(
+            `INSERT INTO vehicles (id, tenant_id, data, created_at, updated_at)
+             VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+             ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+            item.id,
+            context.tenantId,
+            JSON.stringify(item)
+          );
+        }
+      }
+
+      for (const booking of bookings) {
+        await tx.bookingRecord.upsert({
+          where: { id: booking.id },
+          update: { data: booking as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
+          create: { id: booking.id, tenantId: context.tenantId, data: booking as unknown as Prisma.InputJsonValue },
+        });
+      }
+
+      for (const meeting of meetings) {
         await tx.$executeRawUnsafe(
-          `INSERT INTO vehicles (id, tenant_id, data, created_at, updated_at)
+          `INSERT INTO meetings (id, tenant_id, data, created_at, updated_at)
            VALUES ($1, $2, $3::jsonb, NOW(), NOW())
            ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-          item.id,
+          meeting.id,
           context.tenantId,
-          JSON.stringify(item)
+          JSON.stringify(meeting)
         );
       }
-    }
 
-    for (const booking of bookings) {
-      await tx.bookingRecord.upsert({
-        where: { id: booking.id },
-        update: { data: booking as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
-        create: { id: booking.id, tenantId: context.tenantId, data: booking as unknown as Prisma.InputJsonValue },
-      });
-    }
+      for (const report of safetyReports) {
+        await tx.$executeRawUnsafe(
+          `INSERT INTO safety_reports (id, tenant_id, data, created_at, updated_at)
+           VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+           ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+          report.id,
+          context.tenantId,
+          JSON.stringify(report)
+        );
+      }
 
-    for (const meeting of meetings) {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO meetings (id, tenant_id, data, created_at, updated_at)
-         VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-        meeting.id,
-        context.tenantId,
-        JSON.stringify(meeting)
-      );
-    }
+      for (const audit of qualityAudits) {
+        await tx.$executeRawUnsafe(
+          `INSERT INTO quality_audits (id, tenant_id, data, created_at, updated_at)
+           VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+           ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+          audit.id,
+          context.tenantId,
+          JSON.stringify(audit)
+        );
+      }
 
-    for (const report of safetyReports) {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO safety_reports (id, tenant_id, data, created_at, updated_at)
-         VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-        report.id,
-        context.tenantId,
-        JSON.stringify(report)
-      );
-    }
+      for (const cap of correctiveActionPlans) {
+        await tx.$executeRawUnsafe(
+          `INSERT INTO corrective_action_plans (id, tenant_id, data, created_at, updated_at)
+           VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+           ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+          cap.id,
+          context.tenantId,
+          JSON.stringify(cap)
+        );
+      }
 
-    for (const audit of qualityAudits) {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO quality_audits (id, tenant_id, data, created_at, updated_at)
-         VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-        audit.id,
-        context.tenantId,
-        JSON.stringify(audit)
-      );
-    }
-
-    for (const cap of correctiveActionPlans) {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO corrective_action_plans (id, tenant_id, data, created_at, updated_at)
-         VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-        cap.id,
-        context.tenantId,
-        JSON.stringify(cap)
-      );
-    }
-
-    for (const risk of risks) {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO risks (id, tenant_id, data, created_at, updated_at)
-         VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-        risk.id,
-        context.tenantId,
-        JSON.stringify(risk)
-      );
-    }
-  }));
+      for (const risk of risks) {
+        await tx.$executeRawUnsafe(
+          `INSERT INTO risks (id, tenant_id, data, created_at, updated_at)
+           VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+           ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+          risk.id,
+          context.tenantId,
+          JSON.stringify(risk)
+        );
+      }
+    }, {
+      maxWait: 30_000,
+      timeout: 180_000,
+    })
+  );
 
   const existingConfig = await recordStage('Read tenant config', { reads: 1 }, async () => readTenantConfig(context.tenantId));
   const existingReports = Array.isArray(existingConfig[REPORTS_KEY]) ? (existingConfig[REPORTS_KEY] as StudentProgressReport[]) : [];
@@ -1294,6 +1303,7 @@ async function deleteSimulationRun(context: TenantContext, runId: string) {
     await tx.$executeRawUnsafe(`DELETE FROM quality_audits WHERE tenant_id = $1 AND id LIKE $2`, context.tenantId, `${prefix}%`);
     await tx.$executeRawUnsafe(`DELETE FROM corrective_action_plans WHERE tenant_id = $1 AND id LIKE $2`, context.tenantId, `${prefix}%`);
     await tx.$executeRawUnsafe(`DELETE FROM risks WHERE tenant_id = $1 AND id LIKE $2`, context.tenantId, `${prefix}%`);
+    await tx.$executeRawUnsafe(`DELETE FROM simulation_route_metrics WHERE tenant_id = $1 AND run_id = $2`, context.tenantId, runId);
   });
 
   const existingConfig = await readTenantConfig(context.tenantId);
@@ -1307,6 +1317,15 @@ async function deleteSimulationRun(context: TenantContext, runId: string) {
     [ACTIVE_SIMULATION_RUN_KEY]: activeRunId === runId ? null : activeRunId,
     [RUNS_KEY]: runs.filter((run) => run.id !== runId),
   });
+}
+
+async function deleteAllSimulationRuns(context: TenantContext) {
+  const existingConfig = await readTenantConfig(context.tenantId);
+  const runs = Array.isArray(existingConfig[RUNS_KEY]) ? (existingConfig[RUNS_KEY] as SimulationRunSummary[]) : [];
+
+  for (const run of runs) {
+    await deleteSimulationRun(context, run.id);
+  }
 }
 
 async function stopSimulationTracking(context: TenantContext) {
@@ -1376,6 +1395,7 @@ async function runAutoExercise(context: TenantContext, run: SimulationRunSummary
       for (let index = 0; index < route.requests; index += 1) {
         await recordSimulationRouteMetric({
           tenantId: context.tenantId,
+          runId: run.id,
           routeKey: route.routeKey,
           reads: route.reads,
           writes: route.writes,
@@ -1499,7 +1519,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, run, autoExercise }, { status: 200 });
   } catch (error) {
     console.error('[simulation-lab] failed to generate run:', error);
-    return NextResponse.json({ error: 'Failed to generate simulation run.' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to generate simulation run.' },
+      { status: 500 }
+    );
   }
 }
 
@@ -1511,6 +1534,13 @@ export async function DELETE(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
+    const clearAll = body?.clearAll === true;
+
+    if (clearAll) {
+      await deleteAllSimulationRuns(context);
+      return NextResponse.json({ ok: true, cleared: true }, { status: 200 });
+    }
+
     const runId = typeof body?.runId === 'string' ? body.runId.trim() : '';
     if (!runId) {
       return NextResponse.json({ error: 'Missing run id.' }, { status: 400 });

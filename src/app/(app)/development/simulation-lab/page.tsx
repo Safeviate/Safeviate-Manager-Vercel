@@ -285,6 +285,97 @@ function getRunHealth(run: SimulationRunSummary) {
   return 'pass' as const;
 }
 
+function getObservedRequests(run: SimulationRunSummary) {
+  return run.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0;
+}
+
+function getDecodedAnalysis(run: SimulationRunSummary) {
+  const observedRequests = getObservedRequests(run);
+  const observedErrors = run.telemetry.observedRoutes?.reduce((sum, route) => sum + route.errorCount, 0) || 0;
+  const hottestRoute = [...(run.telemetry.observedRoutes || [])].sort((left, right) => right.requestCount - left.requestCount)[0] || null;
+  const health = getRunHealth(run);
+  const insights: string[] = [];
+
+  if (run.writes.total > 500) {
+    insights.push(`This is a heavy seed run with ${run.writes.total} records written, so it is a strong pressure test for booking, reporting, and dashboard flows.`);
+  } else if (run.writes.total > 200) {
+    insights.push(`This run created a moderate tenant footprint with ${run.writes.total} records, which is useful for realistic day-to-day validation.`);
+  } else {
+    insights.push(`This is a lighter seed run with ${run.writes.total} records, which is best suited to baseline smoke and functional checks.`);
+  }
+
+  if (observedRequests === 0) {
+    insights.push('No downstream route traffic has been observed yet, so this run mainly tells us about seeding cost rather than live app usage.');
+  } else if (hottestRoute) {
+    insights.push(`Observed usage is active, and ${hottestRoute.routeKey} is currently the hottest route with ${hottestRoute.requestCount} requests.`);
+  }
+
+  if (observedErrors > 0) {
+    insights.push(`Observed telemetry captured ${observedErrors} downstream API errors, so this run should be investigated before performance tuning.`);
+  } else if (observedRequests > 0) {
+    insights.push('No downstream API errors were observed during the tracked usage for this run.');
+  }
+
+  if (run.telemetry.actualDbWrites > run.writes.total * 1.4) {
+    insights.push('Generator write pressure is running higher than expected for the seeded footprint, which makes this a good candidate for query or persistence review.');
+  } else {
+    insights.push('Generator write pressure looks proportionate to the size of the seeded dataset.');
+  }
+
+  if (health === 'fail') {
+    insights.push('Overall run health is failing, so fix the broken telemetry or route behavior before drawing optimization conclusions.');
+  } else if (health === 'watch') {
+    insights.push('Overall run health is on watch, which means the run is usable but should be reviewed before it becomes the benchmark scenario.');
+  } else {
+    insights.push('Overall run health is healthy, so this run is a good candidate to use as a baseline for future before/after comparisons.');
+  }
+
+  return insights;
+}
+
+function getComparisonInterpretation(left: SimulationRunSummary, right: SimulationRunSummary) {
+  const statements: string[] = [];
+  const writeDelta = left.writes.total - right.writes.total;
+  const flightDelta = left.totals.simulatedFlightHours - right.totals.simulatedFlightHours;
+  const observedDelta = getObservedRequests(left) - getObservedRequests(right);
+
+  if (writeDelta !== 0) {
+    statements.push(
+      writeDelta > 0
+        ? `Run A seeded ${writeDelta} more records than Run B, so it places more write pressure on the tenant.`
+        : `Run B seeded ${Math.abs(writeDelta)} more records than Run A, so it is the heavier write scenario.`,
+    );
+  }
+
+  if (flightDelta !== 0) {
+    statements.push(
+      flightDelta > 0
+        ? `Run A generated ${flightDelta.toFixed(1)} more simulated flight hours than Run B.`
+        : `Run B generated ${Math.abs(flightDelta).toFixed(1)} more simulated flight hours than Run A.`,
+    );
+  }
+
+  if (observedDelta !== 0) {
+    statements.push(
+      observedDelta > 0
+        ? `Run A drove ${observedDelta} more observed downstream requests than Run B.`
+        : `Run B drove ${Math.abs(observedDelta)} more observed downstream requests than Run A.`,
+    );
+  } else {
+    statements.push('Both runs currently show the same level of observed downstream traffic.');
+  }
+
+  if (getRunHealth(left) !== getRunHealth(right)) {
+    statements.push(
+      `Run A is currently ${getRunHealth(left)}, while Run B is ${getRunHealth(right)}, so they are not equally suitable as baseline scenarios.`,
+    );
+  } else {
+    statements.push(`Both runs currently sit at the same overall health state: ${getRunHealth(left)}.`);
+  }
+
+  return statements;
+}
+
 export default function SimulationLabPage() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<SimulationLabSettings>(EMPTY_SETTINGS);
@@ -297,6 +388,7 @@ export default function SimulationLabPage() {
   const [isStoppingTracking, setIsStoppingTracking] = useState(false);
   const [resumingRunId, setResumingRunId] = useState<string | null>(null);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
+  const [isClearingRuns, setIsClearingRuns] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [compareLeftId, setCompareLeftId] = useState<string | null>(null);
   const [compareRightId, setCompareRightId] = useState<string | null>(null);
@@ -536,6 +628,40 @@ export default function SimulationLabPage() {
       });
     } finally {
       setDeletingRunId(null);
+    }
+  };
+
+  const handleClearResults = async () => {
+    if (runs.length === 0) return;
+
+    setIsClearingRuns(true);
+    try {
+      const response = await fetch('/api/development/simulation-lab', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clearAll: true }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to clear simulation results.');
+      }
+
+      setRuns([]);
+      setActiveRunId(null);
+      setCompareLeftId(null);
+      setCompareRightId(null);
+      toast({
+        title: 'Results Cleared',
+        description: 'All simulation runs and their seeded DB records were removed from this tenant.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Clear Results Failed',
+        description: error instanceof Error ? error.message : 'The simulation results could not be cleared.',
+      });
+    } finally {
+      setIsClearingRuns(false);
     }
   };
 
@@ -780,6 +906,16 @@ export default function SimulationLabPage() {
               <Badge variant="outline" className="text-[10px] font-black uppercase tracking-[0.16em]">
                 Live DB writes
               </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => void handleClearResults()}
+                disabled={isClearingRuns || runs.length === 0}
+              >
+                <Trash2 className="h-4 w-4" />
+                {isClearingRuns ? 'Clearing Results...' : 'Clear Results'}
+              </Button>
               <Button type="button" variant="outline" className="gap-2" onClick={handleExportJson} disabled={runs.length === 0}>
                 <Download className="h-4 w-4" />
                 Export JSON
@@ -1056,6 +1192,14 @@ export default function SimulationLabPage() {
 
                   {comparison.left && comparison.right ? (
                     <>
+                      <div className="rounded-2xl border bg-muted/5 p-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Comparison Interpretation</p>
+                        <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                          {getComparisonInterpretation(comparison.left, comparison.right).map((statement, index) => (
+                            <p key={`comparison-interpretation-${index}`}>{statement}</p>
+                          ))}
+                        </div>
+                      </div>
                       <div className="grid gap-4 xl:grid-cols-2">
                         <ComparisonRunCard title="Run A" run={comparison.left} />
                         <ComparisonRunCard title="Run B" run={comparison.right} />
@@ -1401,6 +1545,19 @@ export default function SimulationLabPage() {
                             <SignalTile icon={<Database className="h-4 w-4 text-cyan-700" />} label="Actual Reads" value={String(run.telemetry.actualDbReads)} />
                             <SignalTile icon={<ServerCog className="h-4 w-4 text-cyan-700" />} label="Actual Writes" value={String(run.telemetry.actualDbWrites)} />
                             <SignalTile icon={<Activity className="h-4 w-4 text-cyan-700" />} label="Run Time" value={`${run.telemetry.actualDurationMs} ms`} />
+                          </div>
+                          <div className="border-t px-4 py-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decoded Analysis</p>
+                              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-[0.16em]">
+                                Plain English
+                              </Badge>
+                            </div>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              {getDecodedAnalysis(run).map((line, index) => (
+                                <p key={`${run.id}-decoded-${index}`}>{line}</p>
+                              ))}
+                            </div>
                           </div>
                           <div className="border-t px-4 py-4">
                             <div className="mb-3 flex items-center justify-between gap-3">

@@ -26,6 +26,7 @@ export async function getActiveSimulationRunId(tenantId: string) {
 
 export async function recordSimulationRouteMetric(input: {
   tenantId: string | null | undefined;
+  runId?: string | null | undefined;
   routeKey: string;
   reads?: number;
   writes?: number;
@@ -35,7 +36,8 @@ export async function recordSimulationRouteMetric(input: {
   const tenantId = input.tenantId?.trim();
   if (!tenantId) return;
 
-  const runId = await getActiveSimulationRunId(tenantId);
+  const explicitRunId = input.runId?.trim();
+  const runId = explicitRunId || await getActiveSimulationRunId(tenantId);
   if (!runId) return;
 
   await ensureSimulationRouteMetricsSchema();
@@ -92,4 +94,3 @@ export async function listSimulationRouteMetrics(tenantId: string, runId: string
     lastSeenAt: row.last_seen_at instanceof Date ? row.last_seen_at.toISOString() : String(row.last_seen_at),
   })) satisfies SimulationRouteMetric[];
 }
-
