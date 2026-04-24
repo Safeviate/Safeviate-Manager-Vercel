@@ -395,6 +395,10 @@ export default function SimulationLabPage() {
   const [runSearch, setRunSearch] = useState('');
   const [runFilter, setRunFilter] = useState<'all' | 'active' | 'observed' | 'quiet' | 'attention'>('all');
   const [runSort, setRunSort] = useState<'newest' | 'writes' | 'flightHours' | 'observed' | 'health'>('newest');
+  const [showRunTrends, setShowRunTrends] = useState(false);
+  const [showPresetLaunchpad, setShowPresetLaunchpad] = useState(false);
+  const [showRunComparison, setShowRunComparison] = useState(false);
+  const [showRunLedger, setShowRunLedger] = useState(true);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -1018,85 +1022,103 @@ export default function SimulationLabPage() {
 
               <Card className="border shadow-none">
                 <CardHeader className="border-b bg-muted/5">
-                  <CardTitle className="text-sm font-black uppercase tracking-tight">Run Trends</CardTitle>
-                  <CardDescription>
-                    Scan the most recent runs before you export or compare them in detail.
-                  </CardDescription>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-black uppercase tracking-tight">Run Trends</CardTitle>
+                      <CardDescription>
+                        Scan the most recent runs before you export or compare them in detail.
+                      </CardDescription>
+                    </div>
+                    <Button type="button" variant="outline" className="gap-2" onClick={() => setShowRunTrends((current) => !current)}>
+                      {showRunTrends ? 'Hide Trends' : 'Show Trends'}
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
-                  <TrendMetricCard
-                    title="Writes"
-                    runs={trendRuns}
-                    getValue={(run) => run.writes.total}
-                    valueFormatter={(value) => String(Math.round(value))}
-                    tone="emerald"
-                  />
-                  <TrendMetricCard
-                    title="Flight Hours"
-                    runs={trendRuns}
-                    getValue={(run) => run.totals.simulatedFlightHours}
-                    valueFormatter={(value) => `${value.toFixed(1)}h`}
-                    tone="amber"
-                  />
-                  <TrendMetricCard
-                    title="Estimated API"
-                    runs={trendRuns}
-                    getValue={(run) => run.telemetry.estimatedApiRequests}
-                    valueFormatter={(value) => String(Math.round(value))}
-                    tone="violet"
-                  />
-                  <TrendMetricCard
-                    title="Observed Requests"
-                    runs={trendRuns}
-                    getValue={(run) => run.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0}
-                    valueFormatter={(value) => String(Math.round(value))}
-                    tone="sky"
-                  />
-                </CardContent>
+                {showRunTrends ? (
+                  <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
+                    <TrendMetricCard
+                      title="Writes"
+                      runs={trendRuns}
+                      getValue={(run) => run.writes.total}
+                      valueFormatter={(value) => String(Math.round(value))}
+                      tone="emerald"
+                    />
+                    <TrendMetricCard
+                      title="Flight Hours"
+                      runs={trendRuns}
+                      getValue={(run) => run.totals.simulatedFlightHours}
+                      valueFormatter={(value) => `${value.toFixed(1)}h`}
+                      tone="amber"
+                    />
+                    <TrendMetricCard
+                      title="Estimated API"
+                      runs={trendRuns}
+                      getValue={(run) => run.telemetry.estimatedApiRequests}
+                      valueFormatter={(value) => String(Math.round(value))}
+                      tone="violet"
+                    />
+                    <TrendMetricCard
+                      title="Observed Requests"
+                      runs={trendRuns}
+                      getValue={(run) => run.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0}
+                      valueFormatter={(value) => String(Math.round(value))}
+                      tone="sky"
+                    />
+                  </CardContent>
+                ) : null}
               </Card>
 
               <Card className="border shadow-none">
                 <CardHeader className="border-b bg-muted/5">
-                  <CardTitle className="text-sm font-black uppercase tracking-tight">Preset Launchpad</CardTitle>
-                  <CardDescription>
-                    Launch repeatable school shapes directly from saved templates, or load one back into the form before you fine-tune it.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
-                  {presets.map((preset) => (
-                    <div key={preset.id} className="rounded-2xl border bg-background p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-black uppercase tracking-tight">{preset.label}</p>
-                          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                            {preset.isCustom ? 'Custom tenant preset' : 'Built-in scenario'}
-                          </p>
-                          {preset.settings.note ? (
-                            <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{preset.settings.note}</p>
-                          ) : null}
-                        </div>
-                        <Badge variant={preset.isCustom ? 'default' : 'outline'} className="text-[10px] font-black uppercase tracking-[0.16em]">
-                          {preset.isCustom ? 'Custom' : 'Built-in'}
-                        </Badge>
-                      </div>
-                      <div className="mt-4 grid gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                        <span>{preset.settings.studentCount} students</span>
-                        <span>{preset.settings.instructorCount} instructors</span>
-                        <span>{preset.settings.aircraftCount} aircraft</span>
-                        <span>{preset.settings.simulationDays} day window</span>
-                      </div>
-                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                        <Button type="button" variant="outline" className="w-full gap-2" onClick={() => applyPreset(preset.id)}>
-                          Load To Form
-                        </Button>
-                        <Button type="button" className="w-full gap-2" disabled={isRunning} onClick={() => void handleRunPreset(preset.id)}>
-                          <Play className="h-4 w-4" />
-                          {isRunning ? 'Running...' : 'Run Preset'}
-                        </Button>
-                      </div>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-black uppercase tracking-tight">Preset Launchpad</CardTitle>
+                      <CardDescription>
+                        Launch repeatable school shapes directly from saved templates, or load one back into the form before you fine-tune it.
+                      </CardDescription>
                     </div>
-                  ))}
-                </CardContent>
+                    <Button type="button" variant="outline" className="gap-2" onClick={() => setShowPresetLaunchpad((current) => !current)}>
+                      {showPresetLaunchpad ? 'Hide Presets' : 'Show Presets'}
+                    </Button>
+                  </div>
+                </CardHeader>
+                {showPresetLaunchpad ? (
+                  <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+                    {presets.map((preset) => (
+                      <div key={preset.id} className="rounded-2xl border bg-background p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black uppercase tracking-tight">{preset.label}</p>
+                            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                              {preset.isCustom ? 'Custom tenant preset' : 'Built-in scenario'}
+                            </p>
+                            {preset.settings.note ? (
+                              <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{preset.settings.note}</p>
+                            ) : null}
+                          </div>
+                          <Badge variant={preset.isCustom ? 'default' : 'outline'} className="text-[10px] font-black uppercase tracking-[0.16em]">
+                            {preset.isCustom ? 'Custom' : 'Built-in'}
+                          </Badge>
+                        </div>
+                        <div className="mt-4 grid gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                          <span>{preset.settings.studentCount} students</span>
+                          <span>{preset.settings.instructorCount} instructors</span>
+                          <span>{preset.settings.aircraftCount} aircraft</span>
+                          <span>{preset.settings.simulationDays} day window</span>
+                        </div>
+                        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                          <Button type="button" variant="outline" className="w-full gap-2" onClick={() => applyPreset(preset.id)}>
+                            Load To Form
+                          </Button>
+                          <Button type="button" className="w-full gap-2" disabled={isRunning} onClick={() => void handleRunPreset(preset.id)}>
+                            <Play className="h-4 w-4" />
+                            {isRunning ? 'Running...' : 'Run Preset'}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                ) : null}
               </Card>
 
               <Card className="border shadow-none">
@@ -1109,12 +1131,15 @@ export default function SimulationLabPage() {
                       </CardDescription>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" variant="outline" className="gap-2" onClick={() => setShowRunComparison((current) => !current)}>
+                        {showRunComparison ? 'Hide Comparison' : 'Show Comparison'}
+                      </Button>
                       <Button
                         type="button"
                         variant="outline"
                         className="gap-2"
                         onClick={handleSwapComparison}
-                        disabled={!comparison.left || !comparison.right}
+                        disabled={!comparison.left || !comparison.right || !showRunComparison}
                       >
                         Swap A/B
                       </Button>
@@ -1123,7 +1148,7 @@ export default function SimulationLabPage() {
                         variant="outline"
                         className="gap-2"
                         onClick={handleClearComparison}
-                        disabled={!compareLeftId && !compareRightId}
+                        disabled={(!compareLeftId && !compareRightId) || !showRunComparison}
                       >
                         Clear
                       </Button>
@@ -1132,7 +1157,7 @@ export default function SimulationLabPage() {
                         variant="outline"
                         className="gap-2"
                         onClick={handleExportComparisonJson}
-                        disabled={!comparison.left || !comparison.right}
+                        disabled={!comparison.left || !comparison.right || !showRunComparison}
                       >
                         <Download className="h-4 w-4" />
                         Export Comparison JSON
@@ -1142,7 +1167,7 @@ export default function SimulationLabPage() {
                         variant="outline"
                         className="gap-2"
                         onClick={handleExportComparisonCsv}
-                        disabled={!comparison.left || !comparison.right}
+                        disabled={!comparison.left || !comparison.right || !showRunComparison}
                       >
                         <Download className="h-4 w-4" />
                         Export Comparison CSV
@@ -1150,93 +1175,95 @@ export default function SimulationLabPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4 p-4">
-                  {comparisonSummary ? (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                      <ComparisonSummaryBadge label="Write Edge" value={comparisonSummary.writeDelta} suffix="" />
-                      <ComparisonSummaryBadge label="Flight Edge" value={comparisonSummary.flightHourDelta} suffix="h" />
-                      <ComparisonSummaryBadge label="API Edge" value={comparisonSummary.estimatedApiDelta} suffix="" />
-                      <ComparisonSummaryBadge label="Observed Edge" value={comparisonSummary.observedDelta} suffix="" />
-                    </div>
-                  ) : null}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field label="Compare Run A">
-                      <select
-                        value={compareLeftId ?? ''}
-                        onChange={(event) => setCompareLeftId(event.target.value || null)}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        <option value="">Select a run</option>
-                        {runs.map((run) => (
-                          <option key={run.id} value={run.id}>
-                            {run.label} - {new Date(run.createdAt).toLocaleDateString()}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Compare Run B">
-                      <select
-                        value={compareRightId ?? ''}
-                        onChange={(event) => setCompareRightId(event.target.value || null)}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        <option value="">Select a run</option>
-                        {runs.map((run) => (
-                          <option key={run.id} value={run.id}>
-                            {run.label} - {new Date(run.createdAt).toLocaleDateString()}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  </div>
-
-                  {comparison.left && comparison.right ? (
-                    <>
-                      <div className="rounded-2xl border bg-muted/5 p-4">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Comparison Interpretation</p>
-                        <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                          {getComparisonInterpretation(comparison.left, comparison.right).map((statement, index) => (
-                            <p key={`comparison-interpretation-${index}`}>{statement}</p>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="grid gap-4 xl:grid-cols-2">
-                        <ComparisonRunCard title="Run A" run={comparison.left} />
-                        <ComparisonRunCard title="Run B" run={comparison.right} />
-                      </div>
+                {showRunComparison ? (
+                  <CardContent className="space-y-4 p-4">
+                    {comparisonSummary ? (
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <DeltaTile
-                          label="Write Delta"
-                          left={comparison.left.writes.total}
-                          right={comparison.right.writes.total}
-                          suffix=""
-                        />
-                        <DeltaTile
-                          label="Flight Hour Delta"
-                          left={comparison.left.totals.simulatedFlightHours}
-                          right={comparison.right.totals.simulatedFlightHours}
-                          suffix="h"
-                        />
-                        <DeltaTile
-                          label="Estimated API Delta"
-                          left={comparison.left.telemetry.estimatedApiRequests}
-                          right={comparison.right.telemetry.estimatedApiRequests}
-                          suffix=""
-                        />
-                        <DeltaTile
-                          label="Observed Route Delta"
-                          left={comparison.left.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0}
-                          right={comparison.right.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0}
-                          suffix=""
-                        />
+                        <ComparisonSummaryBadge label="Write Edge" value={comparisonSummary.writeDelta} suffix="" />
+                        <ComparisonSummaryBadge label="Flight Edge" value={comparisonSummary.flightHourDelta} suffix="h" />
+                        <ComparisonSummaryBadge label="API Edge" value={comparisonSummary.estimatedApiDelta} suffix="" />
+                        <ComparisonSummaryBadge label="Observed Edge" value={comparisonSummary.observedDelta} suffix="" />
                       </div>
-                    </>
-                  ) : (
-                    <div className="rounded-xl border border-dashed bg-muted/5 px-4 py-6 text-sm text-muted-foreground">
-                      Choose two runs to compare them side by side.
+                    ) : null}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field label="Compare Run A">
+                        <select
+                          value={compareLeftId ?? ''}
+                          onChange={(event) => setCompareLeftId(event.target.value || null)}
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">Select a run</option>
+                          {runs.map((run) => (
+                            <option key={run.id} value={run.id}>
+                              {run.label} - {new Date(run.createdAt).toLocaleDateString()}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Compare Run B">
+                        <select
+                          value={compareRightId ?? ''}
+                          onChange={(event) => setCompareRightId(event.target.value || null)}
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">Select a run</option>
+                          {runs.map((run) => (
+                            <option key={run.id} value={run.id}>
+                              {run.label} - {new Date(run.createdAt).toLocaleDateString()}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
                     </div>
-                  )}
-                </CardContent>
+
+                    {comparison.left && comparison.right ? (
+                      <>
+                        <div className="rounded-2xl border bg-muted/5 p-4">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Comparison Interpretation</p>
+                          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                            {getComparisonInterpretation(comparison.left, comparison.right).map((statement, index) => (
+                              <p key={`comparison-interpretation-${index}`}>{statement}</p>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          <ComparisonRunCard title="Run A" run={comparison.left} />
+                          <ComparisonRunCard title="Run B" run={comparison.right} />
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <DeltaTile
+                            label="Write Delta"
+                            left={comparison.left.writes.total}
+                            right={comparison.right.writes.total}
+                            suffix=""
+                          />
+                          <DeltaTile
+                            label="Flight Hour Delta"
+                            left={comparison.left.totals.simulatedFlightHours}
+                            right={comparison.right.totals.simulatedFlightHours}
+                            suffix="h"
+                          />
+                          <DeltaTile
+                            label="Estimated API Delta"
+                            left={comparison.left.telemetry.estimatedApiRequests}
+                            right={comparison.right.telemetry.estimatedApiRequests}
+                            suffix=""
+                          />
+                          <DeltaTile
+                            label="Observed Route Delta"
+                            left={comparison.left.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0}
+                            right={comparison.right.telemetry.observedRoutes?.reduce((sum, route) => sum + route.requestCount, 0) || 0}
+                            suffix=""
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-xl border border-dashed bg-muted/5 px-4 py-6 text-sm text-muted-foreground">
+                        Choose two runs to compare them side by side.
+                      </div>
+                    )}
+                  </CardContent>
+                ) : null}
               </Card>
 
               <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -1373,12 +1400,20 @@ export default function SimulationLabPage() {
                 </Card>
 
                 <Card className="border shadow-none">
-                  <CardHeader className="border-b bg-muted/5">
-                    <CardTitle className="text-sm font-black uppercase tracking-tight">Run Ledger</CardTitle>
-                    <CardDescription>
-                      Every run below already wrote to the tenant database. Use delete only when you want that simulation footprint removed.
-                    </CardDescription>
-                  </CardHeader>
+                <CardHeader className="border-b bg-muted/5">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-black uppercase tracking-tight">Run Ledger</CardTitle>
+                      <CardDescription>
+                        Every run below already wrote to the tenant database. Use delete only when you want that simulation footprint removed.
+                      </CardDescription>
+                    </div>
+                    <Button type="button" variant="outline" className="gap-2" onClick={() => setShowRunLedger((current) => !current)}>
+                      {showRunLedger ? 'Hide Ledger' : 'Show Ledger'}
+                    </Button>
+                  </div>
+                </CardHeader>
+                  {showRunLedger ? (
                   <CardContent className="space-y-4 p-4">
                     <div className="grid gap-3 rounded-2xl border bg-muted/5 p-4 xl:grid-cols-[minmax(0,1fr)_auto_auto]">
                       <Field label="Search Runs">
@@ -1627,6 +1662,7 @@ export default function SimulationLabPage() {
                       </div>
                     )}
                   </CardContent>
+                  ) : null}
                 </Card>
               </div>
             </div>
