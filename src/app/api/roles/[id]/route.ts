@@ -2,6 +2,7 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 
 async function getTenantId() {
   const session = await getServerSession(authOptions);
@@ -26,6 +27,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   await prisma.role.deleteMany({
     where: { id, tenantId },
   });
+
+  invalidatePersonnelDirectoryCaches(tenantId);
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }
@@ -62,6 +65,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (role.count === 0) {
     return NextResponse.json({ error: 'Role not found.' }, { status: 404 });
   }
+
+  invalidatePersonnelDirectoryCaches(tenantId);
 
   return NextResponse.json({ ok: true, role }, { status: 200 });
 }

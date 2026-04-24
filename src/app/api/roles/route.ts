@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { isMasterTenantEmail } from '@/lib/server/tenant-access';
+import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 
 async function getTenantId() {
   const session = await getServerSession(authOptions);
@@ -102,6 +103,8 @@ export async function POST(request: Request) {
     name,
     JSON.stringify({ hiddenMenus: Array.isArray(body.accessOverrides?.hiddenMenus) ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string') : [] }),
   ).catch(() => null);
+
+  invalidatePersonnelDirectoryCaches(tenantId);
 
   return NextResponse.json({ role: { ...role, accessOverrides: { hiddenMenus: Array.isArray(body.accessOverrides?.hiddenMenus) ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string') : [] } } }, { status: 200 });
 }

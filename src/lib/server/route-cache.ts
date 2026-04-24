@@ -35,3 +35,10 @@ export function invalidateRouteCacheByPrefix(prefix: string) {
     }
   }
 }
+
+export function invalidatePersonnelDirectoryCaches(tenantId: string) {
+  invalidateRouteCache(`personnel:roles:${tenantId}`);
+  invalidateRouteCache(`personnel:departments:${tenantId}`);
+  invalidateRouteCache(`personnel:list:${tenantId}`);
+  invalidateRouteCache(`dashboard-summary:${tenantId}`);
+}

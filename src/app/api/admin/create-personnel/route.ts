@@ -5,6 +5,7 @@ import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
 import { createPasswordSetupInvite } from '@/lib/server/password-setup';
+import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 
 export async function POST(request: Request) {
   try {
@@ -109,6 +110,8 @@ export async function POST(request: Request) {
         isErpAlerfaContact: !!isErpAlerfaContact,
       },
     });
+
+    invalidatePersonnelDirectoryCaches(tenantId);
 
     const invite = await createPasswordSetupInvite(request, {
       tenantId,

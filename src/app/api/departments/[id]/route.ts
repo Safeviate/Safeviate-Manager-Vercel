@@ -2,6 +2,7 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 
 async function getTenantId() {
   const session = await getServerSession(authOptions);
@@ -27,6 +28,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     where: { id, tenantId },
   });
 
+  invalidatePersonnelDirectoryCaches(tenantId);
+
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 
@@ -51,6 +54,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       updatedAt: new Date(),
     },
   });
+
+  invalidatePersonnelDirectoryCaches(tenantId);
 
   return NextResponse.json({ ok: true, department }, { status: 200 });
 }

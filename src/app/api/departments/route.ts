@@ -2,6 +2,7 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 
 async function getTenantId() {
   const session = await getServerSession(authOptions);
@@ -62,6 +63,8 @@ export async function POST(request: Request) {
       name,
     },
   });
+
+  invalidatePersonnelDirectoryCaches(tenantId);
 
   return NextResponse.json({ department }, { status: 200 });
 }

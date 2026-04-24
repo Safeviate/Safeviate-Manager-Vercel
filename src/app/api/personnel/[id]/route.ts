@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
+import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -34,6 +35,8 @@ export async function DELETE(
   if (deletedPersonnel.count === 0) {
     return NextResponse.json({ error: 'User not found.' }, { status: 404 });
   }
+
+  invalidatePersonnelDirectoryCaches(tenantId);
 
   return NextResponse.json({ ok: true });
 }
@@ -131,6 +134,8 @@ export async function PATCH(
       updatedAt: new Date(),
     },
   });
+
+  invalidatePersonnelDirectoryCaches(tenantId);
 
   return NextResponse.json({ personnel: data }, { status: 200 });
 }

@@ -288,7 +288,11 @@ export default function ActiveFlightPage() {
   );
   const sortedAircraft = useMemo(() => {
     const source = aircrafts.length > 0 ? aircrafts : fallbackAircraft;
-    return [...source].sort((a, b) => a.tailNumber.localeCompare(b.tailNumber));
+    return [...source].sort((a, b) => {
+      const left = (a.tailNumber || a.id || '').trim();
+      const right = (b.tailNumber || b.id || '').trim();
+      return left.localeCompare(right);
+    });
   }, [aircrafts, fallbackAircraft]);
   const selectedAircraft = useMemo(() => sortedAircraft.find((aircraft) => aircraft.id === selectedAircraftId) || null, [selectedAircraftId, sortedAircraft]);
   const bookingChoices = useMemo(
