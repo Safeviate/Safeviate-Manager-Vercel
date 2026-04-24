@@ -1371,22 +1371,33 @@ async function runAutoExercise(context: TenantContext, run: SimulationRunSummary
 
   const selectedRoutes = routeProfiles[run.settings.autoExerciseProfile];
 
-  for (const route of selectedRoutes) {
-    for (let index = 0; index < route.requests; index += 1) {
-      await recordSimulationRouteMetric({
-        tenantId: context.tenantId,
-        routeKey: route.routeKey,
-        reads: route.reads,
-        writes: route.writes,
-        durationMs: route.durationMs,
-      });
+  try {
+    for (const route of selectedRoutes) {
+      for (let index = 0; index < route.requests; index += 1) {
+        await recordSimulationRouteMetric({
+          tenantId: context.tenantId,
+          routeKey: route.routeKey,
+          reads: route.reads,
+          writes: route.writes,
+          durationMs: route.durationMs,
+        });
+      }
     }
+  } catch (error) {
+    console.error('[simulation-lab] auto exercise failed:', error);
+    return {
+      profile: run.settings.autoExerciseProfile,
+      routeCount: selectedRoutes.length,
+      requestCount: 0,
+      failed: true,
+    };
   }
 
   return {
     profile: run.settings.autoExerciseProfile,
     routeCount: selectedRoutes.length,
     requestCount: selectedRoutes.reduce((sum, route) => sum + route.requests, 0),
+    failed: false,
   };
 }
 

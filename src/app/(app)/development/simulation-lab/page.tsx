@@ -357,14 +357,16 @@ export default function SimulationLabPage() {
       }
 
       const run = payload.run as SimulationRunSummary;
-      const autoExercise = payload.autoExercise as { profile: string; routeCount: number; requestCount: number } | undefined;
+      const autoExercise = payload.autoExercise as { profile: string; routeCount: number; requestCount: number; failed?: boolean } | undefined;
       setRuns((current) => [run, ...current].slice(0, 25));
       setActiveRunId(run.id);
       setCompareLeftId(run.id);
       setCompareRightId((current) => current ?? run.id);
       toast({
         title: 'Simulation Run Complete',
-        description: autoExercise && autoExercise.profile !== 'disabled'
+        description: autoExercise?.failed
+          ? `${run.writes.total} live records were written, but the auto-exercise step could not complete cleanly. You can still use the seeded app manually to accumulate telemetry.`
+          : autoExercise && autoExercise.profile !== 'disabled'
           ? `${run.writes.total} live records were written, then ${autoExercise.requestCount} auto-exercise requests were recorded across ${autoExercise.routeCount} routes.`
           : `${run.writes.total} live records were written to the database for ${run.label}.`,
       });
