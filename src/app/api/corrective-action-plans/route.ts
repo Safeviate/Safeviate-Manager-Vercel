@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -21,17 +22,36 @@ async function getAllCaps(tenantId: string) {
 }
 
 export async function GET() {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
-    const tenantId = await getTenantId();
+    tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ caps: [] }, { status: 200 });
-    return NextResponse.json({ caps: await getAllCaps(tenantId) }, { status: 200 });
+    const caps = await getAllCaps(tenantId);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'corrective-action-plans.GET',
+      reads: 1,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+    });
+    return NextResponse.json({ caps }, { status: 200 });
   } catch (error) {
     console.error('[corrective-action-plans] fallback to empty list:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'corrective-action-plans.GET',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ caps: [] }, { status: 200 });
   }
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const tenantId = await getTenantId();
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await request.json().catch(() => null);
@@ -45,6 +65,13 @@ export async function POST(request: Request) {
     tenantId,
     JSON.stringify(data)
   );
+  await recordSimulationRouteMetric({
+    tenantId,
+    routeKey: 'corrective-action-plans.POST',
+    reads: 0,
+    writes: 1,
+    durationMs: Date.now() - startedAt,
+  });
   return NextResponse.json({ cap: data }, { status: 200 });
 }
 

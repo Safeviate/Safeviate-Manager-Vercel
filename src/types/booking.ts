@@ -145,6 +145,12 @@ export interface Booking {
   aircraftId: string;
   instructorId?: string;
   studentId?: string;
+  studentIds?: string[];
+  briefingRoomId?: string;
+  briefingRoomName?: string;
+  sessionType?: 'Ground School' | 'Student Debrief' | 'Meeting';
+  courseName?: string;
+  meetingType?: 'Instructor Meeting' | 'Safety Meeting' | 'Staff Meeting' | 'Student Meeting' | 'Other';
   createdById?: string;
   approvedById?: string;
   approvedByName?: string;

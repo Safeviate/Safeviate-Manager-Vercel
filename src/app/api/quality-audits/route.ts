@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -37,11 +38,20 @@ async function loadCaps(tenantId: string) {
 }
 
 export async function GET() {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
-    const tenantId = await getTenantId();
+    tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], caps: [], findingLevels: [] }, { status: 200 });
 
     const [audits, caps, config] = await Promise.all([loadAudits(tenantId), loadCaps(tenantId), getConfig(tenantId)]);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'quality-audits.GET',
+      reads: 3,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+    });
     return NextResponse.json({
       audits,
       caps,
@@ -57,11 +67,20 @@ export async function GET() {
     }, { status: 200 });
   } catch (error) {
     console.error('[quality-audits] fallback to empty payload:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'quality-audits.GET',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], caps: [], findingLevels: [] }, { status: 200 });
   }
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const tenantId = await getTenantId();
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await request.json().catch(() => null);
@@ -75,15 +94,30 @@ export async function POST(request: Request) {
     tenantId,
     JSON.stringify(data)
   );
+  await recordSimulationRouteMetric({
+    tenantId,
+    routeKey: 'quality-audits.POST',
+    reads: 0,
+    writes: 1,
+    durationMs: Date.now() - startedAt,
+  });
   return NextResponse.json({ audit: data }, { status: 200 });
 }
 
 export async function DELETE(request: Request) {
+  const startedAt = Date.now();
   const tenantId = await getTenantId();
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
   await prisma.$executeRawUnsafe(`DELETE FROM quality_audits WHERE id = $1 AND tenant_id = $2`, id, tenantId);
+  await recordSimulationRouteMetric({
+    tenantId,
+    routeKey: 'quality-audits.DELETE',
+    reads: 0,
+    writes: 1,
+    durationMs: Date.now() - startedAt,
+  });
   return NextResponse.json({ ok: true }, { status: 200 });
 }

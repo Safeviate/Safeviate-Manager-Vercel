@@ -1,8 +1,8 @@
 export type PlatformUserGroupKey = 'crew' | 'ops' | 'viewer';
 
-export type PrismaMode = 'external' | 'prisma-postgres';
+export type AzureAppServicePlan = 'basic-b1' | 'standard-s1' | 'premium-p0v3';
 
-export type PrismaPostgresPlan = 'starter' | 'pro' | 'business';
+export type AzurePostgresPlan = 'burstable-b1ms' | 'burstable-b2s' | 'general-purpose-d2s';
 
 type RoleProfile = {
   label: string;
@@ -22,16 +22,16 @@ export type PlatformUsageInput = {
   activityIntensityPercent: number;
   trackingMinutesPerCrewUserPerDay: number;
   trackingWriteIntervalSeconds: number;
-  prismaMode: PrismaMode;
-  prismaPlan: PrismaPostgresPlan;
+  appServicePlan: AzureAppServicePlan;
+  postgresPlan: AzurePostgresPlan;
 };
 
 export type GroupUsage = {
   label: string;
   users: number;
   monthlySessions: number;
-  monthlyEdgeRequests: number;
-  monthlyFunctionInvocations: number;
+  monthlyRequests: number;
+  monthlyApiRequests: number;
   monthlyDbOps: number;
   monthlyBandwidthGb: number;
   monthlyStorageGb: number;
@@ -42,68 +42,80 @@ export type PlatformUsageEstimate = {
   totals: {
     users: number;
     monthlySessions: number;
-    monthlyEdgeRequests: number;
-    monthlyFunctionInvocations: number;
+    monthlyRequests: number;
+    monthlyApiRequests: number;
     monthlyDbOps: number;
     monthlyBandwidthGb: number;
     monthlyStorageGb: number;
+    monthlyTrackingWrites: number;
+    computeLoadPercent: number;
   };
-  vercel: {
-    baseCost: number;
-    invocationCost: number;
-    edgeRequestCost: number;
-    bandwidthCost: number;
-    totalCost: number;
-    includedInvocations: number;
-    includedEdgeRequests: number;
-    includedBandwidthGb: number;
-  };
-  prisma: {
-    baseCost: number;
-    operationCost: number;
-    storageCost: number;
-    totalCost: number;
-    includedOperations: number;
-    includedStorageGb: number;
+  azure: {
+    appService: {
+      planLabel: string;
+      baseCost: number;
+      bandwidthCost: number;
+      totalCost: number;
+      includedBandwidthGb: number;
+      estimatedRequestCapacity: number;
+      computeLoadPercent: number;
+    };
+    postgres: {
+      planLabel: string;
+      computeCost: number;
+      storageCost: number;
+      backupCost: number;
+      totalCost: number;
+      provisionedStorageGb: number;
+      estimatedOpsCapacity: number;
+      opsLoadPercent: number;
+    };
   };
   notes: string[];
 };
 
 const DAYS_PER_MONTH = 30;
+const AZURE_INCLUDED_EGRESS_GB = 100;
+const AZURE_EGRESS_OVERAGE_PER_GB = 0.087;
+const AZURE_POSTGRES_STORAGE_PER_GB = 0.115;
+const AZURE_POSTGRES_BACKUP_PER_GB = 0.095;
 
-const VERCEL_INCLUDED_INVOCATIONS = 1_000_000;
-const VERCEL_INCLUDED_EDGE_REQUESTS = 10_000_000;
-const VERCEL_INCLUDED_BANDWIDTH_GB = 1024;
-
-const VERCEL_INVOCATION_OVERAGE_PER_1M = 0.60;
-const VERCEL_EDGE_REQUEST_OVERAGE_PER_1M = 2.0;
-const VERCEL_BANDWIDTH_OVERAGE_PER_GB = 0.15;
-const VERCEL_PRO_BASE = 20;
-
-const PRISMA_PLANS = {
-  starter: {
-    label: 'Starter',
-    baseCost: 10,
-    includedOperations: 1_000_000,
-    includedStorageGb: 10,
-    operationOveragePer1k: 0.008,
-    storageOveragePerGb: 2,
+const AZURE_APP_SERVICE_PLANS = {
+  'basic-b1': {
+    label: 'Basic B1',
+    baseCost: 13.14,
+    estimatedRequestCapacity: 1_500_000,
   },
-  pro: {
-    label: 'Pro',
-    baseCost: 49,
-    includedOperations: 10_000_000,
-    includedStorageGb: 50,
-    operationOveragePer1k: 0.002,
-    storageOveragePerGb: 2,
+  'standard-s1': {
+    label: 'Standard S1',
+    baseCost: 73,
+    estimatedRequestCapacity: 6_000_000,
   },
-  business: {
-    label: 'Business',
-    baseCost: 129,
-    includedOperations: 50_000_000,
-    includedStorageGb: 100,
-    operationOveragePer1k: 0.001,
-    storageOveragePerGb: 1,
+  'premium-p0v3': {
+    label: 'Premium P0v3',
+    baseCost: 60,
+    estimatedRequestCapacity: 12_000_000,
+  },
+} as const;
+
+const AZURE_POSTGRES_PLANS = {
+  'burstable-b1ms': {
+    label: 'Burstable B1ms',
+    computeCost: 12.41,
+    provisionedStorageGb: 32,
+    estimatedOpsCapacity: 4_000_000,
+  },
+  'burstable-b2s': {
+    label: 'Burstable B2s',
+    computeCost: 30,
+    provisionedStorageGb: 64,
+    estimatedOpsCapacity: 10_000_000,
+  },
+  'general-purpose-d2s': {
+    label: 'General Purpose D2s v3',
+    computeCost: 110,
+    provisionedStorageGb: 128,
+    estimatedOpsCapacity: 30_000_000,
   },
 } as const;
 
@@ -154,10 +166,10 @@ function estimateRoleUsage(
 ) {
   const monthlySessions = users * profile.sessionsPerUserPerDay * intensityMultiplier * DAYS_PER_MONTH;
   const monthlyPageViews = monthlySessions * profile.pageViewsPerSession;
-  const monthlyApiCalls = monthlySessions * profile.apiCallsPerSession;
+  const monthlyApiRequests = monthlySessions * profile.apiCallsPerSession;
   const monthlyDbOps = monthlySessions * profile.dbOpsPerSession;
   const monthlyBandwidthGb =
-    ((monthlyPageViews * profile.responseKbPerPage) + (monthlyApiCalls * profile.responseKbPerApi)) /
+    ((monthlyPageViews * profile.responseKbPerPage) + (monthlyApiRequests * profile.responseKbPerApi)) /
     1024 /
     1024;
   const monthlyStorageGb = (users * profile.storageMbPerUserPerMonth * intensityMultiplier) / 1024;
@@ -166,8 +178,8 @@ function estimateRoleUsage(
     label,
     users,
     monthlySessions,
-    monthlyEdgeRequests: monthlyPageViews,
-    monthlyFunctionInvocations: monthlyApiCalls,
+    monthlyRequests: monthlyPageViews + monthlyApiRequests,
+    monthlyApiRequests,
     monthlyDbOps,
     monthlyBandwidthGb,
     monthlyStorageGb,
@@ -188,80 +200,62 @@ export function estimatePlatformUsage(input: PlatformUsageInput): PlatformUsageE
 
   const trackingWritesDaily = crewUsers * (trackingMinutesPerCrewUserPerDay * 60) / trackingWriteIntervalSeconds;
   const trackingWritesMonthly = trackingWritesDaily * DAYS_PER_MONTH;
-  const trackingMonthlyFunctionInvocations = trackingWritesMonthly;
+  const trackingMonthlyApiRequests = trackingWritesMonthly;
   const trackingMonthlyDbOps = trackingWritesMonthly * TRACKING_DB_OPS_PER_WRITE;
   const trackingMonthlyBandwidthGb = (trackingWritesMonthly * TRACKING_PAYLOAD_KB_PER_WRITE) / 1024 / 1024;
   const trackingMonthlyStorageGb = (trackingWritesMonthly * TRACKING_STORAGE_KB_PER_WRITE) / 1024 / 1024;
 
-  const totals = {
-    users: crewUsers + opsUsers + viewerUsers,
-    monthlySessions: crew.monthlySessions + ops.monthlySessions + viewer.monthlySessions,
-    monthlyEdgeRequests: crew.monthlyEdgeRequests + ops.monthlyEdgeRequests + viewer.monthlyEdgeRequests,
-    monthlyFunctionInvocations:
-      crew.monthlyFunctionInvocations +
-      ops.monthlyFunctionInvocations +
-      viewer.monthlyFunctionInvocations +
-      trackingMonthlyFunctionInvocations,
-    monthlyDbOps: crew.monthlyDbOps + ops.monthlyDbOps + viewer.monthlyDbOps + trackingMonthlyDbOps,
-    monthlyBandwidthGb:
-      crew.monthlyBandwidthGb +
-      ops.monthlyBandwidthGb +
-      viewer.monthlyBandwidthGb +
-      trackingMonthlyBandwidthGb,
-    monthlyStorageGb:
-      crew.monthlyStorageGb +
-      ops.monthlyStorageGb +
-      viewer.monthlyStorageGb +
-      trackingMonthlyStorageGb,
-  };
+  const monthlyRequests = crew.monthlyRequests + ops.monthlyRequests + viewer.monthlyRequests + trackingMonthlyApiRequests;
+  const monthlyDbOps = crew.monthlyDbOps + ops.monthlyDbOps + viewer.monthlyDbOps + trackingMonthlyDbOps;
+  const monthlyBandwidthGb =
+    crew.monthlyBandwidthGb +
+    ops.monthlyBandwidthGb +
+    viewer.monthlyBandwidthGb +
+    trackingMonthlyBandwidthGb;
+  const monthlyStorageGb =
+    crew.monthlyStorageGb +
+    ops.monthlyStorageGb +
+    viewer.monthlyStorageGb +
+    trackingMonthlyStorageGb;
 
-  const vercelInvocationOverage = clampPositive(totals.monthlyFunctionInvocations - VERCEL_INCLUDED_INVOCATIONS);
-  const vercelEdgeRequestOverage = clampPositive(totals.monthlyEdgeRequests - VERCEL_INCLUDED_EDGE_REQUESTS);
-  const vercelBandwidthOverage = clampPositive(totals.monthlyBandwidthGb - VERCEL_INCLUDED_BANDWIDTH_GB);
+  const appPlan = AZURE_APP_SERVICE_PLANS[input.appServicePlan];
+  const postgresPlan = AZURE_POSTGRES_PLANS[input.postgresPlan];
+  const bandwidthOverage = clampPositive(monthlyBandwidthGb - AZURE_INCLUDED_EGRESS_GB);
+  const computeLoadPercent = appPlan.estimatedRequestCapacity > 0
+    ? (monthlyRequests / appPlan.estimatedRequestCapacity) * 100
+    : 0;
+  const postgresOpsLoadPercent = postgresPlan.estimatedOpsCapacity > 0
+    ? (monthlyDbOps / postgresPlan.estimatedOpsCapacity) * 100
+    : 0;
+  const storageBillableGb = Math.max(postgresPlan.provisionedStorageGb, Math.ceil(monthlyStorageGb));
 
-  const vercel = {
-    baseCost: VERCEL_PRO_BASE,
-    invocationCost: (vercelInvocationOverage / 1_000_000) * VERCEL_INVOCATION_OVERAGE_PER_1M,
-    edgeRequestCost: (vercelEdgeRequestOverage / 1_000_000) * VERCEL_EDGE_REQUEST_OVERAGE_PER_1M,
-    bandwidthCost: vercelBandwidthOverage * VERCEL_BANDWIDTH_OVERAGE_PER_GB,
+  const appService = {
+    planLabel: appPlan.label,
+    baseCost: appPlan.baseCost,
+    bandwidthCost: bandwidthOverage * AZURE_EGRESS_OVERAGE_PER_GB,
     totalCost: 0,
-    includedInvocations: VERCEL_INCLUDED_INVOCATIONS,
-    includedEdgeRequests: VERCEL_INCLUDED_EDGE_REQUESTS,
-    includedBandwidthGb: VERCEL_INCLUDED_BANDWIDTH_GB,
+    includedBandwidthGb: AZURE_INCLUDED_EGRESS_GB,
+    estimatedRequestCapacity: appPlan.estimatedRequestCapacity,
+    computeLoadPercent,
   };
-  vercel.totalCost = vercel.baseCost + vercel.invocationCost + vercel.edgeRequestCost + vercel.bandwidthCost;
+  appService.totalCost = appService.baseCost + appService.bandwidthCost;
 
-  const prismaPlan = PRISMA_PLANS[input.prismaPlan];
-  const prismaOperationOverage = clampPositive(totals.monthlyDbOps - prismaPlan.includedOperations);
-  const prismaStorageOverage = clampPositive(totals.monthlyStorageGb - prismaPlan.includedStorageGb);
-
-  const prisma =
-    input.prismaMode === 'external'
-      ? {
-          baseCost: 0,
-          operationCost: 0,
-          storageCost: 0,
-          totalCost: 0,
-          includedOperations: 0,
-          includedStorageGb: 0,
-        }
-      : {
-          baseCost: prismaPlan.baseCost,
-          operationCost: (prismaOperationOverage / 1_000) * prismaPlan.operationOveragePer1k,
-          storageCost: prismaStorageOverage * prismaPlan.storageOveragePerGb,
-          totalCost: 0,
-          includedOperations: prismaPlan.includedOperations,
-          includedStorageGb: prismaPlan.includedStorageGb,
-        };
-
-  prisma.totalCost = prisma.baseCost + prisma.operationCost + prisma.storageCost;
+  const postgres = {
+    planLabel: postgresPlan.label,
+    computeCost: postgresPlan.computeCost,
+    storageCost: storageBillableGb * AZURE_POSTGRES_STORAGE_PER_GB,
+    backupCost: monthlyStorageGb * AZURE_POSTGRES_BACKUP_PER_GB,
+    totalCost: 0,
+    provisionedStorageGb: storageBillableGb,
+    estimatedOpsCapacity: postgresPlan.estimatedOpsCapacity,
+    opsLoadPercent: postgresOpsLoadPercent,
+  };
+  postgres.totalCost = postgres.computeCost + postgres.storageCost + postgres.backupCost;
 
   const notes = [
-    'Vercel bandwidth and edge request estimates count app traffic and middleware hits, not external map tiles or third-party assets.',
-    input.prismaMode === 'external'
-      ? 'Prisma ORM is free in the current setup; this estimate does not include your external PostgreSQL provider.'
-      : 'Prisma Postgres pricing uses operation counts, not SQL statement counts.',
-    `Active flight tracking assumes one write every ${trackingWriteIntervalSeconds}s while a flight is live.`,
+    'Azure App Service is modeled as a fixed monthly App Service Plan plus public internet egress after the free monthly bandwidth allowance.',
+    'Azure Database for PostgreSQL Flexible Server is modeled as compute, provisioned storage, and backup storage. Actual regional pricing can vary.',
+    `Active flight tracking assumes one API write every ${trackingWriteIntervalSeconds}s while a flight is live.`,
   ];
 
   return {
@@ -270,9 +264,21 @@ export function estimatePlatformUsage(input: PlatformUsageInput): PlatformUsageE
       ops,
       viewer,
     },
-    totals,
-    vercel,
-    prisma,
+    totals: {
+      users: crewUsers + opsUsers + viewerUsers,
+      monthlySessions: crew.monthlySessions + ops.monthlySessions + viewer.monthlySessions,
+      monthlyRequests,
+      monthlyApiRequests: crew.monthlyApiRequests + ops.monthlyApiRequests + viewer.monthlyApiRequests + trackingMonthlyApiRequests,
+      monthlyDbOps,
+      monthlyBandwidthGb,
+      monthlyStorageGb,
+      monthlyTrackingWrites: trackingWritesMonthly,
+      computeLoadPercent,
+    },
+    azure: {
+      appService,
+      postgres,
+    },
     notes,
   };
 }
@@ -284,31 +290,49 @@ export const DEFAULT_PLATFORM_USAGE_INPUT: PlatformUsageInput = {
   activityIntensityPercent: 100,
   trackingMinutesPerCrewUserPerDay: 30,
   trackingWriteIntervalSeconds: 5,
-  prismaMode: 'external',
-  prismaPlan: 'starter',
+  appServicePlan: 'basic-b1',
+  postgresPlan: 'burstable-b1ms',
 };
 
-export const PRISMA_POSTGRES_PLAN_OPTIONS = [
+export const AZURE_APP_SERVICE_PLAN_OPTIONS = [
   {
-    value: 'starter' as const,
-    label: 'Starter',
-    baseCost: PRISMA_PLANS.starter.baseCost,
-    includedOperations: PRISMA_PLANS.starter.includedOperations,
-    includedStorageGb: PRISMA_PLANS.starter.includedStorageGb,
+    value: 'basic-b1' as const,
+    label: AZURE_APP_SERVICE_PLANS['basic-b1'].label,
+    baseCost: AZURE_APP_SERVICE_PLANS['basic-b1'].baseCost,
+    estimatedRequestCapacity: AZURE_APP_SERVICE_PLANS['basic-b1'].estimatedRequestCapacity,
   },
   {
-    value: 'pro' as const,
-    label: 'Pro',
-    baseCost: PRISMA_PLANS.pro.baseCost,
-    includedOperations: PRISMA_PLANS.pro.includedOperations,
-    includedStorageGb: PRISMA_PLANS.pro.includedStorageGb,
+    value: 'standard-s1' as const,
+    label: AZURE_APP_SERVICE_PLANS['standard-s1'].label,
+    baseCost: AZURE_APP_SERVICE_PLANS['standard-s1'].baseCost,
+    estimatedRequestCapacity: AZURE_APP_SERVICE_PLANS['standard-s1'].estimatedRequestCapacity,
   },
   {
-    value: 'business' as const,
-    label: 'Business',
-    baseCost: PRISMA_PLANS.business.baseCost,
-    includedOperations: PRISMA_PLANS.business.includedOperations,
-    includedStorageGb: PRISMA_PLANS.business.includedStorageGb,
+    value: 'premium-p0v3' as const,
+    label: AZURE_APP_SERVICE_PLANS['premium-p0v3'].label,
+    baseCost: AZURE_APP_SERVICE_PLANS['premium-p0v3'].baseCost,
+    estimatedRequestCapacity: AZURE_APP_SERVICE_PLANS['premium-p0v3'].estimatedRequestCapacity,
+  },
+] as const;
+
+export const AZURE_POSTGRES_PLAN_OPTIONS = [
+  {
+    value: 'burstable-b1ms' as const,
+    label: AZURE_POSTGRES_PLANS['burstable-b1ms'].label,
+    computeCost: AZURE_POSTGRES_PLANS['burstable-b1ms'].computeCost,
+    provisionedStorageGb: AZURE_POSTGRES_PLANS['burstable-b1ms'].provisionedStorageGb,
+  },
+  {
+    value: 'burstable-b2s' as const,
+    label: AZURE_POSTGRES_PLANS['burstable-b2s'].label,
+    computeCost: AZURE_POSTGRES_PLANS['burstable-b2s'].computeCost,
+    provisionedStorageGb: AZURE_POSTGRES_PLANS['burstable-b2s'].provisionedStorageGb,
+  },
+  {
+    value: 'general-purpose-d2s' as const,
+    label: AZURE_POSTGRES_PLANS['general-purpose-d2s'].label,
+    computeCost: AZURE_POSTGRES_PLANS['general-purpose-d2s'].computeCost,
+    provisionedStorageGb: AZURE_POSTGRES_PLANS['general-purpose-d2s'].provisionedStorageGb,
   },
 ] as const;
 

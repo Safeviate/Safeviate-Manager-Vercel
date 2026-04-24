@@ -6,11 +6,13 @@ import {
   ensureBookingsSchema,
   ensureCorrectiveActionPlansSchema,
   ensureManagementOfChangeSchema,
+  ensureMeetingsSchema,
   ensurePersonnelSchema,
   ensureQualityAuditsSchema,
   ensureRisksSchema,
   ensureSafetyReportsSchema,
 } from '@/lib/server/bootstrap-db';
+import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -31,6 +33,7 @@ const EMPTY_SUMMARY = {
   caps: [],
   risks: [],
   attendanceRecords: [],
+  meetings: [],
   clockedInCount: 0,
   openAttendanceSessions: 0,
   totalDutyMinutes: 0,
@@ -63,6 +66,8 @@ async function readTenantConfig(tenantId: string) {
 }
 
 export async function GET() {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
     const session = await getServerSession(authOptions);
     const email = session?.user?.email?.trim().toLowerCase();
@@ -85,7 +90,7 @@ export async function GET() {
       where: { email },
       select: { tenantId: true },
     });
-    const tenantId = currentUser?.tenantId || 'safeviate';
+    tenantId = currentUser?.tenantId || 'safeviate';
     const tenantConfig = await readTenantConfig(tenantId);
 
     await Promise.all([
@@ -93,6 +98,7 @@ export async function GET() {
       ensureAircraftSchema(),
       ensureBookingsSchema(),
       ensureManagementOfChangeSchema(),
+      ensureMeetingsSchema(),
       ensurePersonnelSchema(),
       ensureQualityAuditsSchema(),
       ensureCorrectiveActionPlansSchema(),
@@ -109,6 +115,7 @@ export async function GET() {
       capRows,
       riskRows,
       attendanceRows,
+      meetingRows,
     ] = await Promise.all([
       safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId }, select: { data: true } })),
       safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId }, select: { data: true } })),
@@ -122,6 +129,13 @@ export async function GET() {
         'attendance_records',
         prisma.$queryRawUnsafe<{ data: unknown }[]>(
           `SELECT data FROM attendance_records WHERE tenant_id = $1 ORDER BY created_at DESC`,
+          tenantId
+        )
+      ),
+      safeFindMany(
+        'meetings',
+        prisma.$queryRawUnsafe<{ data: unknown }[]>(
+          `SELECT data FROM meetings WHERE tenant_id = $1 ORDER BY created_at DESC`,
           tenantId
         )
       ),
@@ -151,6 +165,24 @@ export async function GET() {
       return sum + Math.max(0, Math.round((end - start) / 60000));
     }, 0);
     const totalDutyHours = parseFloat((totalDutyMinutes / 60).toFixed(1));
+    for (const row of personnelRows) {
+      const type = row.userType || 'Personnel';
+      if (row.canBeInstructor || INSTRUCTOR_TYPES.has(type)) {
+        instructorList.push(row);
+      }
+      if (row.canBeStudent || STUDENT_TYPES.has(type)) {
+        studentList.push(row);
+      }
+      if (PRIVATE_PILOT_TYPES.has(type)) {
+        privatePilotList.push(row);
+      }
+      if (PERSONNEL_TYPES.has(type)) {
+        personnelList.push(row);
+      } else if (!row.canBeInstructor && !row.canBeStudent && !PRIVATE_PILOT_TYPES.has(type)) {
+        personnelList.push(row);
+      }
+    }
+
     const instructorDuty = instructorList.map((instructor) => {
       const instructorBookings = bookingRows
         .map((row) => row.data as { instructorId?: string | null; preFlightData?: { hobbs?: number }; postFlightData?: { hobbs?: number } })
@@ -173,23 +205,13 @@ export async function GET() {
       };
     });
 
-    for (const row of personnelRows) {
-      const type = row.userType || 'Personnel';
-      if (row.canBeInstructor || INSTRUCTOR_TYPES.has(type)) {
-        instructorList.push(row);
-      }
-      if (row.canBeStudent || STUDENT_TYPES.has(type)) {
-        studentList.push(row);
-      }
-      if (PRIVATE_PILOT_TYPES.has(type)) {
-        privatePilotList.push(row);
-      }
-      if (PERSONNEL_TYPES.has(type)) {
-        personnelList.push(row);
-      } else if (!row.canBeInstructor && !row.canBeStudent && !PRIVATE_PILOT_TYPES.has(type)) {
-        personnelList.push(row);
-      }
-    }
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'dashboard-summary.GET',
+      reads: 11,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+    });
 
     return NextResponse.json(
       {
@@ -205,6 +227,7 @@ export async function GET() {
         caps: capRows.map((row) => row.data),
         risks: riskRows.map((row) => row.data),
         attendanceRecords,
+        meetings: meetingRows.map((row) => row.data),
         clockedInCount,
         openAttendanceSessions,
         totalDutyMinutes,
@@ -217,6 +240,14 @@ export async function GET() {
     );
   } catch (error) {
     console.error('[dashboard-summary] fallback to empty payload:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'dashboard-summary.GET',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json(EMPTY_SUMMARY, { status: 200 });
   }
 }

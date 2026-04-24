@@ -24,6 +24,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { BackNavButton } from '@/components/back-nav-button';
 import { MainPageHeader } from '@/components/page-header';
 
+const COMPETENCY_OPTIONS = [
+    { value: 'circuits', label: 'Circuits' },
+    { value: 'takeoff_landing', label: 'Takeoff & Landing' },
+    { value: 'nav', label: 'Navigation' },
+    { value: 'radio', label: 'Radio Work' },
+    { value: 'airmanship', label: 'Airmanship' },
+    { value: 'handling', label: 'Aircraft Handling' },
+    { value: 'decision', label: 'Decision Making' },
+] as const;
+
 const debriefSchema = z.object({
     overallComment: z.string().min(1, "Please provide an overall comment."),
     entries: z.array(z.object({
@@ -31,6 +41,8 @@ const debriefSchema = z.object({
         exercise: z.string().min(1, "Exercise name is required."),
         rating: z.coerce.number().min(1).max(4),
         comment: z.string().optional(),
+        competencyKey: z.string().optional(),
+        competencySignal: z.enum(['strength', 'growth', 'watch']).optional(),
     })).min(1, "At least one exercise entry is required."),
     instructorSignatureUrl: z.string().optional(),
     studentSignatureUrl: z.string().optional(),
@@ -88,7 +100,7 @@ function NewDebriefContent() {
         resolver: zodResolver(debriefSchema),
         defaultValues: {
             overallComment: '',
-            entries: [{ id: uuidv4(), exercise: '', rating: 4, comment: '' }],
+            entries: [{ id: uuidv4(), exercise: '', rating: 4, comment: '', competencyKey: 'circuits', competencySignal: 'growth' }],
             instructorSignatureUrl: '',
             studentSignatureUrl: '',
         },
@@ -142,7 +154,7 @@ function NewDebriefContent() {
 
     if (isLoadingBooking || isLoadingStudent || isLoadingInstructor) {
         return (
-            <div className="space-y-6 max-w-4xl mx-auto">
+            <div className="space-y-6 max-w-4xl mx-auto h-full min-h-0 overflow-hidden">
                 <Skeleton className="h-10 w-48" />
                 <Skeleton className="h-96 w-full" />
             </div>
@@ -151,7 +163,7 @@ function NewDebriefContent() {
 
     if (!booking) {
         return (
-            <div className="text-center py-12">
+            <div className="text-center py-12 h-full min-h-0 overflow-hidden">
                 <p className="text-muted-foreground mb-4">No booking found for this debrief.</p>
                 <BackNavButton href="/bookings/history" text="Back to History" />
             </div>
@@ -162,14 +174,14 @@ function NewDebriefContent() {
     const instructorName = instructor ? `${instructor.firstName} ${instructor.lastName}` : 'Unknown Instructor';
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto h-full flex flex-col overflow-hidden">
+        <div className="space-y-6 max-w-4xl mx-auto h-full min-h-0 flex flex-col overflow-hidden">
             <MainPageHeader
                 title="Post-Flight Instructor Debrief"
                 description={`Booking #${booking.bookingNumber} · ${booking.type}`}
                 actions={<BackNavButton href="/bookings/history" text="Back to History" />}
             />
 
-            <Card className="flex-1 flex flex-col overflow-hidden shadow-none border">
+            <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-none border">
                 <CardHeader className="shrink-0 border-b bg-muted/20">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
@@ -191,7 +203,7 @@ function NewDebriefContent() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="flex-1 p-0 overflow-hidden">
+                <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
                             <ScrollArea className="flex-1 p-6">
@@ -199,11 +211,11 @@ function NewDebriefContent() {
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
                                             <h3 className="text-lg font-semibold">Exercise Ratings</h3>
-                                            <Button 
+                                                <Button 
                                                 type="button" 
                                                 variant="outline" 
                                                 size="sm" 
-                                                onClick={() => append({ id: uuidv4(), exercise: '', rating: 4, comment: '' })}
+                                                onClick={() => append({ id: uuidv4(), exercise: '', rating: 4, comment: '', competencyKey: 'circuits', competencySignal: 'growth' })}
                                             >
                                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Exercise
                                             </Button>
@@ -268,6 +280,56 @@ function NewDebriefContent() {
                                                         </FormItem>
                                                     )} 
                                                 />
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`entries.${index}.competencyKey`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Competency Area</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={field.value || 'circuits'}>
+                                                                    <FormControl>
+                                                                        <SelectTrigger>
+                                                                            <SelectValue placeholder="Select area" />
+                                                                        </SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent>
+                                                                        {COMPETENCY_OPTIONS.map((option) => (
+                                                                            <SelectItem key={option.value} value={option.value}>
+                                                                                {option.label}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`entries.${index}.competencySignal`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Signal</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={field.value || 'growth'}>
+                                                                    <FormControl>
+                                                                        <SelectTrigger>
+                                                                            <SelectValue placeholder="Select signal" />
+                                                                        </SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="strength">Strength</SelectItem>
+                                                                        <SelectItem value="growth">Growth</SelectItem>
+                                                                        <SelectItem value="watch">Watch</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCompletedAircraftHourPatch } from '@/lib/aircraft-hours';
 import { ensureBookingsSchema } from '@/lib/server/bootstrap-db';
 import { allocateNextBookingNumber } from '@/lib/server/booking-sequence';
+import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -39,8 +40,10 @@ async function getTenantId() {
 }
 
 export async function GET() {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
-    const tenantId = await getTenantId();
+    tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ bookings: [] }, { status: 200 });
 
     await ensureBookingsSchema();
@@ -48,6 +51,14 @@ export async function GET() {
       where: { tenantId },
       orderBy: { createdAt: 'asc' },
       select: { data: true },
+    });
+
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'bookings.GET',
+      reads: 1,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
     });
 
     return NextResponse.json(
@@ -58,14 +69,25 @@ export async function GET() {
     );
   } catch (error) {
     console.error('[bookings] failed to load bookings:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'bookings.GET',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ bookings: [] }, { status: 200 });
   }
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
-    const tenantId = await getTenantId();
+    tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const resolvedTenantId = tenantId;
 
     const body = await request.json().catch(() => null);
     const incoming = body?.booking ?? {};
@@ -74,7 +96,7 @@ export async function POST(request: Request) {
     await ensureBookingsSchema();
 
     const data = await prisma.$transaction(async (tx) => {
-      const sequence = await allocateNextBookingNumber(tx, tenantId);
+      const sequence = await allocateNextBookingNumber(tx, resolvedTenantId);
       const nextData = {
         ...incoming,
         id,
@@ -85,7 +107,7 @@ export async function POST(request: Request) {
         where: { id },
         create: {
           id,
-          tenantId,
+          tenantId: resolvedTenantId,
           data: nextData,
         },
         update: {
@@ -103,7 +125,7 @@ export async function POST(request: Request) {
 
       if (shouldMirrorAircraftHours) {
         const aircraftRow = await tx.aircraftRecord.findFirst({
-          where: { id: nextData.aircraftId, tenantId },
+          where: { id: nextData.aircraftId, tenantId: resolvedTenantId },
           select: { data: true },
         });
 
@@ -114,14 +136,14 @@ export async function POST(request: Request) {
           where: { id: nextData.aircraftId },
           create: {
             id: nextData.aircraftId,
-            tenantId,
+            tenantId: resolvedTenantId,
             data: {
               ...existingAircraft,
               ...completedPatch,
             },
           },
           update: {
-            tenantId,
+            tenantId: resolvedTenantId,
             data: {
               ...existingAircraft,
               ...completedPatch,
@@ -134,9 +156,24 @@ export async function POST(request: Request) {
       return nextData;
     });
 
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'bookings.POST',
+      reads: 2,
+      writes: 2,
+      durationMs: Date.now() - startedAt,
+    });
     return NextResponse.json({ booking: data }, { status: 201 });
   } catch (error) {
     console.error('[bookings] failed to save booking:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'bookings.POST',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ error: 'Failed to save booking.' }, { status: 500 });
   }
 }

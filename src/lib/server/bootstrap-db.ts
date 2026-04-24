@@ -14,6 +14,7 @@ type TableName =
   | 'company_documents'
   | 'external_organizations'
   | 'training_routes'
+  | 'meetings'
   | 'bookings'
   | 'attendance_records'
   | 'aircrafts'
@@ -24,7 +25,8 @@ type TableName =
   | 'corrective_action_plans'
   | 'risks'
   | 'management_of_change'
-  | 'erp_state';
+  | 'erp_state'
+  | 'simulation_route_metrics';
 
 const tableCache = new Map<TableName, boolean>();
 
@@ -260,6 +262,24 @@ export async function ensureTrainingRoutesSchema() {
   tableCache.set('training_routes', true);
 }
 
+export async function ensureMeetingsSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('meetings')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS meetings (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableCache.set('meetings', true);
+}
+
 export async function ensureErpStateSchema() {
   if (!(await isDatabaseAvailable())) return;
   if (await hasTable('erp_state')) {
@@ -438,6 +458,35 @@ export async function ensureCorrectiveActionPlansSchema() {
     )
   `);
   tableCache.set('corrective_action_plans', true);
+}
+
+export async function ensureSimulationRouteMetricsSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('simulation_route_metrics')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS simulation_route_metrics (
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      run_id VARCHAR(128) NOT NULL,
+      route_key TEXT NOT NULL,
+      request_count INTEGER NOT NULL DEFAULT 0,
+      read_count INTEGER NOT NULL DEFAULT 0,
+      write_count INTEGER NOT NULL DEFAULT 0,
+      error_count INTEGER NOT NULL DEFAULT 0,
+      total_duration_ms INTEGER NOT NULL DEFAULT 0,
+      last_seen_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (tenant_id, run_id, route_key)
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS simulation_route_metrics_run_idx
+    ON simulation_route_metrics (tenant_id, run_id)
+  `);
+  tableCache.set('simulation_route_metrics', true);
 }
 
 export async function ensurePersonnelSchema() {

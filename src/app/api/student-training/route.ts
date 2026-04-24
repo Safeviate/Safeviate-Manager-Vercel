@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -46,13 +47,22 @@ async function writeConfig(tenantId: string, config: Record<string, unknown>) {
 }
 
 export async function GET() {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
-    const tenantId = await getTenantId();
+    tenantId = await getTenantId();
     if (!tenantId) {
       return NextResponse.json({ reports: [], milestones: null }, { status: 200 });
     }
 
     const config = await readConfig(tenantId);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'student-training.GET',
+      reads: 1,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+    });
     return NextResponse.json(
       {
         reports: Array.isArray(config[REPORTS_KEY]) ? config[REPORTS_KEY] : [],
@@ -62,11 +72,20 @@ export async function GET() {
     );
   } catch (error) {
     console.error('[student-training] fallback to empty payload:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'student-training.GET',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ reports: [], milestones: null }, { status: 200 });
   }
 }
 
 export async function PUT(request: Request) {
+  const startedAt = Date.now();
   const tenantId = await getTenantId();
   if (!tenantId) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
@@ -89,5 +108,12 @@ export async function PUT(request: Request) {
   }
 
   await writeConfig(tenantId, config);
+  await recordSimulationRouteMetric({
+    tenantId,
+    routeKey: 'student-training.PUT',
+    reads: 1,
+    writes: 1,
+    durationMs: Date.now() - startedAt,
+  });
   return NextResponse.json({ ok: true }, { status: 200 });
 }

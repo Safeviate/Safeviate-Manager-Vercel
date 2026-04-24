@@ -65,6 +65,7 @@ interface MainPageHeaderProps {
   description?: string;
   actions?: ReactNode;
   className?: string;
+  centerActions?: boolean;
 }
 
 interface CardControlHeaderProps {
@@ -75,6 +76,7 @@ interface CardControlHeaderProps {
   mobileActions?: ReactNode;
   className?: string;
   isMobile?: boolean;
+  centerActions?: boolean;
 }
 
 /**
@@ -85,7 +87,8 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
   title,
   description,
   actions,
-  className
+  className,
+  centerActions = false,
 }) => {
   const hasExplicitDescription = description !== undefined;
   const resolvedDescription = hasExplicitDescription
@@ -96,6 +99,7 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
     <CardControlHeader
       className={cn("main-page-header flex w-full shrink-0 flex-col bg-muted/5", className)}
       isMobile={false}
+      centerActions={centerActions}
       context={resolvedDescription ? (
         <div className="flex min-w-0 flex-col gap-1">
           <p className="main-page-header__description text-[10px] font-medium text-muted-foreground sm:text-xs">
@@ -127,6 +131,7 @@ export const CardControlHeader: FC<CardControlHeaderProps> = ({
   mobileActions,
   className,
   isMobile = false,
+  centerActions = false,
 }) => {
   const hasTopRow = Boolean(context || actions || mobileContext || mobileActions);
   const resolvedMobileContext = mobileContext ?? context;
@@ -142,12 +147,30 @@ export const CardControlHeader: FC<CardControlHeaderProps> = ({
               {resolvedMobileActions ? resolvedMobileActions : null}
             </div>
           ) : (
-            <div className={CARD_HEADER_TOP_ROW_CLASS}>
-              <div className={CARD_HEADER_SCOPE_ZONE_CLASS}>
+            <div
+              className={cn(
+                CARD_HEADER_TOP_ROW_CLASS,
+                "main-page-header__header",
+                centerActions && "justify-center"
+              )}
+            >
+              <div
+                className={cn(
+                  CARD_HEADER_SCOPE_ZONE_CLASS,
+                  "main-page-header__scope-zone",
+                  centerActions && "hidden"
+                )}
+              >
                 {context ? context : null}
               </div>
               {actions ? (
-                <div className={CARD_HEADER_ACTION_ZONE_CLASS}>
+                <div
+                  className={cn(
+                    CARD_HEADER_ACTION_ZONE_CLASS,
+                    "main-page-header__action-zone",
+                    centerActions && "w-full flex-1 justify-center"
+                  )}
+                >
                   {actions}
                 </div>
               ) : null}

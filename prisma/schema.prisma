@@ -28,6 +28,7 @@ model Tenant {
   bookings              BookingRecord[]
   attendanceRecords     AttendanceRecord[]
   trainingRoutes        TrainingRouteRecord[]
+  meetings              MeetingRecord[]
   companyDocuments      CompanyDocument[]
   externalOrganizations ExternalOrganization[]
   betaNdaAcceptances    BetaNdaAcceptance[]
@@ -276,6 +277,17 @@ model TrainingRouteRecord {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("training_routes")
+}
+
+model MeetingRecord {
+  id        String   @id @db.VarChar(128)
+  tenantId  String   @map("tenant_id") @db.VarChar(128)
+  data      Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("meetings")
 }
 
 model CompanyDocument {

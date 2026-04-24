@@ -16,9 +16,30 @@ import { startOfToday } from 'date-fns';
 interface CustomCalendarProps {
     selectedDate?: Date;
     onDateSelect?: (date: Date) => void;
+    dayCounts?: Record<string, number>;
+    dayMarkers?: Record<string, { count: number; primaryType?: string }>;
 }
 
-export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarProps) {
+const getBadgeToneClass = (primaryType?: string) => {
+  switch ((primaryType || '').toLowerCase()) {
+    case 'operations':
+      return 'bg-sky-600 text-white';
+    case 'safety':
+      return 'bg-amber-600 text-white';
+    case 'quality':
+      return 'bg-emerald-600 text-white';
+    case 'training':
+      return 'bg-violet-600 text-white';
+    case 'board':
+      return 'bg-slate-700 text-white';
+    case 'general':
+      return 'bg-zinc-600 text-white';
+    default:
+      return 'bg-primary text-primary-foreground';
+  }
+};
+
+export function CustomCalendar({ selectedDate, onDateSelect, dayCounts = {}, dayMarkers = {} }: CustomCalendarProps) {
   const [currentDate, setCurrentDate] = React.useState(selectedDate || new Date());
   const today = startOfToday();
 
@@ -67,6 +88,9 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
   for (let day = 1; day <= daysInMonth; day++) {
     const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const isToday = dayDate.getTime() === today.getTime();
+    const dayKey = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+    const meetingCount = dayMarkers[dayKey]?.count ?? dayCounts[dayKey] ?? 0;
+    const badgeToneClass = getBadgeToneClass(dayMarkers[dayKey]?.primaryType);
     
     const isSelected = selectedDate &&
       day === selectedDate.getDate() &&
@@ -78,13 +102,24 @@ export function CustomCalendar({ selectedDate, onDateSelect }: CustomCalendarPro
         key={`day-${day}`}
         onClick={() => handleDayClick(day)}
         className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
+          'relative flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
           'hover:bg-accent hover:text-accent-foreground',
-          isToday && !isSelected && 'bg-muted text-muted-foreground',
-          isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90'
+          isToday && !isSelected && 'bg-muted text-muted-foreground ring-1 ring-primary/30',
+          isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
+          isToday && isSelected && 'ring-2 ring-primary/60 shadow-sm'
         )}
       >
         {day}
+        {meetingCount > 0 ? (
+          <span
+            className={cn(
+              'absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[8px] font-black leading-none',
+              isSelected ? 'bg-background text-foreground' : badgeToneClass
+            )}
+          >
+            {meetingCount > 9 ? '9+' : meetingCount}
+          </span>
+        ) : null}
       </button>
     );
   }

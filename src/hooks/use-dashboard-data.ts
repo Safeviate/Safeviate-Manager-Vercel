@@ -7,11 +7,12 @@ import type { Personnel } from '@/app/(app)/users/personnel/personnel-directory-
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { ManagementOfChange } from '@/types/moc';
+import type { MeetingRecordData } from '@/types/meeting';
 
 export type UnifiedTask = {
     id: string;
     description: string;
-    sourceType: 'MOC' | 'Audit' | 'Safety Report';
+    sourceType: 'MOC' | 'Audit' | 'Safety Report' | 'Meeting';
     sourceIdentifier: string;
     link: string;
     assigneeId: string;
@@ -51,6 +52,7 @@ export function useDashboardData() {
     const [audits, setAudits] = useState<QualityAudit[]>([]);
     const [reports, setReports] = useState<SafetyReport[]>([]);
     const [caps, setCaps] = useState<CorrectiveActionPlan[]>([]);
+    const [meetings, setMeetings] = useState<MeetingRecordData[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
 
     useEffect(() => {
@@ -75,6 +77,7 @@ export function useDashboardData() {
                     setAudits(payload.audits ?? []);
                     setReports(payload.reports ?? []);
                     setCaps(payload.caps ?? []);
+                    setMeetings(payload.meetings ?? []);
                 }
             } catch (error) {
                 if (!cancelled) {
@@ -86,6 +89,7 @@ export function useDashboardData() {
                     setAudits([]);
                     setReports([]);
                     setCaps([]);
+                    setMeetings([]);
                 }
             } finally {
                 if (!cancelled) setIsLoadingData(false);
@@ -172,10 +176,27 @@ export function useDashboardData() {
             });
           }
         });
+
+        (meetings || []).forEach((meeting) => {
+          (meeting.actionItems || []).forEach((action) => {
+            if (action.status === 'Completed' || action.status === 'Cancelled') return;
+            tasks.push({
+              id: action.id,
+              description: action.description,
+              sourceType: 'Meeting',
+              sourceIdentifier: meeting.meetingNumber,
+              link: `/operations/meetings`,
+              assigneeId: action.assigneeId,
+              assigneeName: userMap.get(action.assigneeId) || action.assigneeName || 'Unassigned',
+              dueDate: action.dueDate,
+              status: action.status,
+            });
+          });
+        });
     
         return tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     
-      }, [mocs, reports, caps, audits, allUsers, isLoadingData]);
+      }, [mocs, reports, caps, audits, meetings, allUsers, isLoadingData]);
 
     const myTasks = useMemo(() => {
         if (!userProfile || !allTasks) return [];

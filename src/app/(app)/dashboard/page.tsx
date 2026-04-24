@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { AlertTriangle, BadgeAlert, ChevronDown, ClipboardCheck, MoreHorizontal, ShieldAlert, Star, TrendingDown, TriangleAlert } from 'lucide-react';
+import { format } from 'date-fns';
 import { useTheme } from '@/components/theme-provider';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -16,23 +20,63 @@ import {
   CARD_HEADER_BAND_CLASS,
   CARD_HEADER_SCOPE_ZONE_CLASS,
   HEADER_COMPACT_CONTROL_CLASS,
+  HEADER_SECONDARY_BUTTON_CLASS,
   HEADER_TAB_LIST_CLASS,
   HEADER_TAB_TRIGGER_CLASS,
 } from '@/components/page-header';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Area, ComposedChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
+import type { AttendanceRecordData } from '@/types/attendance';
+import type { QualityAudit, CorrectiveActionPlan } from '@/types/quality';
+import type { Risk as SafetyRisk } from '@/types/risk';
+import type { SafetyReport } from '@/types/safety-report';
+import type { InstructorHourWarningSettings, MilestoneWarning, StudentMilestoneSettings, StudentProgressReport } from '@/types/training';
 import type { IndustryType } from '@/types/quality';
 
 type DashboardIndustry = 'ATO' | 'AOC' | 'AMO' | 'OHS';
 type IndustryTab = { value: string; label: string };
 type SummaryPayload = {
   aircrafts?: Aircraft[];
-  bookings?: Array<Pick<Booking, 'aircraftId' | 'status'> & {
+  bookings?: Array<Pick<Booking, 'aircraftId' | 'status' | 'instructorId' | 'studentId'> & {
     date?: string;
     preFlightData?: { hobbs?: number; fuelUpliftGallons?: number; fuelUpliftLitres?: number; oilUplift?: number };
     postFlightData?: { hobbs?: number };
   }>;
+  students?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+  }>;
+  instructors?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+  }>;
+  audits?: QualityAudit[];
+  reports?: SafetyReport[];
+  caps?: CorrectiveActionPlan[];
+  risks?: SafetyRisk[];
+  attendanceRecords?: AttendanceRecordData[];
+  totalDutyHours?: number;
+  instructorDuty?: Array<{
+    id: string;
+    name: string;
+    bookingCount: number;
+    instructionHours: number;
+    dutyPressure: number;
+    status: 'ok' | 'pressure' | 'busy';
+  }>;
+  studentProgressReports?: StudentProgressReport[];
+  studentMilestones?: StudentMilestoneSettings | null;
 };
 
 type FleetRow = {
@@ -56,13 +100,157 @@ type FleetTrendPoint = {
   utilisationPercent: number;
 };
 
+type InstructorWarningBand = {
+  hours: number;
+  warningHours: number;
+  color?: string;
+  foregroundColor?: string;
+};
+
+type InstructorLoadStatus = 'safe' | 'watch' | 'over';
+
+type StudentLoadStatus = 'safe' | 'watch' | 'over';
+
+type InstructorLoadRow = {
+  id: string;
+  name: string;
+  periodFlightHours: number;
+  periodDutyHours: number;
+  todayFlightHours: number;
+  todayDutyHours: number;
+  bookingCount: number;
+  dutyMinutes: number;
+  nextLimitHours: number | null;
+  warningHours: number | null;
+  status: InstructorLoadStatus;
+  hasOpenSession: boolean;
+};
+
+type StudentLoadRow = {
+  id: string;
+  name: string;
+  totalFlightHours: number;
+  recentFlightHours: number;
+  lastFlightDate: string | null;
+  lastDebriefDate: string | null;
+  daysSinceFlight: number | null;
+  daysSinceDebrief: number | null;
+  utilisationShare: number;
+  pacePerWeek: number;
+  forecastDaysToNextMilestone: number | null;
+  recommendedAction: string;
+  milestoneHours: number | null;
+  warningHours: number | null;
+  status: StudentLoadStatus;
+};
+
+type InstructorMetrics = {
+  rows: InstructorLoadRow[];
+  periodLabel: string;
+  totalPeriodFlightHours: number;
+  totalPeriodDutyHours: number;
+  totalTodayFlightHours: number;
+  totalTodayDutyHours: number;
+  openSessions: number;
+  watchCount: number;
+  overCount: number;
+};
+
+type StudentMetrics = {
+  rows: StudentLoadRow[];
+  periodLabel: string;
+  activeStudents: number;
+  newStudents: number;
+  recentDebriefs: number;
+  noRecentActivity: number;
+  stagnatingStudents: number;
+  forecastedNextMilestones: number;
+  watchCount: number;
+  overCount: number;
+};
+
+type CompetencySignal = 'strength' | 'growth' | 'watch';
+
+type CompetencyArea = {
+  label: string;
+  score: number;
+  sampleCount: number;
+  trend: number;
+  signal: CompetencySignal;
+};
+
+type SafetyMetrics = {
+  openReports: number;
+  openRisks: number;
+  openCaps: number;
+  recentReports: number;
+  reportRows: Array<{
+    id: string;
+    title: string;
+    status: string;
+    dateLabel: string;
+    classification: string;
+    location: string;
+    actionCount: number;
+  }>;
+  riskRows: Array<{
+    id: string;
+    hazard: string;
+    hazardArea: string;
+    status: string;
+    riskCount: number;
+    mitigationCount: number;
+  }>;
+  capRows: Array<{
+    id: string;
+    status: string;
+    description: string;
+  }>;
+};
+
+type QualityMetrics = {
+  openAudits: number;
+  closedAudits: number;
+  openFindings: number;
+  averageCompliance: number;
+  openCaps: number;
+  recentAudits: number;
+  auditRows: Array<{
+    id: string;
+    title: string;
+    auditNumber: string;
+    status: string;
+    dateLabel: string;
+    complianceScore: number | null;
+    findingCount: number;
+  }>;
+  capRows: Array<{
+    id: string;
+    status: string;
+    description: string;
+  }>;
+};
+
 const DASHBOARD_SHELL_CLASS = 'overflow-hidden border bg-background shadow-none';
+const DEFAULT_INSTRUCTOR_WARNING_BANDS: InstructorWarningBand[] = [
+  { hours: 20, warningHours: 10, color: '#60a5fa', foregroundColor: '#ffffff' },
+  { hours: 40, warningHours: 30, color: '#facc15', foregroundColor: '#000000' },
+  { hours: 60, warningHours: 50, color: '#f97316', foregroundColor: '#ffffff' },
+  { hours: 80, warningHours: 70, color: '#ef4444', foregroundColor: '#ffffff' },
+];
+const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
+  { milestone: 10, warningHours: 7 },
+  { milestone: 20, warningHours: 17 },
+  { milestone: 30, warningHours: 27 },
+  { milestone: 40, warningHours: 37 },
+];
 const ATC_TABS: IndustryTab[] = [
   { value: 'fleet', label: 'Fleet' },
   { value: 'overview', label: 'Overview' },
   { value: 'instructors', label: 'Instructors' },
   { value: 'students', label: 'Students' },
   { value: 'safety', label: 'Safety' },
+  { value: 'quality', label: 'Quality' },
 ];
 
 const INDUSTRY_TABS: Record<DashboardIndustry, IndustryTab[]> = {
@@ -98,7 +286,7 @@ const INDUSTRY_TITLES: Record<DashboardIndustry, string> = {
 };
 
 const INDUSTRY_DESCRIPTIONS: Record<DashboardIndustry, string> = {
-  ATO: 'Fleet first. The remaining sections will be built one at a time.',
+  ATO: 'Fleet, instructor load, safety, and quality first. The remaining sections will be built one at a time.',
   AOC: 'The operations dashboard shell will be built section by section.',
   AMO: 'The maintenance dashboard shell will be built section by section.',
   OHS: 'The safety dashboard shell will be built section by section.',
@@ -113,6 +301,7 @@ const INDUSTRY_SWITCHER: IndustryTab[] = [
 
 const EMPTY_NOTE = 'This section is intentionally empty for now. We will add content in the next build stage.';
 const DEFAULT_FLEET_TARGET_HOURS = 20;
+const FLEET_PERIOD_OPTIONS: FleetPeriod[] = ['week', 'month', 'all'];
 
 const resolveIndustryKey = (industry?: IndustryType | string | null): DashboardIndustry => {
   if (industry === 'Aviation: Charter / Ops (AOC)') return 'AOC';
@@ -146,6 +335,375 @@ const getServiceState = (aircraft: Aircraft) => {
 };
 
 const formatHours = (hours: number) => `${hours.toFixed(1)}h`;
+
+const getPeriodLabel = (period: FleetPeriod) => {
+  if (period === 'week') return 'Last 7 days';
+  if (period === 'month') return 'Last 30 days';
+  return 'All time';
+};
+
+const getPeriodDays = (period: FleetPeriod) => {
+  if (period === 'week') return 7;
+  if (period === 'month') return 30;
+  return 90;
+};
+
+const getPeriodStart = (period: FleetPeriod, reference = new Date()) => {
+  if (period === 'week') {
+    const start = new Date(reference);
+    start.setDate(reference.getDate() - 7);
+    return start;
+  }
+  if (period === 'month') {
+    const start = new Date(reference);
+    start.setMonth(reference.getMonth() - 1);
+    return start;
+  }
+  return null;
+};
+
+const calcBreakMinutes = (record: AttendanceRecordData) => (record.breaks || []).reduce((sum, breakItem) => {
+  if (typeof breakItem.minutes === 'number') return sum + Math.max(0, breakItem.minutes);
+  if (breakItem.start && breakItem.end) {
+    const start = new Date(breakItem.start).getTime();
+    const end = new Date(breakItem.end).getTime();
+    if (!Number.isNaN(start) && !Number.isNaN(end) && end > start) {
+      return sum + Math.max(0, Math.round((end - start) / 60000));
+    }
+  }
+  return sum;
+}, 0);
+
+const calcDutyMinutes = (record: AttendanceRecordData, referenceNow = Date.now()) => {
+  if (!record.clockIn) return 0;
+  const start = new Date(record.clockIn).getTime();
+  const end = record.clockOut ? new Date(record.clockOut).getTime() : referenceNow;
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return 0;
+  return Math.max(0, Math.round((end - start) / 60000));
+};
+
+const calcNetDutyMinutes = (record: AttendanceRecordData, referenceNow = Date.now()) =>
+  Math.max(0, calcDutyMinutes(record, referenceNow) - calcBreakMinutes(record));
+
+const getInstructorLoadStatus = (hours: number, bands: InstructorWarningBand[]) => {
+  const ordered = [...bands].sort((a, b) => a.hours - b.hours);
+  const nextBand = ordered.find((band) => hours < band.hours) || ordered.at(-1) || null;
+
+  if (!nextBand) {
+    return {
+      status: 'safe' as InstructorLoadStatus,
+      nextLimitHours: null as number | null,
+      warningHours: null as number | null,
+    };
+  }
+
+  if (hours >= nextBand.hours) {
+    return {
+      status: 'over' as InstructorLoadStatus,
+      nextLimitHours: nextBand.hours,
+      warningHours: nextBand.warningHours,
+    };
+  }
+
+  return {
+    status: hours >= nextBand.warningHours ? 'watch' : 'safe',
+    nextLimitHours: nextBand.hours,
+    warningHours: nextBand.warningHours,
+  } as const;
+};
+
+const getStatusStyles = (status: InstructorLoadStatus) => {
+  if (status === 'over') return 'border-red-200 bg-red-50 text-red-700';
+  if (status === 'watch') return 'border-amber-200 bg-amber-50 text-amber-700';
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+};
+
+const getStudentStatusStyles = (status: StudentLoadStatus) => {
+  if (status === 'over') return 'border-red-200 bg-red-50 text-red-700';
+  if (status === 'watch') return 'border-amber-200 bg-amber-50 text-amber-700';
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+};
+
+const formatDateLabel = (date: Date) =>
+  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+
+const getDaysSince = (date: Date | null, reference = new Date()) => {
+  if (!date) return null;
+  const diff = reference.getTime() - date.getTime();
+  if (!Number.isFinite(diff) || diff < 0) return null;
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+};
+
+const formatDaysSince = (days: number | null) => {
+  if (days === null) return 'N/A';
+  if (days <= 0) return 'Today';
+  if (days === 1) return '1 day ago';
+  return `${days} days ago`;
+};
+
+const formatPace = (hoursPerWeek: number) => `${hoursPerWeek.toFixed(1)}h/wk`;
+
+const getStudentRecommendation = (row: {
+  status: StudentLoadStatus;
+  daysSinceFlight: number | null;
+  daysSinceDebrief: number | null;
+  forecastDaysToNextMilestone: number | null;
+}) => {
+  if (row.daysSinceFlight === null) return 'Schedule first lesson';
+  if (row.daysSinceFlight >= 30) return 'Re-engage student';
+  if (row.daysSinceFlight >= 14) return 'Book refresher flight';
+  if (row.daysSinceDebrief === null || row.daysSinceDebrief > row.daysSinceFlight) return 'Complete debrief';
+  if (row.status !== 'safe') return 'Review milestone';
+  if (row.forecastDaysToNextMilestone !== null && row.forecastDaysToNextMilestone <= 30) return 'Plan milestone check';
+  return 'Keep current pace';
+};
+
+const STUDENT_COMPETENCY_RULES: Array<{ key: string; label: string; keywords: string[]; strengthBias: number; growthBias: number }> = [
+  { key: 'circuits', label: 'Circuits', keywords: ['circuit', 'circuits', 'traffic pattern', 'pattern'], strengthBias: 1.05, growthBias: 0.95 },
+  { key: 'takeoff_landing', label: 'Takeoff & Landing', keywords: ['takeoff', 'landing', 'flare', 'roundout', 'touch and go'], strengthBias: 1, growthBias: 1 },
+  { key: 'nav', label: 'Navigation', keywords: ['navigation', 'nav', 'map', 'route', 'waypoint', 'planning'], strengthBias: 1, growthBias: 1 },
+  { key: 'radio', label: 'Radio Work', keywords: ['radio', 'comms', 'communication', 'phraseology', 'rt'], strengthBias: 1, growthBias: 1 },
+  { key: 'airmanship', label: 'Airmanship', keywords: ['airmanship', 'lookout', 'situational awareness', 'awareness', 'scan'], strengthBias: 1.05, growthBias: 0.95 },
+  { key: 'handling', label: 'Aircraft Handling', keywords: ['stall', 'stalls', 'turn', 'steep', 'climb', 'descent', 'handling'], strengthBias: 1, growthBias: 1 },
+  { key: 'decision', label: 'Decision Making', keywords: ['decision', 'judgement', 'judgment', 'planning', 'situational', 'choice'], strengthBias: 0.95, growthBias: 1.05 },
+];
+
+const classifyStudentEntry = (entry: StudentProgressReport['entries'][number]) => {
+  if (entry.competencyKey) {
+    const normalized = entry.competencyKey.toLowerCase();
+    const directMatch = STUDENT_COMPETENCY_RULES.filter(
+      (rule) => rule.key === normalized || rule.label.toLowerCase() === normalized
+    );
+    if (directMatch.length > 0) {
+      return directMatch;
+    }
+  }
+
+  const text = `${entry.exercise || ''} ${entry.comment || ''}`.toLowerCase();
+  return STUDENT_COMPETENCY_RULES.filter((rule) => rule.keywords.some((keyword) => text.includes(keyword)));
+};
+
+const buildStudentCompetencyAreas = (reports: StudentProgressReport[]): CompetencyArea[] => {
+  const buckets = new Map<string, { label: string; scoreTotal: number; sampleCount: number; trendTotal: number; signalVotes: Record<CompetencySignal, number> }>();
+
+  STUDENT_COMPETENCY_RULES.forEach((rule) => {
+    buckets.set(rule.key, {
+      label: rule.label,
+      scoreTotal: 0,
+      sampleCount: 0,
+      trendTotal: 0,
+      signalVotes: { strength: 0, growth: 0, watch: 0 },
+    });
+  });
+
+  const sortedReports = [...reports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  sortedReports.forEach((report, reportIndex) => {
+    const reportWeight = Math.max(0.4, 1 - reportIndex * 0.12);
+    report.entries.forEach((entry) => {
+      const matches = classifyStudentEntry(entry);
+      if (matches.length === 0) return;
+      matches.forEach((rule) => {
+        const bucket = buckets.get(rule.key);
+        if (!bucket) return;
+        const normalizedRating = Math.max(0, Math.min(1, (entry.rating - 1) / 3));
+        bucket.scoreTotal += normalizedRating * 100 * reportWeight * (entry.rating >= 3 ? rule.strengthBias : rule.growthBias);
+        bucket.trendTotal += entry.rating;
+        bucket.sampleCount += 1;
+        const signal: CompetencySignal = entry.competencySignal || (entry.rating >= 3 ? 'strength' : entry.rating <= 2 ? 'growth' : 'watch');
+        bucket.signalVotes[signal] += reportWeight;
+      });
+    });
+  });
+
+  return Array.from(buckets.values())
+    .map((bucket) => {
+      const averageScore = bucket.sampleCount > 0 ? bucket.scoreTotal / bucket.sampleCount : 0;
+      const averageRating = bucket.sampleCount > 0 ? bucket.trendTotal / bucket.sampleCount : 0;
+      const voteSignal = (Object.entries(bucket.signalVotes).sort((a, b) => b[1] - a[1])[0]?.[0] || null) as CompetencySignal | null;
+      const signal: CompetencySignal = voteSignal || (averageRating >= 3.4 ? 'strength' : averageRating <= 2.4 ? 'growth' : 'watch');
+      return {
+        label: bucket.label,
+        score: parseFloat(averageScore.toFixed(1)),
+        sampleCount: bucket.sampleCount,
+        trend: parseFloat(averageRating.toFixed(1)),
+        signal,
+      };
+    })
+    .filter((area) => area.sampleCount > 0)
+    .sort((a, b) => {
+      if (a.signal !== b.signal) {
+        if (a.signal === 'growth') return -1;
+        if (b.signal === 'growth') return 1;
+        if (a.signal === 'watch') return -1;
+        if (b.signal === 'watch') return 1;
+      }
+      return a.score - b.score;
+    });
+};
+
+const getStudentCompetencySnapshot = (reports: StudentProgressReport[]) => {
+  const areas = buildStudentCompetencyAreas(reports);
+  const primary = areas[0] || null;
+  const signal: CompetencySignal = primary?.signal || 'watch';
+  const nextFocus = primary
+    ? primary.signal === 'strength'
+      ? `Keep reinforcing ${primary.label}`
+      : `Next focus: ${primary.label}`
+    : 'Next focus: add debrief notes';
+  return {
+    signal,
+    headline: primary?.label || 'No competency data yet',
+    score: primary?.score ?? 0,
+    nextFocus,
+  };
+};
+
+const getCompetencyTone = (signal: CompetencySignal) => {
+  if (signal === 'strength') {
+    return {
+      border: 'border-emerald-200',
+      bg: 'bg-emerald-50/80',
+      pill: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+      bar: 'bg-emerald-500',
+      label: 'Strength',
+      icon: Star,
+    };
+  }
+
+  if (signal === 'growth') {
+    return {
+      border: 'border-rose-200',
+      bg: 'bg-rose-50/80',
+      pill: 'bg-rose-500/10 text-rose-700 border-rose-200',
+      bar: 'bg-rose-500',
+      label: 'Growth area',
+      icon: TrendingDown,
+    };
+  }
+
+  return {
+    border: 'border-amber-200',
+    bg: 'bg-amber-50/80',
+    pill: 'bg-amber-500/10 text-amber-700 border-amber-200',
+    bar: 'bg-amber-500',
+    label: 'Watch',
+    icon: TrendingDown,
+  };
+};
+
+const getSafetyMetrics = (summary: SummaryPayload): SafetyMetrics => {
+  const reports = (Array.isArray(summary.reports) ? summary.reports : []) as SafetyReport[];
+  const risks = (Array.isArray(summary.risks) ? summary.risks : []) as SafetyRisk[];
+  const caps = (Array.isArray(summary.caps) ? summary.caps : []) as CorrectiveActionPlan[];
+  const now = new Date();
+  const recentCutoff = new Date(now);
+  recentCutoff.setDate(now.getDate() - 30);
+
+  const reportRows = [...reports]
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+    .slice(0, 3)
+    .map((report) => ({
+      id: report.id,
+      title: `${report.reportNumber} · ${report.reportType}`.trim(),
+      status: report.status,
+      dateLabel: format(new Date(report.submittedAt), 'dd MMM yyyy'),
+      classification: report.eventClassification || 'Unclassified',
+      location: report.location || 'Unknown location',
+      actionCount: Array.isArray(report.correctiveActions) ? report.correctiveActions.length : 0,
+    }));
+
+  const riskRows = [...risks]
+    .filter((risk) => risk.status !== 'Closed' && risk.status !== 'Archived')
+    .sort((a, b) => b.risks.length - a.risks.length || a.hazard.localeCompare(b.hazard))
+    .slice(0, 3)
+    .map((risk) => ({
+      id: risk.id,
+      hazard: risk.hazard,
+      hazardArea: risk.hazardArea,
+      status: risk.status,
+      riskCount: risk.risks.length,
+      mitigationCount: risk.risks.reduce((sum: number, item) => sum + item.mitigations.length, 0),
+    }));
+
+  const capRows = [...caps]
+    .sort((a, b) => a.status.localeCompare(b.status))
+    .slice(0, 3)
+    .map((cap) => ({
+      id: cap.id,
+      status: cap.status,
+      description: `CAP ${cap.id}`,
+    }));
+
+  return {
+    openReports: reports.filter((report) => report.status !== 'Closed').length,
+    openRisks: risks.filter((risk) => risk.status === 'Open').length,
+    openCaps: caps.filter((cap) => cap.status !== 'Closed' && cap.status !== 'Cancelled').length,
+    recentReports: reports.filter((report) => {
+      const submittedAt = new Date(report.submittedAt);
+      return !Number.isNaN(submittedAt.getTime()) && submittedAt >= recentCutoff;
+    }).length,
+    reportRows,
+    riskRows,
+    capRows,
+  };
+};
+
+const getQualityMetrics = (summary: SummaryPayload): QualityMetrics => {
+  const audits = (Array.isArray(summary.audits) ? summary.audits : []) as QualityAudit[];
+  const caps = (Array.isArray(summary.caps) ? summary.caps : []) as CorrectiveActionPlan[];
+  const now = new Date();
+  const recentCutoff = new Date(now);
+  recentCutoff.setDate(now.getDate() - 30);
+
+  const auditRows = [...audits]
+    .sort((a, b) => new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime())
+    .slice(0, 3)
+    .map((audit) => ({
+      id: audit.id,
+      title: audit.title,
+      auditNumber: audit.auditNumber,
+      status: audit.status,
+      dateLabel: format(new Date(audit.auditDate), 'dd MMM yyyy'),
+      complianceScore: typeof audit.complianceScore === 'number' ? audit.complianceScore : null,
+      findingCount: Array.isArray(audit.findings) ? audit.findings.filter((finding) => finding.finding !== 'Compliant').length : 0,
+    }));
+
+  const compliantScores = audits
+    .map((audit) => audit.complianceScore)
+    .filter((score): score is number => typeof score === 'number' && Number.isFinite(score));
+
+  const openFindings = audits.reduce((sum, audit) => {
+    const findings = Array.isArray(audit.findings) ? audit.findings : [];
+    return sum + findings.filter((finding) => finding.finding !== 'Compliant').length;
+  }, 0);
+
+  const openCaps = caps.filter((cap) => cap.status !== 'Closed' && cap.status !== 'Cancelled').length;
+
+  const capRows = [...caps]
+    .sort((a, b) => a.status.localeCompare(b.status))
+    .slice(0, 3)
+    .map((cap) => ({
+      id: cap.id,
+      status: cap.status,
+      description: `CAP ${cap.id}`,
+    }));
+
+  return {
+    openAudits: audits.filter((audit) => audit.status !== 'Closed' && audit.status !== 'Archived').length,
+    closedAudits: audits.filter((audit) => audit.status === 'Closed' || audit.status === 'Archived').length,
+    openFindings,
+    averageCompliance:
+      compliantScores.length > 0 ? parseFloat((compliantScores.reduce((sum, score) => sum + score, 0) / compliantScores.length).toFixed(1)) : 0,
+    openCaps,
+    recentAudits: audits.filter((audit) => {
+      const auditDate = new Date(audit.auditDate);
+      return !Number.isNaN(auditDate.getTime()) && auditDate >= recentCutoff;
+    }).length,
+    auditRows,
+    capRows,
+  };
+};
 
 const formatTrendLabel = (date: Date, period: FleetPeriod) => {
   if (period === 'all') {
@@ -189,11 +747,14 @@ const buildTrendBuckets = (period: FleetPeriod) => {
 export default function DashboardPage() {
   const { uiMode } = useTheme();
   const { tenant } = useTenantConfig();
+  const isMobile = useIsMobile();
   const [activeIndustry, setActiveIndustry] = useState<DashboardIndustry>('ATO');
   const [activeTab, setActiveTab] = useState('fleet');
   const [summary, setSummary] = useState<SummaryPayload>({});
   const [fleetTargetHours, setFleetTargetHours] = useState(DEFAULT_FLEET_TARGET_HOURS);
   const [fleetPeriod, setFleetPeriod] = useState<FleetPeriod>('month');
+  const [instructorPeriod, setInstructorPeriod] = useState<FleetPeriod>('month');
+  const [studentPeriod, setStudentPeriod] = useState<FleetPeriod>('month');
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isTargetLoading, setIsTargetLoading] = useState(true);
@@ -261,6 +822,284 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  const instructorWarningBands = useMemo<InstructorWarningBand[]>(() => {
+    const config = tenant as Record<string, unknown> | null;
+    const rawWarnings = config?.['instructor-hour-warnings'];
+
+    if (!rawWarnings || typeof rawWarnings !== 'object') {
+      return DEFAULT_INSTRUCTOR_WARNING_BANDS;
+    }
+
+    const warnings = Array.isArray((rawWarnings as { warnings?: unknown }).warnings)
+      ? ((rawWarnings as { warnings: unknown[] }).warnings)
+      : [];
+
+    const normalized = warnings.reduce<InstructorWarningBand[]>((acc, warning) => {
+      if (!warning || typeof warning !== 'object') return acc;
+      const candidate = warning as Record<string, unknown>;
+      const hours = typeof candidate.hours === 'number' ? candidate.hours : Number(candidate.hours);
+      const warningHours = typeof candidate.warningHours === 'number' ? candidate.warningHours : Number(candidate.warningHours);
+      if (!Number.isFinite(hours) || !Number.isFinite(warningHours) || hours <= 0 || warningHours < 0 || warningHours >= hours) {
+        return acc;
+      }
+      acc.push({
+        hours,
+        warningHours,
+        color: typeof candidate.color === 'string' ? candidate.color : undefined,
+        foregroundColor: typeof candidate.foregroundColor === 'string' ? candidate.foregroundColor : undefined,
+      });
+      return acc;
+    }, []).sort((a, b) => a.hours - b.hours);
+
+    return normalized.length > 0 ? normalized : DEFAULT_INSTRUCTOR_WARNING_BANDS;
+  }, [tenant]);
+
+  const instructorMetrics = useMemo<InstructorMetrics>(() => {
+    const instructors: Array<{ id: string; firstName?: string; lastName?: string }> = Array.isArray(summary.instructors)
+      ? summary.instructors
+      : [];
+    const bookings = Array.isArray(summary.bookings) ? summary.bookings : [];
+    const attendanceRecords = Array.isArray(summary.attendanceRecords) ? summary.attendanceRecords : [];
+    const periodStart = getPeriodStart(instructorPeriod);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+
+    const periodBookings = periodStart
+      ? bookings.filter((booking) => {
+          if (!booking.date) return false;
+          const bookingDate = new Date(booking.date);
+          return !Number.isNaN(bookingDate.getTime()) && bookingDate >= periodStart && bookingDate <= new Date();
+        })
+      : bookings;
+
+    const todayBookings = bookings.filter((booking) => {
+      if (!booking.date) return false;
+      const bookingDate = new Date(booking.date);
+      return !Number.isNaN(bookingDate.getTime()) && bookingDate >= todayStart && bookingDate < tomorrowStart;
+    });
+
+    const periodAttendance = periodStart
+      ? attendanceRecords.filter((record) => {
+          if (!record.clockIn) return false;
+          const clockIn = new Date(record.clockIn);
+          return !Number.isNaN(clockIn.getTime()) && clockIn >= periodStart && clockIn <= new Date();
+        })
+      : attendanceRecords;
+
+    const todayAttendance = attendanceRecords.filter((record) => {
+      if (!record.clockIn) return false;
+      const clockIn = new Date(record.clockIn);
+      return !Number.isNaN(clockIn.getTime()) && clockIn >= todayStart && clockIn < tomorrowStart;
+    });
+
+    const rows: InstructorLoadRow[] = instructors.map((instructor) => {
+      const periodInstructorBookings = periodBookings.filter((booking) => booking.instructorId === instructor.id);
+      const todayInstructorBookings = todayBookings.filter((booking) => booking.instructorId === instructor.id);
+      const periodInstructorAttendance = periodAttendance.filter((record) => record.personnelId === instructor.id);
+      const todayInstructorAttendance = todayAttendance.filter((record) => record.personnelId === instructor.id);
+
+      const periodFlightHours = periodInstructorBookings.reduce((sum, booking) => {
+        const pre = booking.preFlightData?.hobbs;
+        const post = booking.postFlightData?.hobbs;
+        if (pre === undefined || post === undefined) return sum;
+        return sum + Math.max(0, post - pre);
+      }, 0);
+
+      const todayFlightHours = todayInstructorBookings.reduce((sum, booking) => {
+        const pre = booking.preFlightData?.hobbs;
+        const post = booking.postFlightData?.hobbs;
+        if (pre === undefined || post === undefined) return sum;
+        return sum + Math.max(0, post - pre);
+      }, 0);
+
+      const periodDutyMinutes = periodInstructorAttendance.reduce((sum, record) => sum + calcNetDutyMinutes(record, Date.now()), 0);
+      const todayDutyMinutes = todayInstructorAttendance.reduce((sum, record) => sum + calcNetDutyMinutes(record, Date.now()), 0);
+      const dailyStatus = getInstructorLoadStatus(todayFlightHours, instructorWarningBands);
+      const hasOpenSession = periodInstructorAttendance.some((record) => record.status === 'clocked_in' && !record.clockOut);
+
+      return {
+        id: instructor.id,
+        name: `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.id,
+        periodFlightHours: parseFloat(periodFlightHours.toFixed(1)),
+        periodDutyHours: parseFloat((periodDutyMinutes / 60).toFixed(1)),
+        todayFlightHours: parseFloat(todayFlightHours.toFixed(1)),
+        todayDutyHours: parseFloat((todayDutyMinutes / 60).toFixed(1)),
+        bookingCount: periodInstructorBookings.length,
+        dutyMinutes: periodDutyMinutes,
+        nextLimitHours: dailyStatus.nextLimitHours,
+        warningHours: dailyStatus.warningHours,
+        status: dailyStatus.status,
+        hasOpenSession,
+      };
+    });
+
+    rows.sort((a: InstructorLoadRow, b: InstructorLoadRow) => b.todayFlightHours - a.todayFlightHours || b.periodFlightHours - a.periodFlightHours);
+
+    const totalPeriodFlightHours = rows.reduce((sum, row) => sum + row.periodFlightHours, 0);
+    const totalPeriodDutyHours = rows.reduce((sum, row) => sum + row.periodDutyHours, 0);
+    const totalTodayFlightHours = rows.reduce((sum, row) => sum + row.todayFlightHours, 0);
+    const totalTodayDutyHours = rows.reduce((sum, row) => sum + row.todayDutyHours, 0);
+    const openSessions = rows.filter((row) => row.hasOpenSession).length;
+    const watchCount = rows.filter((row) => row.status === 'watch').length;
+    const overCount = rows.filter((row) => row.status === 'over').length;
+
+    return {
+      rows,
+      periodLabel: getPeriodLabel(instructorPeriod),
+      totalPeriodFlightHours: parseFloat(totalPeriodFlightHours.toFixed(1)),
+      totalPeriodDutyHours: parseFloat(totalPeriodDutyHours.toFixed(1)),
+      totalTodayFlightHours: parseFloat(totalTodayFlightHours.toFixed(1)),
+      totalTodayDutyHours: parseFloat(totalTodayDutyHours.toFixed(1)),
+      openSessions,
+      watchCount,
+      overCount,
+    };
+  }, [instructorPeriod, instructorWarningBands, summary.attendanceRecords, summary.bookings, summary.instructors]);
+
+  const studentMilestones = useMemo<MilestoneWarning[]>(() => {
+    const settings = summary.studentMilestones;
+    const milestones = settings && Array.isArray(settings.milestones) ? settings.milestones : DEFAULT_STUDENT_MILESTONES;
+    return milestones
+      .map((entry) => ({
+        milestone: typeof entry.milestone === 'number' ? entry.milestone : Number(entry.milestone),
+        warningHours: typeof entry.warningHours === 'number' ? entry.warningHours : Number(entry.warningHours),
+      }))
+      .filter((entry) => Number.isFinite(entry.milestone) && Number.isFinite(entry.warningHours) && entry.milestone > 0 && entry.warningHours >= 0 && entry.warningHours < entry.milestone)
+      .sort((a, b) => a.milestone - b.milestone);
+  }, [summary.studentMilestones]);
+
+  const studentMetrics = useMemo<StudentMetrics>(() => {
+    const students: Array<{ id: string; firstName?: string; lastName?: string }> = Array.isArray(summary.students)
+      ? summary.students
+      : [];
+    const bookings = Array.isArray(summary.bookings) ? summary.bookings : [];
+    const reports = Array.isArray(summary.studentProgressReports) ? summary.studentProgressReports : [];
+    const periodStart = getPeriodStart(studentPeriod);
+    const now = new Date();
+    const periodBookings = periodStart
+      ? bookings.filter((booking) => {
+          if (!booking.date) return false;
+          const bookingDate = new Date(booking.date);
+          return !Number.isNaN(bookingDate.getTime()) && bookingDate >= periodStart && bookingDate <= now;
+        })
+      : bookings;
+    const recentCutoff = new Date(now);
+    recentCutoff.setDate(now.getDate() - 30);
+    const inactiveCutoff = new Date(now);
+    inactiveCutoff.setDate(now.getDate() - 45);
+    const reportCutoff = periodStart || recentCutoff;
+    const periodDays = getPeriodDays(studentPeriod);
+
+    const rows: StudentLoadRow[] = students.map((student) => {
+      const studentBookings = bookings.filter((booking) => booking.studentId === student.id);
+      const periodStudentBookings = periodBookings.filter((booking) => booking.studentId === student.id);
+      const studentReports = reports.filter((report) => report.studentId === student.id);
+      const totalFlightHours = studentBookings.reduce((sum, booking) => {
+        const pre = booking.preFlightData?.hobbs;
+        const post = booking.postFlightData?.hobbs;
+        if (pre === undefined || post === undefined) return sum;
+        return sum + Math.max(0, post - pre);
+      }, 0);
+      const recentFlightHours = periodStudentBookings.reduce((sum, booking) => {
+        const pre = booking.preFlightData?.hobbs;
+        const post = booking.postFlightData?.hobbs;
+        if (pre === undefined || post === undefined) return sum;
+        return sum + Math.max(0, post - pre);
+      }, 0);
+      const lastFlightDate = studentBookings
+        .map((booking) => booking.date ? new Date(booking.date) : null)
+        .filter((date): date is Date => date !== null && !Number.isNaN(date.getTime()))
+        .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+      const lastDebriefDate = studentReports
+        .map((report) => new Date(report.date))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+      const daysSinceFlight = getDaysSince(lastFlightDate, now);
+      const daysSinceDebrief = getDaysSince(lastDebriefDate, now);
+      const utilisationShare = totalFlightHours > 0 ? parseFloat(((recentFlightHours / totalFlightHours) * 100).toFixed(1)) : 0;
+      const nextMilestone = studentMilestones.find((milestone) => totalFlightHours < milestone.milestone) || null;
+      const pacePerWeek = periodDays > 0 ? parseFloat(((recentFlightHours / periodDays) * 7).toFixed(1)) : 0;
+      const forecastDaysToNextMilestone = nextMilestone && recentFlightHours > 0
+        ? Math.max(0, Math.ceil(((nextMilestone.milestone - totalFlightHours) / recentFlightHours) * periodDays))
+        : null;
+      const status: StudentLoadStatus = !nextMilestone
+        ? 'over'
+        : totalFlightHours >= nextMilestone.warningHours
+          ? 'watch'
+          : 'safe';
+      const recommendedAction = getStudentRecommendation({
+        status,
+        daysSinceFlight,
+        daysSinceDebrief,
+        forecastDaysToNextMilestone,
+      });
+
+      return {
+        id: student.id,
+        name: `${student.firstName || ''} ${student.lastName || ''}`.trim() || student.id,
+        totalFlightHours: parseFloat(totalFlightHours.toFixed(1)),
+        recentFlightHours: parseFloat(recentFlightHours.toFixed(1)),
+        lastFlightDate: lastFlightDate ? lastFlightDate.toISOString() : null,
+        lastDebriefDate: lastDebriefDate ? lastDebriefDate.toISOString() : null,
+        daysSinceFlight,
+        daysSinceDebrief,
+        utilisationShare,
+        pacePerWeek,
+        forecastDaysToNextMilestone,
+        recommendedAction,
+        milestoneHours: nextMilestone ? nextMilestone.milestone : null,
+        warningHours: nextMilestone ? nextMilestone.warningHours : null,
+        status,
+      };
+    });
+
+    rows.sort((a: StudentLoadRow, b: StudentLoadRow) => {
+      if (a.status !== b.status) {
+        if (a.status === 'over') return -1;
+        if (b.status === 'over') return 1;
+        if (a.status === 'watch') return -1;
+        if (b.status === 'watch') return 1;
+      }
+      return b.recentFlightHours - a.recentFlightHours || b.totalFlightHours - a.totalFlightHours;
+    });
+
+    const activeStudents = rows.filter((row) => row.recentFlightHours > 0).length;
+    const newStudents = rows.filter((row) => {
+      if (!row.lastFlightDate || !periodStart) return false;
+      const lastFlight = new Date(row.lastFlightDate);
+      return !Number.isNaN(lastFlight.getTime()) && lastFlight >= periodStart && row.totalFlightHours <= row.recentFlightHours;
+    }).length;
+    const recentDebriefs = rows.filter((row) => {
+      if (!row.lastDebriefDate) return false;
+      const lastDebrief = new Date(row.lastDebriefDate);
+      return !Number.isNaN(lastDebrief.getTime()) && lastDebrief >= reportCutoff;
+    }).length;
+    const stagnatingStudents = rows.filter((row) => row.daysSinceFlight !== null && row.daysSinceFlight >= 30).length;
+    const forecastedNextMilestones = rows.filter((row) => row.forecastDaysToNextMilestone !== null && row.forecastDaysToNextMilestone <= 30).length;
+    const noRecentActivity = rows.filter((row) => {
+      if (!row.lastFlightDate) return true;
+      const lastFlight = new Date(row.lastFlightDate);
+      return Number.isNaN(lastFlight.getTime()) || lastFlight < inactiveCutoff;
+    }).length;
+    const watchCount = rows.filter((row) => row.status === 'watch').length;
+    const overCount = rows.filter((row) => row.status === 'over').length;
+
+    return {
+      rows,
+      periodLabel: getPeriodLabel(studentPeriod),
+      activeStudents,
+      newStudents,
+      recentDebriefs,
+      noRecentActivity,
+      stagnatingStudents,
+      forecastedNextMilestones,
+      watchCount,
+      overCount,
+    };
+  }, [studentPeriod, studentMilestones, summary.bookings, summary.studentProgressReports, summary.students]);
 
   const fleetRows = useMemo<FleetRow[]>(() => {
     const aircrafts = Array.isArray(summary.aircrafts) ? summary.aircrafts : [];
@@ -465,6 +1304,9 @@ export default function DashboardPage() {
     });
   }, [fleetPeriod, fleetTargetHours, selectedAircraft, summary.bookings]);
 
+  const activeIndustryLabel = INDUSTRY_SWITCHER.find((item) => item.value === activeIndustry)?.label || activeIndustry;
+  const activeTabLabel = tabs.find((tab) => tab.value === activeTab)?.label || tabs[0]?.label || 'Overview';
+
   return (
     <div
       className={cn(
@@ -478,9 +1320,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-black uppercase tracking-tight">{INDUSTRY_TITLES[activeIndustry]}</CardTitle>
             <CardDescription className="mt-1 text-xs">
               {INDUSTRY_DESCRIPTIONS[activeIndustry]}
-              <span className="ml-2 font-black uppercase tracking-[0.18em] text-foreground/70">
-                Active: {tabs.find((tab) => tab.value === activeTab)?.label || tabs[0]?.label}
-              </span>
+              <span className="ml-2 font-black uppercase tracking-[0.18em] text-foreground/70">Active: {activeTabLabel}</span>
               {activeIndustry === 'ATO' ? (
                 <span className="ml-2 font-black uppercase tracking-[0.18em] text-foreground/70">
                   Period: {fleetPeriod === 'week' ? 'Last 7 days' : fleetPeriod === 'month' ? 'Last 30 days' : 'All time'}
@@ -489,48 +1329,261 @@ export default function DashboardPage() {
             </CardDescription>
           </div>
           <div className={CARD_HEADER_ACTION_ZONE_CLASS}>
-            <Tabs value={activeIndustry} onValueChange={(value) => setActiveIndustry(value as DashboardIndustry)} className="w-full md:w-auto">
-              <TabsList className={HEADER_TAB_LIST_CLASS}>
-                {INDUSTRY_SWITCHER.map((item) => (
-                  <TabsTrigger key={item.value} value={item.value} className={HEADER_TAB_TRIGGER_CLASS}>
-                    {item.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+            {isMobile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      HEADER_SECONDARY_BUTTON_CLASS,
+                      HEADER_COMPACT_CONTROL_CLASS,
+                      'w-full justify-between text-foreground hover:bg-accent/40'
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{activeIndustryLabel}</span>
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                  {INDUSTRY_SWITCHER.map((item) => (
+                    <DropdownMenuItem
+                      key={item.value}
+                      onClick={() => setActiveIndustry(item.value as DashboardIndustry)}
+                      className="text-[10px] font-bold uppercase"
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Tabs value={activeIndustry} onValueChange={(value) => setActiveIndustry(value as DashboardIndustry)} className="w-full md:w-auto">
+                <TabsList className={HEADER_TAB_LIST_CLASS}>
+                  {INDUSTRY_SWITCHER.map((item) => (
+                    <TabsTrigger key={item.value} value={item.value} className={HEADER_TAB_TRIGGER_CLASS}>
+                      {item.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
           </div>
         </CardHeader>
 
         <CardContent className="min-h-0 flex-1 p-0">
           <Tabs key={activeIndustry} value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
             <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent flex justify-center')}>
-              <TabsList className={cn(HEADER_TAB_LIST_CLASS, 'border-0 bg-transparent px-0 py-0 justify-center')}>
-                {tabs.map((tab) => (
-                  <TabsTrigger key={tab.value} value={tab.value} className={HEADER_TAB_TRIGGER_CLASS}>
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              {isMobile ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        HEADER_SECONDARY_BUTTON_CLASS,
+                        HEADER_COMPACT_CONTROL_CLASS,
+                        'w-full justify-between text-foreground hover:bg-accent/40'
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{activeTabLabel}</span>
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                    {tabs.map((tab) => (
+                      <DropdownMenuItem
+                        key={tab.value}
+                        onClick={() => setActiveTab(tab.value)}
+                        className="text-[10px] font-bold uppercase"
+                      >
+                        {tab.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <TabsList className={cn(HEADER_TAB_LIST_CLASS, 'border-0 bg-transparent px-0 py-0 justify-center')}>
+                  {tabs.map((tab) => (
+                    <TabsTrigger key={tab.value} value={tab.value} className={HEADER_TAB_TRIGGER_CLASS}>
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              )}
             </div>
 
             {activeIndustry === 'ATO' && activeTab === 'fleet' ? (
               <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
-                <div className="flex w-full flex-wrap items-center justify-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
-                  {(['week', 'month', 'all'] as FleetPeriod[]).map((period) => (
-                    <button
-                      key={period}
-                      type="button"
-                      onClick={() => setFleetPeriod(period)}
-                      className={cn(
-                        HEADER_COMPACT_CONTROL_CLASS,
-                        fleetPeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
-                      )}
-                    >
-                      {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
-                    </button>
-                  ))}
-                </div>
+                {isMobile ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          HEADER_SECONDARY_BUTTON_CLASS,
+                          HEADER_COMPACT_CONTROL_CLASS,
+                          'w-full justify-between text-foreground hover:bg-accent/40'
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">
+                            {fleetPeriod === 'week' ? '7 Days' : fleetPeriod === 'month' ? '30 Days' : 'All Time'}
+                          </span>
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                      {FLEET_PERIOD_OPTIONS.map((period) => (
+                        <DropdownMenuItem
+                          key={period}
+                          onClick={() => setFleetPeriod(period)}
+                          className="text-[10px] font-bold uppercase"
+                        >
+                          {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <div className="flex w-full flex-wrap items-center justify-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
+                    {FLEET_PERIOD_OPTIONS.map((period) => (
+                      <button
+                        key={period}
+                        type="button"
+                        onClick={() => setFleetPeriod(period)}
+                        className={cn(
+                          HEADER_COMPACT_CONTROL_CLASS,
+                          fleetPeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                        )}
+                      >
+                        {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {activeIndustry === 'ATO' && activeTab === 'instructors' ? (
+              <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
+                {isMobile ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          HEADER_SECONDARY_BUTTON_CLASS,
+                          HEADER_COMPACT_CONTROL_CLASS,
+                          'w-full justify-between text-foreground hover:bg-accent/40'
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">
+                            {instructorPeriod === 'week' ? '7 Days' : instructorPeriod === 'month' ? '30 Days' : 'All Time'}
+                          </span>
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                      {FLEET_PERIOD_OPTIONS.map((period) => (
+                        <DropdownMenuItem
+                          key={period}
+                          onClick={() => setInstructorPeriod(period)}
+                          className="text-[10px] font-bold uppercase"
+                        >
+                          {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <div className="flex w-full flex-wrap items-center justify-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
+                    {FLEET_PERIOD_OPTIONS.map((period) => (
+                      <button
+                        key={period}
+                        type="button"
+                        onClick={() => setInstructorPeriod(period)}
+                        className={cn(
+                          HEADER_COMPACT_CONTROL_CLASS,
+                          instructorPeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                        )}
+                      >
+                        {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {activeIndustry === 'ATO' && activeTab === 'students' ? (
+              <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
+                {isMobile ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          HEADER_SECONDARY_BUTTON_CLASS,
+                          HEADER_COMPACT_CONTROL_CLASS,
+                          'w-full justify-between text-foreground hover:bg-accent/40'
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">
+                            {studentPeriod === 'week' ? '7 Days' : studentPeriod === 'month' ? '30 Days' : 'All Time'}
+                          </span>
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                      {FLEET_PERIOD_OPTIONS.map((period) => (
+                        <DropdownMenuItem
+                          key={period}
+                          onClick={() => setStudentPeriod(period)}
+                          className="text-[10px] font-bold uppercase"
+                        >
+                          {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <div className="flex w-full flex-wrap items-center justify-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
+                    {FLEET_PERIOD_OPTIONS.map((period) => (
+                      <button
+                        key={period}
+                        type="button"
+                        onClick={() => setStudentPeriod(period)}
+                        className={cn(
+                          HEADER_COMPACT_CONTROL_CLASS,
+                          studentPeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                        )}
+                      >
+                        {period === 'week' ? '7 Days' : period === 'month' ? '30 Days' : 'All Time'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : null}
 
@@ -636,14 +1689,38 @@ export default function DashboardPage() {
 
                     {tabs.filter((tab) => tab.value !== 'fleet').map((tab) => (
                       <TabsContent key={tab.value} value={tab.value} className="m-0">
-                        <StageCard tabLabel={tab.label} modern={isModern} />
+                        {tab.value === 'overview' ? (
+                          <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} />
+                        ) : tab.value === 'instructors' ? (
+                          <InstructorLoadCard modern={isModern} metrics={instructorMetrics} />
+                        ) : tab.value === 'students' ? (
+                          <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
+                        ) : tab.value === 'safety' ? (
+                          <SafetyOverviewCard modern={isModern} summary={summary} />
+                        ) : tab.value === 'quality' ? (
+                          <QualityOverviewCard modern={isModern} summary={summary} />
+                        ) : (
+                          <StageCard tabLabel={tab.label} modern={isModern} />
+                        )}
                       </TabsContent>
                     ))}
                   </>
                 ) : (
                   tabs.map((tab) => (
                     <TabsContent key={tab.value} value={tab.value} className="m-0">
-                      <StageCard tabLabel={tab.label} modern={isModern} />
+                      {tab.value === 'overview' ? (
+                        <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} />
+                      ) : tab.value === 'instructors' ? (
+                        <InstructorLoadCard modern={isModern} metrics={instructorMetrics} />
+                      ) : tab.value === 'students' ? (
+                        <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
+                      ) : tab.value === 'safety' ? (
+                        <SafetyOverviewCard modern={isModern} summary={summary} />
+                      ) : tab.value === 'quality' ? (
+                        <QualityOverviewCard modern={isModern} summary={summary} />
+                      ) : (
+                        <StageCard tabLabel={tab.label} modern={isModern} />
+                      )}
                     </TabsContent>
                   ))
                 )}
@@ -687,5 +1764,644 @@ function StageCard({ tabLabel, modern }: { tabLabel: string; modern: boolean }) 
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function InstructorOverviewCard({ modern, metrics }: { modern: boolean; metrics: InstructorMetrics }) {
+  const topRows = metrics.rows.slice(0, 3);
+
+  return (
+    <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
+      <CardHeader
+        className={cn(
+          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+        )}
+      >
+        <CardTitle className="text-sm font-black uppercase tracking-tight">Instructor Snapshot</CardTitle>
+        <CardDescription className="text-xs">
+          Daily flight load and duty pressure at a glance for {metrics.periodLabel.toLowerCase()}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4 md:p-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Today Flight" value={formatHours(metrics.totalTodayFlightHours)} hint="Current daily training load" />
+          <StatTile label="Today Duty" value={formatHours(metrics.totalTodayDutyHours)} hint="Attendance-based duty time" />
+          <StatTile label="Watch" value={String(metrics.watchCount)} hint="Near daily limit" />
+          <StatTile label="Over" value={String(metrics.overCount)} hint="Above warning band" />
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-2xl border bg-background">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-tight">Top Instructor Load</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Sorted by today's flight hours.
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-black uppercase">
+                {metrics.rows.length} instructors
+              </Badge>
+            </div>
+            <div className="divide-y">
+              {topRows.length > 0 ? (
+                topRows.map((row) => {
+                  const statusClass = getStatusStyles(row.status);
+                  return (
+                    <div key={row.id} className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {row.hasOpenSession ? 'Active session' : 'No open session'}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Today Flight</p>
+                        <p className="mt-1 text-sm font-black">{formatHours(row.todayFlightHours)}</p>
+                      </div>
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Period Flight</p>
+                        <p className="mt-1 text-sm font-black">{formatHours(row.periodFlightHours)}</p>
+                      </div>
+                      <div className={cn('rounded-lg border px-3 py-3', statusClass)}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em]">
+                          {row.status === 'over' ? 'Over' : row.status === 'watch' ? 'Watch' : 'Safe'}
+                        </p>
+                        <p className="mt-1 text-sm font-black">
+                          {row.warningHours !== null ? `Warn at ${row.warningHours}h` : 'No warning band'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No instructor activity yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-background p-4">
+            <p className="text-sm font-black uppercase tracking-tight">Quick Read</p>
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              A simple summary for the duty team.
+            </p>
+            <div className="mt-4 space-y-3">
+              <SummaryLine label="Flight period" value={formatHours(metrics.totalPeriodFlightHours)} />
+              <SummaryLine label="Duty period" value={formatHours(metrics.totalPeriodDutyHours)} />
+              <SummaryLine label="Open sessions" value={String(metrics.openSessions)} />
+              <SummaryLine label="Near limit" value={String(metrics.watchCount)} />
+              <SummaryLine label="Over limit" value={String(metrics.overCount)} />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; metrics: StudentMetrics; summary: SummaryPayload }) {
+  const riskRows = metrics.rows.filter((row) => row.status !== 'safe').slice(0, 4);
+
+  return (
+    <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
+      <CardHeader
+        className={cn(
+          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+        )}
+      >
+        <CardTitle className="text-sm font-black uppercase tracking-tight">Student Snapshot</CardTitle>
+        <CardDescription className="text-xs">
+          Progress, recency, and milestone pressure for {metrics.periodLabel.toLowerCase()}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4 md:p-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Active Students" value={String(metrics.activeStudents)} hint="Students flown in the period" />
+          <StatTile label="New Students" value={String(metrics.newStudents)} hint="First flight in the period" />
+          <StatTile label="Recent Debriefs" value={String(metrics.recentDebriefs)} hint="Reports captured recently" />
+          <StatTile label="No Activity" value={String(metrics.noRecentActivity)} hint="No recent flight activity" />
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-2xl border bg-background">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-tight">Students at Risk</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Milestone pressure and missing recent activity.
+                </p>
+              </div>
+              <Badge
+                variant={metrics.overCount > 0 ? 'destructive' : metrics.watchCount > 0 ? 'secondary' : 'outline'}
+                className="text-[10px] font-black uppercase"
+              >
+                {metrics.overCount > 0 ? `${metrics.overCount} over` : metrics.watchCount > 0 ? `${metrics.watchCount} watch` : 'Clear'}
+              </Badge>
+            </div>
+
+            <div className="divide-y">
+              {riskRows.length > 0 ? (
+                riskRows.map((row) => {
+                  const statusClass = getStudentStatusStyles(row.status);
+                  const lastFlight = row.lastFlightDate ? new Date(row.lastFlightDate) : null;
+                  const lastDebrief = row.lastDebriefDate ? new Date(row.lastDebriefDate) : null;
+                  const studentReports = Array.isArray(summary.studentProgressReports)
+                    ? summary.studentProgressReports.filter((report) => report.studentId === row.id)
+                    : [];
+                  const competency = getStudentCompetencySnapshot(studentReports);
+                  const tone = getCompetencyTone(competency.signal);
+                  const MeterIcon = tone.icon;
+
+                  return (
+                    <div
+                      key={row.id}
+                      className={cn(
+                        'grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_repeat(5,minmax(0,0.74fr))] md:items-center',
+                        row.status !== 'safe' && 'bg-muted/20'
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {lastFlight
+                            ? `Last flight ${formatDateLabel(lastFlight)}${lastDebrief ? ` - Debrief ${formatDateLabel(lastDebrief)}` : ''}`
+                            : 'No flight yet'}
+                        </p>
+                        <div className={cn('mt-3 rounded-xl border p-3', tone.border, tone.bg)}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <MeterIcon className="h-4 w-4 text-current" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em]">Strength / Growth</p>
+                              </div>
+                              <p className="mt-1 text-sm font-black">{competency.headline}</p>
+                            </div>
+                            <Badge variant="outline" className={cn('text-[10px] font-black uppercase tracking-[0.16em]', tone.pill)}>
+                              {tone.label}
+                            </Badge>
+                          </div>
+                          <div className="mt-3 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                              <span>Avg score</span>
+                              <span>{Math.round(competency.score)} / 100</span>
+                            </div>
+                            <Progress value={Math.min(Math.max(competency.score, 0), 100)} indicatorClassName={tone.bar} className="h-1.5" />
+                            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                              {competency.nextFocus}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Recent Hours</p>
+                        <p className="mt-1 text-sm font-black">{formatHours(row.recentFlightHours)}</p>
+                      </div>
+
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Since Flight</p>
+                        <p className="mt-1 text-sm font-black">{formatDaysSince(row.daysSinceFlight)}</p>
+                      </div>
+
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Since Debrief</p>
+                        <p className="mt-1 text-sm font-black">{formatDaysSince(row.daysSinceDebrief)}</p>
+                      </div>
+
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Pace</p>
+                        <p className="mt-1 text-sm font-black">{formatPace(row.pacePerWeek)}</p>
+                        <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {row.forecastDaysToNextMilestone !== null ? `${row.forecastDaysToNextMilestone} days to next milestone` : 'Forecast unavailable'}
+                        </p>
+                      </div>
+
+                      <div className={cn('rounded-lg border px-3 py-3', statusClass)}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em]">
+                          {row.status === 'over' ? 'At risk' : row.status === 'watch' ? 'Watch' : 'Safe'}
+                        </p>
+                        <p className="mt-1 text-sm font-black">
+                          {row.milestoneHours !== null ? `Next ${row.milestoneHours}h` : 'No milestone'}
+                        </p>
+                        <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em]">
+                          Utilisation {row.utilisationShare.toFixed(1)}%
+                        </p>
+                        <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em]">
+                          {row.recommendedAction}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No student risk data available yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-background p-4">
+            <p className="text-sm font-black uppercase tracking-tight">Student Quick Read</p>
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              Recent movement and milestone pressure.
+            </p>
+            <div className="mt-4 space-y-3">
+              <SummaryLine label="Watch" value={String(metrics.watchCount)} />
+              <SummaryLine label="Over" value={String(metrics.overCount)} />
+              <SummaryLine label="Stagnant" value={String(metrics.stagnatingStudents)} />
+              <SummaryLine label="Forecast due" value={String(metrics.forecastedNextMilestones)} />
+              <SummaryLine label="Recent debriefs" value={String(metrics.recentDebriefs)} />
+              <SummaryLine label="No recent activity" value={String(metrics.noRecentActivity)} />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: SummaryPayload }) {
+  const metrics = getSafetyMetrics(summary);
+  const SafetyIcon = ShieldAlert;
+  const reports = metrics.reportRows;
+  const risks = metrics.riskRows;
+
+  return (
+    <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
+      <CardHeader
+        className={cn(
+          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <SafetyIcon className="h-4 w-4 text-amber-600" />
+          <CardTitle className="text-sm font-black uppercase tracking-tight">Safety Snapshot</CardTitle>
+        </div>
+        <CardDescription className="text-xs">
+          Open reports, risk pressure, and active corrective actions in one place.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4 md:p-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Open Reports" value={String(metrics.openReports)} hint="Reports still active" />
+          <StatTile label="Open Hazards" value={String(metrics.openRisks)} hint="Risk items requiring attention" />
+          <StatTile label="Open CAPs" value={String(metrics.openCaps)} hint="Corrective actions in flight" />
+          <StatTile label="Recent Reports" value={String(metrics.recentReports)} hint="Submitted in the last 30 days" />
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-2xl border bg-background">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-tight">Recent Safety Reports</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Submitted reports and escalation status.
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-black uppercase">
+                {reports.length} shown
+              </Badge>
+            </div>
+            <div className="divide-y">
+              {reports.length > 0 ? (
+                reports.map((report) => (
+                  <div key={report.id} className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black uppercase tracking-tight">{report.title}</p>
+                      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        {report.location} · {report.dateLabel}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                      <Badge variant="outline" className="mt-2 text-[10px] font-black uppercase">
+                        {report.status}
+                      </Badge>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Classification</p>
+                      <p className="mt-1 text-sm font-black">{report.classification}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAPs</p>
+                      <p className="mt-1 text-sm font-black">{report.actionCount}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No safety reports have been logged yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border bg-background p-4">
+              <p className="text-sm font-black uppercase tracking-tight">Safety Quick Read</p>
+              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Simple oversight for the duty team.
+              </p>
+              <div className="mt-4 space-y-3">
+                <SummaryLine label="Open reports" value={String(metrics.openReports)} />
+                <SummaryLine label="Open hazards" value={String(metrics.openRisks)} />
+                <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
+                <SummaryLine label="Recent reports" value={String(metrics.recentReports)} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-background">
+              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black uppercase tracking-tight">Open Hazards</p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Current risk register pressure.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-black uppercase">
+                  {risks.length} shown
+                </Badge>
+              </div>
+              <div className="divide-y">
+                {risks.length > 0 ? (
+                  risks.map((risk) => (
+                    <div key={risk.id} className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))] md:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black uppercase tracking-tight">{risk.hazard}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {risk.hazardArea}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                        <p className="mt-1 text-sm font-black">{risk.status}</p>
+                      </div>
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risks / Mitigations</p>
+                        <p className="mt-1 text-sm font-black">
+                          {risk.riskCount} / {risk.mitigationCount}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No open hazards have been logged yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QualityOverviewCard({ modern, summary }: { modern: boolean; summary: SummaryPayload }) {
+  const metrics = getQualityMetrics(summary);
+  const QualityIcon = ClipboardCheck;
+
+  return (
+    <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
+      <CardHeader
+        className={cn(
+          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <QualityIcon className="h-4 w-4 text-blue-600" />
+          <CardTitle className="text-sm font-black uppercase tracking-tight">Quality Snapshot</CardTitle>
+        </div>
+        <CardDescription className="text-xs">
+          Audit progress, open findings, and corrective action flow for the current tenant.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4 md:p-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Open Audits" value={String(metrics.openAudits)} hint="Audits not yet closed" />
+          <StatTile label="Closed Audits" value={String(metrics.closedAudits)} hint="Finalised or archived" />
+          <StatTile label="Open Findings" value={String(metrics.openFindings)} hint="Non-compliant items raised" />
+          <StatTile label="Avg Score" value={`${metrics.averageCompliance.toFixed(1)}%`} hint="Average compliance score" />
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-2xl border bg-background">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-tight">Recent Audits</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Latest audit activity and compliance score.
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-black uppercase">
+                {metrics.recentAudits} recent
+              </Badge>
+            </div>
+            <div className="divide-y">
+              {metrics.auditRows.length > 0 ? (
+                metrics.auditRows.map((audit) => (
+                  <div key={audit.id} className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black uppercase tracking-tight">{audit.title}</p>
+                      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        {audit.auditNumber} · {audit.dateLabel}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                      <Badge variant="outline" className="mt-2 text-[10px] font-black uppercase">
+                        {audit.status}
+                      </Badge>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Score</p>
+                      <p className="mt-1 text-sm font-black">
+                        {audit.complianceScore !== null ? `${audit.complianceScore.toFixed(1)}%` : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Findings</p>
+                      <p className="mt-1 text-sm font-black">{audit.findingCount}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No quality audits have been recorded yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border bg-background p-4">
+              <p className="text-sm font-black uppercase tracking-tight">Quality Quick Read</p>
+              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Audit and corrective action flow.
+              </p>
+              <div className="mt-4 space-y-3">
+                <SummaryLine label="Open audits" value={String(metrics.openAudits)} />
+                <SummaryLine label="Open findings" value={String(metrics.openFindings)} />
+                <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
+                <SummaryLine label="Avg compliance" value={`${metrics.averageCompliance.toFixed(1)}%`} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-background">
+              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black uppercase tracking-tight">Corrective Action Plans</p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Open actions linked to quality issues.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-black uppercase">
+                  {metrics.capRows.length} shown
+                </Badge>
+              </div>
+              <div className="divide-y">
+                {metrics.capRows.length > 0 ? (
+                  metrics.capRows.map((cap) => (
+                    <div key={cap.id} className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black uppercase tracking-tight">{cap.description}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          Corrective action flow
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-background px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                        <p className="mt-1 text-sm font-black">{cap.status}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No corrective action plans are open yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InstructorLoadCard({ modern, metrics }: { modern: boolean; metrics: InstructorMetrics }) {
+  return (
+    <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
+      <CardHeader
+        className={cn(
+          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+        )}
+      >
+        <CardTitle className="text-sm font-black uppercase tracking-tight">Instructor Load</CardTitle>
+        <CardDescription className="text-xs">
+          Duty period, flight time, and daily pressure for {metrics.periodLabel.toLowerCase()}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4 md:p-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Period Flight" value={formatHours(metrics.totalPeriodFlightHours)} hint={`Across ${metrics.rows.length} instructors`} />
+          <StatTile label="Period Duty" value={formatHours(metrics.totalPeriodDutyHours)} hint="Attendance clocked time" />
+          <StatTile label="Today Flight" value={formatHours(metrics.totalTodayFlightHours)} hint="Used for daily pressure" />
+          <StatTile label="Today Duty" value={formatHours(metrics.totalTodayDutyHours)} hint={`${metrics.openSessions} open sessions`} />
+        </div>
+
+        <div className="rounded-2xl border bg-background">
+          <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-black uppercase tracking-tight">Instructor Watchlist</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Ordered by today's flight time.
+              </p>
+            </div>
+            <Badge
+              variant={metrics.overCount > 0 ? 'destructive' : metrics.watchCount > 0 ? 'secondary' : 'outline'}
+              className="text-[10px] font-black uppercase"
+            >
+              {metrics.overCount > 0 ? `${metrics.overCount} over` : metrics.watchCount > 0 ? `${metrics.watchCount} watch` : 'Clear'}
+            </Badge>
+          </div>
+
+          <div className="divide-y">
+            {metrics.rows.length > 0 ? (
+              metrics.rows.map((row) => {
+                const statusClass = getStatusStyles(row.status);
+                const statusLabel = row.status === 'over' ? 'Over limit' : row.status === 'watch' ? 'Nearing limit' : 'On track';
+
+                return (
+                  <div
+                    key={row.id}
+                    className={cn(
+                      'grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.6fr)_repeat(4,minmax(0,0.8fr))] md:items-center',
+                      row.status !== 'safe' && 'bg-muted/20'
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        {row.hasOpenSession ? 'Active duty session' : 'No open session'}
+                        {row.status === 'over'
+                          ? ' - Above highest band'
+                          : row.nextLimitHours
+                            ? ` - Next limit ${row.nextLimitHours}h`
+                            : ''}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Today Flight</p>
+                      <p className="mt-1 text-sm font-black">{formatHours(row.todayFlightHours)}</p>
+                    </div>
+
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Period Flight</p>
+                      <p className="mt-1 text-sm font-black">{formatHours(row.periodFlightHours)}</p>
+                    </div>
+
+                    <div className="rounded-lg border bg-background px-3 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Period Duty</p>
+                      <p className="mt-1 text-sm font-black">{formatHours(row.periodDutyHours)}</p>
+                    </div>
+
+                    <div className={cn('rounded-lg border px-3 py-3', statusClass)}>
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em]">{statusLabel}</p>
+                      <p className="mt-1 text-sm font-black">
+                        {row.warningHours !== null ? `Warn at ${row.warningHours}h` : 'No warning band'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                No instructor data available yet.
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SummaryLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/5 px-3 py-2">
+      <span className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</span>
+      <span className="text-sm font-black">{value}</span>
+    </div>
   );
 }

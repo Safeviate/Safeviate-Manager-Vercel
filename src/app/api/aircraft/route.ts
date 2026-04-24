@@ -2,6 +2,7 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { normalizeUploadUrl } from '@/lib/server/azure-blob';
 import { ensureAircraftSchema } from '@/lib/server/bootstrap-db';
+import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -47,9 +48,11 @@ function normalizeAircraftDocumentUrls(aircraft: unknown) {
 }
 
 export async function GET() {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
     await ensureAircraftSchema();
-    const tenantId = await getTenantId();
+    tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ aircraft: [] }, { status: 200 });
 
     const aircraft = await prisma.aircraftRecord.findMany({
@@ -57,17 +60,34 @@ export async function GET() {
       orderBy: { createdAt: 'asc' },
     });
 
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'aircraft.GET',
+      reads: 1,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+    });
     return NextResponse.json({ aircraft: aircraft.map((row) => normalizeAircraftDocumentUrls(row.data)) }, { status: 200 });
   } catch (error) {
     console.error('[aircraft] fallback to empty list:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'aircraft.GET',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ aircraft: [] }, { status: 200 });
   }
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
     await ensureAircraftSchema();
-    const tenantId = await getTenantId();
+    tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json().catch(() => null);
@@ -104,9 +124,24 @@ export async function POST(request: Request) {
       },
     });
 
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'aircraft.POST',
+      reads: 0,
+      writes: 1,
+      durationMs: Date.now() - startedAt,
+    });
     return NextResponse.json({ aircraft: data }, { status: 200 });
   } catch (error) {
     console.error('[aircraft] failed to save aircraft:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'aircraft.POST',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ error: 'Failed to save aircraft.' }, { status: 500 });
   }
 }

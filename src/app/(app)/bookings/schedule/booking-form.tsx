@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { DocumentUploader } from '@/components/document-uploader';
@@ -469,16 +470,16 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
-                <DialogHeader className="pb-3">
-                    <DialogTitle>{existingBooking ? `Booking #${existingBooking.bookingNumber}` : `New Booking for ${aircraft.tailNumber}`}</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="flex h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-w-3xl min-h-0 flex-col overflow-hidden p-4 sm:h-auto sm:w-full sm:p-6">
+                <DialogHeader className="space-y-1 pb-2">
+                    <DialogTitle className="text-base font-black uppercase tracking-tight sm:text-lg">{existingBooking ? `Booking #${existingBooking.bookingNumber}` : `New Booking for ${aircraft.tailNumber}`}</DialogTitle>
+                    <DialogDescription className="text-xs sm:text-sm">
                         {format(startTime, 'PPP')} • Fleet: {aircraft.tailNumber}
                     </DialogDescription>
                 </DialogHeader>
 
                 {isLocked && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4 flex items-start gap-3">
+                    <div className="mb-3 flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 sm:p-3">
                         <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-xs text-amber-800">
                             <p className="font-bold">Record Locked</p>
@@ -488,7 +489,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 )}
 
                 {!isPermissionsLoading && !canEditBooking && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-md p-3 mb-4 flex items-start gap-3">
+                    <div className="mb-3 flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-2.5 sm:p-3">
                         <Lock className="h-5 w-5 text-slate-600 shrink-0 mt-0.5" />
                         <div className="text-xs text-slate-700">
                             <p className="font-bold">Read-Only Booking</p>
@@ -498,7 +499,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 )}
 
                 {canEditUnderway && isUnderway && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 flex items-start gap-3">
+                    <div className="mb-3 flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 p-2.5 sm:p-3">
                         <Lock className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                         <div className="text-xs text-blue-800">
                             <p className="font-bold">Override Mode Active</p>
@@ -508,7 +509,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 )}
 
                 {!isPermissionsLoading && !canManageSchedule && (
-                    <div className="bg-muted border border-border rounded-md p-3 mb-4 flex items-start gap-3">
+                    <div className="mb-3 flex items-start gap-3 rounded-md border border-border bg-muted p-2.5 sm:p-3">
                         <Lock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                         <div className="text-xs text-muted-foreground">
                             <p className="font-bold">Read-Only Access</p>
@@ -518,30 +519,31 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                 )}
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'checks')} className="space-y-4">
-                            <TabsList className={cn("grid h-11 w-full grid-cols-2", isMaintenanceBooking && "grid-cols-1")}>
-                                <TabsTrigger value="details" className="text-[10px] font-black uppercase tracking-widest">
-                                    Booking Information
-                                </TabsTrigger>
-                                {!isMaintenanceBooking ? (
-                                    <TabsTrigger value="checks" className="text-[10px] font-black uppercase tracking-widest">
-                                        Pre / Post-Flight Checks
-                                    </TabsTrigger>
-                                ) : null}
-                            </TabsList>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+                        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pr-1 pb-24">
+                        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'checks')} className="space-y-3">
+                            <ResponsiveTabRow
+                                value={activeTab}
+                                onValueChange={(value) => setActiveTab(value as 'details' | 'checks')}
+                                placeholder="Select Booking Section"
+                                className="w-full"
+                                options={[
+                                    { value: 'details', label: 'Booking Information' },
+                                    ...(isMaintenanceBooking ? [] : [{ value: 'checks', label: 'Pre / Post-Flight Checks' }]),
+                                ]}
+                            />
 
-                            <TabsContent value="details" className="space-y-6 mt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <TabsContent value="details" className="mt-0 space-y-4">
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     <FormField
                                         control={form.control}
                                         name="type"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Booking Type</FormLabel>
+                                                <FormLabel className="text-[9px] font-black uppercase tracking-widest">Booking Type</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value} disabled={isLocked || !canEditBooking}>
                                                     <FormControl>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger className="h-9">
                                                             <SelectValue placeholder="Select booking type" />
                                                         </SelectTrigger>
                                                     </FormControl>
@@ -559,9 +561,9 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                     />
                                     <FormField control={form.control} name="status" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Status</FormLabel>
+                                            <FormLabel className="text-[9px] font-black uppercase tracking-widest">Status</FormLabel>
                                             <FormControl>
-                                                <div className="grid grid-cols-3 gap-2">
+                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                                     {BOOKING_STATUS_OPTIONS.map((option) => {
                                                         const active = field.value === option.value;
                                                         return (
@@ -570,7 +572,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                                                 type="button"
                                                                 variant={active ? 'default' : 'outline'}
                                                                 className={cn(
-                                                                    'h-10 rounded-md px-3 text-[10px] font-black uppercase tracking-widest',
+                                                                    'h-9 rounded-md px-2.5 text-[8px] font-black uppercase tracking-[0.12em] leading-none whitespace-nowrap sm:h-10 sm:px-3 sm:text-[9px]',
                                                                     active ? 'shadow-sm' : 'bg-background'
                                                                 )}
                                                                 onClick={() => field.onChange(option.value)}
@@ -593,7 +595,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 )}
 
                                 {isMaintenanceBooking ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border bg-amber-50/40 p-4">
+                                    <div className="grid grid-cols-1 gap-2 rounded-xl border bg-amber-50/40 p-3 sm:grid-cols-2 sm:p-4">
                                         <FormField control={form.control} name="date" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>From Date</FormLabel>
@@ -624,7 +626,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         )} />
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                         <FormField control={form.control} name="startTime" render={({ field }) => ( <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                         <FormField control={form.control} name="endTime" render={({ field }) => ( <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                     </div>
@@ -637,13 +639,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         name="instructorId"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Instructor</FormLabel>
+                                                    <FormLabel className="text-[9px] font-black uppercase tracking-widest">Instructor</FormLabel>
                                                 <FormControl>
                                                     <select
                                                         value={field.value || ''}
                                                         onChange={(event) => field.onChange(event.target.value)}
                                                         disabled={isLocked || !canEditBooking}
-                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         <option value="">Select Instructor...</option>
                                                         {instructors.map((pilot) => (
@@ -662,13 +664,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                         name="studentId"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Student</FormLabel>
+                                                <FormLabel className="text-[9px] font-black uppercase tracking-widest">Student</FormLabel>
                                                 <FormControl>
                                                     <select
                                                         value={field.value || ''}
                                                         onChange={(event) => field.onChange(event.target.value)}
                                                         disabled={isLocked || !canEditBooking}
-                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         <option value="">Select Student...</option>
                                                         {students.map((pilot) => (
@@ -685,19 +687,19 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 </div>
                                 ) : null}
 
-                                <div className="grid gap-4 lg:grid-cols-2">
+                                <div className="grid gap-2 lg:grid-cols-2">
                                     {!existingBooking ? (
                                         !isMaintenanceBooking ? (
-                                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-4 space-y-4">
-                                            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 space-y-3 sm:p-4">
+                                            <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-emerald-700">
                                                  <MapIcon className="h-3.5 w-3.5" /> Mission Profile
                                             </p>
                                             <FormField control={form.control} name="routeId" render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-[9px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
+                                                    <FormLabel className="text-[8px] font-black uppercase">Preset Training Route (Optional)</FormLabel>
                                                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked || !canEditBooking}>
                                                         <FormControl>
-                                                            <SelectTrigger className="bg-background">
+                                                            <SelectTrigger className="h-9 bg-background">
                                                                 <SelectValue placeholder="Select a training route to pre-fill navlog..." />
                                                             </SelectTrigger>
                                                         </FormControl>
@@ -715,8 +717,8 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                             )} />
                                         </div>
                                         ) : (
-                                        <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2">
-                                            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-800">
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 space-y-2 sm:p-4">
+                                            <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-amber-800">
                                                 <Lock className="h-3.5 w-3.5" /> Aircraft Maintenance Block
                                             </p>
                                             <p className="text-xs text-amber-900/80">
@@ -729,13 +731,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                     )}
 
                                     <FormField control={form.control} name="notes" render={({ field }) => (
-                                        <FormItem className={cn('rounded-xl border bg-background p-4 shadow-sm', existingBooking ? 'lg:col-span-2' : '')}>
+                                        <FormItem className={cn('rounded-xl border bg-background p-3 shadow-sm sm:p-4', existingBooking ? 'lg:col-span-2' : '')}>
                                             <div className="space-y-1.5">
                                                 <FormLabel>Admin Notes</FormLabel>
                                                 <p className="text-xs text-muted-foreground">Add any relevant notes for dispatch or follow-up.</p>
                                             </div>
                                             <FormControl>
-                                                <Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} rows={2} className="min-h-[64px]" />
+                                                <Textarea placeholder="Add any relevant notes..." {...field} disabled={!canEditBooking} rows={2} className="min-h-[56px]" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -743,7 +745,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 </div>
 
                                 {!isMaintenanceBooking ? (
-                                <div className="rounded-xl border bg-muted/20 p-3 space-y-3">
+                                <div className="rounded-xl border bg-muted/20 p-2.5 space-y-3 sm:p-3">
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
                                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Planning Requirement</p>
@@ -753,7 +755,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                             {requireWeatherPlanningNavlog ? 'Required' : 'Optional'}
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-3">
+                                    <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2.5">
                                         <div className="space-y-0.5">
                                             <p className="text-[10px] font-black uppercase tracking-widest">Require Weather / Map / Navlog</p>
                                             <p className="text-[10px] text-muted-foreground">Instructor can only approve after these are completed when enabled.</p>
@@ -774,7 +776,7 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                                 ) : null}
 
                                 {!isMaintenanceBooking && isOvernight && (
-                                    <div className="grid grid-cols-2 gap-4 rounded-xl border p-3">
+                                    <div className="grid grid-cols-1 gap-2 rounded-xl border p-3 sm:grid-cols-2">
                                         <FormField control={form.control} name="overnightBookingDate" render={({ field }) => ( <FormItem><FormLabel>Return Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(parseLocalDate(e.target.value))} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                         <FormField control={form.control} name="overnightEndTime" render={({ field }) => ( <FormItem><FormLabel>Return Time</FormLabel><FormControl><Input type="time" {...field} disabled={isLocked || !canEditBooking} /></FormControl><FormMessage /></FormItem> )} />
                                     </div>
@@ -969,8 +971,9 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
                             </TabsContent>
                             ) : null}
                         </Tabs>
+                        </div>
 
-                        <DialogFooter className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:gap-2">
+                        <DialogFooter className="sticky bottom-0 z-10 mt-auto flex flex-col gap-3 border-t bg-background/95 pt-4 backdrop-blur sm:static sm:z-auto sm:flex-row sm:items-center sm:gap-2 sm:bg-transparent sm:pt-4">
                             {existingBooking && canDelete && (
                                 <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
                                     <Button type="button" variant="destructive" className="mr-auto" onClick={() => setDeleteConfirmOpen(true)}>

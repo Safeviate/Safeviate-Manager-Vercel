@@ -9,15 +9,17 @@ import { Slider } from '@/components/ui/slider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
+  AZURE_APP_SERVICE_PLAN_OPTIONS,
+  AZURE_POSTGRES_PLAN_OPTIONS,
   DEFAULT_PLATFORM_USAGE_INPUT,
   PLATFORM_ROLE_LABELS,
   PLATFORM_ROLE_ORDER,
   estimatePlatformUsage,
+  type AzureAppServicePlan,
+  type AzurePostgresPlan,
   type PlatformUsageInput,
-  type PrismaMode,
-  type PrismaPostgresPlan,
 } from '@/lib/platform-usage-estimator';
-import { Database, DollarSign, GaugeCircle, Network, Repeat2, Server, Users } from 'lucide-react';
+import { Cloud, Database, DollarSign, GaugeCircle, Network, Repeat2, Server, Users } from 'lucide-react';
 
 const currency = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -108,8 +110,8 @@ export function CostPredictor() {
   const [activityIntensity, setActivityIntensity] = useState([DEFAULT_PLATFORM_USAGE_INPUT.activityIntensityPercent]);
   const [trackingMinutes, setTrackingMinutes] = useState([DEFAULT_PLATFORM_USAGE_INPUT.trackingMinutesPerCrewUserPerDay]);
   const [trackingInterval, setTrackingInterval] = useState([DEFAULT_PLATFORM_USAGE_INPUT.trackingWriteIntervalSeconds]);
-  const [prismaMode, setPrismaMode] = useState<PrismaMode>(DEFAULT_PLATFORM_USAGE_INPUT.prismaMode);
-  const [prismaPlan, setPrismaPlan] = useState<PrismaPostgresPlan>(DEFAULT_PLATFORM_USAGE_INPUT.prismaPlan);
+  const [appServicePlan, setAppServicePlan] = useState<AzureAppServicePlan>(DEFAULT_PLATFORM_USAGE_INPUT.appServicePlan);
+  const [postgresPlan, setPostgresPlan] = useState<AzurePostgresPlan>(DEFAULT_PLATFORM_USAGE_INPUT.postgresPlan);
 
   const estimate = useMemo(
     () =>
@@ -120,15 +122,20 @@ export function CostPredictor() {
         activityIntensityPercent: activityIntensity[0],
         trackingMinutesPerCrewUserPerDay: trackingMinutes[0],
         trackingWriteIntervalSeconds: trackingInterval[0],
-        prismaMode,
-        prismaPlan,
+        appServicePlan,
+        postgresPlan,
       } satisfies PlatformUsageInput),
-    [activityIntensity, crewUsers, opsUsers, prismaMode, prismaPlan, trackingInterval, trackingMinutes, viewerUsers],
+    [activityIntensity, appServicePlan, crewUsers, opsUsers, postgresPlan, trackingInterval, trackingMinutes, viewerUsers],
   );
 
-  const totalCost = estimate.vercel.totalCost + estimate.prisma.totalCost;
+  const totalCost = estimate.azure.appService.totalCost + estimate.azure.postgres.totalCost;
   const totalUsers = estimate.totals.users;
   const monthlyDataGb = estimate.totals.monthlyBandwidthGb;
+  const trackingApiRequests = estimate.totals.monthlyTrackingWrites;
+  const groupApiRequests = estimate.groups.crew.monthlyApiRequests + estimate.groups.ops.monthlyApiRequests + estimate.groups.viewer.monthlyApiRequests;
+  const groupDbOps = estimate.groups.crew.monthlyDbOps + estimate.groups.ops.monthlyDbOps + estimate.groups.viewer.monthlyDbOps;
+  const groupBandwidthGb = estimate.groups.crew.monthlyBandwidthGb + estimate.groups.ops.monthlyBandwidthGb + estimate.groups.viewer.monthlyBandwidthGb;
+  const groupStorageGb = estimate.groups.crew.monthlyStorageGb + estimate.groups.ops.monthlyStorageGb + estimate.groups.viewer.monthlyStorageGb;
 
   return (
     <div className="grid gap-6 bg-background p-6 lg:grid-cols-[0.95fr_1.3fr]">
@@ -178,7 +185,7 @@ export function CostPredictor() {
               max={250}
               step={10}
               suffix="%"
-              hint="Raises sessions, API usage, and database operations across every user group."
+              hint="Raises sessions, API usage, database work, and outbound data across every user group."
             />
           </CardContent>
         </Card>
@@ -216,8 +223,8 @@ export function CostPredictor() {
                 <div className="space-y-2">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-700">Assumption</p>
                   <p className="text-[11px] leading-relaxed text-slate-600">
-                    This models the real app pattern: authenticated page views hit Vercel, live-flight writes hit the API,
-                    and Prisma ORM only becomes billable if you move to Prisma Postgres.
+                    Authenticated pages and API routes run through Azure App Service, while live-flight writes land in
+                    Azure Database for PostgreSQL through Prisma ORM.
                   </p>
                 </div>
               </div>
@@ -228,49 +235,50 @@ export function CostPredictor() {
         <Card className="shadow-none border">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-black uppercase tracking-[0.18em] text-slate-900">
-              Database Mode
+              Azure Hosting
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Mode</Label>
-              <Select value={prismaMode} onValueChange={(value) => setPrismaMode(value as PrismaMode)}>
+              <Label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">App Service Plan</Label>
+              <Select value={appServicePlan} onValueChange={(value) => setAppServicePlan(value as AzureAppServicePlan)}>
                 <SelectTrigger className="h-10 border-slate-200 bg-white text-sm font-semibold">
-                  <SelectValue placeholder="Select database mode" />
+                  <SelectValue placeholder="Select App Service plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="external">Current setup - Prisma ORM only</SelectItem>
-                  <SelectItem value="prisma-postgres">Prisma Postgres</SelectItem>
+                  {AZURE_APP_SERVICE_PLAN_OPTIONS.map((plan) => (
+                    <SelectItem key={plan.value} value={plan.value}>
+                      {plan.label} - {currency.format(plan.baseCost)} / mo
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className={cn('space-y-2', prismaMode === 'external' && 'opacity-50')}>
-              <Label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Prisma Postgres Plan</Label>
-              <Select
-                value={prismaPlan}
-                onValueChange={(value) => setPrismaPlan(value as PrismaPostgresPlan)}
-                disabled={prismaMode === 'external'}
-              >
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">PostgreSQL Flexible Server</Label>
+              <Select value={postgresPlan} onValueChange={(value) => setPostgresPlan(value as AzurePostgresPlan)}>
                 <SelectTrigger className="h-10 border-slate-200 bg-white text-sm font-semibold">
-                  <SelectValue placeholder="Select Prisma plan" />
+                  <SelectValue placeholder="Select PostgreSQL plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="starter">Starter</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="business">Business</SelectItem>
+                  {AZURE_POSTGRES_PLAN_OPTIONS.map((plan) => (
+                    <SelectItem key={plan.value} value={plan.value}>
+                      {plan.label} - {currency.format(plan.computeCost)} compute / mo
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-start gap-3">
-                <Database className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
                 <div className="space-y-2">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-700">Current Setup</p>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-700">Current Target</p>
                   <p className="text-[11px] leading-relaxed text-slate-600">
-                    This repository currently uses PostgreSQL through Prisma ORM, so Prisma itself is free unless you
-                    switch to Prisma Postgres.
+                    This estimate is tuned for Azure App Service hosting with Azure Database for PostgreSQL Flexible
+                    Server and Prisma as the ORM layer.
                   </p>
                 </div>
               </div>
@@ -286,12 +294,11 @@ export function CostPredictor() {
           </CardHeader>
           <CardContent className="space-y-2 text-[11px] leading-relaxed text-slate-600">
             <p>
-              The Vercel estimate assumes a Pro workspace with one developer seat, then adds usage overages for
-              invocations, edge requests, and fast data transfer.
+              App Service is estimated as a fixed monthly plan with public internet egress after the first 100 GB.
             </p>
             <p>
-              External map tile traffic is excluded because those requests go directly to the tile provider rather than
-              Vercel.
+              PostgreSQL is estimated from compute, provisioned storage, and backup storage. Use the Azure Pricing
+              Calculator for a final regional quote before committing spend.
             </p>
           </CardContent>
         </Card>
@@ -300,25 +307,21 @@ export function CostPredictor() {
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            title="Vercel Monthly"
-            value={currency.format(estimate.vercel.totalCost)}
-            subtitle={`$${estimate.vercel.baseCost.toFixed(0)} base + usage overages`}
+            title="App Service"
+            value={currency.format(estimate.azure.appService.totalCost)}
+            subtitle={`${estimate.azure.appService.planLabel} plus bandwidth`}
             icon={Server}
             tone="default"
           />
           <MetricCard
-            title="Prisma Monthly"
-            value={currency.format(estimate.prisma.totalCost)}
-            subtitle={
-              prismaMode === 'external'
-                ? 'Current Prisma ORM setup'
-                : `${estimate.prisma.baseCost.toFixed(0)} base + selected Prisma Postgres usage`
-            }
+            title="PostgreSQL"
+            value={currency.format(estimate.azure.postgres.totalCost)}
+            subtitle={`${estimate.azure.postgres.planLabel} compute and storage`}
             icon={Database}
-            tone={prismaMode === 'external' ? 'success' : 'default'}
+            tone="success"
           />
           <MetricCard
-            title="Combined Monthly"
+            title="Azure Monthly"
             value={currency.format(totalCost)}
             subtitle={`${integerNumber.format(totalUsers)} users across the model`}
             icon={DollarSign}
@@ -327,7 +330,7 @@ export function CostPredictor() {
           <MetricCard
             title="Monthly Data"
             value={`${monthlyDataGb.toFixed(2)} GB`}
-            subtitle={`${integerNumber.format(estimate.totals.monthlyFunctionInvocations)} function invocations`}
+            subtitle={`${integerNumber.format(estimate.totals.monthlyApiRequests)} API requests`}
             icon={Network}
             tone="default"
           />
@@ -346,7 +349,7 @@ export function CostPredictor() {
                   <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">Role</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">Users</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">Sessions / Mo</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">Invocations / Mo</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">Requests / Mo</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">DB Ops / Mo</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">Bandwidth / Mo</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-[0.18em]">Storage / Mo</TableHead>
@@ -360,7 +363,7 @@ export function CostPredictor() {
                       <TableCell className="font-black text-slate-900">{role.label}</TableCell>
                       <TableCell>{integerNumber.format(role.users)}</TableCell>
                       <TableCell>{compactNumber.format(role.monthlySessions)}</TableCell>
-                      <TableCell>{compactNumber.format(role.monthlyFunctionInvocations)}</TableCell>
+                      <TableCell>{compactNumber.format(role.monthlyRequests)}</TableCell>
                       <TableCell>{compactNumber.format(role.monthlyDbOps)}</TableCell>
                       <TableCell>{role.monthlyBandwidthGb.toFixed(2)} GB</TableCell>
                       <TableCell>{role.monthlyStorageGb.toFixed(2)} GB</TableCell>
@@ -372,10 +375,10 @@ export function CostPredictor() {
                   <TableCell className="font-semibold text-slate-600" colSpan={2}>
                     Active flights writing every {trackingInterval[0]} sec
                   </TableCell>
-                  <TableCell>{compactNumber.format(estimate.totals.monthlyFunctionInvocations - estimate.groups.crew.monthlyFunctionInvocations - estimate.groups.ops.monthlyFunctionInvocations - estimate.groups.viewer.monthlyFunctionInvocations)}</TableCell>
-                  <TableCell>{compactNumber.format(estimate.totals.monthlyDbOps - estimate.groups.crew.monthlyDbOps - estimate.groups.ops.monthlyDbOps - estimate.groups.viewer.monthlyDbOps)}</TableCell>
-                  <TableCell>{(estimate.totals.monthlyBandwidthGb - estimate.groups.crew.monthlyBandwidthGb - estimate.groups.ops.monthlyBandwidthGb - estimate.groups.viewer.monthlyBandwidthGb).toFixed(2)} GB</TableCell>
-                  <TableCell>{(estimate.totals.monthlyStorageGb - estimate.groups.crew.monthlyStorageGb - estimate.groups.ops.monthlyStorageGb - estimate.groups.viewer.monthlyStorageGb).toFixed(2)} GB</TableCell>
+                  <TableCell>{compactNumber.format(trackingApiRequests)}</TableCell>
+                  <TableCell>{compactNumber.format(estimate.totals.monthlyDbOps - groupDbOps)}</TableCell>
+                  <TableCell>{(estimate.totals.monthlyBandwidthGb - groupBandwidthGb).toFixed(2)} GB</TableCell>
+                  <TableCell>{(estimate.totals.monthlyStorageGb - groupStorageGb).toFixed(2)} GB</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -386,29 +389,21 @@ export function CostPredictor() {
           <Card className="shadow-none border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-black uppercase tracking-[0.18em] text-slate-900">
-                Vercel Cost Breakdown
+                App Service Breakdown
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <span className="font-semibold text-slate-700">Pro workspace seat</span>
-                <span className="font-black text-slate-900">{currency.format(estimate.vercel.baseCost)}</span>
+                <span className="font-semibold text-slate-700">{estimate.azure.appService.planLabel}</span>
+                <span className="font-black text-slate-900">{currency.format(estimate.azure.appService.baseCost)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <span className="font-semibold text-slate-700">Function invocations</span>
-                <span className="font-black text-slate-900">{currency.format(estimate.vercel.invocationCost)}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <span className="font-semibold text-slate-700">Edge requests</span>
-                <span className="font-black text-slate-900">{currency.format(estimate.vercel.edgeRequestCost)}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <span className="font-semibold text-slate-700">Fast data transfer</span>
-                <span className="font-black text-slate-900">{currency.format(estimate.vercel.bandwidthCost)}</span>
+                <span className="font-semibold text-slate-700">Public egress</span>
+                <span className="font-black text-slate-900">{currency.format(estimate.azure.appService.bandwidthCost)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-slate-900 bg-slate-900 px-4 py-3 text-white">
-                <span className="font-black uppercase tracking-[0.16em]">Total Vercel</span>
-                <span className="font-black">{currency.format(estimate.vercel.totalCost)}</span>
+                <span className="font-black uppercase tracking-[0.16em]">Total App Service</span>
+                <span className="font-black">{currency.format(estimate.azure.appService.totalCost)}</span>
               </div>
             </CardContent>
           </Card>
@@ -416,27 +411,25 @@ export function CostPredictor() {
           <Card className="shadow-none border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-black uppercase tracking-[0.18em] text-slate-900">
-                Prisma Cost Breakdown
+                PostgreSQL Breakdown
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <span className="font-semibold text-slate-700">
-                  {prismaMode === 'external' ? 'Current Prisma ORM setup' : 'Prisma Postgres base'}
-                </span>
-                <span className="font-black text-slate-900">{currency.format(estimate.prisma.baseCost)}</span>
+                <span className="font-semibold text-slate-700">{estimate.azure.postgres.planLabel} compute</span>
+                <span className="font-black text-slate-900">{currency.format(estimate.azure.postgres.computeCost)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <span className="font-semibold text-slate-700">Operations</span>
-                <span className="font-black text-slate-900">{currency.format(estimate.prisma.operationCost)}</span>
+                <span className="font-semibold text-slate-700">{estimate.azure.postgres.provisionedStorageGb} GB storage</span>
+                <span className="font-black text-slate-900">{currency.format(estimate.azure.postgres.storageCost)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <span className="font-semibold text-slate-700">Storage</span>
-                <span className="font-black text-slate-900">{currency.format(estimate.prisma.storageCost)}</span>
+                <span className="font-semibold text-slate-700">Backup storage</span>
+                <span className="font-black text-slate-900">{currency.format(estimate.azure.postgres.backupCost)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-emerald-900 bg-emerald-950 px-4 py-3 text-white">
-                <span className="font-black uppercase tracking-[0.16em]">Total Prisma</span>
-                <span className="font-black">{currency.format(estimate.prisma.totalCost)}</span>
+                <span className="font-black uppercase tracking-[0.16em]">Total PostgreSQL</span>
+                <span className="font-black">{currency.format(estimate.azure.postgres.totalCost)}</span>
               </div>
             </CardContent>
           </Card>
@@ -445,43 +438,41 @@ export function CostPredictor() {
         <Card className="shadow-none border">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-black uppercase tracking-[0.18em] text-slate-900">
-              Threshold Check
+              Capacity Check
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Vercel Invocations</span>
-                <Badge variant={estimate.totals.monthlyFunctionInvocations > estimate.vercel.includedInvocations ? 'destructive' : 'secondary'}>
-                  {estimate.totals.monthlyFunctionInvocations > estimate.vercel.includedInvocations ? 'Over' : 'Within'}
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">App Requests</span>
+                <Badge variant={estimate.totals.computeLoadPercent > 80 ? 'destructive' : 'secondary'}>
+                  {estimate.totals.computeLoadPercent > 80 ? 'Watch' : 'OK'}
                 </Badge>
               </div>
               <p className="mt-2 text-sm font-black text-slate-900">
-                {compactNumber.format(estimate.totals.monthlyFunctionInvocations)} / {compactNumber.format(estimate.vercel.includedInvocations)}
+                {compactNumber.format(estimate.totals.monthlyRequests)} / {compactNumber.format(estimate.azure.appService.estimatedRequestCapacity)}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Edge Requests</span>
-                <Badge variant={estimate.totals.monthlyEdgeRequests > estimate.vercel.includedEdgeRequests ? 'destructive' : 'secondary'}>
-                  {estimate.totals.monthlyEdgeRequests > estimate.vercel.includedEdgeRequests ? 'Over' : 'Within'}
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Postgres Ops</span>
+                <Badge variant={estimate.azure.postgres.opsLoadPercent > 80 ? 'destructive' : 'secondary'}>
+                  {estimate.azure.postgres.opsLoadPercent > 80 ? 'Watch' : 'OK'}
                 </Badge>
               </div>
               <p className="mt-2 text-sm font-black text-slate-900">
-                {compactNumber.format(estimate.totals.monthlyEdgeRequests)} / {compactNumber.format(estimate.vercel.includedEdgeRequests)}
+                {compactNumber.format(estimate.totals.monthlyDbOps)} / {compactNumber.format(estimate.azure.postgres.estimatedOpsCapacity)}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-                  Prisma Ops {prismaMode === 'external' ? '(free)' : ''}
-                </span>
-                <Badge variant={prismaMode === 'external' ? 'secondary' : estimate.totals.monthlyDbOps > estimate.prisma.includedOperations ? 'destructive' : 'secondary'}>
-                  {prismaMode === 'external' ? 'Free' : estimate.totals.monthlyDbOps > estimate.prisma.includedOperations ? 'Over' : 'Within'}
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Outbound Data</span>
+                <Badge variant={estimate.totals.monthlyBandwidthGb > estimate.azure.appService.includedBandwidthGb ? 'destructive' : 'secondary'}>
+                  {estimate.totals.monthlyBandwidthGb > estimate.azure.appService.includedBandwidthGb ? 'Billable' : 'Free'}
                 </Badge>
               </div>
               <p className="mt-2 text-sm font-black text-slate-900">
-                {compactNumber.format(estimate.totals.monthlyDbOps)} / {prismaMode === 'external' ? 'N/A' : compactNumber.format(estimate.prisma.includedOperations)}
+                {estimate.totals.monthlyBandwidthGb.toFixed(2)} GB / {estimate.azure.appService.includedBandwidthGb} GB
               </p>
             </div>
           </CardContent>
@@ -500,6 +491,12 @@ export function CostPredictor() {
                 <p>{note}</p>
               </div>
             ))}
+            <div className="flex gap-2">
+              <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <p>
+                The model counted {compactNumber.format(groupApiRequests)} role-driven API requests before live tracking writes.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

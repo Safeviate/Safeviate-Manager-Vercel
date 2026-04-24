@@ -37,6 +37,7 @@ type EnrichedBooking = Booking & {
   creatorName?: string;
   instructorName?: string;
   studentName?: string;
+  roomContextLabel?: string;
   fullStartTime?: Date;
   aircraft?: Aircraft;
 };
@@ -177,7 +178,7 @@ const BookingsTable = ({
                                     </Badge>
                                 </div>
                                 <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                    {b.aircraftTailNumber}
+                                    {b.briefingRoomName ? `Room: ${b.aircraftTailNumber}` : b.aircraftTailNumber}
                                 </p>
                             </div>
                             <Badge variant={getStatusBadgeVariant(b.status)} className="text-[10px] font-black uppercase py-0.5">
@@ -217,7 +218,9 @@ const BookingsTable = ({
                                     </p>
                                 </div>
                                 <div className="rounded-lg border bg-background px-3 py-3">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                                        {b.briefingRoomName ? 'Briefing Room' : 'Aircraft'}
+                                    </p>
                                     <p className="mt-1 text-sm font-semibold text-foreground uppercase">{b.aircraftTailNumber}</p>
                                 </div>
                             </div>
@@ -312,10 +315,11 @@ export default function BookingsHistoryPage() {
       const fullStartTime = b.date && b.startTime ? parse(`${b.date} ${b.startTime}`, 'yyyy-MM-dd HH:mm', new Date()) : undefined;
         return {
         ...b,
-        aircraftTailNumber: bookingAircraft?.tailNumber || 'Unknown Aircraft',
+        aircraftTailNumber: bookingAircraft?.tailNumber || b.briefingRoomName || 'Unknown Aircraft',
         creatorName: (b as Booking & { createdByName?: string }).createdByName || userMap.get(b.createdById || '') || 'Unknown Creator',
         instructorName: userMap.get(b.instructorId || '') || (b.instructorId ? b.instructorId : undefined),
         studentName: userMap.get(b.studentId || '') || (b.studentId ? b.studentId : undefined),
+        roomContextLabel: b.briefingRoomName ? `${b.sessionType || b.type}` : undefined,
         fullStartTime: fullStartTime,
         aircraft: bookingAircraft,
       };

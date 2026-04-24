@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect, useCallback } from 'react';
+import { use, useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import {
   MainPageHeader,
   HEADER_ACTION_BUTTON_CLASS,
+  HEADER_COMPACT_CONTROL_CLASS,
   HEADER_SECONDARY_BUTTON_CLASS,
   CARD_HEADER_BAND_CLASS,
   HEADER_TAB_LIST_CLASS,
@@ -17,28 +18,36 @@ import {
 } from '@/components/page-header';
 import { BackNavButton } from '@/components/back-nav-button';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
-import { 
-  Plane, 
-  History, 
-  FileText, 
-  Settings2, 
-  ArrowLeft, 
-  PlusCircle, 
-  Trash2, 
-  Clock, 
-  Gauge, 
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Plane,
+  History,
+  FileText,
+  Settings2,
+  ArrowLeft,
+  PlusCircle,
+  Trash2,
+  Clock,
+  Gauge,
   AlertCircle,
   CalendarIcon,
   Eye,
   Pencil,
   Info,
-  Wrench
+  Wrench,
+  MoreHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { 
   Dialog, 
   DialogContent, 
@@ -147,6 +156,14 @@ type UtilisationTrendPoint = {
   tachoHours: number;
   fuelLitres: number;
   oilUsed: number;
+};
+
+type UtilisationHealthTrendPoint = {
+  label: string;
+  flightHours: number;
+  downtimeHours: number;
+  defectCount: number;
+  defectRate: number;
 };
 
 type DefectCategory = {
@@ -352,6 +369,180 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
     return () => events.forEach(e => window.removeEventListener(e, loadData));
   }, [loadData, aircraftId]);
 
+  const utilisationChartNow = new Date();
+  const utilisationChartAircraftId = aircraft?.id ?? null;
+  const utilisationChartWindowStart = (() => {
+    if (usagePeriod === 'selected') {
+      return new Date(
+        selectedFromDate.getFullYear(),
+        selectedFromDate.getMonth(),
+        selectedFromDate.getDate(),
+        0,
+        0,
+        0,
+        0
+      );
+    }
+    if (usagePeriod === '30d') {
+      const start = new Date(utilisationChartNow);
+      start.setDate(utilisationChartNow.getDate() - 30);
+      return start;
+    }
+    return null;
+  })();
+  const utilisationChartWindowEnd = (() => {
+    if (usagePeriod === 'selected') {
+      return new Date(
+        selectedToDate.getFullYear(),
+        selectedToDate.getMonth(),
+        selectedToDate.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
+    }
+    return utilisationChartNow;
+  })();
+  const utilisationChartNormalizedStart =
+    utilisationChartWindowStart &&
+    utilisationChartWindowEnd &&
+    utilisationChartWindowStart > utilisationChartWindowEnd
+      ? utilisationChartWindowEnd
+      : utilisationChartWindowStart;
+  const utilisationChartNormalizedEnd =
+    utilisationChartWindowStart &&
+    utilisationChartWindowEnd &&
+    utilisationChartWindowStart > utilisationChartWindowEnd
+      ? utilisationChartWindowStart
+      : utilisationChartWindowEnd;
+  const utilisationChartBookings = (usageSummary.bookings || []).filter((booking) => {
+    if (booking.aircraftId !== utilisationChartAircraftId) return false;
+    if (!utilisationChartWindowStart || usagePeriod === 'all') return true;
+    if (!booking.date) return false;
+    const bookingDate = new Date(booking.date);
+    return (
+      !Number.isNaN(bookingDate.getTime()) &&
+      !!utilisationChartNormalizedStart &&
+      !!utilisationChartNormalizedEnd &&
+      bookingDate >= utilisationChartNormalizedStart &&
+      bookingDate <= utilisationChartNormalizedEnd
+    );
+  });
+  const utilisationChartDefects = (usageSummary.bookings || []).reduce<
+    {
+      id: string;
+      dateLabel: string;
+      reportedAt: string;
+      rectifiedAt?: string;
+      details: string;
+      categoryId: string;
+      categoryLabel: string;
+      ataLabel: string;
+      componentId?: string;
+      componentName?: string;
+      componentSerialNumber?: string;
+      title: string;
+      status: 'Open';
+      grounded: boolean;
+      source: 'post-flight';
+    }[]
+  >((allDefects, booking) => {
+    if (booking.aircraftId !== utilisationChartAircraftId) return allDefects;
+    const defectText = booking.postFlightData?.defects?.trim();
+    if (!defectText) return allDefects;
+    const defectDate = booking.date ? new Date(booking.date) : null;
+    const category = categorizeDefect(defectText);
+    allDefects.push({
+      id: `${booking.aircraftId || utilisationChartAircraftId}-${booking.date || 'unknown'}-${defectText}`,
+      dateLabel:
+        defectDate && !Number.isNaN(defectDate.getTime()) ? format(defectDate, 'dd MMM yyyy') : booking.date || 'Unknown date',
+      reportedAt: defectDate && !Number.isNaN(defectDate.getTime()) ? defectDate.toISOString() : utilisationChartNow.toISOString(),
+      details: defectText,
+      categoryId: category.id,
+      categoryLabel: category.label,
+      ataLabel: category.ataLabel,
+      title: 'Post-flight defect',
+      status: 'Open',
+      grounded: false,
+      source: 'post-flight',
+    });
+    return allDefects;
+  }, []);
+
+  const utilisationHealthTrend = useMemo<UtilisationHealthTrendPoint[]>(() => {
+    const chartStart = utilisationChartWindowStart ?? new Date(utilisationChartNow.getTime() - 180 * 24 * 60 * 60 * 1000);
+    const chartEnd = utilisationChartWindowEnd ?? utilisationChartNow;
+    const rangeDays = Math.max(1, Math.ceil((chartEnd.getTime() - chartStart.getTime()) / 86400000));
+    const bucketCount = rangeDays <= 35 ? 5 : rangeDays <= 90 ? 6 : 8;
+    const bucketSizeDays = Math.max(1, Math.ceil(rangeDays / bucketCount));
+
+    return Array.from({ length: bucketCount }, (_, index) => {
+      const bucketStart = new Date(chartStart);
+      bucketStart.setDate(chartStart.getDate() + index * bucketSizeDays);
+      const bucketEnd = new Date(bucketStart);
+      bucketEnd.setDate(bucketStart.getDate() + bucketSizeDays);
+      const effectiveEnd = bucketEnd > chartEnd ? chartEnd : bucketEnd;
+
+      const bucketFlights = utilisationChartBookings.filter((booking) => {
+        if (!booking.date) return false;
+        const bookingDate = new Date(booking.date);
+        return !Number.isNaN(bookingDate.getTime()) && bookingDate >= bucketStart && bookingDate < effectiveEnd;
+      });
+      const bucketDefects = utilisationChartDefects.filter((defect) => {
+        if (!defect.reportedAt) return false;
+        const defectDate = new Date(defect.reportedAt);
+        return !Number.isNaN(defectDate.getTime()) && defectDate >= bucketStart && defectDate < effectiveEnd;
+      });
+
+      const flightHours = bucketFlights.reduce((sum, booking) => {
+        const pre = booking.preFlightData?.hobbs;
+        const post = booking.postFlightData?.hobbs;
+        if (pre === undefined || post === undefined) return sum;
+        return sum + Math.max(0, post - pre);
+      }, 0);
+
+      const downtimeHours = bucketDefects.reduce((sum, defect) => {
+        const reportedAt = new Date(defect.reportedAt).getTime();
+        const rectifiedAt = defect.rectifiedAt ? new Date(defect.rectifiedAt).getTime() : chartEnd.getTime();
+        if (Number.isNaN(reportedAt) || Number.isNaN(rectifiedAt) || rectifiedAt < reportedAt) return sum;
+        return sum + Math.max(0, (rectifiedAt - reportedAt) / 3600000);
+      }, 0);
+
+      const defectCount = bucketDefects.length;
+      const defectRate = flightHours > 0 ? (defectCount / flightHours) * 10 : defectCount * 10;
+
+      return {
+        label: format(bucketStart, 'dd MMM'),
+        flightHours: parseFloat(flightHours.toFixed(1)),
+        downtimeHours: parseFloat(downtimeHours.toFixed(1)),
+        defectCount,
+        defectRate: parseFloat(defectRate.toFixed(2)),
+      };
+    });
+  }, [utilisationChartBookings, utilisationChartDefects, utilisationChartNow, utilisationChartWindowEnd, utilisationChartWindowStart]);
+
+  const utilisationHealthRecommendation = useMemo(() => {
+    const recent = utilisationHealthTrend.slice(-3);
+    if (recent.length === 0) {
+      return 'No maintenance trend data yet. Capture structured defects to activate the chart.';
+    }
+
+    const avgFlight = recent.reduce((sum, point) => sum + point.flightHours, 0) / recent.length;
+    const avgDowntime = recent.reduce((sum, point) => sum + point.downtimeHours, 0) / recent.length;
+    const avgDefectRate = recent.reduce((sum, point) => sum + point.defectRate, 0) / recent.length;
+
+    if (avgDefectRate >= 1.5 || avgDowntime > Math.max(1, avgFlight)) {
+      return 'Maintenance review recommended: downtime is outpacing active flying and defects are stacking up.';
+    }
+
+    if (avgDefectRate >= 0.75 || avgDowntime > avgFlight * 0.5) {
+      return 'Watch the rectification cycle closely and plan proactive defect clearance capacity.';
+    }
+
+    return 'Utilisation is healthy: flight hours remain ahead of downtime and defect pressure is currently low.';
+  }, [utilisationHealthTrend]);
+
   if (isLoading) {
     return (
       <div className="max-w-[1100px] mx-auto w-full space-y-6 pt-4 px-1">
@@ -535,6 +726,8 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
     {
       id: string;
       dateLabel: string;
+      reportedAt: string;
+      rectifiedAt?: string;
       details: string;
       categoryId: string;
       categoryLabel: string;
@@ -557,6 +750,7 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
       id: `${booking.aircraftId || aircraft.id}-${booking.date || 'unknown'}-${defectText}`,
       dateLabel:
         defectDate && !Number.isNaN(defectDate.getTime()) ? format(defectDate, 'dd MMM yyyy') : booking.date || 'Unknown date',
+      reportedAt: defectDate && !Number.isNaN(defectDate.getTime()) ? defectDate.toISOString() : now.toISOString(),
       details: defectText,
       categoryId: category.id,
       categoryLabel: category.label,
@@ -646,28 +840,21 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                 }
               />
 
-            <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent overflow-hidden flex justify-center')}>
-              <TabsList className={cn(HEADER_TAB_LIST_CLASS, 'border-0 bg-transparent px-0 py-0 overflow-x-auto no-scrollbar w-full flex items-center justify-center')}>
-                <TabsTrigger value="overview" className={HEADER_TAB_TRIGGER_CLASS}>
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="utilisation" className={HEADER_TAB_TRIGGER_CLASS}>
-                  Utilisation
-                </TabsTrigger>
-                <TabsTrigger value="maintenance" className={HEADER_TAB_TRIGGER_CLASS}>
-                  Maintenance
-                </TabsTrigger>
-                <TabsTrigger value="defects" className={HEADER_TAB_TRIGGER_CLASS}>
-                  Defect List
-                </TabsTrigger>
-                <TabsTrigger value="components" className={HEADER_TAB_TRIGGER_CLASS}>
-                  Components
-                </TabsTrigger>
-                <TabsTrigger value="documents" className={HEADER_TAB_TRIGGER_CLASS}>
-                  Documents
-                </TabsTrigger>
-              </TabsList>
-            </div>
+            <ResponsiveTabRow
+              value={activeTab}
+              onValueChange={setActiveTab}
+              placeholder="Select Aircraft Section"
+              centerTabs
+              className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent overflow-hidden')}
+              options={[
+                { value: 'overview', label: 'Overview' },
+                { value: 'utilisation', label: 'Utilisation' },
+                { value: 'maintenance', label: 'Maintenance' },
+                { value: 'defects', label: 'Defect List' },
+                { value: 'components', label: 'Components' },
+                { value: 'documents', label: 'Documents' },
+              ]}
+            />
             <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
               <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
@@ -779,116 +966,256 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                       </div>
                     </CardHeader>
                     <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
-                      <div className="flex w-full flex-wrap items-center justify-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Graphs</span>
-                        <button
-                          type="button"
-                          onClick={() => setVisibleGraphs((current) => ({ ...current, comparison: !current.comparison }))}
-                          className={cn(
-                            HEADER_TAB_TRIGGER_CLASS,
-                            visibleGraphs.comparison ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
-                          )}
-                        >
-                          Compare Windows
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setVisibleGraphs((current) => ({ ...current, service: !current.service }))}
-                          className={cn(
-                            HEADER_TAB_TRIGGER_CLASS,
-                            visibleGraphs.service ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
-                          )}
-                        >
-                          Service Capacity
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setVisibleGraphs((current) => ({ ...current, hours: !current.hours }))}
-                          className={cn(
-                            HEADER_TAB_TRIGGER_CLASS,
-                            visibleGraphs.hours ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
-                          )}
-                        >
-                          Hours Trend
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setVisibleGraphs((current) => ({ ...current, consumption: !current.consumption }))}
-                          className={cn(
-                            HEADER_TAB_TRIGGER_CLASS,
-                            visibleGraphs.consumption ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
-                          )}
-                        >
-                          Consumption
-                        </button>
-                      </div>
-                    </div>
-                    <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent border-b')}>
-                      <div className="flex w-full flex-wrap items-center justify-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
-                        {(['selected', '30d', 'all'] as UsagePeriod[]).map((period) => (
+                      {isMobile ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                HEADER_SECONDARY_BUTTON_CLASS,
+                                HEADER_COMPACT_CONTROL_CLASS,
+                                'w-full justify-between text-foreground hover:bg-accent/40'
+                              )}
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">Graphs</span>
+                              </span>
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                            <DropdownMenuCheckboxItem
+                              checked={visibleGraphs.comparison}
+                              onCheckedChange={() => setVisibleGraphs((current) => ({ ...current, comparison: !current.comparison }))}
+                              className="text-[10px] font-bold uppercase"
+                            >
+                              Compare Windows
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                              checked={visibleGraphs.service}
+                              onCheckedChange={() => setVisibleGraphs((current) => ({ ...current, service: !current.service }))}
+                              className="text-[10px] font-bold uppercase"
+                            >
+                              Service Capacity
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                              checked={visibleGraphs.hours}
+                              onCheckedChange={() => setVisibleGraphs((current) => ({ ...current, hours: !current.hours }))}
+                              className="text-[10px] font-bold uppercase"
+                            >
+                              Hours Trend
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                              checked={visibleGraphs.consumption}
+                              onCheckedChange={() => setVisibleGraphs((current) => ({ ...current, consumption: !current.consumption }))}
+                              className="text-[10px] font-bold uppercase"
+                            >
+                              Consumption
+                            </DropdownMenuCheckboxItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <div className="flex w-full flex-wrap items-center justify-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Graphs</span>
                           <button
-                            key={period}
                             type="button"
-                            onClick={() => setUsagePeriod(period)}
+                            onClick={() => setVisibleGraphs((current) => ({ ...current, comparison: !current.comparison }))}
                             className={cn(
                               HEADER_TAB_TRIGGER_CLASS,
-                              usagePeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                              visibleGraphs.comparison ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
                             )}
                           >
-                            {period === 'selected' ? 'Selected Period' : period === '30d' ? 'Last 30 Days' : 'Lifetime'}
+                            Compare Windows
                           </button>
-                        ))}
-                        <Popover>
-                          <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => setVisibleGraphs((current) => ({ ...current, service: !current.service }))}
+                            className={cn(
+                              HEADER_TAB_TRIGGER_CLASS,
+                              visibleGraphs.service ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
+                            )}
+                          >
+                            Service Capacity
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVisibleGraphs((current) => ({ ...current, hours: !current.hours }))}
+                            className={cn(
+                              HEADER_TAB_TRIGGER_CLASS,
+                              visibleGraphs.hours ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
+                            )}
+                          >
+                            Hours Trend
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVisibleGraphs((current) => ({ ...current, consumption: !current.consumption }))}
+                            className={cn(
+                              HEADER_TAB_TRIGGER_CLASS,
+                              visibleGraphs.consumption ? 'border-foreground text-foreground' : 'border-input text-muted-foreground opacity-60'
+                            )}
+                          >
+                            Consumption
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent border-b')}>
+                      {isMobile ? (
+                        <div className="space-y-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className={cn(
+                                  HEADER_SECONDARY_BUTTON_CLASS,
+                                  HEADER_COMPACT_CONTROL_CLASS,
+                                  'w-full justify-between text-foreground hover:bg-accent/40'
+                                )}
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">
+                                    {usagePeriod === 'selected' ? 'Selected Period' : usagePeriod === '30d' ? 'Last 30 Days' : 'Lifetime'}
+                                  </span>
+                                </span>
+                                <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                              {(['selected', '30d', 'all'] as UsagePeriod[]).map((period) => (
+                                <DropdownMenuCheckboxItem
+                                  key={period}
+                                  checked={usagePeriod === period}
+                                  onCheckedChange={() => setUsagePeriod(period)}
+                                  className="text-[10px] font-bold uppercase"
+                                >
+                                  {period === 'selected' ? 'Selected Period' : period === '30d' ? 'Last 30 Days' : 'Lifetime'}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <div className="grid grid-cols-1 gap-2">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    HEADER_TAB_TRIGGER_CLASS,
+                                    'w-full justify-center',
+                                    usagePeriod === 'selected' ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                  {format(selectedFromDate, 'dd MMM yyyy')}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="center">
+                                <CustomCalendar
+                                  selectedDate={selectedFromDate}
+                                  onDateSelect={(date) => {
+                                    setSelectedFromDate(date);
+                                    setUsagePeriod('selected');
+                                  }}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    HEADER_TAB_TRIGGER_CLASS,
+                                    'w-full justify-center',
+                                    usagePeriod === 'selected' ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                  {format(selectedToDate, 'dd MMM yyyy')}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="center">
+                                <CustomCalendar
+                                  selectedDate={selectedToDate}
+                                  onDateSelect={(date) => {
+                                    setSelectedToDate(date);
+                                    setUsagePeriod('selected');
+                                  }}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex w-full flex-wrap items-center justify-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Period</span>
+                          {(['selected', '30d', 'all'] as UsagePeriod[]).map((period) => (
                             <button
+                              key={period}
                               type="button"
+                              onClick={() => setUsagePeriod(period)}
                               className={cn(
                                 HEADER_TAB_TRIGGER_CLASS,
-                                'min-w-[150px] justify-center',
-                                usagePeriod === 'selected' ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                                usagePeriod === period ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
                               )}
                             >
-                              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                              {format(selectedFromDate, 'dd MMM yyyy')}
+                              {period === 'selected' ? 'Selected Period' : period === '30d' ? 'Last 30 Days' : 'Lifetime'}
                             </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="center">
-                            <CustomCalendar
-                              selectedDate={selectedFromDate}
-                              onDateSelect={(date) => {
-                                setSelectedFromDate(date);
-                                setUsagePeriod('selected');
-                              }}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">to</span>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              className={cn(
-                                HEADER_TAB_TRIGGER_CLASS,
-                                'min-w-[150px] justify-center',
-                                usagePeriod === 'selected' ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                              {format(selectedToDate, 'dd MMM yyyy')}
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="center">
-                            <CustomCalendar
-                              selectedDate={selectedToDate}
-                              onDateSelect={(date) => {
-                                setSelectedToDate(date);
-                                setUsagePeriod('selected');
-                              }}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                          ))}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className={cn(
+                                  HEADER_TAB_TRIGGER_CLASS,
+                                  'min-w-[150px] justify-center',
+                                  usagePeriod === 'selected' ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                {format(selectedFromDate, 'dd MMM yyyy')}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="center">
+                              <CustomCalendar
+                                selectedDate={selectedFromDate}
+                                onDateSelect={(date) => {
+                                  setSelectedFromDate(date);
+                                  setUsagePeriod('selected');
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">to</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className={cn(
+                                  HEADER_TAB_TRIGGER_CLASS,
+                                  'min-w-[150px] justify-center',
+                                  usagePeriod === 'selected' ? 'border-foreground text-foreground' : 'border-input text-muted-foreground'
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                {format(selectedToDate, 'dd MMM yyyy')}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="center">
+                              <CustomCalendar
+                                selectedDate={selectedToDate}
+                                onDateSelect={(date) => {
+                                  setSelectedToDate(date);
+                                  setUsagePeriod('selected');
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      )}
                     </div>
                     <CardContent className="space-y-6 p-4">
                       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -944,6 +1271,62 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                           supporting="All recorded oil uplift"
                         />
                       </div>
+
+                      <Card className="shadow-none border overflow-hidden">
+                        <CardHeader className="border-b bg-muted/10 px-4 py-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Flight, Downtime and Defect Rate</h4>
+                              <CardDescription className="text-xs">
+                                Flight time versus defect downtime, with defect rate shown per 10 flight hours.
+                              </CardDescription>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-[0.16em]">
+                              Ops recommendation
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3 p-4">
+                          <div className="h-[280px]">
+                            {utilisationHealthTrend.length > 0 ? (
+                              <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={utilisationHealthTrend} margin={{ top: 8, right: 24, left: -16, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
+                                  <YAxis yAxisId="left" tickLine={false} axisLine={false} fontSize={11} />
+                                  <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} fontSize={11} />
+                                  <Tooltip
+                                    formatter={(value: number, name: string) => {
+                                      if (name === 'flightHours') return [`${value.toFixed(1)}h`, 'Flight Hours'];
+                                      if (name === 'downtimeHours') return [`${value.toFixed(1)}h`, 'Defect Downtime'];
+                                      if (name === 'defectRate') return [`${value.toFixed(2)}`, 'Defect Rate / 10h'];
+                                      if (name === 'defectCount') return [`${value}`, 'Defect Count'];
+                                      return [value, name];
+                                    }}
+                                  />
+                                  <Bar yAxisId="left" dataKey="flightHours" fill="#1d4ed8" radius={[6, 6, 0, 0]} name="flightHours" />
+                                  <Bar yAxisId="left" dataKey="downtimeHours" fill="#f97316" radius={[6, 6, 0, 0]} name="downtimeHours" />
+                                  <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="defectRate"
+                                    stroke="#7c3aed"
+                                    strokeWidth={2.5}
+                                    dot={{ r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                    name="defectRate"
+                                  />
+                                </ComposedChart>
+                              </ResponsiveContainer>
+                            ) : (
+                              <div className="flex h-full items-center justify-center rounded-xl border border-dashed bg-muted/5 text-sm text-muted-foreground">
+                                No utilisation trend data in this window yet.
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{utilisationHealthRecommendation}</p>
+                        </CardContent>
+                      </Card>
 
                       {visibleGraphs.comparison ? (
                       <Card className="shadow-none border overflow-hidden">

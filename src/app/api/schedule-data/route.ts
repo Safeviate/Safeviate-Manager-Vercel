@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { ensureAircraftSchema, ensureBookingsSchema, ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
+import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -53,6 +54,8 @@ const buildInstructorDutyModel = (
 };
 
 export async function GET() {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
   try {
     const session = await getServerSession(authOptions);
     const email = session?.user?.email?.trim().toLowerCase();
@@ -75,7 +78,7 @@ export async function GET() {
       where: { email },
       select: { tenantId: true },
     });
-    const tenantId = currentUser?.tenantId || 'safeviate';
+    tenantId = currentUser?.tenantId || 'safeviate';
 
     await Promise.all([ensureAircraftSchema(), ensureBookingsSchema(), ensurePersonnelSchema()]);
     const [aircraftRows, bookingRows, personnelRows] = await Promise.all([
@@ -107,6 +110,14 @@ export async function GET() {
       }))
     );
 
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'schedule-data.GET',
+      reads: 4,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+    });
+
     return NextResponse.json(
       {
         aircraft: aircraftRows.map((row) => row.data),
@@ -118,6 +129,14 @@ export async function GET() {
     );
   } catch (error) {
     console.error('[schedule-data] fallback to empty payload:', error);
+    await recordSimulationRouteMetric({
+      tenantId,
+      routeKey: 'schedule-data.GET',
+      reads: 0,
+      writes: 0,
+      durationMs: Date.now() - startedAt,
+      isError: true,
+    });
     return NextResponse.json({ aircraft: [], bookings: [], instructors: [], instructorDuty: [] }, { status: 200 });
   }
 }

@@ -22,11 +22,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, History, CheckCircle2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Star, TrendingDown, Target } from 'lucide-react';
 
 interface TrainingRecordsProps {
     studentId: string;
     tenantId: string;
 }
+
+type CompetencyArea = {
+    key: string;
+    label: string;
+    score: number;
+    sampleCount: number;
+    trend: number;
+    lastSeen: string | null;
+    signal: 'strength' | 'growth' | 'watch';
+    nextAction: string;
+};
 
 const getRatingColor = (rating: number) => {
     switch (rating) {
@@ -73,6 +85,234 @@ const MilestoneProgress = ({ totalHours, milestone, warningThreshold }: { totalH
             )}
         </div>
     )
+}
+
+const COMPETENCY_RULES: Array<{ key: string; label: string; keywords: string[]; strengthBias: number; growthBias: number; nextAction: string }> = [
+    { key: 'circuits', label: 'Circuits', keywords: ['circuit', 'circuits', 'traffic pattern', 'pattern'], strengthBias: 1.05, growthBias: 0.95, nextAction: 'Plan circuit repetition' },
+    { key: 'takeoff_landing', label: 'Takeoff & Landing', keywords: ['takeoff', 'landing', 'flare', 'roundout', 'touch and go'], strengthBias: 1.0, growthBias: 1.0, nextAction: 'Focus landing discipline' },
+    { key: 'nav', label: 'Navigation', keywords: ['navigation', 'nav', 'map', 'route', 'waypoint', 'planning'], strengthBias: 1.0, growthBias: 1.0, nextAction: 'Run a navigation exercise' },
+    { key: 'radio', label: 'Radio Work', keywords: ['radio', 'comms', 'communication', 'phraseology', 'rt'], strengthBias: 1.0, growthBias: 1.0, nextAction: 'Practice radio phraseology' },
+    { key: 'airmanship', label: 'Airmanship', keywords: ['airmanship', 'lookout', 'situational awareness', 'awareness', 'scan'], strengthBias: 1.05, growthBias: 0.95, nextAction: 'Reinforce lookout habits' },
+    { key: 'handling', label: 'Aircraft Handling', keywords: ['stall', 'stalls', 'turn', 'steep', 'climb', 'descent', 'handling'], strengthBias: 1.0, growthBias: 1.0, nextAction: 'Repeat handling drills' },
+    { key: 'decision', label: 'Decision Making', keywords: ['decision', 'judgement', 'judgment', 'planning', 'situational', 'choice'], strengthBias: 0.95, growthBias: 1.05, nextAction: 'Debrief decision points' },
+];
+
+const classifyEntry = (entry: StudentProgressReport['entries'][number]) => {
+    if (entry.competencyKey) {
+        const normalized = entry.competencyKey.toLowerCase();
+        const directMatch = COMPETENCY_RULES.filter(
+            (rule) => rule.key === normalized || rule.label.toLowerCase() === normalized
+        );
+        if (directMatch.length > 0) {
+            return directMatch;
+        }
+    }
+
+    const text = `${entry.exercise || ''} ${entry.comment || ''}`.toLowerCase();
+    return COMPETENCY_RULES.filter((rule) => rule.keywords.some((keyword) => text.includes(keyword)));
+};
+
+const buildCompetencyAreas = (reports: StudentProgressReport[]): CompetencyArea[] => {
+    const buckets = new Map<string, { label: string; scoreTotal: number; sampleCount: number; trendTotal: number; signalVotes: Record<CompetencyArea['signal'], number>; lastSeen: string | null; nextAction: string }>();
+
+    COMPETENCY_RULES.forEach((rule) => {
+        buckets.set(rule.key, {
+            label: rule.label,
+            scoreTotal: 0,
+            sampleCount: 0,
+            trendTotal: 0,
+            signalVotes: { strength: 0, growth: 0, watch: 0 },
+            lastSeen: null,
+            nextAction: rule.nextAction,
+        });
+    });
+
+    const sortedReports = [...reports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    sortedReports.forEach((report, reportIndex) => {
+        const reportWeight = Math.max(0.4, 1 - reportIndex * 0.12);
+        report.entries.forEach((entry) => {
+            const matchRules = classifyEntry(entry);
+            if (matchRules.length === 0) return;
+            matchRules.forEach((rule) => {
+                const bucket = buckets.get(rule.key);
+                if (!bucket) return;
+                const normalizedRating = Math.max(0, Math.min(1, (entry.rating - 1) / 3));
+                const weightedScore = normalizedRating * 100 * reportWeight * (entry.rating >= 3 ? rule.strengthBias : rule.growthBias);
+                bucket.scoreTotal += weightedScore;
+                bucket.trendTotal += entry.rating;
+                bucket.sampleCount += 1;
+                const signal: CompetencyArea['signal'] = entry.competencySignal || (entry.rating >= 3 ? 'strength' : entry.rating <= 2 ? 'growth' : 'watch');
+                bucket.signalVotes[signal] += reportWeight;
+                bucket.lastSeen = bucket.lastSeen && new Date(bucket.lastSeen).getTime() > new Date(report.date).getTime() ? bucket.lastSeen : report.date;
+            });
+        });
+    });
+
+    return Array.from(buckets.entries())
+        .map(([key, bucket]) => {
+            const averageScore = bucket.sampleCount > 0 ? bucket.scoreTotal / bucket.sampleCount : 0;
+            const averageRating = bucket.sampleCount > 0 ? bucket.trendTotal / bucket.sampleCount : 0;
+            const voteSignal = (Object.entries(bucket.signalVotes).sort((a, b) => b[1] - a[1])[0]?.[0] || null) as CompetencyArea['signal'] | null;
+            const signal: CompetencyArea['signal'] = voteSignal || (averageRating >= 3.4 ? 'strength' : averageRating <= 2.4 ? 'growth' : 'watch');
+            return {
+                key,
+                label: bucket.label,
+                score: parseFloat(averageScore.toFixed(1)),
+                sampleCount: bucket.sampleCount,
+                trend: parseFloat(averageRating.toFixed(1)),
+                lastSeen: bucket.lastSeen,
+                signal,
+                nextAction: bucket.nextAction,
+            };
+        })
+        .filter((area) => area.sampleCount > 0)
+        .sort((a, b) => {
+            if (a.signal !== b.signal) {
+                if (a.signal === 'growth') return -1;
+                if (b.signal === 'growth') return 1;
+                if (a.signal === 'watch') return -1;
+                if (b.signal === 'watch') return 1;
+            }
+            return a.score - b.score;
+        });
+};
+
+const formatLastSeen = (value: string | null) => {
+    if (!value) return 'No recent record';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'No recent record';
+    return format(date, 'PPP');
+};
+
+const getMeterTone = (signal: CompetencyArea['signal']) => {
+    if (signal === 'strength') {
+        return {
+            badge: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+            bar: 'bg-emerald-500',
+            panel: 'border-emerald-200 bg-emerald-50/60',
+        };
+    }
+
+    if (signal === 'growth') {
+        return {
+            badge: 'bg-rose-500/10 text-rose-700 border-rose-200',
+            bar: 'bg-rose-500',
+            panel: 'border-rose-200 bg-rose-50/60',
+        };
+    }
+
+    return {
+        badge: 'bg-amber-500/10 text-amber-700 border-amber-200',
+        bar: 'bg-amber-500',
+        panel: 'border-amber-200 bg-amber-50/60',
+    };
+};
+
+function CompetencyRow({ area }: { area: CompetencyArea }) {
+    const tone = getMeterTone(area.signal);
+    const label = area.signal === 'strength' ? 'Strength' : area.signal === 'growth' ? 'Growth area' : 'Watch';
+
+    return (
+        <div className={cn('rounded-xl border p-4 space-y-3', tone.panel)}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <div className="flex items-center gap-2">
+                        {area.signal === 'strength' ? (
+                            <Star className="h-4 w-4 text-emerald-600" />
+                        ) : area.signal === 'growth' ? (
+                            <TrendingDown className="h-4 w-4 text-rose-600" />
+                        ) : (
+                            <Target className="h-4 w-4 text-amber-600" />
+                        )}
+                        <p className="text-sm font-black">{area.label}</p>
+                    </div>
+                    <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        {area.sampleCount} debrief{area.sampleCount === 1 ? '' : 's'} · Avg {area.trend.toFixed(1)}/4 · Last seen {formatLastSeen(area.lastSeen)}
+                    </p>
+                </div>
+                <Badge variant="outline" className={cn('text-[10px] font-black uppercase tracking-[0.18em]', tone.badge)}>
+                    {label}
+                </Badge>
+            </div>
+
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                    <span>Strength meter</span>
+                    <span>{Math.round(area.score)} / 100</span>
+                </div>
+                <Progress value={Math.min(Math.max(area.score, 0), 100)} indicatorClassName={tone.bar} className="h-2" />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 text-xs">
+                <p className="font-medium text-muted-foreground">Next focus</p>
+                <p className="text-right font-black">{area.nextAction}</p>
+            </div>
+        </div>
+    );
+}
+
+function StrengthMeter({ areas }: { areas: CompetencyArea[] }) {
+    const strengths = [...areas].filter((area) => area.signal === 'strength').sort((a, b) => b.score - a.score).slice(0, 3);
+    const growthAreas = [...areas].filter((area) => area.signal === 'growth').sort((a, b) => a.score - b.score).slice(0, 3);
+    const watchAreas = [...areas].filter((area) => area.signal === 'watch').sort((a, b) => a.score - b.score).slice(0, 2);
+    const focusAreas = [...growthAreas, ...watchAreas].slice(0, 3);
+
+    if (areas.length === 0) {
+        return (
+            <section>
+                <SectionHeader title="Strength & Growth Meter" icon={Star} />
+                <div className="rounded-2xl border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+                    No skill-specific debrief notes have been captured yet, so the meter will populate once instructors log exercise feedback.
+                </div>
+            </section>
+        );
+    }
+
+    return (
+        <section className="space-y-4">
+            <SectionHeader title="Strength & Growth Meter" icon={Star} />
+            <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+                <div className="rounded-2xl border bg-background p-5 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-sm font-black uppercase tracking-[0.18em]">Strengths</p>
+                            <p className="text-xs text-muted-foreground">Skills that are holding up under repeated debrief pressure.</p>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] font-black uppercase tracking-[0.18em]">
+                            {strengths.length} highlighted
+                        </Badge>
+                    </div>
+                    <div className="space-y-3">
+                        {strengths.length > 0 ? strengths.map((area) => <CompetencyRow key={area.key} area={area} />) : (
+                            <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                                No current strength signal yet. Encourage more debrief entries to surface the student&apos;s most consistent areas.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border bg-background p-5 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-sm font-black uppercase tracking-[0.18em]">Growth areas</p>
+                            <p className="text-xs text-muted-foreground">The most useful skills to target in the next flight or debrief.</p>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] font-black uppercase tracking-[0.18em]">
+                            {focusAreas.length} prioritized
+                        </Badge>
+                    </div>
+                    <div className="space-y-3">
+                        {focusAreas.length > 0 ? focusAreas.map((area) => <CompetencyRow key={area.key} area={area} />) : (
+                            <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                                No growth area signal yet. Once instructors enter more specific exercise notes, the meter will highlight where the student needs help.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
 }
 
 export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
@@ -162,6 +402,8 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         return [...reports].sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
     }, [reports]);
 
+    const competencyAreas = useMemo(() => buildCompetencyAreas(reports), [reports]);
+
     if (isLoading) {
         return (
             <div className="h-full space-y-6">
@@ -193,6 +435,10 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                                 ))}
                             </div>
                         </section>
+
+                        <Separator />
+
+                        <StrengthMeter areas={competencyAreas} />
 
                         <Separator />
 

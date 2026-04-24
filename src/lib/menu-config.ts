@@ -106,6 +106,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'operations-view',
       },
       {
+        href: '/operations/meetings',
+        label: 'Meetings',
+        description: 'Manage agendas, minutes, and follow-up action items.',
+        permissionId: 'operations-view',
+      },
+      {
         href: '/operations/weather',
         label: 'Weather',
         description: 'View aviation weather reports and forecasts.',
@@ -423,7 +429,13 @@ export const menuConfig: MenuItem[] = [
       {
         href: '/development/usage-estimator',
         label: 'Usage Estimator',
-        description: 'Estimate Vercel traffic, database usage, and Prisma cost from user activity.',
+        description: 'Estimate Azure App Service, PostgreSQL, bandwidth, and tracking load from user activity.',
+        permissionId: 'development-view',
+      },
+      {
+        href: '/development/simulation-lab',
+        label: 'Simulation Lab',
+        description: 'Seed live tenant data for realistic school simulations, then inspect writes, generated records, and run history.',
         permissionId: 'development-view',
       },
       {
