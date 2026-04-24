@@ -82,12 +82,29 @@ export const useTenantConfig = () => {
   const bootstrapTenant = typeof window !== 'undefined'
     ? (window.__SAFEVIATE_THEME_BOOTSTRAP__?.tenant as Tenant | null | undefined) ?? null
     : null;
+  const readInitialIndustryOverride = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return normalizeIndustry(window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY));
+    } catch {
+      return DEFAULT_SAFEVIATE_INDUSTRY;
+    }
+  };
+  const readInitialLocalOverride = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
+      return stored ? safeJsonParse<Record<string, unknown>>(stored) : null;
+    } catch {
+      return null;
+    }
+  };
   const { tenantId, userProfile, isLoading: isProfileLoading } = useUserProfile();
   const [tenantData, setTenantData] = useState<Tenant | null>(bootstrapTenant);
   const [isLoading, setIsLoading] = useState(!bootstrapTenant);
   const [error, setError] = useState<Error | null>(null);
-  const [industryOverride, setIndustryOverride] = useState<IndustryType | null>(null);
-  const [localOverride, setLocalOverride] = useState<Record<string, unknown> | null>(null);
+  const [industryOverride, setIndustryOverride] = useState<IndustryType | null>(readInitialIndustryOverride);
+  const [localOverride, setLocalOverride] = useState<Record<string, unknown> | null>(readInitialLocalOverride);
 
   const buildLocalTenant = (override: Record<string, unknown> | null): Tenant => ({
     id: FALLBACK_TENANT_ID,
@@ -143,7 +160,6 @@ export const useTenantConfig = () => {
         return;
       }
 
-      setIsLoading(true);
       try {
         const [meResponse, configResponse] = await Promise.all([
           fetch('/api/me', { cache: 'no-store' }),
@@ -163,21 +179,26 @@ export const useTenantConfig = () => {
 
         if (!cancelled) {
           if (tenantFromApi) {
-            setTenantData({
+            setTenantData((current) => ({
+              ...(current || bootstrapTenant || {}),
               ...tenantFromApi,
               ...(tenantConfigWithoutIndustry || {}),
-            });
+            }));
           } else if (localOverride) {
             setTenantData(buildLocalTenant(localOverride));
+          } else if (bootstrapTenant) {
+            setTenantData(bootstrapTenant);
           } else {
-            setTenantData(null);
+            setTenantData((current) => current);
           }
           setError(null);
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error('Failed to load tenant configuration.'));
-          setTenantData(null);
+          if (!bootstrapTenant && !localOverride) {
+            setTenantData((current) => current);
+          }
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -199,7 +220,11 @@ export const useTenantConfig = () => {
             );
             const nextConfigWithoutIndustry = stripIndustryFromConfig(nextConfig);
             if (nextConfigWithoutIndustry && Object.keys(nextConfigWithoutIndustry).length > 0) {
-              setTenantData((current) => (current ? { ...current, ...nextConfigWithoutIndustry } : buildLocalTenant(nextConfigWithoutIndustry)));
+              setTenantData((current) =>
+                current
+                  ? { ...current, ...nextConfigWithoutIndustry }
+                  : buildLocalTenant(nextConfigWithoutIndustry)
+              );
             }
           }
         } catch {

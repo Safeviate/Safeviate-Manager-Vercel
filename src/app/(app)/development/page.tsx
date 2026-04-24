@@ -17,6 +17,39 @@ type BookingSequenceSettings = {
   lastResetAt?: string;
 };
 
+const PERFORMANCE_ROADMAP = [
+  {
+    title: '1. Finish CLS / Theme Stability',
+    detail:
+      'Keep first paint stable by aligning default and tenant formatting, reserving header/card space, and removing late layout-affecting theme passes.',
+  },
+  {
+    title: '2. Trim Heavy First Renders',
+    detail:
+      'Render the page shell first, defer below-the-fold sections, and avoid mounting large trees before the user asks for them.',
+  },
+  {
+    title: '3. Expand Safe Live Caching',
+    detail:
+      'Cache tenant config, aircraft/personnel reference lists, and dashboard summary payloads with short-lived tenant-scoped invalidation.',
+  },
+  {
+    title: '4. Add Query-Level Hotspot Detection',
+    detail:
+      'Use Simulation Lab and route telemetry to surface expensive reads, repeated queries, and slow request paths before optimizing blindly.',
+  },
+  {
+    title: '5. Optimize the Hottest Routes',
+    detail:
+      'Refactor the measured bottlenecks first using smaller selects, batched reads, and precomputed rollups where the app is actually under pressure.',
+  },
+  {
+    title: '6. Decide on Archiving at Scale',
+    detail:
+      'Once seeded runs prove record-volume pressure, archive older bookings, telemetry, and historical records without affecting live operations.',
+  },
+];
+
 export default function DevelopmentPage() {
   const { toast } = useToast();
   const { canAccessMenuItem } = usePermissions();
@@ -154,6 +187,30 @@ export default function DevelopmentPage() {
               <p className="text-[10px] font-medium text-muted-foreground">
                 This will restart the sequence for new bookings.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-primary">
+            Performance Roadmap
+          </h3>
+          <p className="text-xs text-muted-foreground font-medium">
+            Internal review path for performance work after simulation, telemetry, and live rendering checks.
+          </p>
+        </div>
+
+        <Card className="border shadow-none">
+          <CardContent className="p-5">
+            <div className="grid gap-3">
+              {PERFORMANCE_ROADMAP.map((step) => (
+                <div key={step.title} className="rounded-2xl border bg-background px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">{step.title}</p>
+                  <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">{step.detail}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
