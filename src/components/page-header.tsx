@@ -23,13 +23,13 @@ export const CARD_HEADER_BAND_CLASS =
   "border-b bg-muted/5 px-2 py-1.5 min-h-11 shrink-0 md:px-4";
 
 export const CARD_HEADER_TOP_ROW_CLASS =
-  "flex items-start justify-between gap-4";
+  "flex min-h-[52px] items-start justify-between gap-4";
 
 export const CARD_HEADER_SCOPE_ZONE_CLASS =
   "min-w-0 flex-1";
 
 export const CARD_HEADER_ACTION_ZONE_CLASS =
-  "flex shrink-0 flex-wrap items-center justify-end gap-2";
+  "flex min-h-8 shrink-0 flex-wrap items-center justify-end gap-2";
 
 const DEFAULT_HEADER_DESCRIPTIONS: Record<string, string> = {
   'Flight Billing': 'Review completed flights ready for billing and export.',

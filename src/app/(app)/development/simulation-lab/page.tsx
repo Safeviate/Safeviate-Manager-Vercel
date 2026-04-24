@@ -908,7 +908,7 @@ export default function SimulationLabPage() {
         <Card className="flex min-h-0 flex-col overflow-hidden border border-card-border shadow-none">
           <div className="border-b px-4 py-4 md:px-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
+              <div className="min-h-[52px] space-y-2">
                 <Skeleton className="h-8 w-48" />
                 <Skeleton className="h-4 w-[420px] max-w-full" />
               </div>
@@ -989,11 +989,11 @@ export default function SimulationLabPage() {
         <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
           <ScrollArea className="h-full">
             <div className="space-y-6 p-4 md:p-6">
-              <div className="rounded-2xl border bg-muted/5 px-4 py-4">
+              <div className="min-h-[84px] rounded-2xl border bg-muted/5 px-4 py-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Telemetry Tracking</p>
-                    <p className="mt-1 text-sm font-semibold">
+                    <p className="mt-1 min-h-[20px] text-sm font-semibold">
                       {activeRunId ? `Active run: ${activeRunId}` : 'No simulation run is currently collecting downstream route telemetry.'}
                     </p>
                   </div>
@@ -1009,7 +1009,7 @@ export default function SimulationLabPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <MetricTile icon={<Database className="h-4 w-4 text-blue-600" />} label="Persisted Runs" value={String(summary.totalRuns)} hint="Simulation runs still on the tenant" />
                 <MetricTile icon={<Users className="h-4 w-4 text-emerald-600" />} label="DB Writes" value={String(summary.totalWrites)} hint="Total records created across runs" />
                 <MetricTile icon={<PlaneTakeoff className="h-4 w-4 text-amber-600" />} label="Flight Hours" value={`${summary.totalFlightHours.toFixed(1)}h`} hint="Completed simulated training hours" />
@@ -1022,7 +1022,7 @@ export default function SimulationLabPage() {
               </div>
 
               <Card className="border shadow-none">
-                <CardHeader className="border-b bg-muted/5">
+                <CardHeader className="min-h-[84px] border-b bg-muted/5">
                   <CardTitle className="text-sm font-black uppercase tracking-tight">Telemetry Overview</CardTitle>
                   <CardDescription>
                     Read the simulation in three layers: projected load, actual generator activity, and downstream route traffic after you use the seeded app.
@@ -1030,10 +1030,10 @@ export default function SimulationLabPage() {
                 </CardHeader>
                 <CardContent className="space-y-4 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/5 px-4 py-3">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Telemetry Scope</p>
-                      <p className="mt-1 text-sm font-semibold">{telemetryOverview.scopeLabel}</p>
-                    </div>
+                  <div className="min-h-[44px]">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Telemetry Scope</p>
+                    <p className="mt-1 min-h-[20px] text-sm font-semibold">{telemetryOverview.scopeLabel}</p>
+                  </div>
                     <Badge variant="outline" className="text-[10px] font-black uppercase tracking-[0.16em]">
                       Estimated vs Actual vs Observed
                     </Badge>
