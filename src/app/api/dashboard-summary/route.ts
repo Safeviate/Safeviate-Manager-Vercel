@@ -12,6 +12,7 @@ import {
   ensureRisksSchema,
   ensureSafetyReportsSchema,
 } from '@/lib/server/bootstrap-db';
+import { getOrSetRouteCache } from '@/lib/server/route-cache';
 import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -53,16 +54,18 @@ async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> 
 }
 
 async function readTenantConfig(tenantId: string) {
-  try {
-    const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-      `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
-      tenantId
-    );
-    return (rows[0]?.data as Record<string, unknown> | null) || {};
-  } catch (error) {
-    console.error('[dashboard-summary] fallback for tenant config:', error);
-    return {};
-  }
+  return getOrSetRouteCache(`dashboard-summary:tenant-config:${tenantId}`, 30_000, async () => {
+    try {
+      const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+        `SELECT data FROM tenant_configs WHERE tenant_id = $1 LIMIT 1`,
+        tenantId
+      );
+      return (rows[0]?.data as Record<string, unknown> | null) || {};
+    } catch (error) {
+      console.error('[dashboard-summary] fallback for tenant config:', error);
+      return {};
+    }
+  });
 }
 
 export async function GET() {
@@ -91,7 +94,8 @@ export async function GET() {
       select: { tenantId: true },
     });
     tenantId = currentUser?.tenantId || 'safeviate';
-    const tenantConfig = await readTenantConfig(tenantId);
+    const resolvedTenantId = tenantId;
+    const tenantConfig = await readTenantConfig(resolvedTenantId);
 
     await Promise.all([
       ensureAttendanceRecordsSchema(),
@@ -116,30 +120,30 @@ export async function GET() {
       riskRows,
       attendanceRows,
       meetingRows,
-    ] = await Promise.all([
-      safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId }, select: { data: true } })),
-      safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId }, select: { data: true } })),
-      safeFindMany('personnel', prisma.personnel.findMany({ where: { tenantId } })),
-      safeFindMany('management_of_change', prisma.managementOfChange.findMany({ where: { tenantId }, select: { data: true } })),
-      safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId }, select: { data: true } })),
-      safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId }, select: { data: true } })),
-      safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId }, select: { data: true } })),
-      safeFindMany('risks', prisma.risk.findMany({ where: { tenantId }, select: { data: true } })),
+    ] = await getOrSetRouteCache(`dashboard-summary:${resolvedTenantId}`, 30_000, async () => Promise.all([
+      safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
+      safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
+      safeFindMany('personnel', prisma.personnel.findMany({ where: { tenantId: resolvedTenantId } })),
+      safeFindMany('management_of_change', prisma.managementOfChange.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
+      safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
+      safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
+      safeFindMany('corrective_action_plans', prisma.correctiveActionPlan.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
+      safeFindMany('risks', prisma.risk.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
       safeFindMany(
         'attendance_records',
         prisma.$queryRawUnsafe<{ data: unknown }[]>(
           `SELECT data FROM attendance_records WHERE tenant_id = $1 ORDER BY created_at DESC`,
-          tenantId
+          resolvedTenantId
         )
       ),
       safeFindMany(
         'meetings',
         prisma.$queryRawUnsafe<{ data: unknown }[]>(
           `SELECT data FROM meetings WHERE tenant_id = $1 ORDER BY created_at DESC`,
-          tenantId
+          resolvedTenantId
         )
       ),
-    ]);
+    ]));
 
     const personnelList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null }> = [];
     const instructorList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null }> = [];

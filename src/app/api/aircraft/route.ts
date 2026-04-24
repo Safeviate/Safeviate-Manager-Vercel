@@ -2,6 +2,7 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { normalizeUploadUrl } from '@/lib/server/azure-blob';
 import { ensureAircraftSchema } from '@/lib/server/bootstrap-db';
+import { getOrSetRouteCache, invalidateRouteCache } from '@/lib/server/route-cache';
 import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -54,11 +55,16 @@ export async function GET() {
     await ensureAircraftSchema();
     tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ aircraft: [] }, { status: 200 });
+    const resolvedTenantId = tenantId;
 
-    const aircraft = await prisma.aircraftRecord.findMany({
-      where: { tenantId },
-      orderBy: { createdAt: 'asc' },
-    });
+    const aircraft = await getOrSetRouteCache(
+      `aircraft:${resolvedTenantId}`,
+      60_000,
+      () => prisma.aircraftRecord.findMany({
+        where: { tenantId: resolvedTenantId },
+        orderBy: { createdAt: 'asc' },
+      })
+    );
 
     await recordSimulationRouteMetric({
       tenantId,
@@ -123,6 +129,9 @@ export async function POST(request: Request) {
         data,
       },
     });
+
+    invalidateRouteCache(`aircraft:${tenantId}`);
+    invalidateRouteCache(`dashboard-summary:${tenantId}`);
 
     await recordSimulationRouteMetric({
       tenantId,

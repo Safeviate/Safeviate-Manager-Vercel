@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { hexToHsl } from '@/lib/utils';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 
@@ -137,6 +138,9 @@ export const SWIMLANE_THEME_KEY = 'safeviate-swimlane-theme';
 export const MATRIX_THEME_KEY = 'safeviate-matrix-theme';
 export const SCALE_KEY = 'safeviate-scale';
 export const SAVED_THEMES_KEY = 'safeviate-saved-themes';
+const AUTH_ROUTES = ['/login', '/forgot-password', '/setup-password', '/beta-nda'];
+
+type BootstrapThemeSnapshot = NonNullable<Window['__SAFEVIATE_THEME_BOOTSTRAP__']>;
 
 // --- Default Values ---
 const defaultColors: ThemeColors = {
@@ -269,6 +273,11 @@ function getInitialState<T>(key: string, defaultValue: T): T {
 const getSavedThemesStorageKey = (tenantId: string | null | undefined) =>
   tenantId ? `${SAVED_THEMES_KEY}:${tenantId}` : SAVED_THEMES_KEY;
 
+const getBootstrapThemeSnapshot = (): BootstrapThemeSnapshot | null => {
+  if (typeof window === 'undefined') return null;
+  return window.__SAFEVIATE_THEME_BOOTSTRAP__ || null;
+};
+
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export const useTheme = () => {
@@ -280,20 +289,56 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<ThemeColors>(defaultColors);
-  const [buttonTheme, setButtonTheme] = useState<ButtonThemeColors>(defaultButtonColors);
-  const [cardTheme, setCardTheme] = useState<CardThemeColors>(defaultCardColors);
-  const [popoverTheme, setPopoverTheme] = useState<PopoverThemeColors>(defaultPopoverColors);
-  const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(defaultSidebarColors);
-  const [sidebarBackgroundImage, setSidebarBackgroundImageState] = useState<string>(defaultSidebarBackgroundImage);
-  const [sidebarBackgroundOpacity, setSidebarBackgroundOpacityState] = useState<number>(0.2);
-  const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(defaultHeaderColors);
-  const [headerBackgroundImage, setHeaderBackgroundImageState] = useState<string>('');
-  const [headerBackgroundOpacity, setHeaderBackgroundOpacityState] = useState<number>(0.22);
-  const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(defaultSwimlaneColors);
-  const [matrixTheme, setMatrixTheme] = useState<MatrixThemeColors>(defaultMatrixColors);
+  const pathname = usePathname();
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname === route || pathname?.startsWith(`${route}/`));
+  const [theme, setTheme] = useState<ThemeColors>(() => ({
+    ...defaultColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.main || {}),
+  }));
+  const [buttonTheme, setButtonTheme] = useState<ButtonThemeColors>(() => ({
+    ...defaultButtonColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.button || {}),
+  }));
+  const [cardTheme, setCardTheme] = useState<CardThemeColors>(() => ({
+    ...defaultCardColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.card || {}),
+  }));
+  const [popoverTheme, setPopoverTheme] = useState<PopoverThemeColors>(() => ({
+    ...defaultPopoverColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.popover || {}),
+  }));
+  const [sidebarTheme, setSidebarTheme] = useState<SidebarThemeColors>(() => ({
+    ...defaultSidebarColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.sidebar || {}),
+  }));
+  const [sidebarBackgroundImage, setSidebarBackgroundImageState] = useState<string>(
+    () => (getBootstrapThemeSnapshot()?.theme?.sidebarBackgroundImage as string | undefined) || defaultSidebarBackgroundImage
+  );
+  const [sidebarBackgroundOpacity, setSidebarBackgroundOpacityState] = useState<number>(
+    () => (getBootstrapThemeSnapshot()?.theme?.sidebarBackgroundOpacity as number | undefined) ?? 0.2
+  );
+  const [headerTheme, setHeaderTheme] = useState<HeaderThemeColors>(() => ({
+    ...defaultHeaderColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.header || {}),
+  }));
+  const [headerBackgroundImage, setHeaderBackgroundImageState] = useState<string>(
+    () => (getBootstrapThemeSnapshot()?.theme?.headerBackgroundImage as string | undefined) || ''
+  );
+  const [headerBackgroundOpacity, setHeaderBackgroundOpacityState] = useState<number>(
+    () => (getBootstrapThemeSnapshot()?.theme?.headerBackgroundOpacity as number | undefined) ?? 0.22
+  );
+  const [swimlaneTheme, setSwimlaneTheme] = useState<SwimlaneThemeColors>(() => ({
+    ...defaultSwimlaneColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.swimlane || {}),
+  }));
+  const [matrixTheme, setMatrixTheme] = useState<MatrixThemeColors>(() => ({
+    ...defaultMatrixColors,
+    ...(getBootstrapThemeSnapshot()?.theme?.matrix || {}),
+  }));
   const [uiMode, setUiModeState] = useState<UiMode>('classic');
-  const [scale, setScaleState] = useState<number>(defaultScale);
+  const [scale, setScaleState] = useState<number>(
+    () => (getBootstrapThemeSnapshot()?.theme?.scale as number | undefined) ?? defaultScale
+  );
   // Browser-only presets for the current tenant, separate from shared tenant branding.
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([]);
 
@@ -331,6 +376,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   // --- Auto-sync with shared tenant branding ---
   useEffect(() => {
+    if (!tenant?.theme) {
+      return;
+    }
+
+    if (isAuthRoute) {
+      return;
+    }
+
     const nextTheme = {
       ...defaultColors,
       ...(tenant?.theme?.main || {}),
@@ -377,9 +430,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       tenant?.theme?.sidebarBackgroundImage
     );
     const localScale = getInitialState<number>(SCALE_KEY, defaultScale);
-    const nextScale = resolveScale(tenant?.theme?.scale) !== defaultScale
-      ? resolveScale(tenant?.theme?.scale)
-      : localScale;
+    const nextScale = isAuthRoute
+      ? defaultScale
+      : resolveScale(tenant?.theme?.scale) !== defaultScale
+        ? resolveScale(tenant?.theme?.scale)
+        : localScale;
     const nextSavedThemes = getInitialState<SavedTheme[]>(
       getSavedThemesStorageKey(tenantId),
       []
@@ -399,8 +454,15 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setMatrixTheme(nextMatrixTheme);
     setUiModeState('classic');
     setScaleState(nextScale);
+  }, [isAuthRoute, tenant?.theme]);
+
+  useEffect(() => {
+    const nextSavedThemes = getInitialState<SavedTheme[]>(
+      getSavedThemesStorageKey(tenantId),
+      []
+    );
     setSavedThemes(nextSavedThemes);
-  }, [tenant?.theme]);
+  }, [tenantId]);
 
   useEffect(() => {
     applyColorsToDOM(theme);
@@ -415,8 +477,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     applyCssNumberToDOM('--header-background-opacity', headerBackgroundOpacity);
     applyColorsToDOM(swimlaneTheme);
     applyColorsToDOM(matrixTheme);
-    applyScaleToDOM(scale);
-  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, sidebarBackgroundImage, sidebarBackgroundOpacity, headerTheme, headerBackgroundImage, headerBackgroundOpacity, swimlaneTheme, matrixTheme, scale]);
+    applyScaleToDOM(isAuthRoute ? defaultScale : scale);
+  }, [theme, buttonTheme, cardTheme, popoverTheme, sidebarTheme, sidebarBackgroundImage, sidebarBackgroundOpacity, headerTheme, headerBackgroundImage, headerBackgroundOpacity, swimlaneTheme, matrixTheme, scale, isAuthRoute]);
   
 
   const updateTheme = <T extends object>(

@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
+import { getOrSetRouteCache } from '@/lib/server/route-cache';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -27,9 +28,9 @@ export async function GET() {
 
     await ensurePersonnelSchema();
     const [roleRows, departmentRows, personnelRows] = await Promise.all([
-      prisma.role.findMany({ where: { tenantId } }),
-      prisma.department.findMany({ where: { tenantId } }),
-      prisma.personnel.findMany({ where: { tenantId } }),
+      getOrSetRouteCache(`personnel:roles:${tenantId}`, 60_000, () => prisma.role.findMany({ where: { tenantId } })),
+      getOrSetRouteCache(`personnel:departments:${tenantId}`, 60_000, () => prisma.department.findMany({ where: { tenantId } })),
+      getOrSetRouteCache(`personnel:list:${tenantId}`, 60_000, () => prisma.personnel.findMany({ where: { tenantId } })),
     ]);
 
     return NextResponse.json(

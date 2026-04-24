@@ -38,12 +38,25 @@ export const metadata: Metadata = {
 };
 
 type TenantThemeConfig = Record<string, unknown> | null;
+type TenantBootstrapConfig = {
+  theme: TenantThemeConfig;
+  tenant: Record<string, unknown> | null;
+};
 
-async function getInitialTenantTheme(): Promise<TenantThemeConfig> {
+declare global {
+  interface Window {
+    __SAFEVIATE_THEME_BOOTSTRAP__?: {
+      theme?: Record<string, unknown> | null;
+      tenant?: Record<string, unknown> | null;
+    };
+  }
+}
+
+async function getInitialTenantBootstrap(): Promise<TenantBootstrapConfig> {
   try {
     const session = await getServerSession(authOptions);
     const email = session?.user?.email?.trim().toLowerCase();
-    if (!email) return null;
+    if (!email) return { theme: null, tenant: null };
 
     await ensureTenantConfigSchema();
 
@@ -77,17 +90,37 @@ async function getInitialTenantTheme(): Promise<TenantThemeConfig> {
       configRow?.data && typeof configRow.data === 'object'
         ? (configRow.data as Record<string, unknown>)
         : null;
+    const tenantRow = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        name: true,
+      },
+    }).catch(() => null);
 
-    return config?.theme && typeof config.theme === 'object'
-      ? (config.theme as Record<string, unknown>)
+    const tenantConfigWithoutIndustry = config
+      ? Object.fromEntries(Object.entries(config).filter(([key]) => key !== 'industry'))
       : null;
+
+    return {
+      theme: config?.theme && typeof config.theme === 'object'
+        ? (config.theme as Record<string, unknown>)
+        : null,
+      tenant: tenantRow
+        ? {
+            ...tenantRow,
+            ...(tenantConfigWithoutIndustry || {}),
+          }
+        : null,
+    };
   } catch {
-    return null;
+    return { theme: null, tenant: null };
   }
 }
 
-function buildThemeBootstrapScript(serverTheme: TenantThemeConfig) {
-  const serializedServerTheme = JSON.stringify(serverTheme ?? null).replace(/</g, '\\u003c');
+function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
+  const serializedServerTheme = JSON.stringify(bootstrap.theme ?? null).replace(/</g, '\\u003c');
+  const serializedServerTenant = JSON.stringify(bootstrap.tenant ?? null).replace(/</g, '\\u003c');
 
   return `
 (() => {
@@ -208,7 +241,7 @@ function buildThemeBootstrapScript(serverTheme: TenantThemeConfig) {
     const isAuthRoute = authRoutes.some((route) => pathname === route || pathname.startsWith(route + '/'));
     const raw = window.localStorage.getItem(LOCAL_TENANT_CONFIG_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    const localTheme = parsed && parsed.theme && typeof parsed.theme === 'object' ? parsed.theme : null;
+    const localTheme = !isAuthRoute && parsed && parsed.theme && typeof parsed.theme === 'object' ? parsed.theme : null;
 
     applyColorGroup({ ...defaults.main, ...(serverTheme && serverTheme.main ? serverTheme.main : {}), ...(localTheme && localTheme.main ? localTheme.main : {}) });
     applyColorGroup({ ...defaults.button, ...(serverTheme && serverTheme.button ? serverTheme.button : {}), ...(localTheme && localTheme.button ? localTheme.button : {}) });
@@ -241,6 +274,8 @@ function buildThemeBootstrapScript(serverTheme: TenantThemeConfig) {
     document.documentElement.style.setProperty('--sidebar-background-opacity', String(sidebarBackgroundOpacity));
     document.documentElement.style.setProperty('--header-background-opacity', String(headerBackgroundOpacity));
 
+    let scale = 100;
+
     if (!isAuthRoute) {
       const themeScale =
         typeof (localTheme && localTheme.scale) === 'number'
@@ -248,11 +283,30 @@ function buildThemeBootstrapScript(serverTheme: TenantThemeConfig) {
           : (typeof (serverTheme && serverTheme.scale) === 'number' ? serverTheme.scale : null);
       const localScaleRaw = window.localStorage.getItem(SCALE_KEY);
       const localScale = localScaleRaw ? JSON.parse(localScaleRaw) : null;
-      const scale = typeof themeScale === 'number' ? themeScale : (typeof localScale === 'number' ? localScale : 100);
+      scale = typeof themeScale === 'number' ? themeScale : (typeof localScale === 'number' ? localScale : 100);
       document.documentElement.style.fontSize = \`\${scale}%\`;
     } else {
       document.documentElement.style.fontSize = '100%';
     }
+
+    window.__SAFEVIATE_THEME_BOOTSTRAP__ = {
+      theme: {
+        main: { ...defaults.main, ...(serverTheme && serverTheme.main ? serverTheme.main : {}), ...(localTheme && localTheme.main ? localTheme.main : {}) },
+        button: { ...defaults.button, ...(serverTheme && serverTheme.button ? serverTheme.button : {}), ...(localTheme && localTheme.button ? localTheme.button : {}) },
+        card: { ...defaults.card, ...(serverTheme && serverTheme.card ? serverTheme.card : {}), ...(localTheme && localTheme.card ? localTheme.card : {}) },
+        popover: { ...defaults.popover, ...(serverTheme && serverTheme.popover ? serverTheme.popover : {}), ...(localTheme && localTheme.popover ? localTheme.popover : {}) },
+        sidebar: { ...defaults.sidebar, ...(serverTheme && serverTheme.sidebar ? serverTheme.sidebar : {}), ...(localTheme && localTheme.sidebar ? localTheme.sidebar : {}) },
+        header: { ...defaults.header, ...(serverTheme && serverTheme.header ? serverTheme.header : {}), ...(localTheme && localTheme.header ? localTheme.header : {}) },
+        swimlane: { ...defaults.swimlane, ...(serverTheme && serverTheme.swimlane ? serverTheme.swimlane : {}), ...(localTheme && localTheme.swimlane ? localTheme.swimlane : {}) },
+        matrix: { ...defaults.matrix, ...(serverTheme && serverTheme.matrix ? serverTheme.matrix : {}), ...(localTheme && localTheme.matrix ? localTheme.matrix : {}) },
+        sidebarBackgroundImage,
+        headerBackgroundImage,
+        sidebarBackgroundOpacity,
+        headerBackgroundOpacity,
+        scale,
+      },
+      tenant: ${serializedServerTenant},
+    };
   } catch {
     // Keep the CSS defaults when browser storage is unavailable or malformed.
   }
@@ -265,12 +319,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initialTenantTheme = await getInitialTenantTheme();
+  const initialTenantBootstrap = await getInitialTenantBootstrap();
 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: buildThemeBootstrapScript(initialTenantTheme) }} />
+        <script dangerouslySetInnerHTML={{ __html: buildThemeBootstrapScript(initialTenantBootstrap) }} />
       </head>
       <body className={`${inter.variable} font-body antialiased`}>
         <AppProviders>

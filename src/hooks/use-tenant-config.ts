@@ -9,6 +9,15 @@ const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
 const FALLBACK_TENANT_ID = 'safeviate';
 const FALLBACK_TENANT_NAME = 'Safeviate';
 
+declare global {
+  interface Window {
+    __SAFEVIATE_THEME_BOOTSTRAP__?: {
+      theme?: Record<string, unknown> | null;
+      tenant?: Record<string, unknown> | null;
+    };
+  }
+}
+
 const safeJsonParse = <T,>(text: string): T | null => {
   if (!text.trim()) return null;
 
@@ -70,9 +79,12 @@ const DEFAULT_SAFEVIATE_INDUSTRY: IndustryType = 'Aviation: Flight Training (ATO
  * Supports a developer override for testing industry-specific layouts.
  */
 export const useTenantConfig = () => {
+  const bootstrapTenant = typeof window !== 'undefined'
+    ? (window.__SAFEVIATE_THEME_BOOTSTRAP__?.tenant as Tenant | null | undefined) ?? null
+    : null;
   const { tenantId, userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const [tenantData, setTenantData] = useState<Tenant | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [tenantData, setTenantData] = useState<Tenant | null>(bootstrapTenant);
+  const [isLoading, setIsLoading] = useState(!bootstrapTenant);
   const [error, setError] = useState<Error | null>(null);
   const [industryOverride, setIndustryOverride] = useState<IndustryType | null>(null);
   const [localOverride, setLocalOverride] = useState<Record<string, unknown> | null>(null);
@@ -116,13 +128,17 @@ export const useTenantConfig = () => {
       }
 
       if (!userProfile) {
-        setTenantData(null);
+        if (!bootstrapTenant) {
+          setTenantData(null);
+        }
         setIsLoading(false);
         return;
       }
 
       if (!tenantId) {
-        setTenantData(null);
+        if (!bootstrapTenant) {
+          setTenantData(null);
+        }
         setIsLoading(false);
         return;
       }

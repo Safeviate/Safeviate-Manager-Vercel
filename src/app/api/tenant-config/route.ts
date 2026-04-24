@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureTenantConfigSchema } from '@/lib/server/bootstrap-db';
+import { getOrSetRouteCache, invalidateRouteCache } from '@/lib/server/route-cache';
 import { MASTER_TENANT_ID, isMasterTenantEmail, resolveTenantOverride } from '@/lib/server/tenant-access';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -20,10 +21,14 @@ export async function GET(request: Request) {
       ? await resolveTenantOverride(request, email, baseTenantId)
       : baseTenantId;
 
-    const configRow = await prisma.tenantConfig.findUnique({
-      where: { tenantId },
-      select: { data: true },
-    });
+    const configRow = await getOrSetRouteCache(
+      `tenant-config:${tenantId}`,
+      60_000,
+      () => prisma.tenantConfig.findUnique({
+        where: { tenantId },
+        select: { data: true },
+      })
+    );
 
     return NextResponse.json({ config: configRow?.data ?? null }, { status: 200 });
   } catch (error) {
@@ -86,6 +91,8 @@ export async function PUT(request: Request) {
         updatedAt: new Date(),
       },
     });
+
+    invalidateRouteCache(`tenant-config:${resolvedTenantId}`);
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
