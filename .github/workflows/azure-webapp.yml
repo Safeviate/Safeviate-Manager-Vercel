@@ -55,9 +55,43 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure Web App (attempt 1)
+        id: deploy_attempt_1
         uses: azure/webapps-deploy@v3
+        continue-on-error: true
         with:
           app-name: safeviate
           package: .
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+
+      - name: Wait before retry 2
+        if: steps.deploy_attempt_1.outcome != 'success'
+        run: sleep 30
+
+      - name: Deploy to Azure Web App (attempt 2)
+        id: deploy_attempt_2
+        if: steps.deploy_attempt_1.outcome != 'success'
+        uses: azure/webapps-deploy@v3
+        continue-on-error: true
+        with:
+          app-name: safeviate
+          package: .
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+
+      - name: Wait before retry 3
+        if: steps.deploy_attempt_1.outcome != 'success' && steps.deploy_attempt_2.outcome != 'success'
+        run: sleep 30
+
+      - name: Deploy to Azure Web App (attempt 3)
+        id: deploy_attempt_3
+        if: steps.deploy_attempt_1.outcome != 'success' && steps.deploy_attempt_2.outcome != 'success'
+        uses: azure/webapps-deploy@v3
+        continue-on-error: true
+        with:
+          app-name: safeviate
+          package: .
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+
+      - name: Fail if Azure deployment still failed
+        if: steps.deploy_attempt_1.outcome != 'success' && steps.deploy_attempt_2.outcome != 'success' && steps.deploy_attempt_3.outcome != 'success'
+        run: exit 1

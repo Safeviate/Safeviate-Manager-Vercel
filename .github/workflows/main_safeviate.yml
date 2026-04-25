@@ -52,11 +52,44 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_83B5837B1C82421F9C7C19366F95782F }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_472FC1469C54499492D0E576AB651E32 }}
 
-      - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
+      - name: 'Deploy to Azure Web App (attempt 1)'
+        id: deploy_to_webapp_attempt_1
         uses: azure/webapps-deploy@v3
+        continue-on-error: true
         with:
           app-name: 'safeviate'
           slot-name: 'Production'
           package: .
+
+      - name: Wait before retry 2
+        if: steps.deploy_to_webapp_attempt_1.outcome != 'success'
+        run: sleep 30
+
+      - name: 'Deploy to Azure Web App (attempt 2)'
+        id: deploy_to_webapp_attempt_2
+        if: steps.deploy_to_webapp_attempt_1.outcome != 'success'
+        uses: azure/webapps-deploy@v3
+        continue-on-error: true
+        with:
+          app-name: 'safeviate'
+          slot-name: 'Production'
+          package: .
+
+      - name: Wait before retry 3
+        if: steps.deploy_to_webapp_attempt_1.outcome != 'success' && steps.deploy_to_webapp_attempt_2.outcome != 'success'
+        run: sleep 30
+
+      - name: 'Deploy to Azure Web App (attempt 3)'
+        id: deploy_to_webapp_attempt_3
+        if: steps.deploy_to_webapp_attempt_1.outcome != 'success' && steps.deploy_to_webapp_attempt_2.outcome != 'success'
+        uses: azure/webapps-deploy@v3
+        continue-on-error: true
+        with:
+          app-name: 'safeviate'
+          slot-name: 'Production'
+          package: .
+
+      - name: Fail if Azure deployment still failed
+        if: steps.deploy_to_webapp_attempt_1.outcome != 'success' && steps.deploy_to_webapp_attempt_2.outcome != 'success' && steps.deploy_to_webapp_attempt_3.outcome != 'success'
+        run: exit 1
           
