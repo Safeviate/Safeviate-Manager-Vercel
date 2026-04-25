@@ -23,7 +23,6 @@ import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
 import { Eye, Trash2, FilePlus, ShieldAlert, ListFilter } from 'lucide-react';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -41,28 +40,6 @@ type EnrichedBooking = Booking & {
   fullStartTime?: Date;
   aircraft?: Aircraft;
 };
-
-const getBookingTypeAbbreviation = (type: Booking['type']): string => {
-    switch (type) {
-        case 'Training Flight': return 'T';
-        case 'Private Flight': return 'P';
-        case 'Maintenance Flight': return 'M';
-        case 'Reposition Flight': return 'R';
-        default: return '';
-    }
-}
-
-const getStatusBadgeVariant = (status: Booking['status']): "default" | "secondary" | "destructive" | "outline" => {
-    switch (status) {
-        case 'Approved': return 'default';
-        case 'Completed': return 'secondary';
-        case 'Cancelled':
-        case 'Cancelled with Reason': return 'destructive';
-        default: return 'secondary';
-    }
-}
-
-const getStatusLabel = (status: Booking['status']) => (status === 'Completed' ? 'Complete' : status);
 
 type BookingBuckets = {
   all: EnrichedBooking[];
@@ -160,11 +137,7 @@ const BookingsTable = ({
             className="p-4"
             gridClassName="sm:grid-cols-2 xl:grid-cols-3"
             renderItem={(b) => {
-                const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
-                    ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
-                    : null;
                 const dateLabel = b.fullStartTime ? format(b.fullStartTime, 'PPP') : 'Invalid Date';
-                const timeLabel = b.fullStartTime ? format(b.fullStartTime, 'HH:mm') : '--:--';
                 const crewLabel = [
                   b.creatorName ? `Creator: ${b.creatorName}` : '',
                   b.instructorName ? `Instructor: ${b.instructorName}` : '',
@@ -176,30 +149,16 @@ const BookingsTable = ({
                     <Card key={b.id} className={cn("overflow-hidden border shadow-none transition-shadow hover:shadow-sm", isMuted && "text-muted-foreground")}>
                         <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
                             <div className="min-w-0 space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
-                                        {getBookingTypeAbbreviation(b.type)}{b.bookingNumber}
-                                    </p>
-                                    <Badge variant="outline" className="h-6 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.08em]">
-                                        {b.type}
-                                    </Badge>
-                                </div>
-                                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                    {b.briefingRoomName ? `Room: ${b.aircraftTailNumber}` : b.aircraftTailNumber}
+                                <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
+                                    {b.bookingNumber}
                                 </p>
                             </div>
-                            <Badge variant={getStatusBadgeVariant(b.status)} className="text-[10px] font-black uppercase py-0.5">
-                                {getStatusLabel(b.status)}
-                            </Badge>
                         </CardHeader>
                         <CardContent className="space-y-3 px-4 py-4">
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <div className="rounded-lg border bg-background px-3 py-2.5">
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Date</p>
                                     <p className="mt-1 text-sm font-semibold text-foreground">{dateLabel}</p>
-                                    <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                                        Start {timeLabel}
-                                    </p>
                                 </div>
                                 <div className="rounded-lg border bg-background px-3 py-2.5">
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">People</p>
