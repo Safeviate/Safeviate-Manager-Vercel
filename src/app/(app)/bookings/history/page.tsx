@@ -21,7 +21,7 @@ import type { Aircraft } from '@/types/aircraft';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import type { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, FilePlus, Clock, ShieldAlert, ListFilter } from 'lucide-react';
+import { Eye, Trash2, FilePlus, ShieldAlert, ListFilter } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -193,7 +193,7 @@ const BookingsTable = ({
                             </Badge>
                         </CardHeader>
                         <CardContent className="space-y-3 px-4 py-4">
-                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
                                 <div className="rounded-lg border bg-background px-3 py-2.5">
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Date</p>
                                     <p className="mt-1 text-sm font-semibold text-foreground">{dateLabel}</p>
@@ -201,24 +201,10 @@ const BookingsTable = ({
                                         Start {timeLabel}
                                     </p>
                                 </div>
-                                <div className="rounded-lg border bg-background px-3 py-2.5 sm:col-span-1 xl:col-span-2">
+                                <div className="rounded-lg border bg-background px-3 py-2.5">
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">People</p>
                                     <p className="mt-1 text-sm font-semibold text-foreground">
                                         {crewLabel || b.creatorName || 'N/A'}
-                                    </p>
-                                    <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                                        {b.briefingRoomName ? `Room: ${b.briefingRoomName}` : `Aircraft: ${b.aircraftTailNumber || 'Unknown Aircraft'}`}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border bg-background px-3 py-2.5">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Flight Time</p>
-                                    <p className="mt-1 text-sm font-semibold text-foreground">
-                                        {flightHours !== null ? (
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                {flightHours}h
-                                            </span>
-                                        ) : '-'}
                                     </p>
                                 </div>
                             </div>
