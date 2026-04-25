@@ -130,13 +130,14 @@ const BookingsTable = ({
     }
     
     return (
-        <ResponsiveCardGrid
-            items={bookings}
-            isLoading={isLoading}
-            loadingCount={4}
-            className="p-4"
-            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
-            renderItem={(b) => {
+        <div className="flex h-full min-h-0 flex-col">
+          <ResponsiveCardGrid
+              items={bookings}
+              isLoading={isLoading}
+              loadingCount={4}
+              className="p-4"
+              gridClassName="sm:grid-cols-2 xl:grid-cols-3"
+              renderItem={(b) => {
                 const dateLabel = b.fullStartTime ? format(b.fullStartTime, 'PPP') : 'Invalid Date';
                 const crewLabel = [
                   b.creatorName ? `Creator: ${b.creatorName}` : '',
@@ -146,7 +147,7 @@ const BookingsTable = ({
                 const isMuted = b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed';
 
                 return (
-                    <Card key={b.id} className={cn("overflow-hidden border shadow-none transition-shadow hover:shadow-sm", isMuted && "text-muted-foreground")}>
+                    <Card key={b.id} className={cn("min-h-[13.5rem] overflow-hidden border shadow-none transition-shadow hover:shadow-sm", isMuted && "text-muted-foreground")}>
                         <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
                             <div className="min-w-0 space-y-1">
                                 <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
@@ -186,16 +187,17 @@ const BookingsTable = ({
                                   booking={b}
                                   tenantId={tenantId}
                                   canDelete={canDeleteBookings}
-                                  canDeleteCompleted={canDeleteCompletedBookings}
+                                canDeleteCompleted={canDeleteCompletedBookings}
                                 />
                             </div>
                         </CardContent>
                     </Card>
                 );
-            }}
-            renderLoadingItem={(index) => <Skeleton key={index} className="h-40 w-full rounded-lg" />}
-            emptyState={<div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">No bookings found for this category.</div>}
-        />
+              }}
+              renderLoadingItem={(index) => <Skeleton key={index} className="h-40 w-full rounded-lg" />}
+              emptyState={<div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">No bookings found for this category.</div>}
+          />
+        </div>
     )
 }
 
@@ -297,7 +299,7 @@ export default function BookingsHistoryPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full min-h-0 px-1 pt-4">
-      <Card className="flex-grow flex flex-col shadow-none border overflow-hidden">
+      <Card className="flex h-full flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
           <ResponsiveTabRow
             value={activeTab}
@@ -311,13 +313,13 @@ export default function BookingsHistoryPage() {
               icon: ListFilter,
             }))}
           />
-          <CardContent className='p-0 flex-1 min-h-0'>
-                <div className={cn("overflow-auto", isMobile ? "h-full min-h-0" : "h-[calc(100vh-21rem)]")}>
-                    <TabsContent value="all" className='m-0'><BookingsTable bookings={bookingBuckets.all} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
-                    <TabsContent value="training" className='m-0'><BookingsTable bookings={bookingBuckets.training} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
-                    <TabsContent value="private" className='m-0'><BookingsTable bookings={bookingBuckets.private} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
-                    <TabsContent value="maintenance" className='m-0'><BookingsTable bookings={bookingBuckets.maintenance} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
-                    <TabsContent value="cancelled" className='m-0'><BookingsTable bookings={bookingBuckets.cancelled} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+          <CardContent className='flex flex-1 min-h-0 p-0'>
+                <div className={cn("flex-1 min-h-0 overflow-auto pb-4", isMobile ? "h-full" : "h-full")}>
+                    <TabsContent value="all" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.all} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="training" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.training} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="private" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.private} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="maintenance" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.maintenance} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
+                    <TabsContent value="cancelled" className='m-0 h-full min-h-0'><BookingsTable bookings={bookingBuckets.cancelled} tenantId={tenantId || ''} canDeleteBookings={canDeleteBookings} canDeleteCompletedBookings={canDeleteCompletedBookings} isLoading={isLoadingBookings} /></TabsContent>
                 </div>
             </CardContent>
         </Tabs>

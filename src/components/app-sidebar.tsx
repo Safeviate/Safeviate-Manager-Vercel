@@ -21,7 +21,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { LogOut, ChevronDown } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -74,7 +74,6 @@ type SidebarSharedState = {
 
 const SidebarItems = () => {
     const pathname = usePathname();
-    const router = useRouter();
     const { setOpenMobile } = useSidebar();
     const { canAccessMenuItem } = usePermissions();
     const currentPathname = pathname ?? '';
@@ -150,25 +149,6 @@ const SidebarItems = () => {
       return menuConfig.filter((item) => item.href === '/dashboard' || canAccessMenuItem(item));
     }, [canAccessMenuItem]);
 
-    useEffect(() => {
-      const prefetch = (href: string) => {
-        const basePath = href.split('?')[0];
-        if (!basePath || basePath.includes('[')) return;
-        router.prefetch(basePath);
-      };
-
-        filteredItems.forEach((item) => {
-        prefetch(item.href);
-        const configuredSubItems =
-          item.href === '/users' && roleBasedUserSubItems.length > 0
-            ? roleBasedUserSubItems
-            : item.subItems || [];
-          configuredSubItems
-            .filter((sub) => canAccessMenuItem(sub, item))
-            .forEach((sub) => prefetch(sub.href));
-      });
-    }, [filteredItems, roleBasedUserSubItems, canAccessMenuItem, router]);
-
     return (
         <SidebarMenu>
             {filteredItems.map((item, index) => {
@@ -227,6 +207,7 @@ const SidebarItems = () => {
                                             >
                                                 <Link
                                                   href={subItem.href}
+                                                  prefetch={false}
                                                   onClick={() => {
                                                     setOpenMobile(false);
                                                     setLastSubmenuByParent(item.href, subItem.href);
@@ -251,7 +232,7 @@ const SidebarItems = () => {
                             tooltip={item.label}
                             className="justify-start pl-2.5 pr-3"
                         >
-                            <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                            <Link href={item.href} prefetch={false} onClick={() => setOpenMobile(false)}>
                                 <Icon className="h-5 w-5" />
                                 <span className="-ml-1">{item.label}</span>
                             </Link>
