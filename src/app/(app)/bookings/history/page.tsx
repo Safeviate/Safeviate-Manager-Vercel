@@ -163,6 +163,13 @@ const BookingsTable = ({
                 const flightHours = (b.status === 'Completed' && b.postFlightData?.hobbs !== undefined && b.preFlightData?.hobbs !== undefined)
                     ? (b.postFlightData.hobbs - b.preFlightData.hobbs).toFixed(1)
                     : null;
+                const dateLabel = b.fullStartTime ? format(b.fullStartTime, 'PPP') : 'Invalid Date';
+                const timeLabel = b.fullStartTime ? format(b.fullStartTime, 'HH:mm') : '--:--';
+                const crewLabel = [
+                  b.creatorName ? `Creator: ${b.creatorName}` : '',
+                  b.instructorName ? `Instructor: ${b.instructorName}` : '',
+                  b.studentName ? `Student: ${b.studentName}` : '',
+                ].filter(Boolean).join(' • ');
                 const isMuted = b.status === 'Cancelled' || b.status === 'Cancelled with Reason' || b.status === 'Completed';
 
                 return (
@@ -185,28 +192,25 @@ const BookingsTable = ({
                                 {getStatusLabel(b.status)}
                             </Badge>
                         </CardHeader>
-                        <CardContent className="space-y-4 px-4 py-4">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-lg border bg-background px-3 py-3">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Creator</p>
-                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.creatorName}</p>
+                        <CardContent className="space-y-3 px-4 py-4">
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                <div className="rounded-lg border bg-background px-3 py-2.5">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Date</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground">{dateLabel}</p>
+                                    <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                                        Start {timeLabel}
+                                    </p>
                                 </div>
-                                <div className="rounded-lg border bg-background px-3 py-3">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Instructor</p>
-                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.instructorName || 'N/A'}</p>
+                                <div className="rounded-lg border bg-background px-3 py-2.5 sm:col-span-1 xl:col-span-2">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">People</p>
+                                    <p className="mt-1 text-sm font-semibold text-foreground">
+                                        {crewLabel || b.creatorName || 'N/A'}
+                                    </p>
+                                    <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                                        {b.briefingRoomName ? `Room: ${b.briefingRoomName}` : `Aircraft: ${b.aircraftTailNumber || 'Unknown Aircraft'}`}
+                                    </p>
                                 </div>
-                                <div className="rounded-lg border bg-background px-3 py-3">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Student</p>
-                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.studentName || 'N/A'}</p>
-                                </div>
-                                <div className="rounded-lg border bg-background px-3 py-3">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Start Time</p>
-                                    <p className="mt-1 text-sm font-semibold text-foreground">{b.fullStartTime ? format(b.fullStartTime, 'PPP HH:mm') : 'Invalid Date'}</p>
-                                </div>
-                            </div>
-
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-lg border bg-background px-3 py-3">
+                                <div className="rounded-lg border bg-background px-3 py-2.5">
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Flight Time</p>
                                     <p className="mt-1 text-sm font-semibold text-foreground">
                                         {flightHours !== null ? (
@@ -217,14 +221,7 @@ const BookingsTable = ({
                                         ) : '-'}
                                     </p>
                                 </div>
-                                <div className="rounded-lg border bg-background px-3 py-3">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                                        {b.briefingRoomName ? 'Briefing Room' : 'Aircraft'}
-                                    </p>
-                                    <p className="mt-1 text-sm font-semibold text-foreground uppercase">{b.aircraftTailNumber}</p>
-                                </div>
                             </div>
-
                             <div className="flex flex-wrap items-center justify-end gap-2">
                                 <Button asChild variant="outline" size="compact" className="border-slate-300">
                                     <Link href={`/bookings/history/${b.id}`}>
@@ -251,7 +248,7 @@ const BookingsTable = ({
                     </Card>
                 );
             }}
-            renderLoadingItem={(index) => <Skeleton key={index} className="h-56 w-full rounded-lg" />}
+            renderLoadingItem={(index) => <Skeleton key={index} className="h-40 w-full rounded-lg" />}
             emptyState={<div className="h-24 text-center flex items-center justify-center text-muted-foreground text-[10px] uppercase font-black tracking-widest bg-muted/5">No bookings found for this category.</div>}
         />
     )
