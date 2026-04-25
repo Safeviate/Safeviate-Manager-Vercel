@@ -6,6 +6,7 @@ import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { MASTER_TENANT_ID } from '@/lib/tenant-constants';
 import type { TabVisibilitySettings } from '@/types/quality';
+import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
 
 type UserProfile = PilotProfile | Personnel;
 type DbUserProfile = {
@@ -35,6 +36,7 @@ type MePayload = {
     roleHiddenMenus?: string[];
 };
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
+const USER_PROFILE_CACHE_TTL_MS = 5 * 60_000;
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
@@ -77,6 +79,10 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const [tenantOverride, setTenantOverride] = useState<string | null>(() => getTenantOverride());
     const authUser = session?.user ?? null;
     const isAuthLoading = status === 'loading';
+    const profileCacheKey = useMemo(() => {
+        if (!authUser) return 'user-profile:anonymous';
+        return `user-profile:${authUser.id || authUser.email || 'session'}`;
+    }, [authUser?.email, authUser?.id]);
 
     useEffect(() => {
         if (isAuthLoading) return;
@@ -85,8 +91,14 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         const loadProfile = async () => {
             setDbLoading(true);
             try {
-                const response = await fetch('/api/me', { cache: 'no-store' });
-                const payload = await parseJsonResponse<MePayload>(response);
+                const payload = await getOrSetClientApiCache<MePayload>(
+                    profileCacheKey,
+                    USER_PROFILE_CACHE_TTL_MS,
+                    async () => {
+                        const response = await fetch('/api/me', { cache: 'no-store' });
+                        return (await parseJsonResponse<MePayload>(response)) ?? { profile: null };
+                    }
+                );
                 if (!cancelled) {
                     setDbProfile(payload?.profile ?? null);
                     setTenant(payload?.tenant ?? null);
@@ -112,7 +124,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         return () => {
             cancelled = true;
         };
-    }, [authUser?.email, isAuthLoading, profileRefreshToken]);
+    }, [authUser?.email, authUser?.id, isAuthLoading, profileCacheKey, profileRefreshToken]);
 
     const isLoading = isAuthLoading || dbLoading;
     const error = dbError;
@@ -134,7 +146,10 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        const handleProfileUpdate = () => setProfileRefreshToken((current) => current + 1);
+        const handleProfileUpdate = () => {
+            invalidateClientApiCache(profileCacheKey);
+            setProfileRefreshToken((current) => current + 1);
+        };
         const syncTenantOverride = () => setTenantOverride(getTenantOverride());
 
         syncTenantOverride();

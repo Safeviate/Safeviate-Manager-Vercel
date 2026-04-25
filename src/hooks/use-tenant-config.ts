@@ -9,6 +9,7 @@ const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
 const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
 const FALLBACK_TENANT_ID = 'safeviate';
 const FALLBACK_TENANT_NAME = 'Safeviate';
+const TENANT_CONFIG_CACHE_TTL_MS = 5 * 60_000;
 
 declare global {
   interface Window {
@@ -182,7 +183,7 @@ export const useTenantConfig = () => {
       try {
         const configPayload = await getOrSetClientApiCache(
           `tenant-config:${tenantId}`,
-          10_000,
+          TENANT_CONFIG_CACHE_TTL_MS,
           async () => {
             const response = await fetch('/api/tenant-config', { cache: 'no-store' });
             return response.ok ? await response.json().catch(() => ({})) : {};
@@ -237,7 +238,7 @@ export const useTenantConfig = () => {
           invalidateClientApiCache(`tenant-config:${tenantId}`);
           const payload = await getOrSetClientApiCache(
             `tenant-config:${tenantId}`,
-            10_000,
+            TENANT_CONFIG_CACHE_TTL_MS,
             async () => {
               const response = await fetch('/api/tenant-config', { cache: 'no-store' });
               return response.ok ? await response.json().catch(() => ({})) : {};

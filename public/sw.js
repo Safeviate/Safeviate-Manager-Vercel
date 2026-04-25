@@ -115,7 +115,15 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => {
       if (cached) return cached;
 
-      return fetch(request).then((response) => cacheResponse(STATIC_CACHE, request, response));
+      return fetch(request)
+        .then((response) => {
+          if (!response.ok) return response;
+          return cacheResponse(STATIC_CACHE, request, response);
+        })
+        .catch(async () => {
+          const fallback = await caches.match('/offline.html');
+          return fallback || new Response('', { status: 204 });
+        });
     })
   );
 });

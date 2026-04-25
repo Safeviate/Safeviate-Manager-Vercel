@@ -49,6 +49,7 @@ const USERS_STATIC_SUB_ITEMS: SubMenuItem[] = [
   { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
   { href: '/users/attendance', label: 'Attendance', permissionId: 'users-view' },
 ];
+const ROLES_SUBMENU_CACHE_TTL_MS = 5 * 60_000;
 
 let lastSubmenuByParentMemory: Record<string, string> = {};
 
@@ -89,7 +90,7 @@ const SidebarItems = () => {
         try {
           const payload = await getOrSetClientApiCache(
             'roles:submenu',
-            15_000,
+            ROLES_SUBMENU_CACHE_TTL_MS,
             async () => {
               const response = await fetch('/api/roles', { cache: 'no-store' });
               return await response.json().catch(() => ({}));
