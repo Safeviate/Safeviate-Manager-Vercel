@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { menuConfig } from '@/lib/menu-config';
@@ -10,11 +10,22 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { RotateCcw } from 'lucide-react';
 import { formatBookingSequenceNumber } from '@/lib/booking-sequence';
+import { parseJsonResponse } from '@/lib/safe-json';
 
 type BookingSequenceSettings = {
   id: 'booking-sequence';
   nextBookingNumber: number;
   lastResetAt?: string;
+};
+
+type DevelopmentDiagnostics = {
+  tenantId: string | null;
+  tenantName: string | null;
+  roleCount: number;
+  roleNames: string[];
+  meStatus: number | null;
+  rolesStatus: number | null;
+  rolesLoaded: boolean;
 };
 
 const PERFORMANCE_ROADMAP = [
@@ -56,6 +67,8 @@ export default function DevelopmentPage() {
   const developmentMenu = menuConfig.find(item => item.href === '/development');
   const [bookingSequenceSettings, setBookingSequenceSettings] = useState<BookingSequenceSettings | null>(null);
   const [isLoadingSequence, setIsLoadingSequence] = useState(true);
+  const [diagnostics, setDiagnostics] = useState<DevelopmentDiagnostics | null>(null);
+  const [isLoadingDiagnostics, setIsLoadingDiagnostics] = useState(true);
 
   const loadBookingSequence = useCallback(async () => {
     setIsLoadingSequence(true);
@@ -90,12 +103,66 @@ export default function DevelopmentPage() {
     }
   }, []);
 
+  const loadDiagnostics = useCallback(async () => {
+    setIsLoadingDiagnostics(true);
+    try {
+      const [meResponse, rolesResponse] = await Promise.all([
+        fetch('/api/me', { cache: 'no-store' }),
+        fetch('/api/roles', { cache: 'no-store' }),
+      ]);
+      const [mePayload, rolesPayload] = await Promise.all([
+        parseJsonResponse<{
+          tenant?: {
+            id?: string | null;
+            name?: string | null;
+          } | null;
+        }>(meResponse),
+        parseJsonResponse<{ roles?: { name?: string | null }[] }>(rolesResponse),
+      ]);
+      const roleNames = Array.isArray(rolesPayload?.roles)
+        ? rolesPayload!.roles
+            .map((role) => (typeof role?.name === 'string' ? role.name.trim() : ''))
+            .filter(Boolean)
+        : [];
+
+      setDiagnostics({
+        tenantId: mePayload?.tenant?.id || null,
+        tenantName: mePayload?.tenant?.name || null,
+        roleCount: roleNames.length,
+        roleNames,
+        meStatus: meResponse.status,
+        rolesStatus: rolesResponse.status,
+        rolesLoaded: rolesResponse.ok,
+      });
+    } catch (error) {
+      console.error('Failed to load development diagnostics', error);
+      setDiagnostics({
+        tenantId: null,
+        tenantName: null,
+        roleCount: 0,
+        roleNames: [],
+        meStatus: null,
+        rolesStatus: null,
+        rolesLoaded: false,
+      });
+    } finally {
+      setIsLoadingDiagnostics(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadBookingSequence();
+    void loadDiagnostics();
     const handler = () => void loadBookingSequence();
     window.addEventListener('safeviate-booking-sequence-updated', handler);
-    return () => window.removeEventListener('safeviate-booking-sequence-updated', handler);
-  }, [loadBookingSequence]);
+    window.addEventListener('safeviate-roles-updated', loadDiagnostics);
+    window.addEventListener('safeviate-tenant-config-updated', loadDiagnostics);
+    return () => {
+      window.removeEventListener('safeviate-booking-sequence-updated', handler);
+      window.removeEventListener('safeviate-roles-updated', loadDiagnostics);
+      window.removeEventListener('safeviate-tenant-config-updated', loadDiagnostics);
+    };
+  }, [loadBookingSequence, loadDiagnostics]);
 
   const handleResetBookingSequence = async () => {
     const confirmed = window.confirm('Reset booking numbering back to 00001? Only do this after old bookings have been cleared or archived.');
@@ -143,9 +210,75 @@ export default function DevelopmentPage() {
   const devSubItems = developmentMenu.subItems.filter(
     (item) => item.href !== '/development/database' && canAccessMenuItem(item, developmentMenu)
   );
+  const diagnosticsSummary = useMemo(() => {
+    if (!diagnostics) return 'Diagnostics unavailable.';
+    if (!diagnostics.rolesLoaded) return 'Unable to confirm live role menu data.';
+    if (diagnostics.roleCount === 0) return 'No dynamic roles were returned for the current tenant.';
+    return `${diagnostics.roleCount} dynamic roles were returned for the current tenant.`;
+  }, [diagnostics]);
 
   return (
       <div className="grid gap-6">
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-primary">
+            Live Diagnostics
+          </h3>
+          <p className="text-xs text-muted-foreground font-medium">
+            Quick verification for tenant resolution and dynamic user-role submenu data.
+          </p>
+        </div>
+
+        <Card className="border shadow-none">
+          <CardContent className="p-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border bg-background px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Tenant</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {isLoadingDiagnostics ? 'Loading...' : diagnostics?.tenantName || diagnostics?.tenantId || 'Unavailable'}
+                </p>
+                {diagnostics?.tenantId ? (
+                  <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {diagnostics.tenantId}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="rounded-2xl border bg-background px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">API /me</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {isLoadingDiagnostics ? 'Loading...' : diagnostics?.meStatus ?? 'Unavailable'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border bg-background px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">API /roles</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {isLoadingDiagnostics ? 'Loading...' : diagnostics?.rolesStatus ?? 'Unavailable'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border bg-background px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Dynamic Roles</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {isLoadingDiagnostics ? 'Loading...' : diagnostics?.roleCount ?? 0}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border bg-muted/10 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Interpretation</p>
+              <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">{diagnosticsSummary}</p>
+              {!isLoadingDiagnostics && diagnostics?.roleNames?.length ? (
+                <p className="mt-2 text-[11px] font-semibold text-foreground">
+                  {diagnostics.roleNames.join(' · ')}
+                </p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       <section className="space-y-4">
         <div className="space-y-1">
           <h3 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
