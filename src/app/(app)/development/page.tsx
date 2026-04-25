@@ -64,6 +64,202 @@ const PERFORMANCE_ROADMAP = [
   },
 ];
 
+const APP_LINK_TREE = [
+  'Safeviate App',
+  '|- Dashboard',
+  '|  |- /dashboard',
+  '|  |- Reads: /api/dashboard-summary, /api/tenant-config',
+  '|- My Dashboard',
+  '|  |- /my-dashboard/tasks',
+  '|  |- /my-dashboard/messages',
+  '|  |- /my-dashboard/logbook',
+  '|- Bookings',
+  '|  |- /bookings/schedule',
+  '|  |  |- Reads: /api/schedule-data, /api/bookings, /api/aircraft, /api/personnel',
+  '|  |- /bookings/history',
+  '|  |  |- Reads: /api/bookings, /api/schedule-data',
+  '|- Operations',
+  '|  |- /operations/active-flight',
+  '|  |  |- Reads: /api/schedule-data, /api/tenant-config, /api/aircraft',
+  '|  |- /operations/fleet-tracker',
+  '|  |- /operations/weather',
+  '|  |- /operations/meetings',
+  '|  |  |- Reads/Writes: /api/meetings',
+  '|  |- /operations/vehicle-usage',
+  '|  |  |- Reads/Writes: /api/vehicle-usage',
+  '|- Safety',
+  '|  |- /safety/risk-register',
+  '|  |- /safety/safety-reports',
+  '|  |- /safety/safety-indicators',
+  '|- Quality',
+  '|  |- /quality/audits',
+  '|  |- /quality/task-tracker',
+  '|  |- /quality/coherence-matrix',
+  '|- Training',
+  '|  |- /training/student-progress',
+  '|  |  |- Reads: /api/student-training',
+  '|  |- /training/exams',
+  '|  |- /training/question-bank',
+  '|- Assets',
+  '|  |- /assets/aircraft',
+  '|  |  |- Reads: /api/aircraft, /api/bookings, /api/tenant-config',
+  '|  |- /assets/vehicles',
+  '|- Maintenance',
+  '|  |- /maintenance/workpacks',
+  '|  |- /maintenance/defects',
+  '|  |- /maintenance/schedule',
+  '|- Users',
+  '|  |- /users/personnel',
+  '|  |- /users/role/[id]',
+  '|  |  |- Reads: /api/users, /api/roles, /api/me',
+  '|- Admin',
+  '|  |- /admin/page-format',
+  '|  |  |- Reads/Writes: /api/tenant-config',
+  '|  |- /admin/roles',
+  '|  |  |- Reads/Writes: /api/roles',
+  '|  |- /admin/department',
+  '|- Development',
+  '|  |- /development',
+  '|  |- /development/simulation-lab',
+  '|  |  |- Reads/Writes: /api/development/simulation-lab',
+].join('\n');
+
+const APP_FLOW_MAP = [
+  {
+    title: 'Identity & Access',
+    detail: 'Session and user identity flow through /api/me. UserProfileProvider feeds permissions, tenant resolution, tab visibility, and route gating.',
+  },
+  {
+    title: 'Tenant Branding & Format',
+    detail: 'Server bootstrap in layout.tsx paints the saved company format first. Client hooks then refresh from /api/tenant-config for live admin updates.',
+  },
+  {
+    title: 'Operational Scheduling',
+    detail: 'Bookings, Daily Schedule, Active Flight, and related views read from /api/schedule-data and /api/bookings, with aircraft and personnel support data joining that path.',
+  },
+  {
+    title: 'Dashboards & Rollups',
+    detail: 'High-level cards and overviews flow through /api/dashboard-summary, which aggregates aircraft, booking, personnel, and training summary data.',
+  },
+  {
+    title: 'Training & Competency',
+    detail: 'Student Progress and debrief-linked views read /api/student-training, then derive strengths, growth areas, and recent competency signals.',
+  },
+  {
+    title: 'Simulation & Telemetry',
+    detail: 'Simulation Lab writes seeded tenant data into the DB, then tracks observed route usage from dashboard, schedule, meetings, safety, quality, and training flows.',
+  },
+];
+
+const MODULE_FLOW_GROUPS = [
+  {
+    title: 'Shared Identity Layer',
+    items: [
+      'NextAuth session',
+      'UserProfileProvider',
+      '/api/me',
+      'Permissions / route gating',
+      'Tenant resolution',
+    ],
+  },
+  {
+    title: 'Branding & Configuration',
+    items: [
+      'Server bootstrap in layout.tsx',
+      '/api/tenant-config',
+      'ThemeProvider',
+      'Page Format',
+      'Feature / visibility switches',
+    ],
+  },
+  {
+    title: 'Core Operations',
+    items: [
+      'Dashboard',
+      'Bookings',
+      'Schedule Data',
+      'Aircraft / Vehicles',
+      'Active Flight / Meetings / Weather',
+    ],
+  },
+  {
+    title: 'Assurance & Training',
+    items: [
+      'Safety',
+      'Quality',
+      'Training',
+      'Student Progress',
+      'Audit / Risk / Reports',
+    ],
+  },
+  {
+    title: 'Developer Observability',
+    items: [
+      'Simulation Lab',
+      'Route telemetry',
+      'Usage Estimator',
+      'Diagnostics',
+      'Performance roadmap',
+    ],
+  },
+];
+
+const API_DEPENDENCY_GROUPS = [
+  {
+    title: 'Identity APIs',
+    endpoints: ['/api/me', '/api/auth/session'],
+    usage: 'Used by session-aware hooks, permissions, tenant resolution, and sidebar/profile state.',
+  },
+  {
+    title: 'Branding & Config APIs',
+    endpoints: ['/api/tenant-config'],
+    usage: 'Feeds page format, feature flags, booking-sequence settings, and module visibility.',
+  },
+  {
+    title: 'Operations APIs',
+    endpoints: ['/api/dashboard-summary', '/api/schedule-data', '/api/bookings', '/api/aircraft', '/api/vehicle-usage', '/api/meetings'],
+    usage: 'Powers dashboard cards, booking grids, active-flight views, aircraft snapshots, and vehicle/meeting workflows.',
+  },
+  {
+    title: 'Assurance & Training APIs',
+    endpoints: ['/api/student-training', '/api/safety-reports', '/api/quality-audits', '/api/corrective-action-plans', '/api/risk-register'],
+    usage: 'Supports progress tracking, safety reporting, audits, CAPs, and risk workflows.',
+  },
+  {
+    title: 'Developer & Telemetry APIs',
+    endpoints: ['/api/development/simulation-lab'],
+    usage: 'Seeds live simulation data, records telemetry, stores run metadata, and supports comparison/export flows.',
+  },
+];
+
+const DB_FLOW_ROWS = [
+  {
+    area: 'Identity & Access',
+    readPattern: 'High read / low write',
+    notes: 'Frequent checks for the signed-in user, tenant, permissions, and menu visibility.',
+  },
+  {
+    area: 'Bookings & Schedule',
+    readPattern: 'High read / medium write',
+    notes: 'Heavy list reads, date grouping, and history growth. Strong candidate for pagination and later archive rules.',
+  },
+  {
+    area: 'Dashboard Rollups',
+    readPattern: 'High read / derived summary',
+    notes: 'Aggregates booking, aircraft, personnel, and training data into summary payloads.',
+  },
+  {
+    area: 'Training, Safety, Quality',
+    readPattern: 'Medium read / medium write',
+    notes: 'More transactional than the dashboard, but still summary-sensitive when lists grow.',
+  },
+  {
+    area: 'Simulation & Telemetry',
+    readPattern: 'Burst write / analysis read',
+    notes: 'Writes large seeded datasets and telemetry bursts, then reads them back for diagnostics and comparison.',
+  },
+];
+
 export default function DevelopmentPage() {
   const { toast } = useToast();
   const { canAccessMenuItem } = usePermissions();
@@ -349,6 +545,139 @@ export default function DevelopmentPage() {
               <p className="text-[10px] font-medium text-muted-foreground">
                 This will restart the sequence for new bookings.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-primary">
+            App Link Tree
+          </h3>
+          <p className="text-xs text-muted-foreground font-medium">
+            Quick map of the main app surfaces, their routes, and the core APIs or shared data paths behind them.
+          </p>
+        </div>
+
+        <Card className="border shadow-none">
+          <CardContent className="p-5 space-y-5">
+            <div className="rounded-2xl border bg-slate-950 px-4 py-4 text-slate-100">
+              <pre className="overflow-x-auto whitespace-pre text-[11px] leading-6 font-mono">
+                {APP_LINK_TREE}
+              </pre>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              {APP_FLOW_MAP.map((item) => (
+                <div key={item.title} className="rounded-2xl border bg-background px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">{item.title}</p>
+                  <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <h4 className="text-[11px] font-black uppercase tracking-widest text-primary">
+                  Module Flow Diagram
+                </h4>
+                <p className="text-xs text-muted-foreground font-medium">
+                  Read this left to right: shared identity and branding feed the operational modules, which then feed assurance and simulation telemetry.
+                </p>
+              </div>
+
+              <div className="grid gap-3 xl:grid-cols-5">
+                {MODULE_FLOW_GROUPS.map((group, index) => (
+                  <div key={group.title} className="rounded-2xl border bg-background px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-foreground">
+                        {group.title}
+                      </p>
+                      {index < MODULE_FLOW_GROUPS.length - 1 ? (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                          -&gt;
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {group.items.map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-xl border bg-muted/10 px-3 py-2 text-[11px] font-semibold text-muted-foreground"
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <h4 className="text-[11px] font-black uppercase tracking-widest text-primary">
+                  API Dependency Map
+                </h4>
+                <p className="text-xs text-muted-foreground font-medium">
+                  These are the main API groups the app leans on during normal use, and what they feed back into the UI.
+                </p>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                {API_DEPENDENCY_GROUPS.map((group) => (
+                  <div key={group.title} className="rounded-2xl border bg-background px-4 py-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-foreground">
+                      {group.title}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {group.endpoints.map((endpoint) => (
+                        <span
+                          key={endpoint}
+                          className="rounded-full border bg-slate-950 px-3 py-1 text-[10px] font-black tracking-[0.12em] text-slate-100"
+                        >
+                          {endpoint}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-sm font-medium leading-6 text-muted-foreground">
+                      {group.usage}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <h4 className="text-[11px] font-black uppercase tracking-widest text-primary">
+                  DB Read / Write Pattern
+                </h4>
+                <p className="text-xs text-muted-foreground font-medium">
+                  Practical view of which modules mostly read, which ones write, and where record growth will matter first.
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                {DB_FLOW_ROWS.map((row) => (
+                  <div key={row.area} className="rounded-2xl border bg-background px-4 py-3">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">
+                          {row.area}
+                        </p>
+                        <p className="text-sm font-medium leading-6 text-muted-foreground">
+                          {row.notes}
+                        </p>
+                      </div>
+                      <span className="rounded-full border bg-primary/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                        {row.readPattern}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
