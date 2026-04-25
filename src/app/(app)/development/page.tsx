@@ -28,6 +28,9 @@ type DevelopmentDiagnostics = {
   rolesLoaded: boolean;
 };
 
+const BUILD_SHA = process.env.NEXT_PUBLIC_BUILD_SHA || 'local-dev';
+const BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME || 'local build';
+
 const PERFORMANCE_ROADMAP = [
   {
     title: '1. Finish CLS / Theme Stability',
@@ -219,6 +222,32 @@ export default function DevelopmentPage() {
 
   return (
       <div className="grid gap-6">
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-primary">
+            Build Identity
+          </h3>
+          <p className="text-xs text-muted-foreground font-medium">
+            Confirms which commit and build artifact the app is currently serving.
+          </p>
+        </div>
+
+        <Card className="border shadow-none">
+          <CardContent className="p-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border bg-background px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Commit</p>
+                <p className="mt-1 font-mono text-sm font-semibold text-foreground">{BUILD_SHA}</p>
+              </div>
+              <div className="rounded-2xl border bg-background px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Built At</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{BUILD_TIME}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       <section className="space-y-4">
         <div className="space-y-1">
           <h3 className="text-[11px] font-black uppercase tracking-widest text-primary">
