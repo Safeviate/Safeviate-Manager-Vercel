@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureRolesSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
@@ -18,6 +19,7 @@ async function getTenantId() {
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await ensureRolesSchema();
   const { id } = await params;
   const tenantId = await getTenantId();
   if (!tenantId) {
@@ -34,6 +36,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await ensureRolesSchema();
   const { id } = await params;
   const tenantId = await getTenantId();
   if (!tenantId) {

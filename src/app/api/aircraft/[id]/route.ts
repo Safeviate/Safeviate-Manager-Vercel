@@ -3,6 +3,7 @@ import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '@/lib/prisma';
 import { normalizeUploadUrl } from '@/lib/server/azure-blob';
 import { ensureAircraftSchema } from '@/lib/server/bootstrap-db';
+import { invalidateRouteCache } from '@/lib/server/route-cache';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -84,6 +85,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       },
     });
 
+    invalidateRouteCache(`aircraft:${tenantId}`);
+    invalidateRouteCache(`dashboard-summary:${tenantId}`);
+    invalidateRouteCache(`schedule-data:${tenantId}`);
+
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     console.error('[aircraft/[id]] failed to update aircraft:', error);
@@ -99,6 +104,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     const { id } = await params;
     await prisma.aircraftRecord.deleteMany({ where: { id, tenantId } });
+    invalidateRouteCache(`aircraft:${tenantId}`);
+    invalidateRouteCache(`dashboard-summary:${tenantId}`);
+    invalidateRouteCache(`schedule-data:${tenantId}`);
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     console.error('[aircraft/[id]] failed to delete aircraft:', error);

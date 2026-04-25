@@ -544,3 +544,34 @@ export async function ensurePersonnelSchema() {
     columnNames.add('can_be_student');
   }
 }
+
+export async function ensureRolesSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (!(await hasTable('roles'))) {
+    return;
+  }
+
+  const columns = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
+    `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'roles'`
+  );
+  const columnNames = new Set(columns.map((row) => row.column_name));
+
+  const addColumn = async (columnSql: string) => {
+    await prisma.$executeRawUnsafe(`ALTER TABLE roles ADD COLUMN IF NOT EXISTS ${columnSql}`);
+  };
+
+  if (!columnNames.has('permissions')) {
+    await addColumn(`permissions JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    columnNames.add('permissions');
+  }
+
+  if (!columnNames.has('access_overrides')) {
+    await addColumn('access_overrides JSONB');
+    columnNames.add('access_overrides');
+  }
+
+  if (!columnNames.has('required_documents')) {
+    await addColumn('required_documents JSONB');
+    columnNames.add('required_documents');
+  }
+}

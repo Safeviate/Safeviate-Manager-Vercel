@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCompletedAircraftHourPatch } from '@/lib/aircraft-hours';
 import { ensureBookingsSchema } from '@/lib/server/bootstrap-db';
 import { allocateNextBookingNumber } from '@/lib/server/booking-sequence';
+import { invalidateRouteCache } from '@/lib/server/route-cache';
 import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -156,6 +157,10 @@ export async function POST(request: Request) {
       return nextData;
     });
 
+    invalidateRouteCache(`dashboard-summary:${tenantId}`);
+    invalidateRouteCache(`schedule-data:${tenantId}`);
+    invalidateRouteCache(`aircraft:${tenantId}`);
+
     await recordSimulationRouteMetric({
       tenantId,
       routeKey: 'bookings.POST',
@@ -246,6 +251,9 @@ export async function PUT(request: Request) {
       },
     });
 
+    invalidateRouteCache(`dashboard-summary:${tenantId}`);
+    invalidateRouteCache(`schedule-data:${tenantId}`);
+
     return NextResponse.json({ booking: mergedData }, { status: 200 });
   } catch (error) {
     console.error('[bookings] failed to update booking:', error);
@@ -268,6 +276,9 @@ export async function DELETE(request: Request) {
     await ensureBookingsSchema();
 
     await prisma.bookingRecord.deleteMany({ where: { id: bookingId, tenantId } });
+
+    invalidateRouteCache(`dashboard-summary:${tenantId}`);
+    invalidateRouteCache(`schedule-data:${tenantId}`);
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {

@@ -132,6 +132,7 @@ export async function POST(request: Request) {
 
     invalidateRouteCache(`aircraft:${tenantId}`);
     invalidateRouteCache(`dashboard-summary:${tenantId}`);
+    invalidateRouteCache(`schedule-data:${tenantId}`);
 
     await recordSimulationRouteMetric({
       tenantId,

@@ -1,6 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
+import { ensurePersonnelSchema, ensureRolesSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -37,7 +37,7 @@ export async function GET() {
     });
     const tenantId = currentUser?.tenantId || 'safeviate';
 
-    await ensurePersonnelSchema();
+    await Promise.all([ensurePersonnelSchema(), ensureRolesSchema()]);
     const [roleRows, departmentRows, userRows, authRows] = await Promise.all([
       prisma.role.findMany({ where: { tenantId } }),
       prisma.department.findMany({ where: { tenantId } }),

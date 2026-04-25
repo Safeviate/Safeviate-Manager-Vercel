@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { ensureAircraftSchema, ensureBookingsSchema, ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
+import { getOrSetRouteCache } from '@/lib/server/route-cache';
 import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -79,23 +80,28 @@ export async function GET() {
       select: { tenantId: true },
     });
     tenantId = currentUser?.tenantId || 'safeviate';
+    const resolvedTenantId = tenantId;
 
     await Promise.all([ensureAircraftSchema(), ensureBookingsSchema(), ensurePersonnelSchema()]);
-    const [aircraftRows, bookingRows, personnelRows] = await Promise.all([
-      prisma.aircraftRecord.findMany({
-        where: { tenantId },
-        orderBy: { createdAt: 'asc' },
-        select: { data: true },
-      }),
-      prisma.bookingRecord.findMany({
-        where: { tenantId },
-        orderBy: { createdAt: 'asc' },
-        select: { data: true },
-      }),
-      prisma.personnel.findMany({
-        where: { tenantId },
-      }),
-    ]);
+    const [aircraftRows, bookingRows, personnelRows] = await getOrSetRouteCache(
+      `schedule-data:${resolvedTenantId}`,
+      15_000,
+      () => Promise.all([
+        prisma.aircraftRecord.findMany({
+          where: { tenantId: resolvedTenantId },
+          orderBy: { createdAt: 'asc' },
+          select: { data: true },
+        }),
+        prisma.bookingRecord.findMany({
+          where: { tenantId: resolvedTenantId },
+          orderBy: { createdAt: 'asc' },
+          select: { data: true },
+        }),
+        prisma.personnel.findMany({
+          where: { tenantId: resolvedTenantId },
+        }),
+      ])
+    );
     const instructors = personnelRows.filter((person) => person.canBeInstructor || person.userType === 'Instructor');
     const instructorDuty = buildInstructorDutyModel(
       bookingRows.map((row) => row.data as {

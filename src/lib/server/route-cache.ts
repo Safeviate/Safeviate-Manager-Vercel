@@ -41,4 +41,5 @@ export function invalidatePersonnelDirectoryCaches(tenantId: string) {
   invalidateRouteCache(`personnel:departments:${tenantId}`);
   invalidateRouteCache(`personnel:list:${tenantId}`);
   invalidateRouteCache(`dashboard-summary:${tenantId}`);
+  invalidateRouteCache(`schedule-data:${tenantId}`);
 }

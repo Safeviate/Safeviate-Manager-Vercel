@@ -314,15 +314,100 @@ function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
 `;
 }
 
+function hexToHslString(hex: string) {
+  const normalized = hex.trim().replace(/^#/, '');
+  if (!/^[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(normalized)) return null;
+
+  const expanded = normalized.length === 3
+    ? normalized.split('').map((char) => char + char).join('')
+    : normalized;
+
+  const r = parseInt(expanded.slice(0, 2), 16) / 255;
+  const g = parseInt(expanded.slice(2, 4), 16) / 255;
+  const b = parseInt(expanded.slice(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+    }
+    h /= 6;
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+function buildServerThemeStyle(theme: TenantThemeConfig) {
+  if (!theme || typeof theme !== 'object') {
+    return undefined;
+  }
+
+  const style: Record<string, string> = {};
+  const themeGroups = ['main', 'button', 'card', 'popover', 'sidebar', 'header', 'swimlane', 'matrix'] as const;
+
+  for (const groupName of themeGroups) {
+    const group = theme[groupName];
+    if (!group || typeof group !== 'object') continue;
+
+    for (const [key, value] of Object.entries(group as Record<string, unknown>)) {
+      if (typeof value !== 'string') continue;
+      const hsl = hexToHslString(value);
+      if (!hsl) continue;
+      style[`--${key}`] = hsl;
+    }
+  }
+
+  if (typeof theme.sidebarBackgroundImage === 'string') {
+    style['--sidebar-background-image'] = theme.sidebarBackgroundImage
+      ? `url("${theme.sidebarBackgroundImage}")`
+      : 'none';
+  }
+
+  if (typeof theme.headerBackgroundImage === 'string') {
+    style['--header-background-image'] = theme.headerBackgroundImage
+      ? `url("${theme.headerBackgroundImage}")`
+      : 'none';
+  }
+
+  if (typeof theme.sidebarBackgroundOpacity === 'number') {
+    style['--sidebar-background-opacity'] = String(theme.sidebarBackgroundOpacity);
+  }
+
+  if (typeof theme.headerBackgroundOpacity === 'number') {
+    style['--header-background-opacity'] = String(theme.headerBackgroundOpacity);
+  }
+
+  if (typeof theme.scale === 'number') {
+    style.fontSize = `${theme.scale}%`;
+  }
+
+  return Object.keys(style).length > 0 ? style : undefined;
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const initialTenantBootstrap = await getInitialTenantBootstrap();
+  const serverThemeStyle = buildServerThemeStyle(initialTenantBootstrap.theme);
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning style={serverThemeStyle}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: buildThemeBootstrapScript(initialTenantBootstrap) }} />
       </head>

@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getOrSetRouteCache, invalidateRouteCache } from '@/lib/server/route-cache';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -24,16 +25,20 @@ export async function GET() {
       return NextResponse.json({ vehicles: [], usageRecords: [] }, { status: 200 });
     }
 
-    const [vehicleRows, usageRows] = await Promise.all([
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(
-        `SELECT data FROM vehicles WHERE tenant_id = $1 ORDER BY created_at ASC`,
-        tenantId
-      ),
-      prisma.$queryRawUnsafe<{ data: unknown }[]>(
-        `SELECT data FROM vehicle_usage_records WHERE tenant_id = $1 ORDER BY created_at DESC`,
-        tenantId
-      ),
-    ]);
+    const [vehicleRows, usageRows] = await getOrSetRouteCache(
+      `vehicle-usage:${tenantId}`,
+      15_000,
+      () => Promise.all([
+        prisma.$queryRawUnsafe<{ data: unknown }[]>(
+          `SELECT data FROM vehicles WHERE tenant_id = $1 ORDER BY created_at ASC`,
+          tenantId
+        ),
+        prisma.$queryRawUnsafe<{ data: unknown }[]>(
+          `SELECT data FROM vehicle_usage_records WHERE tenant_id = $1 ORDER BY created_at DESC`,
+          tenantId
+        ),
+      ])
+    );
 
     return NextResponse.json(
       { vehicles: vehicleRows.map((row) => row.data), usageRecords: usageRows.map((row) => row.data) },
@@ -110,6 +115,8 @@ export async function POST(request: Request) {
         ),
       ]);
 
+      invalidateRouteCache(`vehicle-usage:${tenantId}`);
+
       return NextResponse.json({ usageRecord: usage }, { status: 200 });
     }
 
@@ -155,6 +162,8 @@ export async function POST(request: Request) {
           tenantId
         ),
       ]);
+
+      invalidateRouteCache(`vehicle-usage:${tenantId}`);
 
       return NextResponse.json({ usageRecord: updatedUsage }, { status: 200 });
     }

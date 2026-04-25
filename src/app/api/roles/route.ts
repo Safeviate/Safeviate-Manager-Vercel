@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureRolesSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { isMasterTenantEmail } from '@/lib/server/tenant-access';
@@ -20,6 +21,7 @@ async function getTenantId() {
 
 export async function GET() {
   try {
+    await ensureRolesSchema();
     const tenantId = await getTenantId();
     if (!tenantId) {
       return NextResponse.json({ roles: [] }, { status: 200 });
@@ -57,6 +59,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  await ensureRolesSchema();
   const tenantId = await getTenantId();
   if (!tenantId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

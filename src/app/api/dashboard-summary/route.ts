@@ -44,6 +44,100 @@ const EMPTY_SUMMARY = {
   instructorDuty: [],
 };
 
+type SummaryBookingRecord = {
+  aircraftId?: string | null;
+  date?: string | null;
+  status?: string | null;
+  instructorId?: string | null;
+  studentId?: string | null;
+  preFlightData?: {
+    hobbs?: number;
+    tacho?: number;
+    fuelUpliftGallons?: number;
+    fuelUpliftLitres?: number;
+    oilUplift?: number;
+  } | null;
+  postFlightData?: {
+    hobbs?: number;
+    tacho?: number;
+    defects?: string;
+  } | null;
+};
+
+type SummaryPersonRecord = {
+  id: string;
+  userType: string;
+  canBeInstructor: boolean | null;
+  canBeStudent: boolean | null;
+  userNumber: string | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  department: string | null;
+  organizationId: string | null;
+  permissions: unknown;
+  accessOverrides: unknown;
+  contactNumber: string | null;
+  isErpIncerfaContact: boolean | null;
+  isErpAlerfaContact: boolean | null;
+};
+
+const projectBookingSummary = (value: unknown): SummaryBookingRecord => {
+  const booking = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const preFlightData =
+    booking.preFlightData && typeof booking.preFlightData === 'object'
+      ? (booking.preFlightData as Record<string, unknown>)
+      : null;
+  const postFlightData =
+    booking.postFlightData && typeof booking.postFlightData === 'object'
+      ? (booking.postFlightData as Record<string, unknown>)
+      : null;
+
+  return {
+    aircraftId: typeof booking.aircraftId === 'string' ? booking.aircraftId : null,
+    date: typeof booking.date === 'string' ? booking.date : null,
+    status: typeof booking.status === 'string' ? booking.status : null,
+    instructorId: typeof booking.instructorId === 'string' ? booking.instructorId : null,
+    studentId: typeof booking.studentId === 'string' ? booking.studentId : null,
+    preFlightData: preFlightData
+      ? {
+          hobbs: typeof preFlightData.hobbs === 'number' ? preFlightData.hobbs : undefined,
+          tacho: typeof preFlightData.tacho === 'number' ? preFlightData.tacho : undefined,
+          fuelUpliftGallons: typeof preFlightData.fuelUpliftGallons === 'number' ? preFlightData.fuelUpliftGallons : undefined,
+          fuelUpliftLitres: typeof preFlightData.fuelUpliftLitres === 'number' ? preFlightData.fuelUpliftLitres : undefined,
+          oilUplift: typeof preFlightData.oilUplift === 'number' ? preFlightData.oilUplift : undefined,
+        }
+      : null,
+    postFlightData: postFlightData
+      ? {
+          hobbs: typeof postFlightData.hobbs === 'number' ? postFlightData.hobbs : undefined,
+          tacho: typeof postFlightData.tacho === 'number' ? postFlightData.tacho : undefined,
+          defects: typeof postFlightData.defects === 'string' ? postFlightData.defects : undefined,
+        }
+      : null,
+  };
+};
+
+const projectPersonSummary = (person: SummaryPersonRecord) => ({
+  id: person.id,
+  userType: person.userType,
+  canBeInstructor: person.canBeInstructor ?? undefined,
+  canBeStudent: person.canBeStudent ?? undefined,
+  userNumber: person.userNumber ?? undefined,
+  firstName: person.firstName,
+  lastName: person.lastName,
+  email: person.email,
+  role: person.role,
+  department: person.department ?? undefined,
+  organizationId: person.organizationId ?? undefined,
+  permissions: Array.isArray(person.permissions) ? person.permissions : [],
+  accessOverrides: person.accessOverrides ?? undefined,
+  contactNumber: person.contactNumber ?? undefined,
+  isErpIncerfaContact: person.isErpIncerfaContact ?? undefined,
+  isErpAlerfaContact: person.isErpAlerfaContact ?? undefined,
+});
+
 async function safeFindMany<T>(label: string, task: Promise<T[]>): Promise<T[]> {
   try {
     return await task;
@@ -123,7 +217,30 @@ export async function GET() {
     ] = await getOrSetRouteCache(`dashboard-summary:${resolvedTenantId}`, 30_000, async () => Promise.all([
       safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
       safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
-      safeFindMany('personnel', prisma.personnel.findMany({ where: { tenantId: resolvedTenantId } })),
+      safeFindMany(
+        'personnel',
+        prisma.personnel.findMany({
+          where: { tenantId: resolvedTenantId },
+          select: {
+            id: true,
+            userType: true,
+            canBeInstructor: true,
+            canBeStudent: true,
+            userNumber: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            department: true,
+            organizationId: true,
+            permissions: true,
+            accessOverrides: true,
+            contactNumber: true,
+            isErpIncerfaContact: true,
+            isErpAlerfaContact: true,
+          },
+        })
+      ),
       safeFindMany('management_of_change', prisma.managementOfChange.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
       safeFindMany('quality_audits', prisma.qualityAudit.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
       safeFindMany('safety_reports', prisma.safetyReport.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
@@ -169,7 +286,9 @@ export async function GET() {
       return sum + Math.max(0, Math.round((end - start) / 60000));
     }, 0);
     const totalDutyHours = parseFloat((totalDutyMinutes / 60).toFixed(1));
-    for (const row of personnelRows) {
+    const summaryPersonnelRows = personnelRows.map(projectPersonSummary);
+
+    for (const row of summaryPersonnelRows) {
       const type = row.userType || 'Personnel';
       if (row.canBeInstructor || INSTRUCTOR_TYPES.has(type)) {
         instructorList.push(row);
@@ -189,7 +308,7 @@ export async function GET() {
 
     const instructorDuty = instructorList.map((instructor) => {
       const instructorBookings = bookingRows
-        .map((row) => row.data as { instructorId?: string | null; preFlightData?: { hobbs?: number }; postFlightData?: { hobbs?: number } })
+        .map((row) => projectBookingSummary(row.data))
         .filter((booking) => booking.instructorId === instructor.id);
       const bookingCount = instructorBookings.length;
       const instructionHours = instructorBookings.reduce((sum, booking) => {
@@ -219,7 +338,7 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        bookings: bookingRows.map((row) => row.data),
+        bookings: bookingRows.map((row) => projectBookingSummary(row.data)),
         aircrafts: aircraftRows.map((row) => row.data),
         personnel: personnelList,
         instructors: instructorList,
