@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { MASTER_TENANT_ID } from '@/lib/tenant-constants';
+import type { TabVisibilitySettings } from '@/types/quality';
 
 type UserProfile = PilotProfile | Personnel;
 type DbUserProfile = {
@@ -20,11 +21,27 @@ type DbUserProfile = {
         hiddenTabs?: string[];
     };
 };
+type TenantSummary = {
+    id: string;
+    name?: string | null;
+    industry?: string | null;
+    enabledMenus?: string[] | null;
+    tabVisibilitySettings?: TabVisibilitySettings | null;
+} | null;
+type MePayload = {
+    profile: DbUserProfile | null;
+    tenant?: TenantSummary;
+    rolePermissions?: string[];
+    roleHiddenMenus?: string[];
+};
 const TENANT_OVERRIDE_STORAGE_KEY = 'safeviate:selected-tenant';
 
 interface UserProfileContextType {
     userProfile: UserProfile | null;
     tenantId: string | null;
+    tenant: TenantSummary;
+    rolePermissions: string[];
+    roleHiddenMenus: string[];
     isLoading: boolean;
     error: Error | null;
 }
@@ -51,6 +68,9 @@ const getTenantOverride = () => {
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const { data: session, status } = useSession();
     const [dbProfile, setDbProfile] = useState<DbUserProfile | null>(null);
+    const [tenant, setTenant] = useState<TenantSummary>(null);
+    const [rolePermissions, setRolePermissions] = useState<string[]>([]);
+    const [roleHiddenMenus, setRoleHiddenMenus] = useState<string[]>([]);
     const [dbError, setDbError] = useState<Error | null>(null);
     const [dbLoading, setDbLoading] = useState(false);
     const [profileRefreshToken, setProfileRefreshToken] = useState(0);
@@ -66,15 +86,21 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             setDbLoading(true);
             try {
                 const response = await fetch('/api/me', { cache: 'no-store' });
-                const payload = await parseJsonResponse<{ profile: DbUserProfile | null }>(response);
+                const payload = await parseJsonResponse<MePayload>(response);
                 if (!cancelled) {
                     setDbProfile(payload?.profile ?? null);
+                    setTenant(payload?.tenant ?? null);
+                    setRolePermissions(Array.isArray(payload?.rolePermissions) ? payload.rolePermissions : []);
+                    setRoleHiddenMenus(Array.isArray(payload?.roleHiddenMenus) ? payload.roleHiddenMenus : []);
                     setDbError(null);
                 }
             } catch (error) {
                 if (!cancelled) {
                     setDbError(error instanceof Error ? error : new Error('Failed to load profile.'));
                     setDbProfile(null);
+                    setTenant(null);
+                    setRolePermissions([]);
+                    setRoleHiddenMenus([]);
                 }
             } finally {
                 if (!cancelled) setDbLoading(false);
@@ -142,9 +168,12 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
             accessOverrides: {},
         } as UserProfile) : null),
         tenantId: tenantId || MASTER_TENANT_ID,
+        tenant,
+        rolePermissions,
+        roleHiddenMenus,
         isLoading,
         error,
-    }), [dbProfile, authUser, tenantId, isLoading, error]);
+    }), [dbProfile, authUser, tenantId, tenant, rolePermissions, roleHiddenMenus, isLoading, error]);
 
     return (
         <UserProfileContext.Provider value={value}>

@@ -1,60 +1,27 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useUserProfile } from './use-user-profile';
 import { menuConfig } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { parseJsonResponse } from '@/lib/safe-json';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { MASTER_TENANT_EMAILS } from '@/lib/tenant-constants';
-
-type MePayload = {
-  rolePermissions?: string[];
-  roleHiddenMenus?: string[];
-  tenant?: {
-    id: string;
-    industry?: string | null;
-    enabledMenus?: string[] | null;
-  } | null;
-};
-
-let permissionsCache: MePayload | null = null;
 
 const isSuperUserEmail = (email?: string | null) =>
   MASTER_TENANT_EMAILS.includes((email || '').trim().toLowerCase());
 
 export const usePermissions = () => {
-  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-  const [payload, setPayload] = useState<MePayload | null>(() => permissionsCache);
-  const [isPermissionsLoading, setIsPermissionsLoading] = useState(() => permissionsCache === null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setIsPermissionsLoading(true);
-      try {
-        const response = await fetch('/api/me', { cache: 'no-store' });
-        const data = (await parseJsonResponse<MePayload>(response)) ?? {};
-        if (!cancelled) {
-          setPayload(data);
-          permissionsCache = data;
-        }
-      } catch {
-        if (!cancelled) setPayload(null);
-      } finally {
-        if (!cancelled) setIsPermissionsLoading(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const {
+    userProfile,
+    tenant,
+    rolePermissions,
+    roleHiddenMenus,
+    isLoading: isProfileLoading,
+  } = useUserProfile();
 
   const effectivePermissions = useMemo(() => {
-    const inheritedPermissions = payload?.rolePermissions || [];
+    const inheritedPermissions = rolePermissions || [];
     const overridePermissions = (userProfile as Personnel | null)?.permissions || [];
     const deniedPermissions = new Set(
       overridePermissions.filter((permission) => permission.startsWith('!')).map((permission) => permission.slice(1))
@@ -75,15 +42,14 @@ export const usePermissions = () => {
     });
 
     return grantedPermissions;
-  }, [payload?.rolePermissions, userProfile]);
+  }, [rolePermissions, userProfile]);
 
   const hiddenMenus = useMemo(() => {
-    const roleHiddenMenus = payload?.roleHiddenMenus || [];
     const userHiddenMenus = (userProfile as Personnel | null)?.accessOverrides?.hiddenMenus || [];
     return new Set([...roleHiddenMenus, ...userHiddenMenus]);
-  }, [payload?.roleHiddenMenus, userProfile]);
+  }, [roleHiddenMenus, userProfile]);
 
-  const isLoading = isProfileLoading || isPermissionsLoading;
+  const isLoading = isProfileLoading;
 
   const hasPermission = useCallback(
     (permissionId: string) => {
@@ -111,7 +77,6 @@ export const usePermissions = () => {
     (item: MenuItem | SubMenuItem, parentItem?: MenuItem) => {
       if (isLoading || !userProfile) return false;
 
-      const tenant = payload?.tenant;
       const itemHref = item.href;
       if (isSuperUserEmail(userProfile.email)) {
         return true;
@@ -150,7 +115,7 @@ export const usePermissions = () => {
 
       return true;
     },
-    [hasPermission, hiddenMenus, isLoading, payload?.tenant, userProfile]
+    [hasPermission, hiddenMenus, isLoading, tenant, userProfile]
   );
 
   return {

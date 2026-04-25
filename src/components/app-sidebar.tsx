@@ -43,6 +43,7 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
+import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
 
 const USERS_STATIC_SUB_ITEMS: SubMenuItem[] = [
   { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
@@ -87,8 +88,14 @@ const SidebarItems = () => {
       let cancelled = false;
       const loadRoleSubmenu = async () => {
         try {
-          const response = await fetch('/api/roles', { cache: 'no-store' });
-          const payload = await response.json().catch(() => ({}));
+          const payload = await getOrSetClientApiCache(
+            'roles:submenu',
+            15_000,
+            async () => {
+              const response = await fetch('/api/roles', { cache: 'no-store' });
+              return await response.json().catch(() => ({}));
+            }
+          );
           const apiRoles = (Array.isArray(payload?.roles) ? payload.roles : []) as Role[];
 
           const dynamicItems: SubMenuItem[] = [
@@ -112,10 +119,14 @@ const SidebarItems = () => {
       };
 
       void loadRoleSubmenu();
-      window.addEventListener('safeviate-roles-updated', loadRoleSubmenu);
+      const reloadRoleSubmenu = () => {
+        invalidateClientApiCache('roles:submenu');
+        void loadRoleSubmenu();
+      };
+      window.addEventListener('safeviate-roles-updated', reloadRoleSubmenu);
       return () => {
         cancelled = true;
-        window.removeEventListener('safeviate-roles-updated', loadRoleSubmenu);
+        window.removeEventListener('safeviate-roles-updated', reloadRoleSubmenu);
       };
     }, []);
 

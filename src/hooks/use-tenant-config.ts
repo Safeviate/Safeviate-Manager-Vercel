@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useUserProfile } from './use-user-profile';
 import type { Tenant, IndustryType } from '@/types/quality';
+import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
 
 const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
 const LOCAL_TENANT_CONFIG_KEY = 'safeviate:tenant-config-local-override';
@@ -74,6 +75,24 @@ const normalizeIndustry = (value: unknown): IndustryType | null => {
 
 const DEFAULT_SAFEVIATE_INDUSTRY: IndustryType = 'Aviation: Flight Training (ATO)';
 
+const normalizeTenantSummary = (
+  tenant: {
+    id?: string | null;
+    name?: string | null;
+    [key: string]: unknown;
+  } | null | undefined,
+  fallback?: Tenant | null
+): Tenant | null => {
+  if (!tenant?.id) return null;
+
+  return {
+    ...(fallback || {}),
+    ...tenant,
+    id: tenant.id,
+    name: tenant.name || fallback?.name || FALLBACK_TENANT_NAME,
+  } as Tenant;
+};
+
 /**
  * A custom hook to fetch the configuration for the current tenant.
  * Supports a developer override for testing industry-specific layouts.
@@ -99,7 +118,7 @@ export const useTenantConfig = () => {
       return null;
     }
   };
-  const { tenantId, userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const { tenantId, tenant: profileTenant, userProfile, isLoading: isProfileLoading } = useUserProfile();
   const [tenantData, setTenantData] = useState<Tenant | null>(bootstrapTenant);
   const [isLoading, setIsLoading] = useState(!bootstrapTenant);
   const [error, setError] = useState<Error | null>(null);
@@ -161,13 +180,14 @@ export const useTenantConfig = () => {
       }
 
       try {
-        const [meResponse, configResponse] = await Promise.all([
-          fetch('/api/me', { cache: 'no-store' }),
-          fetch('/api/tenant-config', { cache: 'no-store' }),
-        ]);
-        const payload = meResponse.ok ? await meResponse.json().catch(() => ({})) : {};
-        const configPayload = configResponse.ok ? await configResponse.json().catch(() => ({})) : {};
-        const tenantFromApi = payload?.tenant ?? null;
+        const configPayload = await getOrSetClientApiCache(
+          `tenant-config:${tenantId}`,
+          10_000,
+          async () => {
+            const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+            return response.ok ? await response.json().catch(() => ({})) : {};
+          }
+        );
         const tenantConfig = configPayload?.config ?? null;
         const mergedConfig = mergeTenantConfig(
           tenantConfig && typeof tenantConfig === 'object'
@@ -178,12 +198,17 @@ export const useTenantConfig = () => {
         const tenantConfigWithoutIndustry = stripIndustryFromConfig(mergedConfig);
 
         if (!cancelled) {
-          if (tenantFromApi) {
-            setTenantData((current) => ({
-              ...(current || bootstrapTenant || {}),
-              ...tenantFromApi,
-              ...(tenantConfigWithoutIndustry || {}),
-            }));
+          if (profileTenant) {
+            setTenantData((current) => {
+              const normalizedProfileTenant = normalizeTenantSummary(profileTenant, current ?? bootstrapTenant);
+              return normalizedProfileTenant
+                ? {
+                    ...(current || bootstrapTenant || {}),
+                    ...normalizedProfileTenant,
+                    ...(tenantConfigWithoutIndustry || {}),
+                  }
+                : (current || bootstrapTenant || null);
+            });
           } else if (localOverride) {
             setTenantData(buildLocalTenant(localOverride));
           } else if (bootstrapTenant) {
@@ -209,8 +234,15 @@ export const useTenantConfig = () => {
     
       const handleUpdate = async () => {
         try {
-          const response = await fetch('/api/tenant-config', { cache: 'no-store' });
-          const payload = response.ok ? await response.json().catch(() => ({})) : {};
+          invalidateClientApiCache(`tenant-config:${tenantId}`);
+          const payload = await getOrSetClientApiCache(
+            `tenant-config:${tenantId}`,
+            10_000,
+            async () => {
+              const response = await fetch('/api/tenant-config', { cache: 'no-store' });
+              return response.ok ? await response.json().catch(() => ({})) : {};
+            }
+          );
           if (!cancelled) {
             const nextConfig = mergeTenantConfig(
               payload?.config && typeof payload.config === 'object'
@@ -237,7 +269,7 @@ export const useTenantConfig = () => {
       cancelled = true;
       window.removeEventListener('safeviate-tenant-config-updated', handleUpdate);
     };
-  }, [tenantId, localOverride, userProfile?.id, isProfileLoading]);
+  }, [tenantId, profileTenant, localOverride, userProfile?.id, isProfileLoading]);
 
   const isDeveloper =
     userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';
