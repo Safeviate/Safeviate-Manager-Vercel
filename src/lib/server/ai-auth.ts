@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureRolesSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 
 type DbUserProfile = {
@@ -46,6 +47,8 @@ export async function authenticateAiRequest() {
     update: { updatedAt: new Date() },
     create: { id: 'safeviate', name: 'Safeviate' },
   });
+
+  await ensureRolesSchema();
 
   const currentUser = await prisma.user.findUnique({
     where: { email },
