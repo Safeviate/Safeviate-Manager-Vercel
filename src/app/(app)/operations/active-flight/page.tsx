@@ -29,6 +29,7 @@ import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-f
 import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const BREADCRUMB_SAMPLE_MS = 15000;
 const MAX_BREADCRUMB_POINTS = 60;
@@ -863,13 +864,78 @@ export default function ActiveFlightPage() {
 
   if (isTenantLoading) {
     return (
-      <div className="flex min-h-full flex-1 items-center justify-center p-6">
-        <Card className="w-full max-w-md border shadow-none">
-          <CardContent className="flex items-center gap-3 p-6">
-            <Loader2 className="h-5 w-5 animate-spin text-sky-500" />
-            <div className="space-y-1">
-              <p className="text-sm font-black uppercase tracking-widest">Loading Active Flight</p>
-              <p className="text-sm text-muted-foreground">Resolving tenant access...</p>
+      <div className={cn('mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-4 overflow-hidden px-1 pt-4', isModern && 'gap-4')}>
+        {isModern && (
+          <section className="relative overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.12),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(15,23,42,0.94)_40%,_rgba(30,41,59,0.92))] px-6 py-6 text-white shadow-[0_24px_60px_rgba(15,23,42,0.18)] md:px-8 md:py-7">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+              <div className="max-w-2xl space-y-3">
+                <Skeleton className="h-3 w-36 bg-white/15" />
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-full max-w-xl bg-white/15 md:h-10" />
+                  <Skeleton className="h-4 w-full max-w-lg bg-white/15" />
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Skeleton className="h-7 w-28 rounded-full bg-white/15" />
+                  <Skeleton className="h-7 w-24 rounded-full bg-white/15" />
+                  <Skeleton className="h-7 w-24 rounded-full bg-white/15" />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
+                <Skeleton className="h-[124px] rounded-2xl bg-white/10" />
+                <Skeleton className="h-[124px] rounded-2xl bg-white/10" />
+              </div>
+            </div>
+          </section>
+        )}
+
+        <Card className={cn('flex min-h-0 flex-1 flex-col border shadow-none', isModern && 'overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
+          <div className="border-b border-slate-200/80 px-2 py-1.5 sm:px-3 sm:py-2">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[220px] flex-1 space-y-1">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+              <div className="min-w-[220px] flex-1 space-y-1">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+              <div className="min-w-[240px] flex-1 space-y-1">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-b border-slate-200/80 bg-white">
+            <div className="px-2 py-1.5 sm:px-3 sm:py-2">
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={`action-skeleton-${index}`} className="h-7 w-[92px] rounded-md" />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-b border-slate-200/80 bg-white">
+            <div className="grid grid-cols-4 gap-px bg-slate-200/80 lg:grid-cols-8">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={`telemetry-skeleton-${index}`} className="bg-white px-1.5 py-1 sm:px-3">
+                  <Skeleton className="h-3 w-8" />
+                  <Skeleton className="mt-1 h-4 w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+            <div className="flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center">
+              <div className="space-y-4">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin text-sky-500" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-72" />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

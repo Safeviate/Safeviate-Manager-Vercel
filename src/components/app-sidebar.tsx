@@ -57,6 +57,13 @@ const getLastSubmenuByParent = (): Record<string, string> => {
     return lastSubmenuByParentMemory;
 };
 
+const buildInitialOpenParents = (pathname: string) =>
+  menuConfig.reduce<Record<string, boolean>>((acc, item) => {
+    if (!item.subItems?.length) return acc;
+    acc[item.href] = pathname.startsWith(item.href) && pathname !== item.href;
+    return acc;
+  }, {});
+
 const setLastSubmenuByParent = (parentHref: string, subHref: string) => {
     lastSubmenuByParentMemory = { ...lastSubmenuByParentMemory, [parentHref]: subHref };
 };
@@ -79,9 +86,9 @@ const SidebarItems = () => {
     const { canAccessMenuItem } = usePermissions();
     const currentPathname = pathname ?? '';
     const lastSubmenuByParent = useMemo(() => getLastSubmenuByParent(), [pathname]);
-    const [openParents, setOpenParents] = useState<Record<string, boolean>>({});
+    const [openParents, setOpenParents] = useState<Record<string, boolean>>(() => buildInitialOpenParents(currentPathname));
     const [dismissedParents, setDismissedParents] = useState<Record<string, boolean>>({});
-    const [roleBasedUserSubItems, setRoleBasedUserSubItems] = useState<SubMenuItem[]>([]);
+    const [roleBasedUserSubItems, setRoleBasedUserSubItems] = useState<SubMenuItem[]>(USERS_STATIC_SUB_ITEMS);
     const normalizePath = (path: string) => path.replace(/\/+$/, '');
 
     useEffect(() => {
@@ -132,17 +139,10 @@ const SidebarItems = () => {
 
     useEffect(() => {
         setOpenParents((current) => {
-            const next = { ...current };
-            for (const item of menuConfig) {
-                if (!item.subItems?.length) continue;
-                const shouldBeOpen = currentPathname.startsWith(item.href) && currentPathname !== item.href;
-                if (shouldBeOpen) {
-                    next[item.href] = true;
-                } else if (next[item.href] === undefined) {
-                    next[item.href] = false;
-                }
-            }
-            return next;
+            const next = buildInitialOpenParents(currentPathname);
+            const keys = new Set([...Object.keys(current), ...Object.keys(next)]);
+            const isSame = [...keys].every((key) => Boolean(current[key]) === Boolean(next[key]));
+            return isSame ? current : next;
         });
     }, [pathname]);
   
