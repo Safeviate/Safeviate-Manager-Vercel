@@ -67,7 +67,7 @@ export function ResponsiveTabRow({
         <div className="space-y-1.5">
           {leadingAction ? <div className="flex justify-start">{leadingAction}</div> : null}
           <Select value={value} onValueChange={onValueChange}>
-            <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground h-8 px-3 py-1.5 text-[10px] font-medium shadow-sm hover:bg-accent/40">
+            <SelectTrigger aria-label={placeholder} className="w-full justify-between border-input bg-background text-foreground h-8 px-3 py-1.5 text-[10px] font-semibold shadow-sm hover:bg-accent/40">
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent className="w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]">
@@ -88,7 +88,7 @@ export function ResponsiveTabRow({
             })}
           </SelectContent>
           </Select>
-          {action ? <div className="flex justify-end">{action}</div> : null}
+          {action ? <div className="w-full">{action}</div> : null}
         </div>
       ) : (
         <div className={cn("flex items-center gap-3", leadingAction || action ? "justify-between" : centerTabs ? "justify-center" : "justify-between")}>

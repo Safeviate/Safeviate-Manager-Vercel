@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
@@ -8,7 +10,7 @@ import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingW
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route, ArrowLeft, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -19,6 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -98,10 +101,19 @@ interface ViewBookingDetailsProps {
     booking: Booking;
 }
 
+const BOOKING_PLANNING_SECONDARY_BUTTON_CLASS =
+    "h-8 rounded-md border-input bg-background px-2.5 text-[10px] font-medium leading-none tracking-normal text-foreground shadow-sm hover:bg-accent";
+
+const BOOKING_PLANNING_PRIMARY_BUTTON_CLASS =
+    "h-8 rounded-md px-2.5 text-[10px] font-medium leading-none tracking-normal shadow-sm";
+
+const BOOKING_PLANNING_STATUS_BUTTON_CLASS =
+    "h-8 rounded-md px-2.5 text-[10px] font-medium uppercase tracking-[0.14em] shadow-sm";
+
 const DetailItem = ({ label, value, children }: { label: string, value?: string | undefined | null, children?: React.ReactNode }) => (
     <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
-        {children ? children : <p className="text-sm font-semibold">{value || 'N/A'}</p>}
+        <p className="mb-1 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+        {children ? children : <p className="text-[10px] font-medium leading-4 text-foreground">{value || 'N/A'}</p>}
     </div>
 );
 
@@ -171,10 +183,10 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
     return (
         <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
             <div className="flex items-center justify-between border-b pb-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{title}</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
                 <div className="flex items-center gap-2">
                     {icao && <Badge variant="outline" className="text-[9px] font-black uppercase">{icao}</Badge>}
-                    <Button variant="ghost" size="sm" className="h-8 px-3 text-[10px] font-medium uppercase" onClick={onHide}>Hide</Button>
+                    <Button variant="ghost" size="sm" className="h-8 px-3 text-[9px] font-medium uppercase tracking-[0.16em]" onClick={onHide}>Hide</Button>
                 </div>
             </div>
             
@@ -196,7 +208,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-emerald-600">
                                 <Activity className="h-3 w-3" /> METAR
                             </div>
-                            <p className="text-xs font-mono font-bold leading-tight bg-background/50 p-2 rounded border border-border/50">
+                            <p className="text-[10px] font-mono font-bold leading-tight bg-background/50 p-2 rounded border border-border/50">
                                 {data.metar.rawOb || data.metar.raw}
                             </p>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
@@ -222,7 +234,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-amber-600">
                                 <Clock className="h-3 w-3" /> TAF
                             </div>
-                            <p className="text-xs font-mono font-medium leading-relaxed whitespace-pre-line opacity-80">
+                            <p className="text-[10px] font-mono font-medium leading-relaxed whitespace-pre-line opacity-80">
                                 {data.taf.rawTAF || data.taf.raw}
                             </p>
                         </div>
@@ -234,7 +246,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                 </div>
             ) : (
                 <div className="py-4 text-center">
-                    <p className="text-xs text-muted-foreground font-bold italic mb-4">No weather briefing loaded yet.</p>
+                    <p className="text-[10px] text-muted-foreground font-medium italic mb-4">No weather briefing loaded yet.</p>
                     <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={fetchWeather}>Fetch Weather</Button>
                 </div>
             )}
@@ -243,6 +255,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
 };
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
+    const router = useRouter();
     const isMobile = useIsMobile();
     const { toast } = useToast();
     const { tenantId, userProfile } = useUserProfile();
@@ -285,6 +298,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         { key: 'postFlight' as const, label: 'Post-flight checks recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight, detail: (booking.postFlightData?.hobbs || 0) > 0 ? 'Hobbs recorded' : 'Post-flight pending' },
     ]), [booking.massAndBalance?.isWithinLimits, booking.navlog?.legs?.length, booking.postFlightData?.fuelUpliftGallons, booking.postFlightData?.hobbs, booking.preFlight, booking.preFlightData?.documentsChecked, booking.preFlightData?.fuelUpliftGallons, booking.preFlightData, booking.postFlightData]);
     const approvedSectionCount = checkSections.filter((section) => checkApprovals[section.key]?.approved).length;
+    const approvalPrerequisitesComplete =
+        !!workflowCompletion.flightDetails &&
+        !!workflowCompletion.planning &&
+        !!workflowCompletion.weatherPlanningNavlogRequired &&
+        !!workflowCompletion.massBalance &&
+        !!workflowCompletion.navlog &&
+        !!workflowCompletion.checks;
     const [graphConfig, setGraphConfig] = useState(DEFAULT_GRAPH_CONFIG);
     const [basicEmpty, setBasicEmpty] = useState(DEFAULT_BASIC_EMPTY);
     const [stations, setStations] = useState<BookingStationState[]>(DEFAULT_STATIONS);
@@ -714,42 +734,45 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    const renderWorkflowStatusButton = (sectionKey: keyof BookingWorkflowCompletion, label = 'APPROVED') => (
-        <div className="flex flex-col items-end gap-1">
-            {(() => {
-                const approval = workflowApprovals[sectionKey];
-                const approved = !!approval?.approved;
-                return (
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant={approved ? 'default' : 'outline'}
-                        className={cn(
-                            "h-9 rounded-md px-4 text-[10px] font-black uppercase tracking-widest shadow-sm",
-                            approved
-                                ? "border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800"
-                                : "border-input bg-background text-foreground hover:bg-accent"
-                        )}
-                        onClick={() => handleMarkWorkflowComplete(sectionKey)}
-                        disabled={isSaving}
-                        title={`Mark ${label.toLowerCase()}`}
-                    >
-                        <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
-                        {label}
-                    </Button>
-                );
-            })()}
-            {workflowApprovals[sectionKey]?.approvedByName ? (
-                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    Approved by {workflowApprovals[sectionKey]?.approvedByName}
-                </p>
-            ) : null}
-        </div>
-    );
+    const renderWorkflowStatusButton = (sectionKey: keyof BookingWorkflowCompletion, label = 'Approve') => {
+        const approval = workflowApprovals[sectionKey];
+        const approved = !!approval?.approved;
+
+        if (approved) {
+            return null;
+        }
+
+        return (
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className={cn(
+                    BOOKING_PLANNING_STATUS_BUTTON_CLASS,
+                    "border-input bg-background text-foreground hover:bg-accent"
+                )}
+                onClick={() => handleMarkWorkflowComplete(sectionKey)}
+                disabled={isSaving}
+                title={`Mark ${label.toLowerCase()}`}
+            >
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                {label}
+            </Button>
+        );
+    };
 
     const handleManualConfirmFlight = async () => {
         if (!booking.studentId) {
             toast({ variant: 'destructive', title: 'Approval Blocked', description: 'This booking does not have a student assigned yet.' });
+            return;
+        }
+
+        if (!approvalPrerequisitesComplete) {
+            toast({
+                variant: 'destructive',
+                title: 'Approval Blocked',
+                description: 'Complete and save all required sections before approving this flight.',
+            });
             return;
         }
 
@@ -905,42 +928,179 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` â€¢ ${format(new Date(booking.approvedAt), 'PPP p')}` : ''}` : null}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    headerAction={<BackNavButton href="/bookings/history" text="Back to History" />}
+                    headerAction={isMobile ? null : <BackNavButton href="/bookings/history" text="Back to History" />}
                     tabRowAction={
                         activeTab === 'planning' ? (
-                            <div className="flex items-center gap-2">
-                                <Button 
-                                    variant="outline"
-                                    onClick={() => setShowRouteSummary(!showRouteSummary)}
-                                    className={cn(HEADER_SECONDARY_BUTTON_CLASS, showRouteSummary && "bg-muted")}
-                                >
-                                    <ListFilter className="h-3 w-3 mr-1.5" /> {showRouteSummary ? 'Hide Route' : 'Show Route'}
-                                </Button>
-                                <Button 
-                                    variant="outline"
-                                    onClick={() => setPlannedLegs([])}
-                                    className={HEADER_SECONDARY_BUTTON_CLASS}
-                                    disabled={plannedLegs.length === 0}
-                                >
-                                    <RotateCcw className="h-3 w-3 mr-1.5" /> Clear
-                                </Button>
-                                <Button 
-                                    className={HEADER_ACTION_BUTTON_CLASS}
-                                    onClick={handleCommitRoute}
-                                    disabled={isSaving}
-                                >
-                                    {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                                    Commit Route
-                                </Button>
-                                {renderWorkflowStatusButton('planning')}
-                            </div>
+                            isMobile ? (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-8 w-full justify-between border-input bg-background px-3 text-[10px] font-semibold tracking-normal text-foreground shadow-sm hover:bg-accent/40"
+                                        >
+                                            <span className="flex min-w-0 items-center gap-2">
+                                                <MoreHorizontal className="h-3 w-3 shrink-0" />
+                                                <span className="truncate">Route Actions</span>
+                                            </span>
+                                            <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                                        <DropdownMenuItem
+                                            onClick={() => setShowRouteSummary(!showRouteSummary)}
+                                            className="text-[10px] font-bold uppercase"
+                                        >
+                                            <ListFilter className="mr-2 h-3.5 w-3.5" />
+                                            {showRouteSummary ? 'Hide Route' : 'Show Route'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => setPlannedLegs([])}
+                                            disabled={plannedLegs.length === 0}
+                                            className="text-[10px] font-bold uppercase"
+                                        >
+                                            <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                                            Clear
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={handleCommitRoute}
+                                            disabled={isSaving}
+                                            className="text-[10px] font-bold uppercase"
+                                        >
+                                            <Save className="mr-2 h-3.5 w-3.5" />
+                                            Commit Route
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Button 
+                                        variant="outline"
+                                        onClick={() => setShowRouteSummary(!showRouteSummary)}
+                                        className={cn(BOOKING_PLANNING_SECONDARY_BUTTON_CLASS, showRouteSummary && "bg-muted")}
+                                    >
+                                        <ListFilter className="mr-1 h-3 w-3" /> {showRouteSummary ? 'Hide Route' : 'Show Route'}
+                                    </Button>
+                                    <Button 
+                                        variant="outline"
+                                        onClick={() => setPlannedLegs([])}
+                                        className={BOOKING_PLANNING_SECONDARY_BUTTON_CLASS}
+                                        disabled={plannedLegs.length === 0}
+                                    >
+                                        <RotateCcw className="mr-1 h-3 w-3" /> Clear
+                                    </Button>
+                                    <Button 
+                                        className={cn(
+                                            BOOKING_PLANNING_PRIMARY_BUTTON_CLASS,
+                                            "border border-button-primary-border bg-button-primary text-button-primary-foreground hover:bg-button-primary-accent hover:text-button-primary-accent-foreground"
+                                        )}
+                                        onClick={handleCommitRoute}
+                                        disabled={isSaving}
+                                    >
+                                        {isSaving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Save className="mr-1 h-3 w-3" />}
+                                        Commit Route
+                                    </Button>
+                                </div>
+                            )
                         ) : activeTab === 'flight-details' ? (
-                            renderWorkflowStatusButton('flightDetails')
+                            isMobile ? (
+                                <div className="flex flex-col items-end gap-1">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="h-8 w-full justify-between border-input bg-background px-3 text-[10px] font-semibold tracking-normal text-foreground shadow-sm hover:bg-accent/40"
+                                            >
+                                                <span className="flex min-w-0 items-center gap-2">
+                                                    <MoreHorizontal className="h-3 w-3 shrink-0" />
+                                                    <span className="truncate">Flight Actions</span>
+                                                </span>
+                                                <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                                            <DropdownMenuItem
+                                                onClick={handleSaveFlightDetails}
+                                                disabled={isSaving}
+                                                className="text-[10px] font-bold uppercase"
+                                            >
+                                                {isSaving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+                                                Save Flight Details
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => router.push('/bookings/history')}
+                                                className="text-[10px] font-bold uppercase"
+                                            >
+                                                <ArrowLeft className="mr-2 h-3.5 w-3.5" />
+                                                Back to History
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-muted-foreground">
+                                        Save this section before moving on.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 rounded-md border-input bg-background px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm hover:bg-accent"
+                                        onClick={handleSaveFlightDetails}
+                                        disabled={isSaving}
+                                    >
+                                        {isSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                                        Save Flight Details
+                                    </Button>
+                                    <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-muted-foreground">
+                                        Save this section before moving on.
+                                    </p>
+                                </div>
+                            )
                         ) : activeTab === 'mass-balance' ? (
-                            renderWorkflowStatusButton('massBalance')
+                            null
                         ) : activeTab === 'navlog' ? (
-                            renderWorkflowStatusButton('navlog')
+                            null
                         ) : activeTab === 'checks' ? (
+                                isMobile ? (
+                                    <div className="flex flex-col items-end gap-1">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="h-8 w-full justify-between border-input bg-background px-3 text-[10px] font-semibold tracking-normal text-foreground shadow-sm hover:bg-accent/40"
+                                                >
+                                                    <span className="flex min-w-0 items-center gap-2">
+                                                        <MoreHorizontal className="h-3 w-3 shrink-0" />
+                                                        <span className="truncate">Review Actions</span>
+                                                    </span>
+                                                    <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                                                <DropdownMenuItem
+                                                    onClick={handleSaveChecks}
+                                                    disabled={isSaving}
+                                                    className="text-[10px] font-bold uppercase"
+                                                >
+                                                    {isSaving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+                                                    Save Checks
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={handleManualConfirmFlight}
+                                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove || !approvalPrerequisitesComplete}
+                                                    className="text-[10px] font-bold uppercase"
+                                                >
+                                                    {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
+                                                    {booking.status === 'Approved' ? 'Approved' : 'Approve Flight'}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                ) : (
                                 <div className="flex flex-col items-end gap-1">
                                     <div className="flex items-center gap-2">
                                     <Button
@@ -959,18 +1119,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     size="sm"
                                     className="h-8 bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-800"
                                     onClick={handleManualConfirmFlight}
-                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove}
+                                    disabled={isApproving || booking.status === 'Approved' || booking.status === 'Completed' || !canManuallyApprove || !approvalPrerequisitesComplete}
                                     >
                                         {isApproving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
-                                        {booking.status === 'Approved' ? 'Approved' : 'Flight Approved'}
+                                        {booking.status === 'Approved' ? 'Approved' : 'Approve Flight'}
                                     </Button>
                                     </div>
-                                    {booking.approvedByName ? (
-                                        <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                                            Approved by {booking.approvedByName}
-                                        </p>
-                                    ) : null}
+                                    <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-muted-foreground">
+                                        Save each section first, then approve from checks.
+                                    </p>
                                 </div>
+                                )
                         ) : null
                     }
                 />
@@ -980,27 +1139,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             <CardContent className="pt-4 pb-20 space-y-6">
                                 <div className="rounded-xl bg-muted/20 p-4 space-y-3">
                                     <div className="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Overview</p>
-                                            <p className="text-sm font-black uppercase">Quick Reference</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-8 rounded-md border-input bg-background px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm hover:bg-accent"
-                                                onClick={handleSaveFlightDetails}
-                                                disabled={isSaving}
-                                            >
-                                                {isSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-                                                Save Flight Details
-                                            </Button>
-                                            <Badge variant="outline" className="text-[9px] font-black uppercase">Visible in Scroll</Badge>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Flight Overview</p>
+                                            <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-foreground/90">Quick Reference</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-4">
-                                        <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{getStatusLabel(booking.status)}</Badge></DetailItem>
+                                        <DetailItem label="Status"><p className="text-[10px] font-medium capitalize leading-4 text-foreground">{getStatusLabel(booking.status)}</p></DetailItem>
                                         <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
                                         <DetailItem label="Date" value={formatDateSafe(booking.start, 'PPP')} />
                                         <DetailItem label="Start Time" value={formatDateSafe(booking.start, 'p')} />
@@ -1011,8 +1156,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </div>
 
                                 <div>
-                                    <p className="text-sm text-muted-foreground">Notes</p>
-                                    <p className="font-semibold whitespace-pre-wrap">{booking.notes || 'No notes provided.'}</p>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Notes</p>
+                                    <p className="text-[10px] font-semibold whitespace-pre-wrap text-foreground">{booking.notes || 'No notes provided.'}</p>
                                 </div>
 
                                 {/* Planning Inputs in Details Tab */}
@@ -1020,34 +1165,34 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-4">
                                             <div className="space-y-1.5">
-                                                <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Departure ICAO</UILabel>
-                                                <div className="flex gap-2">
-                                                    <Input value={depIcao} onChange={(e) => setDepIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
-                                                    <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={() => lookupAirport(depIcao, 'dep')} disabled={isLookingUpDep}>
+                                                <UILabel className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Departure ICAO</UILabel>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Input value={depIcao} onChange={(e) => setDepIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="h-10 w-full min-w-0 text-[10px] font-semibold" />
+                                                    <Button variant="outline" className={`${HEADER_SECONDARY_BUTTON_CLASS} h-10 w-full min-w-0 justify-center`} onClick={() => lookupAirport(depIcao, 'dep')} disabled={isLookingUpDep}>
                                                         {isLookingUpDep ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radio className="h-3 w-3" />} Lookup
                                                     </Button>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <Input value={depLat} onChange={(e) => setDepLat(e.target.value)} placeholder="Lat" className="h-10 text-xs font-bold" />
-                                                <Input value={depLon} onChange={(e) => setDepLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
+                                                <Input value={depLat} onChange={(e) => setDepLat(e.target.value)} placeholder="Lat" className="h-10 text-[10px] font-semibold" />
+                                                <Input value={depLon} onChange={(e) => setDepLon(e.target.value)} placeholder="Lon" className="h-10 text-[10px] font-semibold" />
                                             </div>
                                             {showDepWeather && <WeatherCard title="Departure Weather" icao={depIcao} onHide={() => setShowDepWeather(false)} />}
                                             {!showDepWeather && <Button variant="ghost" size="sm" onClick={() => setShowDepWeather(true)} className="text-sm font-medium uppercase">Show Departure Weather</Button>}
                                         </div>
                                         <div className="space-y-4">
                                             <div className="space-y-1.5">
-                                                <UILabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Arrival ICAO</UILabel>
-                                                <div className="flex gap-2">
-                                                    <Input value={arrIcao} onChange={(e) => setArrIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="font-bold h-10" />
-                                                    <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} onClick={() => lookupAirport(arrIcao, 'arr')} disabled={isLookingUpArr}>
+                                                <UILabel className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Arrival ICAO</UILabel>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Input value={arrIcao} onChange={(e) => setArrIcao(e.target.value.toUpperCase())} placeholder="ICAO" className="h-10 w-full min-w-0 text-[10px] font-semibold" />
+                                                    <Button variant="outline" className={`${HEADER_SECONDARY_BUTTON_CLASS} h-10 w-full min-w-0 justify-center`} onClick={() => lookupAirport(arrIcao, 'arr')} disabled={isLookingUpArr}>
                                                         {isLookingUpArr ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radio className="h-3.5 w-3.5" />} Lookup
                                                     </Button>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <Input value={arrLat} onChange={(e) => setArrLat(e.target.value)} placeholder="Lat" className="h-10 text-xs font-bold" />
-                                                <Input value={arrLon} onChange={(e) => setArrLon(e.target.value)} placeholder="Lon" className="h-10 text-xs font-bold" />
+                                                <Input value={arrLat} onChange={(e) => setArrLat(e.target.value)} placeholder="Lat" className="h-10 text-[10px] font-semibold" />
+                                                <Input value={arrLon} onChange={(e) => setArrLon(e.target.value)} placeholder="Lon" className="h-10 text-[10px] font-semibold" />
                                             </div>
                                             {showArrWeather && <WeatherCard title="Arrival Weather" icao={arrIcao} onHide={() => setShowArrWeather(false)} />}
                                             {!showArrWeather && <Button variant="ghost" size="sm" onClick={() => setShowArrWeather(true)} className="text-sm font-medium uppercase">Show Arrival Weather</Button>}

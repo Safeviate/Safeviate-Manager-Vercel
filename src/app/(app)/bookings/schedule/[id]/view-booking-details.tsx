@@ -85,8 +85,8 @@ interface ViewBookingDetailsProps {
 
 const DetailItem = ({ label, value, children }: { label: string, value?: string | undefined | null, children?: React.ReactNode }) => (
     <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
-        {children ? children : <p className="text-sm font-semibold">{value || 'N/A'}</p>}
+        <p className="mb-1 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+        {children ? children : <p className="text-[10px] font-medium leading-4 text-foreground">{value || 'N/A'}</p>}
     </div>
 );
 
@@ -609,7 +609,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${formatDateSafe(booking.approvedAt, 'PPP p')}` : ''}` : 'Awaiting instructor approval'}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    headerAction={<BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
+                    headerAction={isMobile ? null : <BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
                     tabRowAction={
                         <div className="flex items-center gap-2">
                             {canTrackFlight && (
@@ -668,13 +668,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="rounded-xl bg-muted/20 p-4 space-y-3">
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Flight Overview</p>
-                                            <p className="text-sm font-black uppercase">Quick Reference</p>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Flight Overview</p>
+                                            <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-foreground/90">Quick Reference</p>
                                         </div>
                                         <Badge variant="outline" className="text-[9px] font-black uppercase">Visible in Scroll</Badge>
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-4">
-                                        <DetailItem label="Status"><Badge variant={booking.status === 'Approved' ? 'default' : 'secondary'}>{getStatusLabel(booking.status)}</Badge></DetailItem>
+                                        <DetailItem label="Status" value={getStatusLabel(booking.status)} />
                                         <DetailItem label="Aircraft" value={aircraft ? aircraft.tailNumber : booking.aircraftId} />
                                         <DetailItem label="Instructor" value={instructorLabel} />
                                         <DetailItem label="Student" value={studentLabel} />
