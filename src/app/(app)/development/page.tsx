@@ -64,6 +64,27 @@ const PERFORMANCE_ROADMAP = [
   },
 ];
 
+const PERFORMANCE_THRESHOLDS = [
+  {
+    metric: 'LCP',
+    good: 'Under 2.5s',
+    coldStart: 'Up to about 3.5s can be acceptable on a first open.',
+    warmStart: 'Warm repeat loads should usually land under 2.5s.',
+  },
+  {
+    metric: 'CLS',
+    good: 'Under 0.10',
+    coldStart: 'Cold or first-open layout movement should still stay close to stable.',
+    warmStart: 'Repeat loads should stay comfortably under 0.10.',
+  },
+  {
+    metric: 'INP',
+    good: 'Under 200ms',
+    coldStart: 'A little extra time on the first interaction is normal, but it should stay responsive.',
+    warmStart: 'Warm interactions should feel snappy and stay below 200ms.',
+  },
+];
+
 const APP_LINK_TREE = [
   'Safeviate App',
   '|- Dashboard',
@@ -700,6 +721,46 @@ export default function DevelopmentPage() {
                 <div key={step.title} className="rounded-2xl border bg-background px-4 py-3">
                   <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">{step.title}</p>
                   <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">{step.detail}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-primary">
+            Performance Thresholds
+          </h3>
+          <p className="text-xs text-muted-foreground font-medium">
+            Quick reference for what we expect on cold starts versus warm repeat loads.
+          </p>
+        </div>
+
+        <Card className="border shadow-none">
+          <CardContent className="p-5">
+            <div className="grid gap-3 lg:grid-cols-3">
+              {PERFORMANCE_THRESHOLDS.map((item) => (
+                <div key={item.metric} className="rounded-2xl border bg-background px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-foreground">
+                      {item.metric}
+                    </p>
+                    <span className="rounded-full border bg-primary/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                      {item.good}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <div className="rounded-xl border bg-muted/10 px-3 py-2">
+                      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Cold Start</p>
+                      <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">{item.coldStart}</p>
+                    </div>
+                    <div className="rounded-xl border bg-muted/10 px-3 py-2">
+                      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Warm Start</p>
+                      <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">{item.warmStart}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
