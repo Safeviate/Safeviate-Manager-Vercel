@@ -10,8 +10,8 @@ import { TrainingRecords } from '@/app/(app)/users/personnel/[id]/training-recor
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MainPageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Booking } from '@/types/booking';
 import type { MilestoneWarning, StudentMilestoneSettings, StudentProgressReport } from '@/types/training';
 
@@ -311,17 +311,25 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
   })();
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full min-h-0 overflow-hidden gap-4 pt-4">
-      <MainPageHeader
-        title="Student Progress"
-        description="Track progression, recency, and training pace for the selected student."
-      />
+    <Card className="mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-col overflow-hidden shadow-none border">
+      <CardHeader className="shrink-0 border-b bg-muted/5 px-4 py-3">
+        <CardTitle className="text-[13px] font-black uppercase tracking-tight md:text-lg">
+          Student Progress
+        </CardTitle>
+        <CardDescription className="text-[10px] font-medium capitalize tracking-normal text-muted-foreground md:text-sm">
+          Track progression, recency, and training pace for the selected student.
+        </CardDescription>
+      </CardHeader>
 
-      <ProgressSummary student={student} progress={progress} />
+      <ScrollArea className="min-h-0 flex-1">
+        <CardContent className="space-y-4 p-4">
+          <ProgressSummary student={student} progress={progress} />
 
-      <div className="flex-1 min-h-0 overflow-hidden px-1">
-        <TrainingRecords studentId={studentId} tenantId={tenantId || ''} />
-      </div>
-    </div>
+          <div className="flex-1 min-h-0 overflow-hidden px-1">
+            <TrainingRecords studentId={studentId} tenantId={tenantId || ''} />
+          </div>
+        </CardContent>
+      </ScrollArea>
+    </Card>
   );
 }

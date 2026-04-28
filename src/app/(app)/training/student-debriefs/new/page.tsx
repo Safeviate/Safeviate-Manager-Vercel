@@ -23,15 +23,14 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BackNavButton } from '@/components/back-nav-button';
 import { MainPageHeader } from '@/components/page-header';
+import { DEFAULT_TRAINING_COMPETENCY_KEY, TRAINING_COMPETENCY_OPTIONS } from '@/lib/training-competencies';
 
-const COMPETENCY_OPTIONS = [
-    { value: 'circuits', label: 'Circuits' },
-    { value: 'takeoff_landing', label: 'Takeoff & Landing' },
-    { value: 'nav', label: 'Navigation' },
-    { value: 'radio', label: 'Radio Work' },
-    { value: 'airmanship', label: 'Airmanship' },
-    { value: 'handling', label: 'Aircraft Handling' },
-    { value: 'decision', label: 'Decision Making' },
+const RATING_GUIDE = [
+    { value: '1', label: 'Unsafe', hint: 'Instructor intervention required immediately.' },
+    { value: '2', label: 'Significant Support Needed', hint: 'Heavy prompting or corrective input required.' },
+    { value: '3', label: 'Acceptable With Coaching', hint: 'Safe enough to continue, but still needs active coaching.' },
+    { value: '4', label: 'Competent', hint: 'Meets standard with only light instructor input.' },
+    { value: '5', label: 'Strong / Independent', hint: 'Confident, disciplined, and largely self-directed.' },
 ] as const;
 
 const debriefSchema = z.object({
@@ -39,7 +38,7 @@ const debriefSchema = z.object({
     entries: z.array(z.object({
         id: z.string(),
         exercise: z.string().min(1, "Exercise name is required."),
-        rating: z.coerce.number().min(1).max(4),
+        rating: z.coerce.number().min(1).max(5),
         comment: z.string().optional(),
         competencyKey: z.string().optional(),
         competencySignal: z.enum(['strength', 'growth', 'watch']).optional(),
@@ -100,7 +99,7 @@ function NewDebriefContent() {
         resolver: zodResolver(debriefSchema),
         defaultValues: {
             overallComment: '',
-            entries: [{ id: uuidv4(), exercise: '', rating: 4, comment: '', competencyKey: 'circuits', competencySignal: 'growth' }],
+            entries: [{ id: uuidv4(), exercise: '', rating: 4, comment: '', competencyKey: DEFAULT_TRAINING_COMPETENCY_KEY, competencySignal: 'growth' }],
             instructorSignatureUrl: '',
             studentSignatureUrl: '',
         },
@@ -182,7 +181,7 @@ function NewDebriefContent() {
             />
 
             <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-none border">
-                <CardHeader className="shrink-0 border-b bg-muted/20">
+                <CardHeader className="shrink-0 border-b bg-muted/5 px-5 py-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <CardTitle>Post-Flight Instructor Debrief</CardTitle>
@@ -190,14 +189,14 @@ function NewDebriefContent() {
                                 Booking #{booking.bookingNumber} • {booking.type}
                             </CardDescription>
                         </div>
-                        <div className="flex items-center gap-3 bg-muted/50 p-3 rounded-lg border">
+                        <div className="flex items-center gap-3 rounded-xl border bg-background px-4 py-3">
                             <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Student</span>
+                                <span className="text-[10px] uppercase font-black tracking-[0.12em] text-muted-foreground">Student</span>
                                 <span className="text-sm font-semibold">{studentName}</span>
                             </div>
                             <Separator orientation="vertical" className="h-8" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Instructor</span>
+                                <span className="text-[10px] uppercase font-black tracking-[0.12em] text-muted-foreground">Instructor</span>
                                 <span className="text-sm font-semibold">{instructorName}</span>
                             </div>
                         </div>
@@ -208,56 +207,47 @@ function NewDebriefContent() {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
                             <ScrollArea className="flex-1 p-6">
                                 <div className="space-y-8">
+                                    <div className="rounded-xl border bg-muted/5 p-4 space-y-4">
+                                        <div className="space-y-1">
+                                            <h3 className="text-sm font-black uppercase tracking-[0.08em]">Instructor Assessment Guide</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Rate what the student or higher-rated pilot actually demonstrated on this flight, then tag the main competency being assessed.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                            {RATING_GUIDE.map((item) => (
+                                                <div key={item.value} className="rounded-lg border bg-background p-3">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Rating {item.value}</p>
+                                                    <p className="mt-1 text-sm font-semibold">{item.label}</p>
+                                                    <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
                                     <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="text-lg font-semibold">Exercise Ratings</h3>
-                                                <Button 
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <h3 className="text-lg font-semibold">Assessment Entries</h3>
+                                                <p className="text-sm text-muted-foreground">Log each observed exercise, competency, and instructor signal from the flight.</p>
+                                            </div>
+                                            <Button 
                                                 type="button" 
                                                 variant="outline" 
                                                 size="sm" 
-                                                onClick={() => append({ id: uuidv4(), exercise: '', rating: 4, comment: '', competencyKey: 'circuits', competencySignal: 'growth' })}
+                                                onClick={() => append({ id: uuidv4(), exercise: '', rating: 4, comment: '', competencyKey: DEFAULT_TRAINING_COMPETENCY_KEY, competencySignal: 'growth' })}
                                             >
-                                                <PlusCircle className="mr-2 h-4 w-4" /> Add Exercise
+                                                <PlusCircle className="mr-2 h-4 w-4" /> Add Entry
                                             </Button>
                                         </div>
 
                                         {fields.map((field, index) => (
-                                            <div key={field.id} className="p-4 border rounded-lg bg-muted/20 space-y-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                                                    <FormField 
-                                                        control={form.control} 
-                                                        name={`entries.${index}.exercise`} 
-                                                        render={({ field }) => (
-                                                            <FormItem className="md:col-span-2">
-                                                                <FormLabel>Exercise / Maneuver</FormLabel>
-                                                                <FormControl><Input placeholder="e.g., Steep Turns" {...field} /></FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )} 
-                                                    />
-                                                    <FormField 
-                                                        control={form.control} 
-                                                        name={`entries.${index}.rating`} 
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Rating</FormLabel>
-                                                                <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                                                                    <FormControl>
-                                                                        <SelectTrigger>
-                                                                            <SelectValue />
-                                                                        </SelectTrigger>
-                                                                    </FormControl>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="1">1 - Unsatisfactory</SelectItem>
-                                                                        <SelectItem value="2">2 - Needs Improvement</SelectItem>
-                                                                        <SelectItem value="3">3 - Satisfactory</SelectItem>
-                                                                        <SelectItem value="4">4 - Proficient</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )} 
-                                                    />
+                                            <div key={field.id} className="rounded-xl border bg-background p-4 space-y-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Entry {index + 1}</p>
+                                                        <p className="text-sm font-semibold">Observed competency and instructor feedback</p>
+                                                    </div>
                                                     <Button 
                                                         type="button" 
                                                         variant="ghost" 
@@ -269,13 +259,53 @@ function NewDebriefContent() {
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                                    <FormField 
+                                                        control={form.control} 
+                                                        name={`entries.${index}.exercise`} 
+                                                        render={({ field }) => (
+                                                            <FormItem className="md:col-span-2">
+                                                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Exercise / Observation</FormLabel>
+                                                                <FormControl><Input placeholder="e.g., Circuit rejoin, general handling, arrival and landing" {...field} /></FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} 
+                                                    />
+                                                    <FormField 
+                                                        control={form.control} 
+                                                        name={`entries.${index}.rating`} 
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Rating</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                                                                    <FormControl>
+                                                                        <SelectTrigger>
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="1">1 - Unsafe</SelectItem>
+                                                                        <SelectItem value="2">2 - Significant Support Needed</SelectItem>
+                                                                        <SelectItem value="3">3 - Acceptable With Coaching</SelectItem>
+                                                                        <SelectItem value="4">4 - Competent</SelectItem>
+                                                                        <SelectItem value="5">5 - Strong / Independent</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} 
+                                                    />
+                                                    <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                                                        Use the guide above
+                                                    </div>
+                                                </div>
                                                 <FormField 
                                                     control={form.control} 
                                                     name={`entries.${index}.comment`} 
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormLabel>Exercise Notes</FormLabel>
-                                                            <FormControl><Textarea placeholder="Specific feedback for this exercise..." {...field} /></FormControl>
+                                                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Instructor Notes</FormLabel>
+                                                            <FormControl><Textarea placeholder="What went well, what needed intervention, and what should be reinforced next flight..." {...field} /></FormControl>
                                                             <FormMessage />
                                                         </FormItem>
                                                     )} 
@@ -287,15 +317,15 @@ function NewDebriefContent() {
                                                         name={`entries.${index}.competencyKey`}
                                                         render={({ field }) => (
                                                             <FormItem>
-                                                                <FormLabel>Competency Area</FormLabel>
-                                                                <Select onValueChange={field.onChange} defaultValue={field.value || 'circuits'}>
+                                                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Competency Area</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={field.value || DEFAULT_TRAINING_COMPETENCY_KEY}>
                                                                     <FormControl>
                                                                         <SelectTrigger>
                                                                             <SelectValue placeholder="Select area" />
                                                                         </SelectTrigger>
                                                                     </FormControl>
                                                                     <SelectContent>
-                                                                        {COMPETENCY_OPTIONS.map((option) => (
+                                                                        {TRAINING_COMPETENCY_OPTIONS.map((option) => (
                                                                             <SelectItem key={option.value} value={option.value}>
                                                                                 {option.label}
                                                                             </SelectItem>
@@ -312,7 +342,7 @@ function NewDebriefContent() {
                                                         name={`entries.${index}.competencySignal`}
                                                         render={({ field }) => (
                                                             <FormItem>
-                                                                <FormLabel>Signal</FormLabel>
+                                                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Instructor Signal</FormLabel>
                                                                 <Select onValueChange={field.onChange} defaultValue={field.value || 'growth'}>
                                                                     <FormControl>
                                                                         <SelectTrigger>
@@ -341,11 +371,11 @@ function NewDebriefContent() {
                                         name="overallComment" 
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-lg font-semibold">Overall Progress Comment</FormLabel>
+                                                <FormLabel className="text-lg font-semibold">Overall Instructor Debrief</FormLabel>
                                                 <FormControl>
                                                     <Textarea 
                                                         className="min-h-[120px]" 
-                                                        placeholder="Summarize the overall performance and objectives for the next flight..." 
+                                                        placeholder="Summarize the student's overall performance, key risks, strengths, and the focus for the next lesson..." 
                                                         {...field} 
                                                     />
                                                 </FormControl>

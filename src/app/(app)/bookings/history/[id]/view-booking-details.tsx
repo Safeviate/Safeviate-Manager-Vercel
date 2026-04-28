@@ -214,7 +214,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
                                 <div className="flex items-center gap-2">
                                     <Wind className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'}Â°</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'}Ã‚Â°</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Eye className="h-3 w-3 text-sky-500" />
@@ -222,7 +222,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Thermometer className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.temp}Â°C / {data.metar.dewp}Â°C</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.temp}Ã‚Â°C / {data.metar.dewp}Ã‚Â°C</span>
                                 </div>
                             </div>
                         </div>
@@ -491,7 +491,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
-    // â”€â”€ Fuel sync between M&B and NavLog â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Fuel sync between M&B and NavLog Ã¢â€â‚¬Ã¢â€â‚¬
     const fuelStation = useMemo(() => stations.find(s => s.type === 'fuel'), [stations]);
     const fuelWeightLbs = fuelStation ? (parseFloat(String(fuelStation.weight)) || 0) : undefined;
 
@@ -923,9 +923,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
-                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} â€¢ Inst: ${instructorLabel} â€¢ Stud: ${studentLabel}`}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
                     status={booking.status}
-                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` â€¢ ${format(new Date(booking.approvedAt), 'PPP p')}` : ''}` : null}
+                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${format(new Date(booking.approvedAt), "PPP p")}` : ""}` : null}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     headerAction={isMobile ? null : <BackNavButton href="/bookings/history" text="Back to History" />}
@@ -1037,9 +1037,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
-                                    <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-muted-foreground">
-                                        Save this section before moving on.
-                                    </p>
                                 </div>
                             ) : (
                                 <div className="flex flex-wrap items-center gap-2">
@@ -1054,9 +1051,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         {isSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
                                         Save Flight Details
                                     </Button>
-                                    <p className="text-[9px] font-medium capitalize tracking-[0.18em] text-muted-foreground">
-                                        Save this section before moving on.
-                                    </p>
                                 </div>
                             )
                         ) : activeTab === 'mass-balance' ? (
@@ -1260,7 +1254,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                     </div>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                        <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0)}Â°</span>
+                                                                        <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0)}Ã‚Â°</span>
                                                                     </div>
                                                                 </div>
                                                             </div>

@@ -18,6 +18,7 @@ import type { QualityAudit, QualityFinding, CorrectiveActionPlan } from '@/types
 import type { Risk } from '@/types/risk';
 import type { SafetyReport } from '@/types/safety-report';
 import type { StudentMilestoneSettings, StudentProgressReport } from '@/types/training';
+import { TRAINING_COMPETENCY_OPTIONS } from '@/lib/training-competencies';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -328,15 +329,7 @@ const AIRCRAFT_MODELS = [
 const MEETING_TYPES = ['Operations', 'Safety', 'Training', 'Board', 'General'] as const;
 const REPORT_TYPES = ['Hazard', 'Occurrence', 'Near Miss', 'Maintenance Event'];
 const COURSE_NAMES = ['PPL Ground School', 'Nav Briefing', 'Solo Debrief', 'Human Factors Review', 'Air Law Revision'];
-const COMPETENCIES = [
-  { key: 'circuits', label: 'Circuits' },
-  { key: 'takeoff_landing', label: 'Takeoff & Landing' },
-  { key: 'nav', label: 'Navigation' },
-  { key: 'radio', label: 'Radio Work' },
-  { key: 'airmanship', label: 'Airmanship' },
-  { key: 'handling', label: 'Aircraft Handling' },
-  { key: 'decision', label: 'Decision Making' },
-];
+const COMPETENCIES = TRAINING_COMPETENCY_OPTIONS;
 
 function clampNumber(value: unknown, fallback: number, min: number, max: number) {
   const numeric = typeof value === 'number' ? value : Number(value);
@@ -689,7 +682,7 @@ function buildStudentReports(runId: string, settings: SimulationLabSettings, stu
     for (let reportIndex = 0; reportIndex < settings.studentReportsPerStudent && studentBookings.length > 0; reportIndex += 1) {
       const booking = studentBookings[(index + reportIndex) % studentBookings.length];
       const competency = COMPETENCIES[(index + reportIndex) % COMPETENCIES.length];
-      const rating = ((index + reportIndex) % 4) + 1 as 1 | 2 | 3 | 4;
+      const rating = ((index + reportIndex) % 5) + 1 as 1 | 2 | 3 | 4 | 5;
       reports.push({
         id: `sim_${runId}_report_${student.id}_${reportIndex + 1}`,
         bookingId: booking.id,
@@ -704,16 +697,16 @@ function buildStudentReports(runId: string, settings: SimulationLabSettings, stu
             exercise: competency.label,
             rating,
             comment: rating >= 3 ? `${competency.label} handled confidently.` : `${competency.label} needs more rehearsal.`,
-            competencyKey: competency.key,
-            competencySignal: rating >= 3 ? 'strength' : rating === 2 ? 'growth' : 'watch',
+            competencyKey: competency.value,
+            competencySignal: rating >= 4 ? 'strength' : rating === 2 ? 'growth' : 'watch',
           },
           {
             id: `${student.id}_entry_${reportIndex + 1}_b`,
             exercise: 'Airmanship Review',
-            rating: Math.max(1, Math.min(4, rating + 1)) as 1 | 2 | 3 | 4,
+            rating: Math.max(1, Math.min(5, rating + 1)) as 1 | 2 | 3 | 4 | 5,
             comment: 'General scan, lookout, and handling assessed during simulation.',
             competencyKey: 'airmanship',
-            competencySignal: rating >= 3 ? 'strength' : 'watch',
+            competencySignal: rating >= 4 ? 'strength' : 'watch',
           },
         ],
       });

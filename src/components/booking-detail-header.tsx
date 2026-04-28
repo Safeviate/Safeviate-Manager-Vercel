@@ -54,40 +54,36 @@ export function BookingDetailHeader({
       <Card className="overflow-hidden rounded-none border-0 shadow-none">
         <CardContent className="px-3 py-2.5 md:px-4 md:py-3">
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0 space-y-2">
-              <div className="flex min-w-0 items-start justify-between gap-3 md:gap-4">
-                <div className="min-w-0 space-y-1">
-                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <h1 className="min-w-0 break-words text-[13px] font-black uppercase tracking-tight text-foreground md:text-lg">
-                      {title}
-                    </h1>
-                    {primarySubtitle ? (
-                      <span className="min-w-0 break-words text-[8px] font-medium capitalize leading-4 tracking-normal text-muted-foreground md:text-[9px]">
-                        {primarySubtitle}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {!isMobile && secondarySubtitleParts.length > 0 ? (
-                    <div className="space-y-0.5">
-                      {secondarySubtitleParts.map((part, index) => (
-                        <span
-                          key={`${part}-${index}`}
-                          className="block max-w-[72ch] break-words text-[8px] font-medium capitalize leading-4 tracking-normal text-muted-foreground md:text-[9px]"
-                        >
-                          {part}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                {!isMobile && approvalMeta ? (
-                      <p className="max-w-[240px] text-right text-[8px] font-medium capitalize leading-tight tracking-normal text-muted-foreground md:text-[9px]">
-                    {approvalMeta}
-                  </p>
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <h1 className="min-w-0 break-words text-[13px] font-black uppercase tracking-tight text-foreground md:text-lg">
+                  {title}
+                </h1>
+                {primarySubtitle ? (
+                  <span className="min-w-0 break-words text-[13px] font-black uppercase tracking-tight text-foreground/90 md:text-lg">
+                    {primarySubtitle}
+                  </span>
                 ) : null}
               </div>
+
+              {!isMobile && secondarySubtitleParts.length > 0 ? (
+                <div className="space-y-0.5">
+                  {secondarySubtitleParts.map((part, index) => (
+                    <span
+                      key={`${part}-${index}`}
+                      className="block max-w-[72ch] break-words text-[8px] font-medium capitalize leading-4 tracking-normal text-muted-foreground md:text-[9px]"
+                    >
+                      {part}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
+              {!isMobile && approvalMeta ? (
+                <p className="max-w-[72ch] break-words text-[8px] font-medium capitalize leading-tight tracking-normal text-muted-foreground md:text-[9px]">
+                  {approvalMeta}
+                </p>
+              ) : null}
 
               {isMobile ? (
                 <div className="space-y-1.5">

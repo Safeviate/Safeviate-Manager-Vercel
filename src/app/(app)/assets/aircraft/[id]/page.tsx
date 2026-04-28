@@ -829,9 +829,10 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
         
         <div className={cn("flex-1 pb-10", isMobile ? "overflow-visible" : "overflow-y-auto no-scrollbar")}>
           <Card className="shadow-none border rounded-xl overflow-hidden flex flex-col">
-              <MainPageHeader
+            <MainPageHeader
                 title={aircraft.tailNumber}
                 description={`${aircraft.make} ${aircraft.model}`}
+                className="[&>div:first-child>div:first-child]:px-2 [&>div:first-child>div:first-child]:py-0 [&>div:first-child>div:first-child]:min-h-11 [&_.main-page-header__header]:h-11 [&_.main-page-header__header]:min-h-11 [&_.main-page-header__header]:items-center [&_.main-page-header__actions]:py-0"
                 actions={
                   <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <BackNavButton href="/assets/aircraft" text="Back to Fleet" />
@@ -954,8 +955,8 @@ export default function AircraftDetailPage({ params }: AircraftDetailPageProps) 
                 </CardContent>
               </TabsContent>
 
-              <TabsContent value="utilisation" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-y-auto no-scrollbar")}>
-                <CardContent className="p-4 sm:p-6 space-y-6">
+              <TabsContent value="utilisation" className={cn("mt-0 outline-none", isMobile ? "min-h-0" : "h-full overflow-hidden")}>
+                <CardContent className="p-4 sm:p-6 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto no-scrollbar">
                   <Card className="shadow-none border overflow-hidden">
                     <CardHeader className="border-b bg-muted/20 px-4 py-3">
                       <div className="flex flex-col gap-3">

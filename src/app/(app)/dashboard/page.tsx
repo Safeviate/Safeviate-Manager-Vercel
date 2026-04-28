@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { buildTrainingCompetencyAreas } from '@/lib/training-competencies';
 import { parseJsonResponse } from '@/lib/safe-json';
 import {
   CARD_HEADER_ACTION_ZONE_CLASS,
@@ -169,14 +170,12 @@ type StudentMetrics = {
   overCount: number;
 };
 
-type CompetencySignal = 'strength' | 'growth' | 'watch';
-
 type CompetencyArea = {
   label: string;
   score: number;
   sampleCount: number;
   trend: number;
-  signal: CompetencySignal;
+  signal: 'strength' | 'growth' | 'watch';
 };
 
 type SafetyMetrics = {
@@ -458,94 +457,10 @@ const getStudentRecommendation = (row: {
   return 'Keep current pace';
 };
 
-const STUDENT_COMPETENCY_RULES: Array<{ key: string; label: string; keywords: string[]; strengthBias: number; growthBias: number }> = [
-  { key: 'circuits', label: 'Circuits', keywords: ['circuit', 'circuits', 'traffic pattern', 'pattern'], strengthBias: 1.05, growthBias: 0.95 },
-  { key: 'takeoff_landing', label: 'Takeoff & Landing', keywords: ['takeoff', 'landing', 'flare', 'roundout', 'touch and go'], strengthBias: 1, growthBias: 1 },
-  { key: 'nav', label: 'Navigation', keywords: ['navigation', 'nav', 'map', 'route', 'waypoint', 'planning'], strengthBias: 1, growthBias: 1 },
-  { key: 'radio', label: 'Radio Work', keywords: ['radio', 'comms', 'communication', 'phraseology', 'rt'], strengthBias: 1, growthBias: 1 },
-  { key: 'airmanship', label: 'Airmanship', keywords: ['airmanship', 'lookout', 'situational awareness', 'awareness', 'scan'], strengthBias: 1.05, growthBias: 0.95 },
-  { key: 'handling', label: 'Aircraft Handling', keywords: ['stall', 'stalls', 'turn', 'steep', 'climb', 'descent', 'handling'], strengthBias: 1, growthBias: 1 },
-  { key: 'decision', label: 'Decision Making', keywords: ['decision', 'judgement', 'judgment', 'planning', 'situational', 'choice'], strengthBias: 0.95, growthBias: 1.05 },
-];
-
-const classifyStudentEntry = (entry: StudentProgressReport['entries'][number]) => {
-  if (entry.competencyKey) {
-    const normalized = entry.competencyKey.toLowerCase();
-    const directMatch = STUDENT_COMPETENCY_RULES.filter(
-      (rule) => rule.key === normalized || rule.label.toLowerCase() === normalized
-    );
-    if (directMatch.length > 0) {
-      return directMatch;
-    }
-  }
-
-  const text = `${entry.exercise || ''} ${entry.comment || ''}`.toLowerCase();
-  return STUDENT_COMPETENCY_RULES.filter((rule) => rule.keywords.some((keyword) => text.includes(keyword)));
-};
-
-const buildStudentCompetencyAreas = (reports: StudentProgressReport[]): CompetencyArea[] => {
-  const buckets = new Map<string, { label: string; scoreTotal: number; sampleCount: number; trendTotal: number; signalVotes: Record<CompetencySignal, number> }>();
-
-  STUDENT_COMPETENCY_RULES.forEach((rule) => {
-    buckets.set(rule.key, {
-      label: rule.label,
-      scoreTotal: 0,
-      sampleCount: 0,
-      trendTotal: 0,
-      signalVotes: { strength: 0, growth: 0, watch: 0 },
-    });
-  });
-
-  const sortedReports = [...reports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  sortedReports.forEach((report, reportIndex) => {
-    const reportWeight = Math.max(0.4, 1 - reportIndex * 0.12);
-    report.entries.forEach((entry) => {
-      const matches = classifyStudentEntry(entry);
-      if (matches.length === 0) return;
-      matches.forEach((rule) => {
-        const bucket = buckets.get(rule.key);
-        if (!bucket) return;
-        const normalizedRating = Math.max(0, Math.min(1, (entry.rating - 1) / 3));
-        bucket.scoreTotal += normalizedRating * 100 * reportWeight * (entry.rating >= 3 ? rule.strengthBias : rule.growthBias);
-        bucket.trendTotal += entry.rating;
-        bucket.sampleCount += 1;
-        const signal: CompetencySignal = entry.competencySignal || (entry.rating >= 3 ? 'strength' : entry.rating <= 2 ? 'growth' : 'watch');
-        bucket.signalVotes[signal] += reportWeight;
-      });
-    });
-  });
-
-  return Array.from(buckets.values())
-    .map((bucket) => {
-      const averageScore = bucket.sampleCount > 0 ? bucket.scoreTotal / bucket.sampleCount : 0;
-      const averageRating = bucket.sampleCount > 0 ? bucket.trendTotal / bucket.sampleCount : 0;
-      const voteSignal = (Object.entries(bucket.signalVotes).sort((a, b) => b[1] - a[1])[0]?.[0] || null) as CompetencySignal | null;
-      const signal: CompetencySignal = voteSignal || (averageRating >= 3.4 ? 'strength' : averageRating <= 2.4 ? 'growth' : 'watch');
-      return {
-        label: bucket.label,
-        score: parseFloat(averageScore.toFixed(1)),
-        sampleCount: bucket.sampleCount,
-        trend: parseFloat(averageRating.toFixed(1)),
-        signal,
-      };
-    })
-    .filter((area) => area.sampleCount > 0)
-    .sort((a, b) => {
-      if (a.signal !== b.signal) {
-        if (a.signal === 'growth') return -1;
-        if (b.signal === 'growth') return 1;
-        if (a.signal === 'watch') return -1;
-        if (b.signal === 'watch') return 1;
-      }
-      return a.score - b.score;
-    });
-};
-
 const getStudentCompetencySnapshot = (reports: StudentProgressReport[]) => {
-  const areas = buildStudentCompetencyAreas(reports);
+  const areas = buildTrainingCompetencyAreas(reports);
   const primary = areas[0] || null;
-  const signal: CompetencySignal = primary?.signal || 'watch';
+  const signal: CompetencyArea['signal'] = primary?.signal || 'watch';
   const nextFocus = primary
     ? primary.signal === 'strength'
       ? `Keep reinforcing ${primary.label}`
@@ -559,7 +474,7 @@ const getStudentCompetencySnapshot = (reports: StudentProgressReport[]) => {
   };
 };
 
-const getCompetencyTone = (signal: CompetencySignal) => {
+const getCompetencyTone = (signal: CompetencyArea['signal']) => {
   if (signal === 'strength') {
     return {
       border: 'border-emerald-200',

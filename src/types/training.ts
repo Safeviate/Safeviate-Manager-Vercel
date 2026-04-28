@@ -1,5 +1,5 @@
 
-export type PerformanceRating = 1 | 2 | 3 | 4;
+export type PerformanceRating = 1 | 2 | 3 | 4 | 5;
 
 export type CompetencySignal = 'strength' | 'growth' | 'watch';
 
