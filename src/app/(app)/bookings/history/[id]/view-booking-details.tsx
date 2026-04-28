@@ -1019,13 +1019,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             )
                         ) : activeTab === 'flight-details' ? (
                             isMobile ? (
-                                <div className="flex flex-col items-end gap-1">
+                                <div className="flex flex-col items-center gap-1">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                className="h-8 w-full justify-between border-input bg-background px-3 text-[10px] font-semibold tracking-normal text-foreground shadow-sm hover:bg-accent/40"
+                                                className="h-8 w-[254px] max-w-[calc(100vw-1rem)] justify-between border-input bg-background px-3 text-[10px] font-semibold tracking-normal text-foreground shadow-sm hover:bg-accent/40"
                                             >
                                                 <span className="flex min-w-0 items-center gap-2">
                                                     <MoreHorizontal className="h-3 w-3 shrink-0" />
@@ -1213,85 +1213,106 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden relative">
-                            <div className="flex-1 min-h-0 w-full relative z-0">
+                        <div className="flex h-full min-h-0 flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,1fr)_360px]">
+                            <div className="relative order-1 z-20 h-[16rem] flex-none overflow-visible bg-slate-900 lg:flex lg:h-auto lg:min-h-0 lg:flex-col">
                                 <AeronauticalMap
                                     legs={plannedLegs}
                                     onAddWaypoint={handleAddWaypoint}
                                     isLayersPanelOpen={isMapLayersPanelOpen}
                                     onLayersPanelOpenChange={setIsMapLayersPanelOpen}
-                                  rightAccessory={
-                                    <button
-                                      type="button"
-                                      className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-                                      onClick={() => setShowRouteSummary((current) => !current)}
-                                      aria-label={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
-                                      title={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
-                                    >
-                                      <Route className="h-4 w-4" />
-                                    </button>
-                                  }
+                                    rightAccessory={
+                                        <button
+                                            type="button"
+                                            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+                                            onClick={() => setShowRouteSummary((current) => !current)}
+                                            aria-label={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                                            title={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                                        >
+                                            <Route className="h-4 w-4" />
+                                        </button>
+                                    }
                                 />
-                                
-                                {/* Route Summary Cards - Absolute positioned over the map */}
-                                {showRouteSummary && (
-                                    <div className="absolute top-4 right-4 z-[1000] w-[300px] bottom-4 flex flex-col pointer-events-none">
-                                        <Card className="shadow-2xl border bg-background/95 backdrop-blur flex flex-col min-h-0 h-fit max-h-full pointer-events-auto overflow-hidden">
-                                            <CardHeader className="p-4 border-b shrink-0 flex flex-row items-center justify-between space-y-0">
-                                                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                                                    <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
-                                                </CardTitle>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowRouteSummary(false)}>
-                                                    <ChevronRight className="h-4 w-4" />
-                                                </Button>
-                                            </CardHeader>
-                                            <ScrollArea className="flex-1 overflow-y-auto">
-                                                <div className="p-2 space-y-2">
+                            </div>
+
+                            {showRouteSummary ? (
+                                <div className={cn(
+                                    "relative order-2 z-10 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:sticky lg:top-0 lg:h-full lg:max-h-[calc(100vh-1rem)] lg:border-l lg:border-t-0",
+                                    showRouteSummary ? "flex-1" : "flex-none"
+                                )}>
+                                    <Card className="flex h-full min-h-0 flex-col overflow-hidden border-0 shadow-none">
+                                        <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b px-3 py-2.5">
+                                            <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                                                <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
+                                            </CardTitle>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowRouteSummary(false)}>
+                                                <ChevronRight className="h-4 w-4" />
+                                            </Button>
+                                        </CardHeader>
+                                        {showRouteSummary ? (
+                                            <div className="flex-1 min-h-0 overflow-y-auto">
+                                                <div className="grid h-full grid-cols-1 gap-1 p-2 [grid-auto-rows:calc((100%-0.25rem)/2)] lg:block lg:h-auto lg:space-y-1">
                                                     {plannedLegs.map((leg) => (
-                                                        <div key={leg.id} className="flex items-start gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
-                                                            <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <span className="text-[11px] font-black uppercase leading-tight break-words">{leg.waypoint || 'PNT'}</span>
-                                                        <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
-                                                    </div>
-                            {[leg.frequencies, leg.layerInfo].filter(Boolean).map((line, index) => (
-                                <p key={`${leg.id}-detail-${index}`} className="mt-1 text-[9px] font-semibold leading-tight text-slate-700">
-                                    {line}
-                                </p>
-                            ))}
-                                                    <div className="mt-2 flex gap-5">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                        <span className="text-[10px] font-black">{leg.distance?.toFixed(1) || '0.0'} NM</span>
+                                                        <div
+                                                            key={leg.id}
+                                                            className="group flex min-h-0 items-start gap-2 overflow-hidden rounded-lg border bg-muted/10 p-1.5 transition-colors hover:bg-muted/20"
+                                                        >
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-start justify-between gap-1.5">
+                                                                    <span className="break-words text-[9px] font-black uppercase leading-tight">{leg.waypoint || 'PNT'}</span>
+                                                                    <span className="shrink-0 font-mono text-[8px] text-muted-foreground">
+                                                                        {leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                                {[leg.frequencies, leg.layerInfo].filter(Boolean).map((line, index) => (
+                                                                    <p key={`${leg.id}-detail-${index}`} className="mt-0.5 text-[7px] font-semibold leading-tight text-slate-700">
+                                                                        {line}
+                                                                    </p>
+                                                                ))}
+                                                                <div className="mt-1 flex items-center gap-3">
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span className="text-[7px] font-bold uppercase text-muted-foreground">Dist</span>
+                                                                        <span className="text-[8px] font-black">{leg.distance?.toFixed(1) || '0.0'} NM</span>
                                                                     </div>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                        <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0) || '0'}&deg;</span>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span className="text-[7px] font-bold uppercase text-muted-foreground">HDG</span>
+                                                                        <span className="text-[8px] font-black">{leg.magneticHeading?.toFixed(0) || '0'}&deg;</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                onClick={() => setPlannedLegs(plannedLegs.filter(l => l.id !== leg.id))}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-5 w-5 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+                                                                onClick={() => setPlannedLegs(plannedLegs.filter((l) => l.id !== leg.id))}
                                                             >
-                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                <Trash2 className="h-2.5 w-2.5" />
                                                             </Button>
                                                         </div>
                                                     ))}
                                                     {plannedLegs.length === 0 && (
-                                                        <div className="py-12 text-center">
-                                                            <p className="text-[10px] font-black uppercase text-muted-foreground italic opacity-40">Click the map to add waypoints</p>
+                                                        <div className="py-6 text-center">
+                                                            <p className="text-[10px] font-black uppercase italic text-muted-foreground opacity-40">Click the map to add waypoints</p>
                                                         </div>
                                                     )}
                                                 </div>
-                                            </ScrollArea>
-                                        </Card>
-                                    </div>
-                                )}
-
-                            </div>
+                                            </div>
+                                        ) : null}
+                                    </Card>
+                                </div>
+                            ) : (
+                                <div className="relative order-2 z-10 flex flex-none flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
+                                    <Card className="flex h-auto min-h-0 flex-col overflow-hidden border-0 shadow-none">
+                                        <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b px-3 py-2.5">
+                                            <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                                                <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
+                                            </CardTitle>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowRouteSummary(true)}>
+                                                <ChevronRight className="h-4 w-4 rotate-180" />
+                                            </Button>
+                                        </CardHeader>
+                                    </Card>
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
 

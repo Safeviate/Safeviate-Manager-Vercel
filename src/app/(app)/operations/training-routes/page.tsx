@@ -14,12 +14,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
+import { MobileActionDropdown } from '@/components/mobile-action-dropdown';
 import { useTheme } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -45,6 +48,7 @@ const createEmptyRoute = (): TrainingRoute => ({
 export default function TrainingRoutesPage() {
   const { tenant, isLoading: isTenantLoading } = useTenantConfig();
   const { uiMode } = useTheme();
+  const isMobile = useIsMobile();
   const [routes, setRoutes] = useState<TrainingRoute[]>([]);
   const [activeRoute, setActiveRoute] = useState<TrainingRoute | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -220,26 +224,49 @@ export default function TrainingRoutesPage() {
       <Card className={cn(OPERATIONS_MAP_CARD_CLASS, isModern && 'border-slate-200/80 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.08)]')}>
         <CardHeader className={cn(CARD_HEADER_BAND_CLASS, isModern && 'bg-transparent')}>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsMapZoomPanelOpen(true)}
-              className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
-            >
-              Map Zoom
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setIsMapLayersPanelOpen(true)}
-              className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
-            >
-              Map Layers
-            </Button>
-            <Button
-              onClick={handleCreateNew}
-              className={cn(routePlannerPrimaryButtonClass, isModern && 'border-slate-200 bg-slate-800 text-white hover:bg-slate-700')}
-            >
-              <Plus size={14} className="mr-2" /> New Route
-            </Button>
+            <div className="hidden flex-wrap items-center justify-center gap-2 md:flex">
+              <Button
+                variant="outline"
+                onClick={() => setIsMapZoomPanelOpen(true)}
+                className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+              >
+                Map Zoom
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsMapLayersPanelOpen(true)}
+                className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+              >
+                Map Layers
+              </Button>
+              <Button
+                onClick={handleCreateNew}
+                className={cn(routePlannerPrimaryButtonClass, isModern && 'border-slate-200 bg-slate-800 text-white hover:bg-slate-700')}
+              >
+                <Plus size={14} className="mr-2" /> New Route
+              </Button>
+            </div>
+            <MobileActionDropdown icon={Navigation} label="Route Actions" className="md:hidden">
+              <DropdownMenuItem
+                onClick={() => setIsMapZoomPanelOpen(true)}
+                className="text-[11px] font-semibold uppercase"
+              >
+                Map Zoom
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setIsMapLayersPanelOpen(true)}
+                className="text-[11px] font-semibold uppercase"
+              >
+                Map Layers
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleCreateNew}
+                className="text-[11px] font-semibold uppercase"
+              >
+                <Plus size={14} className="mr-2" />
+                New Route
+              </DropdownMenuItem>
+            </MobileActionDropdown>
           </div>
         </CardHeader>
 
@@ -261,9 +288,9 @@ export default function TrainingRoutesPage() {
               {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
-            <div className={cn('relative order-2 z-10 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:h-full lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
+            <div className={cn('relative order-2 z-10 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:sticky lg:top-0 lg:h-full lg:max-h-[calc(100vh-1rem)] lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
               {activeRoute ? (
-                <ScrollArea className="flex-1">
+                <ScrollArea className={cn('flex-1 min-h-0', isMobile ? 'h-[min(42vh,26rem)]' : 'h-full')}>
                   <div className="space-y-8 p-6 pb-12">
                     <div className={cn('space-y-4 border-b pb-6', isModern && 'border-slate-200/80')}>
                     <div className="flex items-center justify-between">

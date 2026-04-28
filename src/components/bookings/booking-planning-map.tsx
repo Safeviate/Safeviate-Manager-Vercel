@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import type { NavlogLeg, Hazard } from '@/types/booking';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
   ssr: false,
@@ -29,6 +30,8 @@ export function BookingPlanningMap({
   onLayersPanelOpenChange,
   rightAccessory,
 }: BookingPlanningMapProps) {
+  const isMobile = useIsMobile();
+
   return (
     <div className="booking-planning-map relative h-full w-full">
       <AeronauticalMap
@@ -40,7 +43,13 @@ export function BookingPlanningMap({
         isLayersPanelOpen={isLayersPanelOpen}
         onLayersPanelOpenChange={onLayersPanelOpenChange}
       />
-      {rightAccessory ? <div className="absolute right-4 top-4 z-[1000]">{rightAccessory}</div> : null}
+      {rightAccessory ? (
+        <div
+          className={`absolute z-[1000] ${isMobile ? 'left-1/2 top-16 -translate-x-1/2' : 'right-4 top-4'}`}
+        >
+          {rightAccessory}
+        </div>
+      ) : null}
       <style jsx global>{`
         .booking-planning-map .leaflet-container {
           cursor: pointer;
@@ -49,6 +58,11 @@ export function BookingPlanningMap({
         .booking-planning-map .leaflet-dragging,
         .booking-planning-map .leaflet-interactive {
           cursor: pointer !important;
+        }
+        @media (max-width: 639px) {
+          .booking-planning-map .leaflet-top.leaflet-left {
+            top: 2.5rem !important;
+          }
         }
       `}</style>
     </div>

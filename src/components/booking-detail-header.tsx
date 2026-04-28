@@ -67,13 +67,14 @@ export function BookingDetailHeader({
               </div>
 
               {!isMobile && secondarySubtitleParts.length > 0 ? (
-                <div className="space-y-0.5">
+                <div className="flex max-w-[72ch] flex-wrap items-center gap-x-2 gap-y-0.5">
                   {secondarySubtitleParts.map((part, index) => (
                     <span
                       key={`${part}-${index}`}
-                      className="block max-w-[72ch] break-words text-[8px] font-medium capitalize leading-4 tracking-normal text-muted-foreground md:text-[9px]"
+                      className="flex items-center gap-2 text-[8px] font-medium capitalize leading-4 tracking-normal text-muted-foreground md:text-[9px]"
                     >
-                      {part}
+                      {index > 0 ? <span aria-hidden="true" className="text-muted-foreground/60">|</span> : null}
+                      <span className="break-words">{part}</span>
                     </span>
                   ))}
                 </div>
@@ -92,8 +93,9 @@ export function BookingDetailHeader({
                       {secondarySubtitleParts.map((part, index) => (
                         <span
                           key={`${part}-${index}`}
-                          className="min-w-0 break-words text-[8px] font-medium capitalize leading-4 tracking-normal text-muted-foreground"
+                          className="flex min-w-0 items-center gap-2 break-words text-[8px] font-medium capitalize leading-4 tracking-normal text-muted-foreground"
                         >
+                          {index > 0 ? <span aria-hidden="true" className="text-muted-foreground/60">|</span> : null}
                           {part}
                         </span>
                       ))}
@@ -143,7 +145,7 @@ export function BookingDetailHeader({
           value={activeTab}
           onValueChange={onTabChange}
           placeholder="Select Section"
-          action={tabRowAction}
+          centerTabs
           joinedDesktopTabs={false}
           options={[
             { value: 'flight-details', label: 'Flight Details', icon: FileText },
@@ -153,6 +155,13 @@ export function BookingDetailHeader({
             { value: 'checks', label: 'Checks', icon: ClipboardCheck },
           ]}
         />
+        {tabRowAction ? (
+          <div className="border-b border-card-border/70 bg-muted/5 px-3 py-2 md:px-4">
+            <div className="flex w-full flex-wrap items-center justify-center gap-2">
+              {tabRowAction}
+            </div>
+          </div>
+        ) : null}
       </div>
     </>
   );

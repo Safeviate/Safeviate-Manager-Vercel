@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import type { NavlogLeg, Hazard } from '@/types/booking';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -880,6 +881,7 @@ const SearchControl = ({
   onResultsChange: (results: OpenAipFeature[]) => void;
 }) => {
   const map = useMap();
+  const isMobile = useIsMobile();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OpenAipFeature[]>([]);
   const [selected, setSelected] = useState<OpenAipFeature | null>(null);
@@ -967,10 +969,15 @@ const SearchControl = ({
   return (
     <div
       ref={containerRef}
-      className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-sm pointer-events-auto"
+      className="absolute top-4 z-[1000] pointer-events-auto"
+      style={
+        isMobile
+          ? { left: '50%', transform: 'translateX(-50%)', width: 'min(258px, calc(100vw - 1rem))' }
+          : { left: '50%', transform: 'translateX(-50%)', width: 'min(320px, calc(100vw - 1rem))' }
+      }
     >
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search Airport, Navaid, or Point..."
           value={query}
@@ -986,7 +993,7 @@ const SearchControl = ({
               handleSelect(results[0]);
             }
           }}
-          className="pl-9 pr-9 h-10 shadow-lg"
+          className="h-8 pl-8 pr-8 text-sm shadow-lg"
         />
         {query && (
           <button
@@ -997,9 +1004,9 @@ const SearchControl = ({
               setResults([]);
               onResultsChangeRef.current([]);
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
@@ -2262,6 +2269,12 @@ export default function AeronauticalMap({
 
         .leaflet-control-layers {
           display: none !important;
+        }
+
+        @media (max-width: 639px) {
+          .leaflet-top.leaflet-left {
+            top: 4.25rem !important;
+          }
         }
       `}</style>
     </div>
