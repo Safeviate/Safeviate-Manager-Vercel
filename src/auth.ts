@@ -10,6 +10,26 @@ assertRequiredEnv(['NEXTAUTH_SECRET'], 'authentication');
 const cleanEnvValue = (value: string | undefined) =>
   value?.replace(/\\r\\n|\\n|\\r/g, '').trim() || '';
 
+const AUTH_DB_TIMEOUT_MS = 1_500;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+}
+
 const normalizeNextAuthUrl = () => {
   const current = cleanEnvValue(process.env.NEXTAUTH_URL);
   if (process.env.NODE_ENV === 'development') {
@@ -68,7 +88,11 @@ export const authOptions: NextAuthOptions = {
 
         let dbUser = null;
         try {
-          dbUser = await prisma.user.findUnique({ where: { email } });
+          dbUser = await withTimeout(
+            prisma.user.findUnique({ where: { email } }),
+            AUTH_DB_TIMEOUT_MS,
+            '[AUTH] Database lookup'
+          );
         } catch (error) {
           console.error('[AUTH] Database lookup failed, falling back to seed credentials when possible.', error);
         }
@@ -160,10 +184,14 @@ export const authOptions: NextAuthOptions = {
 
       if (token.id) {
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id },
-            select: { email: true, suspendedAt: true },
-          });
+          const dbUser = await withTimeout(
+            prisma.user.findUnique({
+              where: { id: token.id },
+              select: { email: true, suspendedAt: true },
+            }),
+            AUTH_DB_TIMEOUT_MS,
+            '[AUTH] Session validation'
+          );
 
           if (!dbUser || dbUser.suspendedAt) {
             token.id = '';

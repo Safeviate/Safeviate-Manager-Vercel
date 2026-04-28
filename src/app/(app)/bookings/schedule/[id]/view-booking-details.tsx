@@ -706,31 +706,26 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         </CardHeader>
                                         <ScrollArea className="flex-1">
                                             <div className="p-2 space-y-2">
-                                                {plannedLegs.map((leg, i) => (
-                                                    <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
+                                                {plannedLegs.map((leg) => (
+                                                    <div key={leg.id} className="flex items-start gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
                                                         <div className="flex-1 min-w-0">
-         <div className="flex justify-between items-center">
-             <span className="font-black text-[11px] uppercase truncate">{leg.waypoint}</span>
-             <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+         <div className="flex items-start justify-between gap-2">
+             <span className="text-[11px] font-black uppercase leading-tight break-words">{leg.waypoint || 'PNT'}</span>
+             <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
          </div>
-         {leg.frequencies && (
-             <p className="mt-1 text-[9px] font-semibold text-emerald-700">
-                 {leg.frequencies}
+         {[leg.frequencies, leg.layerInfo].filter(Boolean).map((line, index) => (
+             <p key={`${leg.id}-detail-${index}`} className="mt-1 text-[9px] font-semibold leading-tight text-slate-700">
+                 {line}
              </p>
-         )}
-         {leg.layerInfo && (
-             <p className="mt-1 text-[9px] font-semibold text-primary">
-                 {leg.layerInfo}
-             </p>
-         )}
-         <div className="flex gap-3 mt-1">
+         ))}
+         <div className="mt-2 flex gap-5">
                                                                 <div className="flex flex-col">
                                                                     <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                    <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>
+                                                                    <span className="text-[10px] font-black">{leg.distance?.toFixed(1) || '0.0'} NM</span>
                                                                 </div>
                                                                 <div className="flex flex-col">
                                                                     <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                    <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0)}°</span>
+                                                                    <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0) || '0'}&deg;</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1002,4 +997,5 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         </Card>
     );
 }
+
 

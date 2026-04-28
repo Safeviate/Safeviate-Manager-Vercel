@@ -372,7 +372,7 @@ export default function TrainingRoutesPage() {
                                       </div>
                                       <div className="flex flex-col">
                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                        <span className="text-[10px] font-black text-slate-900">{leg.magneticHeading?.toFixed(0) || '0'}°</span>
+                                        <span className="text-[10px] font-black text-slate-900">{leg.magneticHeading?.toFixed(0) || '0'}&deg;</span>
                                       </div>
                                     </div>
                                   </div>
@@ -455,3 +455,4 @@ export default function TrainingRoutesPage() {
     </div>
   );
 }
+

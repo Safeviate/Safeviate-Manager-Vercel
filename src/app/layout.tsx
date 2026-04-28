@@ -43,6 +43,26 @@ type TenantBootstrapConfig = {
   tenant: Record<string, unknown> | null;
 };
 
+const LAYOUT_DB_TIMEOUT_MS = 1_500;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+}
+
 declare global {
   interface Window {
     __SAFEVIATE_THEME_BOOTSTRAP__?: {
@@ -60,10 +80,14 @@ async function getInitialTenantBootstrap(): Promise<TenantBootstrapConfig> {
 
     await ensureTenantConfigSchema();
 
-    const dbUser = await prisma.user.findUnique({
-      where: { email },
-      select: { tenantId: true },
-    });
+    const dbUser = await withTimeout(
+      prisma.user.findUnique({
+        where: { email },
+        select: { tenantId: true },
+      }),
+      LAYOUT_DB_TIMEOUT_MS,
+      '[layout] User bootstrap lookup'
+    );
 
     const baseTenantId = dbUser?.tenantId || MASTER_TENANT_ID;
     let tenantId = baseTenantId;
@@ -73,30 +97,42 @@ async function getInitialTenantBootstrap(): Promise<TenantBootstrapConfig> {
       const requestedTenantId = cookieStore.get(TENANT_OVERRIDE_COOKIE)?.value?.trim();
 
       if (requestedTenantId && requestedTenantId !== baseTenantId) {
-        const tenant = await prisma.tenant.findUnique({
-          where: { id: requestedTenantId },
-          select: { id: true },
-        });
+        const tenant = await withTimeout(
+          prisma.tenant.findUnique({
+            where: { id: requestedTenantId },
+            select: { id: true },
+          }),
+          LAYOUT_DB_TIMEOUT_MS,
+          '[layout] Tenant override lookup'
+        );
         tenantId = tenant?.id || baseTenantId;
       }
     }
 
-    const configRow = await prisma.tenantConfig.findUnique({
-      where: { tenantId },
-      select: { data: true },
-    });
+    const configRow = await withTimeout(
+      prisma.tenantConfig.findUnique({
+        where: { tenantId },
+        select: { data: true },
+      }),
+      LAYOUT_DB_TIMEOUT_MS,
+      '[layout] Tenant config lookup'
+    );
 
     const config =
       configRow?.data && typeof configRow.data === 'object'
         ? (configRow.data as Record<string, unknown>)
         : null;
-    const tenantRow = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        id: true,
-        name: true,
-      },
-    }).catch(() => null);
+    const tenantRow = await withTimeout(
+      prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      LAYOUT_DB_TIMEOUT_MS,
+      '[layout] Tenant row lookup'
+    ).catch(() => null);
 
     const tenantConfigWithoutIndustry = config
       ? Object.fromEntries(Object.entries(config).filter(([key]) => key !== 'industry'))

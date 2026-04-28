@@ -10,7 +10,7 @@ import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingW
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route, ArrowLeft, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route, ArrowLeft, ChevronDown, MoreHorizontal, Layers3 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -264,6 +264,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [isApproving, setIsApproving] = useState(false);
     const [approvingSection, setApprovingSection] = useState<CheckApprovalKey | null>(null);
     const [showRouteSummary, setShowRouteSummary] = useState(!isMobile);
+    const [isMapLayersPanelOpen, setIsMapLayersPanelOpen] = useState(false);
     const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
     const [personnel, setPersonnel] = useState<BookingPerson[]>([]);
     const [loadingAc, setLoadingAc] = useState(true);
@@ -948,6 +949,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
                                         <DropdownMenuItem
+                                            onClick={() => setIsMapLayersPanelOpen(true)}
+                                            className="text-[10px] font-bold uppercase"
+                                        >
+                                            <Layers3 className="mr-2 h-3.5 w-3.5" />
+                                            Map Layers
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
                                             onClick={() => setShowRouteSummary(!showRouteSummary)}
                                             className="text-[10px] font-bold uppercase"
                                         >
@@ -974,6 +982,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </DropdownMenu>
                             ) : (
                                 <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsMapLayersPanelOpen(true)}
+                                        className={BOOKING_PLANNING_SECONDARY_BUTTON_CLASS}
+                                    >
+                                        <Layers3 className="mr-1 h-3 w-3" /> Map Layers
+                                    </Button>
                                     <Button 
                                         variant="outline"
                                         onClick={() => setShowRouteSummary(!showRouteSummary)}
@@ -1201,8 +1216,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden relative">
                             <div className="flex-1 min-h-0 w-full relative z-0">
                                 <AeronauticalMap
-                                  legs={plannedLegs}
-                                  onAddWaypoint={handleAddWaypoint}
+                                    legs={plannedLegs}
+                                    onAddWaypoint={handleAddWaypoint}
+                                    isLayersPanelOpen={isMapLayersPanelOpen}
+                                    onLayersPanelOpenChange={setIsMapLayersPanelOpen}
                                   rightAccessory={
                                     <button
                                       type="button"
@@ -1230,31 +1247,26 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             </CardHeader>
                                             <ScrollArea className="flex-1 overflow-y-auto">
                                                 <div className="p-2 space-y-2">
-                                                    {plannedLegs.map((leg, i) => (
-                                                        <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
+                                                    {plannedLegs.map((leg) => (
+                                                        <div key={leg.id} className="flex items-start gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
                                                             <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="font-black text-[11px] uppercase truncate">{leg.waypoint}</span>
-                                                        <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <span className="text-[11px] font-black uppercase leading-tight break-words">{leg.waypoint || 'PNT'}</span>
+                                                        <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
                                                     </div>
-                            {leg.frequencies && (
-                                <p className="mt-1 text-[9px] font-semibold text-emerald-700">
-                                    {leg.frequencies}
+                            {[leg.frequencies, leg.layerInfo].filter(Boolean).map((line, index) => (
+                                <p key={`${leg.id}-detail-${index}`} className="mt-1 text-[9px] font-semibold leading-tight text-slate-700">
+                                    {line}
                                 </p>
-                            )}
-                            {leg.layerInfo && (
-                                <p className="text-[9px] font-semibold text-primary">
-                                    {leg.layerInfo}
-                                </p>
-                            )}
-                                                    <div className="flex gap-3 mt-1">
+                            ))}
+                                                    <div className="mt-2 flex gap-5">
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                        <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>
+                                                                        <span className="text-[10px] font-black">{leg.distance?.toFixed(1) || '0.0'} NM</span>
                                                                     </div>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                        <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0)}Ã‚Â°</span>
+                                                                        <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0) || '0'}&deg;</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -1514,5 +1526,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         </Card>
     );
 }
+
 
 

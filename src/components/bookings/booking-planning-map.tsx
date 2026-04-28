@@ -1,8 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import type { NavlogLeg, Hazard } from '@/types/booking';
-import { AviationMapLibreShell } from '@/components/maps/aviation-maplibre-shell';
+
+const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse bg-slate-900/10" />,
+});
 
 interface BookingPlanningMapProps {
   legs: NavlogLeg[];
@@ -10,6 +14,8 @@ interface BookingPlanningMapProps {
   onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
   onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
   isEditing?: boolean;
+  isLayersPanelOpen?: boolean;
+  onLayersPanelOpenChange?: (open: boolean) => void;
   rightAccessory?: React.ReactNode;
 }
 
@@ -19,45 +25,32 @@ export function BookingPlanningMap({
   onAddWaypoint,
   onMoveWaypoint,
   isEditing = false,
+  isLayersPanelOpen = false,
+  onLayersPanelOpenChange,
   rightAccessory,
 }: BookingPlanningMapProps) {
-  const center = useMemo<[number, number]>(() => {
-    const lastLeg = [...legs].reverse().find((leg) => leg.latitude !== undefined && leg.longitude !== undefined);
-    if (lastLeg?.latitude !== undefined && lastLeg.longitude !== undefined) {
-      return [lastLeg.latitude, lastLeg.longitude];
-    }
-    return [-25.9, 27.9];
-  }, [legs]);
-
   return (
-    <div className="relative h-full w-full">
-      <AviationMapLibreShell
-        mode="route-planner"
-        center={center}
-        baseLayer="light"
-        minZoom={4}
-        maxZoom={16}
-        showLabels
-        showMasterChart
-        showAirports
-        showNavaids
-        showReportingPoints
-        showAirspaces
-        showClassE
-        showClassF
-        showClassG
-        showMilitaryAreas
-        showTrainingAreas
-        showGlidingSectors
-        showHangGlidings
-        showObstacles
+    <div className="booking-planning-map relative h-full w-full">
+      <AeronauticalMap
         legs={legs}
         hazards={hazards}
-        isEditing={isEditing}
-        onMapShortPress={(lat, lon) => onAddWaypoint(lat, lon)}
+        onAddWaypoint={onAddWaypoint}
         onMoveWaypoint={onMoveWaypoint}
+        isEditing={isEditing}
+        isLayersPanelOpen={isLayersPanelOpen}
+        onLayersPanelOpenChange={onLayersPanelOpenChange}
       />
       {rightAccessory ? <div className="absolute right-4 top-4 z-[1000]">{rightAccessory}</div> : null}
+      <style jsx global>{`
+        .booking-planning-map .leaflet-container {
+          cursor: pointer;
+        }
+        .booking-planning-map .leaflet-grab,
+        .booking-planning-map .leaflet-dragging,
+        .booking-planning-map .leaflet-interactive {
+          cursor: pointer !important;
+        }
+      `}</style>
     </div>
   );
 }
