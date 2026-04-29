@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { NavlogLeg, Hazard } from '@/types/booking';
+import type { NavlogLeg, Hazard, WaypointContext } from '@/types/booking';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
@@ -12,7 +12,14 @@ const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aerona
 interface BookingPlanningMapProps {
   legs: NavlogLeg[];
   hazards?: Hazard[];
-  onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
+  onAddWaypoint: (
+    lat: number,
+    lon: number,
+    identifier?: string,
+    frequencies?: string,
+    layerInfo?: string,
+    waypointContext?: WaypointContext
+  ) => void;
   onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
   isEditing?: boolean;
   isLayersPanelOpen?: boolean;
@@ -45,7 +52,7 @@ export function BookingPlanningMap({
       />
       {rightAccessory ? (
         <div
-          className={`absolute z-[1000] ${isMobile ? 'left-1/2 top-16 -translate-x-1/2' : 'right-4 top-4'}`}
+          className={`absolute z-[1000] ${isMobile ? 'right-3 top-16' : 'right-4 top-4'}`}
         >
           {rightAccessory}
         </div>

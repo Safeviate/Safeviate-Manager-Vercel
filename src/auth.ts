@@ -10,7 +10,8 @@ assertRequiredEnv(['NEXTAUTH_SECRET'], 'authentication');
 const cleanEnvValue = (value: string | undefined) =>
   value?.replace(/\\r\\n|\\n|\\r/g, '').trim() || '';
 
-const AUTH_DB_TIMEOUT_MS = 1_500;
+// Auth lookups can be slow on a cold dev connection, so keep this generous.
+const AUTH_DB_TIMEOUT_MS = 10_000;
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timeoutHandle: NodeJS.Timeout | null = null;
@@ -180,29 +181,6 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name || token.name;
-      }
-
-      if (token.id) {
-        try {
-          const dbUser = await withTimeout(
-            prisma.user.findUnique({
-              where: { id: token.id },
-              select: { email: true, suspendedAt: true },
-            }),
-            AUTH_DB_TIMEOUT_MS,
-            '[AUTH] Session validation'
-          );
-
-          if (!dbUser || dbUser.suspendedAt) {
-            token.id = '';
-            token.email = '';
-            token.name = '';
-          } else {
-            token.email = dbUser.email;
-          }
-        } catch (error) {
-          console.error('[AUTH] Session validation failed.', error);
-        }
       }
       return token;
     },

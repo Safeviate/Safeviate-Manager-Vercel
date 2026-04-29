@@ -43,7 +43,8 @@ type TenantBootstrapConfig = {
   tenant: Record<string, unknown> | null;
 };
 
-const LAYOUT_DB_TIMEOUT_MS = 1_500;
+// Root layout bootstrap runs on first page load, so allow time for a cold DB.
+const LAYOUT_DB_TIMEOUT_MS = 10_000;
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timeoutHandle: NodeJS.Timeout | null = null;

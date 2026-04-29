@@ -1,12 +1,12 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { Booking, NavlogLeg } from '@/types/booking';
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { Booking, NavlogLeg, WaypointContext } from '@/types/booking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, Navigation, Wind, Gauge, Fuel, Settings2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Trash2, Navigation, Wind, Gauge, Fuel, Settings2, ChevronDown, ChevronRight, PenSquare, Eraser } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,6 +16,8 @@ import type { TrainingRoute } from '@/types/booking';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Library, Search } from 'lucide-react';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { formatLatLonDms } from '@/lib/coordinate-parser';
+import { cn } from '@/lib/utils';
 
 /** Weight of AVGAS per gallon in lbs */
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -25,7 +27,7 @@ interface NavlogBuilderProps {
     tenantId: string;
     /** Fuel weight in lbs from the M&B fuel station (for bi-directional sync) */
     fuelWeightLbs?: number;
-    /** Callback when endurance changes — parent updates the M&B fuel station */
+    /** Callback when endurance changes â€” parent updates the M&B fuel station */
     onFuelWeightChange?: (weightLbs: number) => void;
 }
 
@@ -57,6 +59,316 @@ function InlineInput({
     );
 }
 
+function WaypointContextDetails({ context }: { context?: WaypointContext }) {
+    if (!context?.items?.length) return null;
+
+    return (
+        <div className="mt-1 space-y-1">
+            {context.items.map((item, index) => (
+                <div key={`${item.layer}-${item.label}-${index}`} className="rounded-md border border-border/70 bg-muted/10 px-2 py-1">
+                    <p className="text-[8px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                        {item.kind ? item.kind.replace(/-/g, ' ') : 'waypoint'}
+                    </p>
+                    <p className="text-[8px] font-black uppercase leading-tight text-foreground">
+                        {item.label}
+                    </p>
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        {item.layer}
+                    </p>
+                    {item.detail ? (
+                        <p className="mt-0.5 text-[8px] font-semibold leading-tight text-slate-700">
+                            {item.detail}
+                        </p>
+                    ) : null}
+                    {item.frequencies ? (
+                        <p className="mt-0.5 text-[8px] font-semibold leading-tight text-emerald-700">
+                            {item.frequencies}
+                        </p>
+                    ) : null}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function MetricTile({ label, value, emphasized = false }: { label: string; value: string; emphasized?: boolean }) {
+    return (
+        <div className="h-[42px] w-[117px] rounded-md border bg-background px-2 py-1.5">
+            <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+            <p className={`mt-1 text-left font-mono text-[10px] font-black leading-none ${emphasized ? 'text-primary' : 'text-foreground'}`}>{value}</p>
+        </div>
+    );
+}
+
+function WaypointEndpointCard({
+    label,
+    latitude,
+    longitude,
+    context,
+}: {
+    label: string;
+    latitude?: number;
+    longitude?: number;
+    context?: WaypointContext;
+}) {
+    return (
+        <div className="h-[143px] w-[290px] rounded-lg border bg-background px-3 py-2">
+            <div className="flex items-baseline justify-between gap-3">
+                <p className="min-w-0 shrink font-black uppercase text-foreground text-[10px]">{label}</p>
+                <p className="shrink-0 text-right font-mono text-[10px] font-bold text-muted-foreground">
+                    {formatLatLonDms(latitude, longitude)}
+                </p>
+            </div>
+            <WaypointContextDetails context={context} />
+        </div>
+    );
+}
+
+function NavlogNotesField({
+    value,
+    onSave,
+    className = '',
+}: {
+    value?: string;
+    onSave: (value: string) => void;
+    className?: string;
+}) {
+    const [draft, setDraft] = useState(value ?? '');
+
+    useEffect(() => {
+        setDraft(value ?? '');
+    }, [value]);
+
+    return (
+        <Textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => {
+                if ((value ?? '') !== draft) {
+                    onSave(draft);
+                }
+            }}
+            placeholder="Add notes for this leg or waypoint"
+            className={cn(
+                'mt-1 min-h-[92px] resize-none border-border/70 bg-background px-2 py-2 text-[10px] font-semibold leading-tight text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-1',
+                className
+            )}
+        />
+    );
+}
+
+function HandwrittenNotesField({
+    textValue,
+    inkValue,
+    onSaveText,
+    onSaveInk,
+}: {
+    textValue?: string;
+    inkValue?: string;
+    onSaveText: (value: string) => void;
+    onSaveInk: (value?: string) => void;
+}) {
+    const [draftText, setDraftText] = useState(textValue ?? '');
+    const [isPadOpen, setIsPadOpen] = useState(false);
+    const [hasDrawing, setHasDrawing] = useState(Boolean(inkValue));
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const drawingRef = useRef(false);
+    const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+
+    useEffect(() => {
+        setDraftText(textValue ?? '');
+    }, [textValue]);
+
+    useEffect(() => {
+        setHasDrawing(Boolean(inkValue));
+    }, [inkValue]);
+
+    useEffect(() => {
+        if (!isPadOpen) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const parent = canvas.parentElement;
+        const width = Math.max(560, Math.floor(parent?.clientWidth ?? 560));
+        const height = 320;
+        const ratio = window.devicePixelRatio || 1;
+
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.scale(ratio, ratio);
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.lineWidth = 2;
+        context.strokeStyle = '#0f172a';
+
+        if (inkValue) {
+            const image = new Image();
+            image.onload = () => {
+                context.drawImage(image, 0, 0, width, height);
+                setHasDrawing(true);
+            };
+            image.src = inkValue;
+        } else {
+            setHasDrawing(false);
+        }
+    }, [inkValue, isPadOpen]);
+
+    const getCanvasPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        return {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+        };
+    };
+
+    const startDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext('2d');
+        if (!canvas || !context) return;
+        drawingRef.current = true;
+        const point = getCanvasPoint(event);
+        lastPointRef.current = point;
+        context.beginPath();
+        context.moveTo(point.x, point.y);
+        canvas.setPointerCapture(event.pointerId);
+    };
+
+    const continueDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        if (!drawingRef.current) return;
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext('2d');
+        if (!canvas || !context) return;
+        const point = getCanvasPoint(event);
+        const lastPoint = lastPointRef.current;
+        if (lastPoint) {
+            context.beginPath();
+            context.moveTo(lastPoint.x, lastPoint.y);
+            context.lineTo(point.x, point.y);
+            context.stroke();
+            setHasDrawing(true);
+        }
+        lastPointRef.current = point;
+    };
+
+    const stopDrawing = (event?: React.PointerEvent<HTMLCanvasElement>) => {
+        drawingRef.current = false;
+        lastPointRef.current = null;
+        if (event) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    };
+
+    const clearPad = () => {
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext('2d');
+        if (!canvas || !context) return;
+        context.save();
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.restore();
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.lineWidth = 2;
+        context.strokeStyle = '#0f172a';
+        setHasDrawing(false);
+    };
+
+    const savePad = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        onSaveInk(hasDrawing ? canvas.toDataURL('image/png') : undefined);
+        setIsPadOpen(false);
+    };
+
+    return (
+        <>
+            <div className="mt-1 space-y-2">
+                <Textarea
+                    value={draftText}
+                    onChange={(event) => setDraftText(event.target.value)}
+                    onBlur={() => {
+                        if ((textValue ?? '') !== draftText) {
+                            onSaveText(draftText);
+                        }
+                    }}
+                    placeholder="Type notes or open the handwriting pad"
+                    className="min-h-[72px] resize-none border-border/70 bg-background px-2 py-2 text-[10px] font-semibold leading-tight text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-1"
+                />
+                {inkValue ? (
+                    <div className="rounded-md border border-border/70 bg-background p-2">
+                        <img src={inkValue} alt="Handwritten notes preview" className="h-20 w-full rounded-sm object-contain" />
+                    </div>
+                ) : null}
+                <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" className="h-8 text-[10px] font-black uppercase" onClick={() => setIsPadOpen(true)}>
+                        <PenSquare className="mr-2 h-3.5 w-3.5" />
+                        Open Pad
+                    </Button>
+                    {inkValue ? (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-8 text-[10px] font-black uppercase text-destructive hover:text-destructive"
+                            onClick={() => {
+                                onSaveInk(undefined);
+                                setHasDrawing(false);
+                            }}
+                        >
+                            <Eraser className="mr-2 h-3.5 w-3.5" />
+                            Clear Ink
+                        </Button>
+                    ) : null}
+                </div>
+            </div>
+
+            <Dialog open={isPadOpen} onOpenChange={setIsPadOpen}>
+                <DialogContent className="max-w-3xl bg-background">
+                    <DialogHeader>
+                        <DialogTitle className="text-xs font-black uppercase tracking-widest">Handwritten Notes Pad</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div className="overflow-hidden rounded-lg border bg-white p-3">
+                            <canvas
+                                ref={canvasRef}
+                                className="block max-w-full touch-none rounded-md bg-white"
+                                onPointerDown={startDrawing}
+                                onPointerMove={continueDrawing}
+                                onPointerUp={stopDrawing}
+                                onPointerLeave={stopDrawing}
+                                onPointerCancel={stopDrawing}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-[10px] font-semibold text-muted-foreground">
+                                Write with your finger, stylus, or mouse. Save inserts the drawing back into the leg summary.
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <Button type="button" variant="outline" className="h-8 text-[10px] font-black uppercase" onClick={clearPad}>
+                                    Clear Pad
+                                </Button>
+                                <Button type="button" className="h-8 text-[10px] font-black uppercase" onClick={savePad}>
+                                    Save Pad
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
+
 export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightChange }: NavlogBuilderProps) {
     const { toast } = useToast();
     const legs = booking.navlog?.legs || [];
@@ -73,6 +385,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
     const [showPerLegWind, setShowPerLegWind] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [searchRoute, setSearchRoute] = useState('');
+    const [expandedLegIds, setExpandedLegIds] = useState<string[]>([]);
 
     const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
 
@@ -113,10 +426,10 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
         }
     };
 
-    // ── Bi-directional fuel sync with M&B ──
+    // â”€â”€ Bi-directional fuel sync with M&B â”€â”€
     const syncSourceRef = useRef<'navlog' | 'mb' | null>(null);
 
-    // When M&B fuel weight changes → update FOB in gallons
+    // When M&B fuel weight changes â†’ update FOB in gallons
     useEffect(() => {
         if (fuelWeightLbs === undefined || syncSourceRef.current === 'navlog') {
             syncSourceRef.current = null;
@@ -129,7 +442,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
         }
     }, [fuelWeightLbs]);
 
-    // When FOB changes → push fuel weight to M&B
+    // When FOB changes â†’ push fuel weight to M&B
     useEffect(() => {
         if (!onFuelWeightChange || syncSourceRef.current === 'mb') {
             syncSourceRef.current = null;
@@ -149,6 +462,15 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
         () => calculateRouteTotals(calculatedLegs, params),
         [calculatedLegs, params]
     );
+
+    useEffect(() => {
+        const visibleLegIds = calculatedLegs.slice(1).map((leg) => leg.id);
+        setExpandedLegIds((current) => {
+            const next = current.filter((id) => visibleLegIds.includes(id));
+            if (next.length > 0) return next;
+            return visibleLegIds[0] ? [visibleLegIds[0]] : [];
+        });
+    }, [calculatedLegs]);
 
     const formatMinutes = (minutes: number): string => {
         if (!isFinite(minutes) || minutes <= 0) return '-';
@@ -244,7 +566,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
 
     return (
         <div className="flex-1 flex flex-col min-h-0 h-full bg-background overflow-hidden">
-            {/* ── Global Flight Parameters Bar ── */}
+            {/* â”€â”€ Global Flight Parameters Bar â”€â”€ */}
             <div className="shrink-0 border-b bg-muted/20 px-4 py-3 space-y-3">
                 <div className="flex items-center justify-between">
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -300,7 +622,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                             onChange={(e) => setParams({ ...params, windDirection: parseFloat(e.target.value) || 0 })}
                             className="h-7 w-14 text-xs font-bold text-center"
                         />
-                        <span className="text-[9px] font-bold text-muted-foreground">° /</span>
+                        <span className="text-[9px] font-bold text-muted-foreground">Â° /</span>
                         <Input
                             type="number"
                             value={params.windSpeed}
@@ -339,7 +661,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                 {/* Derived endurance & reserve summary */}
                 <div className="flex items-center gap-4 text-[10px] font-black uppercase">
                     <span className="text-muted-foreground">
-                        Endurance: <span className="text-foreground">{params.fuelBurnPerHour > 0 ? (params.fuelOnBoard / params.fuelBurnPerHour).toFixed(1) : '∞'} hrs</span>
+                        Endurance: <span className="text-foreground">{params.fuelBurnPerHour > 0 ? (params.fuelOnBoard / params.fuelBurnPerHour).toFixed(1) : 'âˆž'} hrs</span>
                     </span>
                     <span className="text-muted-foreground">
                         Reserve: <span className={totals.fuelRemaining < 0 ? 'text-destructive' : 'text-emerald-600'}>{totals.enduranceRemaining.toFixed(1)} hrs ({totals.fuelRemaining.toFixed(1)} {fuelUnit === 'GPH' ? 'GAL' : 'L'})</span>
@@ -347,207 +669,203 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                 </div>
             </div>
 
-            {/* ── NavLog Table ── */}
-            <div className="w-full overflow-x-auto flex-1">
-                <Table className="min-w-[1400px]">
-                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                        <TableRow className="whitespace-nowrap">
-                            <TableHead className="w-10 text-[9px] uppercase font-black px-3 whitespace-nowrap">#</TableHead>
-                            <TableHead className="text-[9px] uppercase font-black whitespace-nowrap min-w-[180px]">Waypoint</TableHead>
-                            <TableHead className="text-center text-[9px] uppercase font-black whitespace-nowrap w-16">ALT</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">TC°</TableHead>
-                            {showPerLegWind && (
-                                <>
-                                    <TableHead className="text-center text-[9px] uppercase font-black whitespace-nowrap w-20">W/V</TableHead>
-                                </>
-                            )}
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">WCA</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">TH°</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">VAR</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">
-                                <span className="text-primary">MH°</span>
-                            </TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-14">DIST</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">GS</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">ETE</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-14">CUM</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-12">FUEL</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black whitespace-nowrap w-14">REM</TableHead>
-                            <TableHead className="text-right text-[9px] uppercase font-black px-3 no-print whitespace-nowrap w-10"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {calculatedLegs.map((leg, index) => {
-                            const isFirstLeg = index === 0 && (leg.distance === undefined || leg.distance === 0);
-                            const fuelRem = params.fuelOnBoard - calculatedLegs.slice(0, index + 1).reduce((s, l) => s + (l.tripFuel || 0), 0);
-                            const lowFuel = fuelRem < (params.fuelBurnPerHour * 0.75); // 45 min reserve warning
+            {/* â”€â”€ NavLog Table â”€â”€ */}
+            {/* NavLog Leg Cards */}
+            <div className="flex-1 overflow-y-auto bg-muted/5 p-4">
+                <div className="space-y-4">
+                    {calculatedLegs.slice(1).map((leg, index) => {
+                        const actualIndex = index + 1;
+                        const fromLeg = calculatedLegs[actualIndex - 1];
+                        const fuelRem = params.fuelOnBoard - calculatedLegs.slice(1, actualIndex + 1).reduce((s, l) => s + (l.tripFuel || 0), 0);
+                        const lowFuel = fuelRem < (params.fuelBurnPerHour * 0.75);
+                        const isExpanded = expandedLegIds.includes(leg.id);
 
-                            return (
-                                <TableRow
-                                    key={leg.id}
-                                    className="hover:bg-muted/5 transition-colors border-b last:border-b-0 whitespace-nowrap"
-                                >
-                                    {/* # */}
-                                    <TableCell className="font-black text-[10px] text-muted-foreground px-3">
-                                        {index + 1}
-                                    </TableCell>
+                        return (
+                            <div key={leg.id} className="overflow-hidden rounded-xl border bg-background shadow-none">
+                                <div className="flex items-center justify-between border-b bg-muted/20 px-4 py-2">
+                                    <button
+                                        type="button"
+                                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                        onClick={() =>
+                                            setExpandedLegIds((current) =>
+                                                current.includes(leg.id)
+                                                    ? current.filter((id) => id !== leg.id)
+                                                    : [...current, leg.id]
+                                            )
+                                        }
+                                    >
+                                        {isExpanded ? (
+                                            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                        ) : (
+                                            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                        )}
+                                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                                            Leg {index + 1}
+                                        </span>
+                                        <span className="truncate text-sm font-black uppercase text-foreground">
+                                            {fromLeg?.waypoint || booking.navlog?.departureIcao || 'Departure'} to {leg.waypoint}
+                                        </span>
+                                    </button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="no-print h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
+                                        onClick={() => handleRemoveLeg(leg.id)}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
 
-                                    {/* Waypoint */}
-                                    <TableCell className="whitespace-nowrap align-top">
-                                        <div className="flex flex-col items-start gap-0.5">
-                                            <span className="font-black text-xs uppercase text-foreground">
-                                                {leg.waypoint}
-                                            </span>
-                                            <span className="text-[8px] font-mono font-bold text-muted-foreground">
-                                                {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
-                                            </span>
-                                            {leg.frequencies && (
-                                                <span className="text-[8px] font-semibold text-emerald-700">
-                                                    {leg.frequencies}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </TableCell>
+                                {isExpanded ? (
+                                    <div className="grid gap-4 p-4 lg:grid-cols-[290px_minmax(0,1fr)_242px]">
+                                        <section className="w-[290px] space-y-3">
+                                            <div className="grid gap-3">
+                                                <div className="relative">
+                                                    <p className="absolute -top-4 left-0 text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">From</p>
+                                                    <WaypointEndpointCard
+                                                        label={fromLeg?.waypoint || booking.navlog?.departureIcao || 'Departure'}
+                                                        latitude={fromLeg?.latitude ?? booking.navlog?.departureLatitude}
+                                                        longitude={fromLeg?.longitude ?? booking.navlog?.departureLongitude}
+                                                        context={fromLeg?.waypointContext}
+                                                    />
+                                                </div>
+                                                <div className="relative">
+                                                    <p className="absolute -top-3 left-0 text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">To</p>
+                                                    <WaypointEndpointCard
+                                                        label={leg.waypoint}
+                                                        latitude={leg.latitude}
+                                                        longitude={leg.longitude}
+                                                        context={leg.waypointContext}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </section>
 
-                                    {/* ALT (editable) */}
-                                    <TableCell className="text-center">
-                                        <InlineInput
-                                            value={leg.altitude}
-                                            onChange={(v) => handleUpdateLeg(leg.id, { altitude: v })}
-                                            placeholder="FL"
-                                            width="w-16"
-                                        />
-                                    </TableCell>
-
-                                    {/* TC° */}
-                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
-                                        {isFirstLeg ? '-' : `${(leg.trueCourse ?? 0).toFixed(0)}°`}
-                                    </TableCell>
-
-                                    {/* Per-leg Wind Override */}
-                                    {showPerLegWind && (
-                                        <TableCell className="text-center">
-                                            <div className="flex items-center gap-0.5 justify-center">
-                                                <InlineInput
-                                                    value={legs[index]?.windDirection}
-                                                    onChange={(v) => handleUpdateLeg(leg.id, { windDirection: v })}
-                                                    placeholder={`${params.windDirection}`}
-                                                    width="w-10"
-                                                />
-                                                <span className="text-[8px] text-muted-foreground">/</span>
-                                                <InlineInput
-                                                    value={legs[index]?.windSpeed}
-                                                    onChange={(v) => handleUpdateLeg(leg.id, { windSpeed: v })}
-                                                    placeholder={`${params.windSpeed}`}
-                                                    width="w-10"
+                                        <section className="min-w-0 space-y-3">
+                                            <div className="h-[118px] w-full rounded-md border bg-background px-2 py-1.5">
+                                                <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Notes</p>
+                                                <NavlogNotesField
+                                                    value={leg.notes}
+                                                    onSave={(value) => void handleUpdateLeg(leg.id, { notes: value })}
+                                                    className="h-[88px] min-h-0"
                                                 />
                                             </div>
-                                        </TableCell>
-                                    )}
+                                        </section>
 
-                                    {/* WCA */}
-                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
-                                        {isFirstLeg ? '-' : `${(leg.wca ?? 0) >= 0 ? '+' : ''}${(leg.wca ?? 0).toFixed(0)}°`}
-                                    </TableCell>
+                                        <section className="relative w-[242px]">
+                                            <p className="absolute -top-4 left-0 text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Leg Calculations</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="h-[42px] w-[117px] rounded-md border bg-background px-2 py-1.5">
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Altitude</p>
+                                                    <InlineInput
+                                                        value={leg.altitude}
+                                                        onChange={(v) => handleUpdateLeg(leg.id, { altitude: v })}
+                                                        placeholder="FL"
+                                                        width="w-full"
+                                                        className="mt-1 h-5 border-border/70 bg-background px-2 text-left font-mono text-[10px] font-black leading-none text-foreground"
+                                                    />
+                                                </div>
+                                                {showPerLegWind ? (
+                                                    <div className="h-[42px] w-[117px] rounded-md border bg-background px-2 py-1.5">
+                                                        <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Wind</p>
+                                                        <div className="mt-1 flex items-center gap-1">
+                                                            <InlineInput
+                                                                value={legs[index]?.windDirection}
+                                                                onChange={(v) => handleUpdateLeg(leg.id, { windDirection: v })}
+                                                                placeholder={`${params.windDirection}`}
+                                                                width="w-[48px]"
+                                                                className="h-5 border-border/70 bg-background px-1 text-left font-mono text-[10px] font-black leading-none text-foreground"
+                                                            />
+                                                            <span className="text-[8px] text-muted-foreground">/</span>
+                                                            <InlineInput
+                                                                value={legs[index]?.windSpeed}
+                                                                onChange={(v) => handleUpdateLeg(leg.id, { windSpeed: v })}
+                                                                placeholder={`${params.windSpeed}`}
+                                                                width="w-[48px]"
+                                                                className="h-5 border-border/70 bg-background px-1 text-left font-mono text-[10px] font-black leading-none text-foreground"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <MetricTile label="Wind" value={`${params.windDirection}/${params.windSpeed} KT`} />
+                                                )}
+                                                <MetricTile label="True Course" value={`${(leg.trueCourse ?? 0).toFixed(0)}°`} />
+                                                <MetricTile label="Wind Correction" value={`${(leg.wca ?? 0) >= 0 ? '+' : ''}${(leg.wca ?? 0).toFixed(0)}°`} />
+                                                <MetricTile label="True Heading" value={`${(leg.trueHeading ?? 0).toFixed(0)}°`} />
+                                                <MetricTile label="Variation" value={(leg.variation ?? 0) >= 0 ? `${(leg.variation ?? 0).toFixed(0)}°E` : `${Math.abs(leg.variation ?? 0).toFixed(0)}°W`} />
+                                                <MetricTile label="Mag Heading" value={`${(leg.magneticHeading ?? 0).toFixed(0)}°`} emphasized />
+                                                <MetricTile label="Distance" value={`${(leg.distance ?? 0).toFixed(1)} NM`} />
+                                                <MetricTile label="Ground Speed" value={`${(leg.groundSpeed ?? 0).toFixed(0)} KT`} />
+                                                <MetricTile label="Est Time Enroute" value={formatMinutes(leg.ete ?? 0)} />
+                                                <MetricTile label="Cumulative Time" value={formatMinutes(leg.cumulativeEte ?? 0)} />
+                                                <MetricTile label="Fuel Used" value={`${(leg.tripFuel ?? 0).toFixed(1)}`} />
+                                                <div className={`h-[42px] w-[117px] rounded-md border px-2 py-1.5 ${lowFuel ? 'border-destructive/30 bg-destructive/5' : 'bg-background'}`}> 
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Fuel Remaining</p>
+                                                    <p className={`mt-1 text-left font-mono text-[10px] font-black leading-none ${lowFuel ? 'text-destructive' : 'text-emerald-700'}`}>
+                                                        {fuelRem.toFixed(1)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </div>
+                                ) : null}
+                            </div>
+                        );
+                    })}
 
-                                    {/* TH° */}
-                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
-                                        {isFirstLeg ? '-' : `${(leg.trueHeading ?? 0).toFixed(0)}°`}
-                                    </TableCell>
+                    {calculatedLegs.length > 1 ? (
+                        <div className="rounded-xl border bg-background p-4">
+                            <div className="mb-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Leg Notes Summary</p>
+                            </div>
+                            <div className="space-y-3">
+                                {calculatedLegs.slice(1).map((leg, index) => {
+                                    const fromLeg = calculatedLegs[index];
+                                    const legTitle = `${fromLeg?.waypoint || booking.navlog?.departureIcao || 'Departure'} to ${leg.waypoint}`;
 
-                                    {/* VAR */}
-                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
-                                        {(leg.variation ?? 0) >= 0 ? `${(leg.variation ?? 0).toFixed(0)}°E` : `${Math.abs(leg.variation ?? 0).toFixed(0)}°W`}
-                                    </TableCell>
+                                    return (
+                                        <div key={`${leg.id}-summary`} className="rounded-lg border bg-muted/5 p-3">
+                                            <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                                                Leg {index + 1}
+                                            </p>
+                                            <p className="mt-1 text-[10px] font-black uppercase text-foreground">
+                                                {legTitle}
+                                            </p>
+                                            <NavlogNotesField
+                                                value={leg.notes}
+                                                onSave={(value) => void handleUpdateLeg(leg.id, { notes: value })}
+                                                className="min-h-[96px]"
+                                            />
+                                            <div className="mt-3 rounded-md border bg-background px-2 py-1.5">
+                                                <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Handwritten Notes</p>
+                                                <HandwrittenNotesField
+                                                    textValue={leg.handwrittenNotes}
+                                                    inkValue={leg.handwrittenNotesInk}
+                                                    onSaveText={(value) => void handleUpdateLeg(leg.id, { handwrittenNotes: value })}
+                                                    onSaveInk={(value) => void handleUpdateLeg(leg.id, { handwrittenNotesInk: value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
 
-                                    {/* MH° (primary — highlighted) */}
-                                    <TableCell className="text-right">
-                                        <span className="font-mono text-sm font-black text-primary">
-                                            {isFirstLeg ? '-' : `${(leg.magneticHeading ?? 0).toFixed(0)}°`}
-                                        </span>
-                                    </TableCell>
-
-                                    {/* DIST */}
-                                    <TableCell className="text-right font-mono text-[10px] font-black">
-                                        {isFirstLeg ? '-' : (leg.distance ?? 0).toFixed(1)}
-                                    </TableCell>
-
-                                    {/* GS */}
-                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
-                                        {isFirstLeg ? '-' : `${(leg.groundSpeed ?? 0).toFixed(0)}`}
-                                    </TableCell>
-
-                                    {/* ETE */}
-                                    <TableCell className="text-right font-mono text-[10px] font-black">
-                                        {isFirstLeg ? '-' : formatMinutes(leg.ete ?? 0)}
-                                    </TableCell>
-
-                                    {/* Cumulative ETE */}
-                                    <TableCell className="text-right font-mono text-[10px] font-bold text-muted-foreground">
-                                        {isFirstLeg ? '-' : formatMinutes(leg.cumulativeEte ?? 0)}
-                                    </TableCell>
-
-                                    {/* Fuel per leg */}
-                                    <TableCell className="text-right font-mono text-[10px] font-black">
-                                        {isFirstLeg ? '-' : (leg.tripFuel ?? 0).toFixed(1)}
-                                    </TableCell>
-
-                                    {/* Fuel Remaining */}
-                                    <TableCell className={`text-right font-mono text-[10px] font-black ${lowFuel ? 'text-destructive' : ''}`}>
-                                        {fuelRem.toFixed(1)}
-                                    </TableCell>
-
-                                    {/* Actions */}
-                                    <TableCell className="text-right px-3 no-print">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                                            onClick={() => handleRemoveLeg(leg.id)}
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                    <TableFooter className="bg-muted/20 border-t-2">
-                        <TableRow className="whitespace-nowrap font-black">
-                            <TableCell colSpan={showPerLegWind ? 5 : 4} className="text-[10px] uppercase tracking-widest px-3">
-                                Totals
-                            </TableCell>
-                            {/* WCA, TH, VAR, MH — empty */}
-                            <TableCell />
-                            <TableCell />
-                            <TableCell />
-                            <TableCell />
-                            {/* DIST total */}
-                            <TableCell className="text-right font-mono text-[10px]">
-                                {totals.distance.toFixed(1)} NM
-                            </TableCell>
-                            {/* Avg GS */}
-                            <TableCell className="text-right font-mono text-[10px] text-muted-foreground">
-                                {totals.groundSpeed > 0 ? `${totals.groundSpeed.toFixed(0)}` : '-'}
-                            </TableCell>
-                            {/* Total ETE */}
-                            <TableCell className="text-right font-mono text-[10px]">
-                                {formatMinutes(totals.ete)}
-                            </TableCell>
-                            {/* Cumulative = same as total */}
-                            <TableCell />
-                            {/* Total Fuel */}
-                            <TableCell className="text-right font-mono text-[10px]">
-                                {totals.fuel.toFixed(1)}
-                            </TableCell>
-                            {/* Reserve */}
-                            <TableCell className={`text-right font-mono text-[10px] ${totals.fuelRemaining < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                                {totals.fuelRemaining.toFixed(1)}
-                            </TableCell>
-                            <TableCell className="no-print" />
-                        </TableRow>
-                    </TableFooter>
-                </Table>
+                    <div className="rounded-xl border bg-background p-4">
+                        <div className="mb-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Totals</p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+                            <MetricTile label="Distance" value={`${totals.distance.toFixed(1)} NM`} />
+                            <MetricTile label="Avg GS" value={totals.groundSpeed > 0 ? `${totals.groundSpeed.toFixed(0)} KT` : '-'} />
+                            <MetricTile label="ETE" value={formatMinutes(totals.ete)} />
+                            <MetricTile label="Fuel" value={totals.fuel.toFixed(1)} />
+                            <MetricTile label="Reserve" value={totals.fuelRemaining.toFixed(1)} emphasized={totals.fuelRemaining >= 0} />
+                            <MetricTile label="Endurance" value={`${totals.enduranceRemaining.toFixed(1)} hrs`} />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
@@ -601,3 +919,5 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
         </div>
     );
 }
+
+

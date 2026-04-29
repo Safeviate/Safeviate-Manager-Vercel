@@ -4,13 +4,14 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
 import { Loader2, MapPin, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
-import type { NavlogLeg } from '@/types/booking';
+import type { NavlogLeg, WaypointContext } from '@/types/booking';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { calculateRouteTotals, createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { formatLatLonDms } from '@/lib/coordinate-parser';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useTheme } from '@/components/theme-provider';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
@@ -73,8 +74,15 @@ export default function FlightPlannerPage() {
     );
   }
 
-  const handleAddWaypoint = (lat: number, lon: number, identifier = 'WP', frequencies?: string, layerInfo?: string) => {
-    setLegs((current) => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
+  const handleAddWaypoint = (
+    lat: number,
+    lon: number,
+    identifier = 'WP',
+    frequencies?: string,
+    layerInfo?: string,
+    waypointContext?: WaypointContext
+  ) => {
+    setLegs((current) => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo, waypointContext)]);
   };
 
   const handleSetDeparture = (legId: string) => {
@@ -218,7 +226,7 @@ export default function FlightPlannerPage() {
                               <div className="min-w-0 space-y-1">
                                 <p className="truncate text-sm font-black uppercase">{leg.waypoint}</p>
                                 <p className="text-[9px] font-mono font-bold text-muted-foreground">
-                                  {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
+                                  {formatLatLonDms(leg.latitude, leg.longitude)}
                                 </p>
                                 {leg.frequencies && <p className="text-[9px] font-semibold text-emerald-700">{leg.frequencies}</p>}
                                 {leg.layerInfo && <p className="text-[9px] font-semibold text-primary">{leg.layerInfo}</p>}

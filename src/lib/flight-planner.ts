@@ -1,4 +1,4 @@
-import type { NavlogLeg } from '@/types/booking';
+import type { NavlogLeg, WaypointContext } from '@/types/booking';
 import { calculateEte, calculateFuelRequired, calculateWindTriangle, getBearing, getDistance, getMagneticVariation } from '@/lib/e6b';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -32,7 +32,8 @@ export function createNavlogLegFromCoordinates(
   lon: number,
   identifier = 'WP',
   frequencies?: string,
-  layerInfo?: string
+  layerInfo?: string,
+  waypointContext?: WaypointContext
 ): NavlogLeg {
   const lastLeg = existingLegs[existingLegs.length - 1];
   let distance = 0;
@@ -57,6 +58,13 @@ export function createNavlogLegFromCoordinates(
   const ete = lastLeg ? calculateEte(distance, 100) : 0;
   const tripFuel = lastLeg ? calculateFuelRequired(ete, 8.5) : 0;
 
+  const summaryFromContext =
+    waypointContext?.items[0]
+      ? [waypointContext.items[0].layer, waypointContext.items[0].label, waypointContext.items[0].detail]
+          .filter(Boolean)
+          .join(' • ')
+      : undefined;
+
   return {
     id: uuidv4(),
     waypoint: `${identifier}-${existingLegs.length + 1}`,
@@ -68,7 +76,8 @@ export function createNavlogLegFromCoordinates(
     variation,
     altitude: 3500,
     frequencies,
-    layerInfo,
+    layerInfo: layerInfo || summaryFromContext,
+    waypointContext,
     ete,
     tripFuel,
   };

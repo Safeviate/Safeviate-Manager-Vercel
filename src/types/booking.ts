@@ -88,6 +88,26 @@ export interface BookingWorkflowApprovals {
     checks?: SectionApproval;
 }
 
+export type WaypointContextItemKind = 'airport' | 'navaid' | 'reporting-point' | 'airspace' | 'obstacle' | 'other';
+
+export interface WaypointContextItem {
+    label: string;
+    layer: string;
+    kind?: WaypointContextItemKind;
+    distanceNm?: number;
+    frequencies?: string;
+    detail?: string;
+}
+
+export interface WaypointContext {
+    lat: number;
+    lon: number;
+    title: string;
+    subtitle?: string;
+    items: WaypointContextItem[];
+    activeLayers: string[];
+}
+
 export interface NavlogLeg {
     id: string;
     waypoint: string;
@@ -97,7 +117,10 @@ export interface NavlogLeg {
     altitude?: number;
     frequencies?: string;
     layerInfo?: string;
+    waypointContext?: WaypointContext;
     notes?: string;
+    handwrittenNotes?: string;
+    handwrittenNotesInk?: string;
     windDirection?: number;
     windSpeed?: number;
     trueAirspeed?: number;

@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import type { Booking, BookingWorkflowCompletion, NavlogLeg, ChecklistPhoto } from "@/types/booking";
+import type { Booking, BookingWorkflowCompletion, NavlogLeg, ChecklistPhoto, WaypointContext } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
@@ -29,6 +29,7 @@ import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { formatLatLonDms } from '@/lib/coordinate-parser';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 import { isBookingEligibleForTracking } from '@/lib/booking-tracking';
 
@@ -518,8 +519,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
-        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
+    const handleAddWaypoint = (
+        lat: number,
+        lon: number,
+        identifier: string = 'WP',
+        frequencies?: string,
+        layerInfo?: string,
+        waypointContext?: WaypointContext
+    ) => {
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo, waypointContext)]);
     };
 
     const handleSetDeparture = (leg: NavlogLeg) => {
@@ -711,7 +719,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                         <div className="flex-1 min-w-0">
          <div className="flex items-start justify-between gap-2">
              <span className="text-[11px] font-black uppercase leading-tight break-words">{leg.waypoint || 'PNT'}</span>
-             <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+                                    <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{formatLatLonDms(leg.latitude, leg.longitude)}</span>
          </div>
          {[leg.frequencies, leg.layerInfo].filter(Boolean).map((line, index) => (
              <p key={`${leg.id}-detail-${index}`} className="mt-1 text-[9px] font-semibold leading-tight text-slate-700">

@@ -17,6 +17,8 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
 import type { ReactNode } from 'react';
+import type { WaypointContext, WaypointContextItem } from '@/types/booking';
+import { formatLatLonDms } from '@/lib/coordinate-parser';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -35,7 +37,14 @@ const RouteWaypointIcon = L.divIcon({
 
 interface AeronauticalMapProps {
   legs: NavlogLeg[];
-  onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
+  onAddWaypoint: (
+    lat: number,
+    lon: number,
+    identifier?: string,
+    frequencies?: string,
+    layerInfo?: string,
+    waypointContext?: WaypointContext
+  ) => void;
   onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
   hazards?: Hazard[];
   onAddHazard?: (lat: number, lng: number) => void;
@@ -54,22 +63,9 @@ const HazardIcon = L.divIcon({
   iconAnchor: [12, 12],
 });
 
-type LayerInfoItem = {
-  label: string;
-  layer: string;
-  distanceNm?: number;
-  frequencies?: string;
-  detail?: string;
-};
+type LayerInfoItem = WaypointContextItem;
 
-type LayerInfoState = {
-  lat: number;
-  lon: number;
-  title: string;
-  subtitle?: string;
-  items: LayerInfoItem[];
-  activeLayers: string[];
-};
+type LayerInfoState = WaypointContext;
 
 type OpenAipFeature = {
   _id: string;
@@ -426,6 +422,7 @@ function VisiblePointLoader({
   const map = useMap();
   const requestSeq = useRef(0);
   const lastRequestKeyRef = useRef('');
+  const isDisposedRef = useRef(false);
 
   const activeResources = useMemo(() => {
     const resources: Array<typeof OPENAIP_POINT_RESOURCES[number]> = [];
@@ -436,9 +433,16 @@ function VisiblePointLoader({
   }, [airportsEnabled, navaidsEnabled, reportingEnabled]);
 
   const loadVisiblePoints = useCallback(async () => {
-    if (activeResources.length === 0) return;
+    if (activeResources.length === 0 || isDisposedRef.current) return;
 
-    const bounds = map.getBounds().pad(0.25);
+    let bounds: L.LatLngBounds;
+    try {
+      const container = map.getContainer();
+      if (!container || !container.isConnected) return;
+      bounds = map.getBounds().pad(0.25);
+    } catch {
+      return;
+    }
     const bbox = [
       bounds.getWest().toFixed(6),
       bounds.getSouth().toFixed(6),
@@ -471,7 +475,12 @@ function VisiblePointLoader({
   }, [map, onFeaturesLoaded, activeResources]);
 
   useEffect(() => {
+    isDisposedRef.current = false;
     loadVisiblePoints();
+    return () => {
+      isDisposedRef.current = true;
+      requestSeq.current += 1;
+    };
   }, [loadVisiblePoints]);
 
   useMapEvents({
@@ -552,11 +561,19 @@ function VisibleAirspaceLoader({
   const map = useMap();
   const requestSeq = useRef(0);
   const lastRequestKeyRef = useRef('');
+  const isDisposedRef = useRef(false);
 
   const loadVisibleAirspaces = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled || isDisposedRef.current) return;
 
-    const bounds = map.getBounds().pad(0.25);
+    let bounds: L.LatLngBounds;
+    try {
+      const container = map.getContainer();
+      if (!container || !container.isConnected) return;
+      bounds = map.getBounds().pad(0.25);
+    } catch {
+      return;
+    }
     const bbox = [
       bounds.getWest().toFixed(6),
       bounds.getSouth().toFixed(6),
@@ -578,7 +595,12 @@ function VisibleAirspaceLoader({
   }, [enabled, map, onFeaturesLoaded]);
 
   useEffect(() => {
+    isDisposedRef.current = false;
     loadVisibleAirspaces();
+    return () => {
+      isDisposedRef.current = true;
+      requestSeq.current += 1;
+    };
   }, [loadVisibleAirspaces]);
 
   useMapEvents({
@@ -599,11 +621,19 @@ function VisibleObstacleLoader({
   const map = useMap();
   const requestSeq = useRef(0);
   const lastRequestKeyRef = useRef('');
+  const isDisposedRef = useRef(false);
 
   const loadVisibleObstacles = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled || isDisposedRef.current) return;
 
-    const bounds = map.getBounds().pad(0.35);
+    let bounds: L.LatLngBounds;
+    try {
+      const container = map.getContainer();
+      if (!container || !container.isConnected) return;
+      bounds = map.getBounds().pad(0.35);
+    } catch {
+      return;
+    }
     const bbox = [
       bounds.getWest().toFixed(6),
       bounds.getSouth().toFixed(6),
@@ -625,7 +655,12 @@ function VisibleObstacleLoader({
   }, [enabled, map, onFeaturesLoaded]);
 
   useEffect(() => {
+    isDisposedRef.current = false;
     loadVisibleObstacles();
+    return () => {
+      isDisposedRef.current = true;
+      requestSeq.current += 1;
+    };
   }, [loadVisibleObstacles]);
 
   useMapEvents({
@@ -876,9 +911,11 @@ const blockMapInteraction = (event: React.SyntheticEvent) => {
 const SearchControl = ({
   onAddWaypoint,
   onResultsChange,
+  canAddWaypoint = true,
 }: {
   onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
   onResultsChange: (results: OpenAipFeature[]) => void;
+  canAddWaypoint?: boolean;
 }) => {
   const map = useMap();
   const isMobile = useIsMobile();
@@ -1085,25 +1122,27 @@ const SearchControl = ({
               </div>
             ) : null}
             <div className="flex gap-2 pt-2">
-              <Button size="sm" className="w-full" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
-                blockMapInteraction(event);
-                const [lon, lat] = selected.geometry!.coordinates!;
-                onAddWaypoint(
-                  lat,
-                  lon,
-                  selected.icaoCode || selected.identifier || selected.name,
-                  formatWaypointFrequencies(selected.frequencies),
-                  selected.sourceLayer === 'airports'
-                    ? 'OpenAIP Airports'
-                    : selected.sourceLayer === 'navaids'
-                      ? 'OpenAIP Navaids'
-                      : 'OpenAIP Reporting Points'
-                );
-                setSelected(null);
-                onResultsChangeRef.current([]);
-              }}>
-                <Plus className="h-4 w-4 mr-2" /> Add
-              </Button>
+              {canAddWaypoint ? (
+                <Button size="sm" className="w-full" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
+                  blockMapInteraction(event);
+                  const [lon, lat] = selected.geometry!.coordinates!;
+                  onAddWaypoint(
+                    lat,
+                    lon,
+                    selected.icaoCode || selected.identifier || selected.name,
+                    formatWaypointFrequencies(selected.frequencies),
+                    selected.sourceLayer === 'airports'
+                      ? 'OpenAIP Airports'
+                      : selected.sourceLayer === 'navaids'
+                        ? 'OpenAIP Navaids'
+                        : 'OpenAIP Reporting Points'
+                  );
+                  setSelected(null);
+                  onResultsChangeRef.current([]);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" /> Add
+                </Button>
+              ) : null}
               <Button size="sm" variant="ghost" className="w-full" onMouseDown={blockMapInteraction} onPointerDown={blockMapInteraction} onTouchStart={blockMapInteraction} onClick={(event) => {
                 blockMapInteraction(event);
                 setSelected(null);
@@ -1170,6 +1209,11 @@ export default function AeronauticalMap({
       setLayerPanelTab('layers');
     }
   }, [isLayersPanelOpen]);
+
+  const closeUtilityPanels = useCallback(() => {
+    onZoomPanelOpenChange?.(false);
+    onLayersPanelOpenChange?.(false);
+  }, [onLayersPanelOpenChange, onZoomPanelOpenChange]);
 
   const openAipFeatures = useMemo(() => mergeOpenAipFeatures(viewportFeatures, searchFeatures), [searchFeatures, viewportFeatures]);
   const airportFeatures = useMemo(
@@ -1423,6 +1467,9 @@ export default function AeronauticalMap({
     airspacesVisible,
   ]);
   const handleMapClick = useCallback((lat: number, lon: number) => {
+    closeUtilityPanels();
+    if (!isEditing) return;
+
     const candidates = openAipFeatures.filter((item) => {
       if (item.sourceLayer === 'airports') return airportsVisible;
       if (item.sourceLayer === 'navaids') return navaidsVisible;
@@ -1447,22 +1494,25 @@ export default function AeronauticalMap({
     if (nearest && nearestDistance <= CLICK_SNAP_THRESHOLD_NM) {
       const identifier = nearest.icaoCode || nearest.identifier || nearest.name;
       const frequencies = formatWaypointFrequencies(nearest.frequencies);
-      const context = buildWaypointContext(buildLayerInfo(lat, lon));
+      const info = buildLayerInfo(lat, lon);
+      const context = buildWaypointContext(info);
       setPendingClickLabel(identifier);
-      onAddWaypoint(lat, lon, identifier, frequencies, context);
+      onAddWaypoint(lat, lon, identifier, frequencies, context, info);
       return;
     }
 
-    const context = buildWaypointContext(buildLayerInfo(lat, lon));
+    const info = buildLayerInfo(lat, lon);
+    const context = buildWaypointContext(info);
     setPendingClickLabel('PNT');
-    onAddWaypoint(lat, lon, 'PNT', undefined, context);
-  }, [airportsVisible, buildLayerInfo, buildWaypointContext, navaidsVisible, openAipFeatures, onAddWaypoint, reportingVisible]);
+    onAddWaypoint(lat, lon, 'PNT', undefined, context, info);
+  }, [airportsVisible, buildLayerInfo, buildWaypointContext, closeUtilityPanels, isEditing, navaidsVisible, openAipFeatures, onAddWaypoint, reportingVisible]);
 
   const handleLongPress = useCallback((lat: number, lon: number) => {
+    closeUtilityPanels();
     if (isEditing) return;
     setPendingClickLabel('Layer info');
     setLayerInfo(buildLayerInfo(lat, lon));
-  }, [buildLayerInfo, isEditing]);
+  }, [buildLayerInfo, closeUtilityPanels, isEditing]);
 
   useEffect(() => {
     if (isEditing) {
@@ -1526,15 +1576,15 @@ export default function AeronauticalMap({
 
   return (
     <div className="relative h-full w-full">
-    <LeafletMapFrame
-      center={center}
-      zoom={8}
-      minZoom={minVisibleZoom}
-      maxZoom={maxVisibleZoom}
+      <LeafletMapFrame
+        center={center}
+        zoom={8}
+        minZoom={minVisibleZoom}
+        maxZoom={maxVisibleZoom}
       preferCanvas
       className="h-full w-full outline-none"
-      style={{ background: '#0f172a' }}
-    >
+        style={{ background: '#0f172a' }}
+      >
       <LayersControl position="topleft" collapsed>
         <LayersControl.BaseLayer checked={selectedBaseLayer === 'light'} name="Light (Standard)">
           <TileLayer
@@ -1577,13 +1627,15 @@ export default function AeronauticalMap({
                     mousedown: stopMarkerPress,
                     click: (event) => {
                       L.DomEvent.stop(event.originalEvent);
+                      if (!isEditing) return;
                       setPendingClickLabel(identifier);
                       onAddWaypoint(
                         lat,
                         lon,
                         identifier,
                         formatWaypointFrequencies(feature.frequencies),
-                        buildWaypointContext(buildLayerInfo(lat, lon))
+                        buildWaypointContext(buildLayerInfo(lat, lon)),
+                        buildLayerInfo(lat, lon)
                       );
                     },
                   }}
@@ -1621,13 +1673,15 @@ export default function AeronauticalMap({
                     mousedown: stopMarkerPress,
                     click: (event) => {
                       L.DomEvent.stop(event.originalEvent);
+                      if (!isEditing) return;
                       setPendingClickLabel(identifier);
                       onAddWaypoint(
                         lat,
                         lon,
                         identifier,
                         formatWaypointFrequencies(feature.frequencies),
-                        buildWaypointContext(buildLayerInfo(lat, lon))
+                        buildWaypointContext(buildLayerInfo(lat, lon)),
+                        buildLayerInfo(lat, lon)
                       );
                     },
                   }}
@@ -1665,13 +1719,15 @@ export default function AeronauticalMap({
                     mousedown: stopMarkerPress,
                     click: (event) => {
                       L.DomEvent.stop(event.originalEvent);
+                      if (!isEditing) return;
                       setPendingClickLabel(identifier);
                       onAddWaypoint(
                         lat,
                         lon,
                         identifier,
                         formatWaypointFrequencies(feature.frequencies),
-                        buildWaypointContext(buildLayerInfo(lat, lon))
+                        buildWaypointContext(buildLayerInfo(lat, lon)),
+                        buildLayerInfo(lat, lon)
                       );
                     },
                   }}
@@ -1929,6 +1985,7 @@ export default function AeronauticalMap({
         onResultsChange={(results) => {
           setSearchFeatures(results);
         }}
+        canAddWaypoint={isEditing}
       />
 
       {pendingClickLabel && (
@@ -1952,7 +2009,7 @@ export default function AeronauticalMap({
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary">{layerInfo.subtitle}</p>
               )}
               <p className="text-[10px] text-muted-foreground">
-                {layerInfo.lat.toFixed(4)}, {layerInfo.lon.toFixed(4)}
+                {formatLatLonDms(layerInfo.lat, layerInfo.lon)}
               </p>
             </div>
 
@@ -1979,14 +2036,16 @@ export default function AeronauticalMap({
             )}
 
             <div className="flex flex-col gap-2 pt-2 border-t mt-4">
-              <Button 
-                className="h-8 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[10px] w-full"
-                onClick={() => {
-                  onAddWaypoint(layerInfo.lat, layerInfo.lon, layerInfo.title);
-                }}
-              >
-                Add to Route
-              </Button>
+              {isEditing && (
+                <Button 
+                  className="h-8 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[10px] w-full"
+                  onClick={() => {
+                    onAddWaypoint(layerInfo.lat, layerInfo.lon, layerInfo.title);
+                  }}
+                >
+                  Add to Route
+                </Button>
+              )}
               {onAddHazard && (
                 <Button 
                   variant="outline"
@@ -2015,7 +2074,7 @@ export default function AeronauticalMap({
               <p className="text-xs font-bold leading-relaxed">{h.note || 'No description provided.'}</p>
               <div className="pt-1 flex items-center justify-between border-t border-muted">
                  <span className="text-[8px] text-muted-foreground uppercase font-black">Coordinates</span>
-                 <span className="text-[8px] font-mono font-bold text-muted-foreground">{h.lat.toFixed(4)}, {h.lng.toFixed(4)}</span>
+                 <span className="text-[8px] font-mono font-bold text-muted-foreground">{formatLatLonDms(h.lat, h.lng)}</span>
               </div>
             </div>
           </Popup>
@@ -2142,6 +2201,31 @@ export default function AeronauticalMap({
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 py-2 sm:px-3 sm:py-3">
+            <div className="mb-2 space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Base Layer</p>
+              <div className="grid grid-cols-2 gap-1">
+                {[
+                  { key: 'light', label: 'Light' },
+                  { key: 'satellite', label: 'Satellite' },
+                ].map((layer) => (
+                  <Button
+                    key={layer.key}
+                    type="button"
+                    variant="outline"
+                    aria-pressed={selectedBaseLayer === layer.key}
+                    className={`h-7 px-2 text-[8px] font-black uppercase sm:h-8 sm:text-[9px] ${
+                      selectedBaseLayer === layer.key
+                        ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => setSelectedBaseLayer(layer.key as 'light' | 'satellite')}
+                  >
+                    {layer.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="mb-2 grid grid-cols-3 gap-1">
               {[
                 { key: 'layers', label: 'Layers' },
@@ -2271,9 +2355,32 @@ export default function AeronauticalMap({
           display: none !important;
         }
 
+        .leaflet-bottom.leaflet-right {
+          right: 0.35rem !important;
+          bottom: 0.2rem !important;
+        }
+
+        .leaflet-control-attribution {
+          max-width: calc(100vw - 5.5rem);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin: 0 !important;
+          padding: 0 0.35rem !important;
+          border-radius: 9999px;
+          font-size: 9px !important;
+          line-height: 1 !important;
+          background: rgba(255, 255, 255, 0.88) !important;
+        }
+
         @media (max-width: 639px) {
           .leaflet-top.leaflet-left {
             top: 4.25rem !important;
+          }
+
+          .leaflet-control-attribution {
+            max-width: calc(100vw - 4.5rem);
+            font-size: 8px !important;
           }
         }
       `}</style>

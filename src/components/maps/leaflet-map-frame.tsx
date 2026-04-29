@@ -1,7 +1,42 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { MapContainer } from 'react-leaflet';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import type { Map as LeafletMap } from 'leaflet';
+import { MapContainer, useMap } from 'react-leaflet';
+
+function MapResizeController() {
+  const map = useMap();
+
+  useEffect(() => {
+    let frameId = 0;
+
+    const refreshMapSize = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        map.invalidateSize(false);
+      });
+    };
+
+    refreshMapSize();
+
+    const container = map.getContainer();
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refreshMapSize) : null;
+    resizeObserver?.observe(container);
+    resizeObserver?.observe(container.parentElement || container);
+
+    window.addEventListener('resize', refreshMapSize);
+    window.addEventListener('orientationchange', refreshMapSize);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', refreshMapSize);
+      window.removeEventListener('orientationchange', refreshMapSize);
+    };
+  }, [map]);
+
+  return null;
+}
 
 type LeafletMapFrameProps = {
   center: [number, number];
@@ -29,9 +64,27 @@ export function LeafletMapFrame({
   children,
 }: LeafletMapFrameProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [instanceKey] = useState(() => `leaflet-map-${Math.random().toString(36).slice(2)}`);
+  const mapRef = useRef<LeafletMap | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      try {
+        map.off();
+        map.remove();
+      } catch {
+        // Ignore teardown noise during dev remounts.
+      } finally {
+        mapRef.current = null;
+      }
+    };
   }, []);
 
   if (!isMounted) {
@@ -46,6 +99,10 @@ export function LeafletMapFrame({
 
   return (
     <MapContainer
+      key={instanceKey}
+      ref={(map) => {
+        mapRef.current = map;
+      }}
       center={center}
       zoom={zoom}
       minZoom={minZoom}
@@ -57,6 +114,7 @@ export function LeafletMapFrame({
       className={className}
       style={mergedStyle}
     >
+      <MapResizeController />
       {children}
     </MapContainer>
   );

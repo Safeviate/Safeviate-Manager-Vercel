@@ -1,17 +1,18 @@
-'use client';
+﻿'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingWorkflowCompletion, NavlogLeg, Navlog, PreFlightData, PostFlightData, ChecklistPhoto } from "@/types/booking";
+import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingWorkflowCompletion, NavlogLeg, Navlog, PreFlightData, PostFlightData, ChecklistPhoto, WaypointContext, TrainingRoute } from "@/types/booking";
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route, ArrowLeft, ChevronDown, MoreHorizontal, Layers3 } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route, ArrowLeft, ChevronDown, MoreHorizontal, Layers3, Plus, X, Printer } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NavlogBuilder } from '../../navlog-builder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -31,7 +33,9 @@ import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { coordinatePartsToDecimal, formatCoordinateDms, formatLatLonDms } from '@/lib/coordinate-parser';
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
+import { findOpenAipAirportByIcao } from '@/lib/openaip-airports';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 
 // Dynamic import for Leaflet to avoid SSR issues
@@ -109,6 +113,59 @@ const BOOKING_PLANNING_PRIMARY_BUTTON_CLASS =
 
 const BOOKING_PLANNING_STATUS_BUTTON_CLASS =
     "h-8 rounded-md px-2.5 text-[10px] font-medium uppercase tracking-[0.14em] shadow-sm";
+
+const MOBILE_ROUTE_SUMMARY_BODY_HEIGHT = '11.5rem';
+const MOBILE_ROUTE_SUMMARY_CARD_HEIGHT = '5rem';
+const MOBILE_ROUTE_SUMMARY_EMPTY_HEIGHT = '5.5rem';
+type WaypointContextItem = WaypointContext['items'][number];
+
+const WAYPOINT_KIND_LABELS: Partial<Record<NonNullable<WaypointContextItem['kind']>, string>> = {
+    airport: 'Airport',
+    navaid: 'Navaid',
+    'reporting-point': 'Reporting Point',
+    airspace: 'Airspace',
+    obstacle: 'Obstacle',
+    other: 'Other',
+};
+
+const formatWaypointContextKind = (kind?: WaypointContextItem['kind']) => (kind ? WAYPOINT_KIND_LABELS[kind] || kind : 'Waypoint');
+const formatHeadingDegrees = (value?: number) => (value === undefined || Number.isNaN(value) ? '---' : Math.round(value).toString().padStart(3, '0'));
+const getReciprocalHeading = (value?: number) => (value === undefined || Number.isNaN(value) ? undefined : (value + 180) % 360);
+
+const WaypointContextStack = ({ context }: { context?: WaypointContext }) => {
+    if (!context?.items?.length) return null;
+
+    return (
+        <div className="mt-1.5 space-y-1.5 border-t border-border/60 pt-1.5">
+            <div className="space-y-1">
+                {context.items.map((item, index) => (
+                    <div key={`${item.layer}-${item.label}-${index}`} className="rounded-md border border-border/70 bg-background/70 px-2 py-1">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                                <p className="text-[8px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                                    {formatWaypointContextKind(item.kind)}
+                                </p>
+                                <p className="text-[9px] font-black uppercase leading-tight text-foreground">
+                                    {item.label}
+                                </p>
+                                <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                    {item.layer}
+                                </p>
+                            </div>
+                            {item.distanceNm !== undefined && (
+                                <span className="shrink-0 font-mono text-[8px] font-black text-muted-foreground">
+                                    {item.distanceNm.toFixed(1)} NM
+                                </span>
+                            )}
+                        </div>
+                        {item.detail && <p className="mt-0.5 text-[8px] font-semibold leading-tight text-slate-700">{item.detail}</p>}
+                        {item.frequencies && <p className="mt-0.5 text-[8px] font-semibold leading-tight text-emerald-700">{item.frequencies}</p>}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const DetailItem = ({ label, value, children }: { label: string, value?: string | undefined | null, children?: React.ReactNode }) => (
     <div>
@@ -214,7 +271,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
                                 <div className="flex items-center gap-2">
                                     <Wind className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'}Ã‚Â°</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'} deg</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Eye className="h-3 w-3 text-sky-500" />
@@ -222,7 +279,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Thermometer className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.temp}Ã‚Â°C / {data.metar.dewp}Ã‚Â°C</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.temp} C / {data.metar.dewp} C</span>
                                 </div>
                             </div>
                         </div>
@@ -265,6 +322,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [approvingSection, setApprovingSection] = useState<CheckApprovalKey | null>(null);
     const [showRouteSummary, setShowRouteSummary] = useState(!isMobile);
     const [isMapLayersPanelOpen, setIsMapLayersPanelOpen] = useState(false);
+    const [isRouteDraftMode, setIsRouteDraftMode] = useState(false);
+    const [routeDraftBackup, setRouteDraftBackup] = useState<NavlogLeg[] | null>(null);
     const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
     const [personnel, setPersonnel] = useState<BookingPerson[]>([]);
     const [loadingAc, setLoadingAc] = useState(true);
@@ -288,8 +347,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }, [personnel, booking.studentId]);
     const isAssignedInstructor = !!userProfile && booking.instructorId === userProfile.id;
     const canManuallyApprove = isAssignedInstructor || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.role?.toLowerCase() === 'dev';
+    const printHref = `/print/bookings/${booking.id}`;
     const preFlightPhotos = ((booking.preFlightData as (typeof booking.preFlightData & { photos?: ChecklistPhoto[] }) | undefined)?.photos || []) as ChecklistPhoto[];
     const postFlightPhotos = (booking.postFlightData?.photos || []) as ChecklistPhoto[];
+
+    useEffect(() => {
+        if (isMobile && activeTab === 'planning') {
+            setShowRouteSummary(false);
+        }
+    }, [activeTab, isMobile]);
+
     const checkSections = useMemo(() => ([
         { key: 'massAndBalance' as const, label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits, detail: booking.massAndBalance?.isWithinLimits ? 'Within limits' : 'Needs review' },
         { key: 'navlog' as const, label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length, detail: booking.navlog?.legs?.length ? `${booking.navlog.legs.length} legs planned` : 'No navlog found' },
@@ -401,6 +468,22 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [showArrWeather, setShowArrWeather] = useState(true);
     const [isLookingUpDep, setIsLookingUpDep] = useState(false);
     const [isLookingUpArr, setIsLookingUpArr] = useState(false);
+    const [manualWaypointName, setManualWaypointName] = useState('');
+    const [manualLatHemisphere, setManualLatHemisphere] = useState<'S' | 'N'>('S');
+    const [manualLatDegrees, setManualLatDegrees] = useState('');
+    const [manualLatMinutes, setManualLatMinutes] = useState('');
+    const [manualLatSeconds, setManualLatSeconds] = useState('');
+    const [manualLonHemisphere, setManualLonHemisphere] = useState<'E' | 'W'>('E');
+    const [manualLonDegrees, setManualLonDegrees] = useState('');
+    const [manualLonMinutes, setManualLonMinutes] = useState('');
+    const [manualLonSeconds, setManualLonSeconds] = useState('');
+    const [routeDraftName, setRouteDraftName] = useState(`${booking.bookingNumber} Route`);
+    const [savedRouteDraftId, setSavedRouteDraftId] = useState<string | null>(null);
+    const latMinutesRef = useRef<HTMLInputElement | null>(null);
+    const latSecondsRef = useRef<HTMLInputElement | null>(null);
+    const lonDegreesRef = useRef<HTMLInputElement | null>(null);
+    const lonMinutesRef = useRef<HTMLInputElement | null>(null);
+    const lonSecondsRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         if (aircraft) {
@@ -492,7 +575,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Fuel sync between M&B and NavLog Ã¢â€â‚¬Ã¢â€â‚¬
+    // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Fuel sync between M&B and NavLog ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
     const fuelStation = useMemo(() => stations.find(s => s.type === 'fuel'), [stations]);
     const fuelWeightLbs = fuelStation ? (parseFloat(String(fuelStation.weight)) || 0) : undefined;
 
@@ -820,8 +903,164 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
-        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
+    const handleAddWaypoint = (
+        lat: number,
+        lon: number,
+        identifier: string = 'WP',
+        frequencies?: string,
+        layerInfo?: string,
+        waypointContext?: WaypointContext
+    ) => {
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo, waypointContext)]);
+    };
+
+    const handleMoveWaypoint = (legId: string, lat: number, lon: number) => {
+        if (!isRouteDraftMode) return;
+
+        setPlannedLegs((current) => {
+            const movedLegs = current.map((leg) =>
+                leg.id === legId ? { ...leg, latitude: lat, longitude: lon } : leg
+            );
+
+            return movedLegs.map((leg, index) => {
+                const rebuiltLeg = createNavlogLegFromCoordinates(
+                    movedLegs.slice(0, index),
+                    leg.latitude ?? 0,
+                    leg.longitude ?? 0,
+                    leg.waypoint?.replace(/-\d+$/, '') || 'PNT',
+                    leg.frequencies,
+                    leg.layerInfo,
+                    leg.waypointContext,
+                );
+
+                return {
+                    ...leg,
+                    ...rebuiltLeg,
+                    id: leg.id,
+                };
+            });
+        });
+        toast({ title: 'Waypoint moved', description: 'Route leg calculations updated.' });
+    };
+
+    const handleAddRoute = () => {
+        setActiveTab('planning');
+        if (isRouteDraftMode) {
+            const restoredLegs = routeDraftBackup ?? (booking.navlog?.legs || []);
+            setPlannedLegs(restoredLegs);
+            setRouteDraftBackup(null);
+            setIsRouteDraftMode(false);
+            setShowRouteSummary(restoredLegs.length > 0);
+            setManualWaypointName('');
+            setManualLatDegrees('');
+            setManualLatMinutes('');
+            setManualLatSeconds('');
+            setManualLonDegrees('');
+            setManualLonMinutes('');
+            setManualLonSeconds('');
+            setSavedRouteDraftId(null);
+            return;
+        }
+
+        setRouteDraftBackup(plannedLegs);
+        setPlannedLegs([]);
+        setIsRouteDraftMode(true);
+        setShowRouteSummary(true);
+    };
+
+    const handleSaveRouteDraft = async () => {
+        if (plannedLegs.length === 0) {
+            toast({ variant: 'destructive', title: 'No route to save', description: 'Add at least one waypoint before saving the route.' });
+            return;
+        }
+
+        const route: TrainingRoute = {
+            id: savedRouteDraftId || uuidv4(),
+            name: routeDraftName.trim() || `${booking.bookingNumber} Route`,
+            description: `Saved from booking ${booking.bookingNumber}`,
+            routeType: 'training',
+            legs: plannedLegs,
+            hazards: booking.navlog?.hazards || [],
+            tenantId: tenantId || 'safeviate',
+            createdAt: new Date().toISOString(),
+        };
+
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/training-routes', {
+                method: savedRouteDraftId ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ route }),
+            });
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Failed to save route.');
+            }
+
+            setSavedRouteDraftId(route.id);
+            setRouteDraftName(route.name);
+            toast({
+                title: savedRouteDraftId ? 'Route updated' : 'Route saved',
+                description: `${route.name} is available in the route planner.`,
+            });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Save failed', description: error instanceof Error ? error.message : 'Failed to save route.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleAddManualWaypoint = () => {
+        if (!isRouteDraftMode) return;
+
+        const lat = coordinatePartsToDecimal({
+            axis: 'lat',
+            hemisphere: manualLatHemisphere,
+            degrees: manualLatDegrees,
+            minutes: manualLatMinutes,
+            seconds: manualLatSeconds,
+        });
+        const lon = coordinatePartsToDecimal({
+            axis: 'lon',
+            hemisphere: manualLonHemisphere,
+            degrees: manualLonDegrees,
+            minutes: manualLonMinutes,
+            seconds: manualLonSeconds,
+        });
+
+        if (lat === null || lon === null) {
+            toast({ variant: 'destructive', title: 'Invalid coordinates', description: 'Check the hemisphere, degrees, minutes, and seconds fields.' });
+            return;
+        }
+
+        const identifier = manualWaypointName.trim() || 'PNT';
+        setPlannedLegs((current) => [
+            ...current,
+            createNavlogLegFromCoordinates(current, lat, lon, identifier, undefined, 'Manual Coordinates'),
+        ]);
+        setManualWaypointName('');
+        setManualLatDegrees('');
+        setManualLatMinutes('');
+        setManualLatSeconds('');
+        setManualLonDegrees('');
+        setManualLonMinutes('');
+        setManualLonSeconds('');
+        setShowRouteSummary(true);
+        toast({ title: 'Waypoint added', description: `${identifier} added from manual coordinates.` });
+    };
+
+    const handleCoordinatePartChange = (
+        value: string,
+        setValue: (next: string) => void,
+        nextField?: React.RefObject<HTMLInputElement | null>,
+        maxDigits = 2
+    ) => {
+        const sanitized = value.replace(/[^\d]/g, '').slice(0, maxDigits);
+        setValue(sanitized);
+        if (nextField && sanitized.length === maxDigits) {
+            nextField.current?.focus();
+            nextField.current?.select();
+        }
     };
 
     const handleCommitRoute = async () => {
@@ -863,6 +1102,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 planning: true,
                 navlog: true,
             }));
+            setIsRouteDraftMode(false);
+            setRouteDraftBackup(null);
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
             toast({ title: "Route Committed", description: "The navigation log and airport details have been updated." });
         } catch (error: unknown) {
@@ -876,9 +1117,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         if (!icao) return;
         type === 'dep' ? setIsLookingUpDep(true) : setIsLookingUpArr(true);
         try {
-            const res = await fetch(`/api/openaip?resource=airports&icaoCode=${icao}`);
-            const data = await res.json();
-            const airport = data.items?.[0];
+            const normalizedIcao = icao.trim().toUpperCase();
+            const airport = await findOpenAipAirportByIcao(normalizedIcao);
             if (airport && airport.geometry?.coordinates) {
                 const [lon, lat] = airport.geometry.coordinates;
                 if (type === 'dep') {
@@ -886,12 +1126,19 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 } else {
                     setArrLat(lat.toFixed(6)); setArrLon(lon.toFixed(6));
                 }
-                toast({ title: `Found ${icao}`, description: airport.name });
+                toast({ title: `Found ${normalizedIcao}`, description: airport.name });
+            } else {
+                toast({ variant: 'destructive', title: 'Airport not found', description: `No OpenAIP airport match found for ${normalizedIcao}.` });
             }
         } finally {
             type === 'dep' ? setIsLookingUpDep(false) : setIsLookingUpArr(false);
         }
     };
+
+    const departureLatPreview = depLat ? formatCoordinateDms(Number.parseFloat(depLat), 'lat') : '--';
+    const departureLonPreview = depLon ? formatCoordinateDms(Number.parseFloat(depLon), 'lon') : '--';
+    const arrivalLatPreview = arrLat ? formatCoordinateDms(Number.parseFloat(arrLat), 'lat') : '--';
+    const arrivalLonPreview = arrLon ? formatCoordinateDms(Number.parseFloat(arrLon), 'lon') : '--';
 
     if (!initialDetailsLoaded && (loadingAc || loadingPeople)) return <Skeleton className="h-64 w-full" />;
 
@@ -920,16 +1167,45 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     };
 
     return (
-        <Card className="flex h-full min-h-0 flex-1 flex-col shadow-none border overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
+        <Card className={cn(
+            "flex min-h-0 flex-col shadow-none border overflow-hidden",
+            isMobile && activeTab === 'planning' ? "h-full flex-1" : "h-full flex-1"
+        )}>
+            <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className={cn(
+                    "flex min-h-0 flex-col",
+                    isMobile && activeTab === 'planning' ? "h-full flex-1" : "h-full flex-1"
+                )}
+            >
                 <BookingDetailHeader
                     title={booking.type}
-                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} â€¢ Inst: ${instructorLabel} â€¢ Stud: ${studentLabel}`}
                     status={booking.status}
-                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${format(new Date(booking.approvedAt), "PPP p")}` : ""}` : null}
+                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` â€¢ ${format(new Date(booking.approvedAt), "PPP p")}` : ""}` : null}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    headerAction={isMobile ? null : <BackNavButton href="/bookings/history" text="Back to History" />}
+                    headerAction={
+                        isMobile ? (
+                            <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                                <Link href={printHref} target="_blank" rel="noreferrer">
+                                    <Printer className="h-3.5 w-3.5" />
+                                    <span className="sr-only">Print Flight</span>
+                                </Link>
+                            </Button>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <BackNavButton href="/bookings/history" text="Back to History" />
+                                <Button asChild variant="outline" className="h-9 gap-2 text-[10px] font-bold uppercase">
+                                    <Link href={printHref} target="_blank" rel="noreferrer">
+                                        <Printer className="h-3.5 w-3.5" />
+                                        Print Flight
+                                    </Link>
+                                </Button>
+                            </div>
+                        )
+                    }
                     tabRowAction={
                         activeTab === 'planning' ? (
                             isMobile ? (
@@ -949,7 +1225,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
                                         <DropdownMenuItem
-                                            onClick={() => setIsMapLayersPanelOpen(true)}
+                                            onClick={handleAddRoute}
+                                            className="text-[10px] font-bold uppercase"
+                                        >
+                                            {isRouteDraftMode ? <X className="mr-2 h-3.5 w-3.5" /> : <Plus className="mr-2 h-3.5 w-3.5" />}
+                                            {isRouteDraftMode ? 'Exit Add Route' : 'Add Route'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => setIsMapLayersPanelOpen((current) => !current)}
                                             className="text-[10px] font-bold uppercase"
                                         >
                                             <Layers3 className="mr-2 h-3.5 w-3.5" />
@@ -971,6 +1254,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             Clear
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
+                                            onClick={handleSaveRouteDraft}
+                                            disabled={isSaving || plannedLegs.length === 0}
+                                            className="text-[10px] font-bold uppercase"
+                                        >
+                                            <Save className="mr-2 h-3.5 w-3.5" />
+                                            Save Route
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
                                             onClick={handleCommitRoute}
                                             disabled={isSaving}
                                             className="text-[10px] font-bold uppercase"
@@ -984,7 +1275,15 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <div className="flex items-center gap-2">
                                     <Button
                                         variant="outline"
-                                        onClick={() => setIsMapLayersPanelOpen(true)}
+                                        onClick={handleAddRoute}
+                                        className={BOOKING_PLANNING_SECONDARY_BUTTON_CLASS}
+                                    >
+                                        {isRouteDraftMode ? <X className="mr-1 h-3 w-3" /> : <Plus className="mr-1 h-3 w-3" />}
+                                        {isRouteDraftMode ? 'Exit Add Route' : 'Add Route'}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsMapLayersPanelOpen((current) => !current)}
                                         className={BOOKING_PLANNING_SECONDARY_BUTTON_CLASS}
                                     >
                                         <Layers3 className="mr-1 h-3 w-3" /> Map Layers
@@ -1003,6 +1302,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                         disabled={plannedLegs.length === 0}
                                     >
                                         <RotateCcw className="mr-1 h-3 w-3" /> Clear
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleSaveRouteDraft}
+                                        className={BOOKING_PLANNING_SECONDARY_BUTTON_CLASS}
+                                        disabled={isSaving || plannedLegs.length === 0}
+                                    >
+                                        <Save className="mr-1 h-3 w-3" /> Save Route
                                     </Button>
                                     <Button 
                                         className={cn(
@@ -1142,7 +1449,10 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         ) : null
                     }
                 />
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className={cn(
+                    "flex min-h-0 flex-col overflow-hidden",
+                    isMobile && activeTab === 'planning' ? "h-auto flex-none" : "flex-1"
+                )}>
                     <TabsContent value="flight-details" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
                         <ScrollArea className="min-h-0 flex-1">
                             <CardContent className="pt-4 pb-20 space-y-6">
@@ -1186,6 +1496,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <Input value={depLat} onChange={(e) => setDepLat(e.target.value)} placeholder="Lat" className="h-10 text-[10px] font-semibold" />
                                                 <Input value={depLon} onChange={(e) => setDepLon(e.target.value)} placeholder="Lon" className="h-10 text-[10px] font-semibold" />
                                             </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="rounded-md border bg-muted/10 px-3 py-2">
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Lat DMS</p>
+                                                    <p className="text-[10px] font-mono font-bold text-foreground">{departureLatPreview}</p>
+                                                </div>
+                                                <div className="rounded-md border bg-muted/10 px-3 py-2">
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Lon DMS</p>
+                                                    <p className="text-[10px] font-mono font-bold text-foreground">{departureLonPreview}</p>
+                                                </div>
+                                            </div>
                                             {showDepWeather && <WeatherCard title="Departure Weather" icao={depIcao} onHide={() => setShowDepWeather(false)} />}
                                             {!showDepWeather && <Button variant="ghost" size="sm" onClick={() => setShowDepWeather(true)} className="text-sm font-medium uppercase">Show Departure Weather</Button>}
                                         </div>
@@ -1203,6 +1523,16 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <Input value={arrLat} onChange={(e) => setArrLat(e.target.value)} placeholder="Lat" className="h-10 text-[10px] font-semibold" />
                                                 <Input value={arrLon} onChange={(e) => setArrLon(e.target.value)} placeholder="Lon" className="h-10 text-[10px] font-semibold" />
                                             </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="rounded-md border bg-muted/10 px-3 py-2">
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Lat DMS</p>
+                                                    <p className="text-[10px] font-mono font-bold text-foreground">{arrivalLatPreview}</p>
+                                                </div>
+                                                <div className="rounded-md border bg-muted/10 px-3 py-2">
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Lon DMS</p>
+                                                    <p className="text-[10px] font-mono font-bold text-foreground">{arrivalLonPreview}</p>
+                                                </div>
+                                            </div>
                                             {showArrWeather && <WeatherCard title="Arrival Weather" icao={arrIcao} onHide={() => setShowArrWeather(false)} />}
                                             {!showArrWeather && <Button variant="ghost" size="sm" onClick={() => setShowArrWeather(true)} className="text-sm font-medium uppercase">Show Arrival Weather</Button>}
                                         </div>
@@ -1212,14 +1542,28 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                         </ScrollArea>
                     </TabsContent>
 
-                    <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="flex h-full min-h-0 flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,1fr)_360px]">
-                            <div className="relative order-1 z-20 h-[16rem] flex-none overflow-visible bg-slate-900 lg:flex lg:h-auto lg:min-h-0 lg:flex-col">
+                    <TabsContent
+                        value="planning"
+                        className={cn(
+                            "m-0 flex min-h-0 flex-col overflow-hidden overscroll-contain data-[state=inactive]:hidden",
+                            isMobile ? "h-full flex-1 min-h-[calc(100svh-15rem)]" : "h-full flex-1"
+                        )}
+                    >
+                        <div
+                            className={cn(
+                                "relative flex min-h-0 flex-1 overflow-hidden overscroll-contain",
+                                isMobile && "min-h-[calc(100svh-15rem)]"
+                            )}
+                            style={isMobile ? { overscrollBehavior: 'contain' } : undefined}
+                        >
+                            <div className={cn("relative z-20 flex min-h-0 flex-1 overflow-visible bg-slate-900", isMobile && "min-h-[calc(100svh-15rem)]")}>
                                 <AeronauticalMap
                                     legs={plannedLegs}
                                     onAddWaypoint={handleAddWaypoint}
+                                    onMoveWaypoint={handleMoveWaypoint}
                                     isLayersPanelOpen={isMapLayersPanelOpen}
                                     onLayersPanelOpenChange={setIsMapLayersPanelOpen}
+                                    isEditing={isRouteDraftMode}
                                     rightAccessory={
                                         <button
                                             type="button"
@@ -1235,84 +1579,258 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                             </div>
 
                             {showRouteSummary ? (
-                                <div className={cn(
-                                    "relative order-2 z-10 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:sticky lg:top-0 lg:h-full lg:max-h-[calc(100vh-1rem)] lg:border-l lg:border-t-0",
-                                    showRouteSummary ? "flex-1" : "flex-none"
-                                )}>
-                                    <Card className="flex h-full min-h-0 flex-col overflow-hidden border-0 shadow-none">
-                                        <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b px-3 py-2.5">
-                                            <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                                                <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
-                                            </CardTitle>
+                                <div className="absolute inset-x-3 bottom-3 z-30 md:inset-y-3 md:left-auto md:right-3 md:w-[22rem]">
+                                    <Card className="flex max-h-[42svh] min-h-0 flex-col overflow-hidden border border-border/70 bg-background/98 shadow-2xl backdrop-blur md:h-full md:max-h-none">
+                                        <CardHeader className="flex shrink-0 flex-row items-start justify-between space-y-0 border-b px-3 py-2.5">
+                                            <div className="min-w-0">
+                                                <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                                                    <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
+                                                </CardTitle>
+                                                {(isRouteDraftMode || savedRouteDraftId) && routeDraftName.trim() ? (
+                                                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+                                                        <p className="truncate text-[10px] font-black uppercase tracking-[0.14em] text-slate-700">
+                                                            {routeDraftName.trim()}
+                                                        </p>
+                                                        {savedRouteDraftId ? (
+                                                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                                                                Saved Route
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                ) : null}
+                                            </div>
                                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowRouteSummary(false)}>
                                                 <ChevronRight className="h-4 w-4" />
                                             </Button>
                                         </CardHeader>
-                                        {showRouteSummary ? (
-                                            <div className="flex-1 min-h-0 overflow-y-auto">
-                                                <div className="grid h-full grid-cols-1 gap-1 p-2 [grid-auto-rows:calc((100%-0.25rem)/2)] lg:block lg:h-auto lg:space-y-1">
-                                                    {plannedLegs.map((leg) => (
-                                                        <div
-                                                            key={leg.id}
-                                                            className="group flex min-h-0 items-start gap-2 overflow-hidden rounded-lg border bg-muted/10 p-1.5 transition-colors hover:bg-muted/20"
-                                                        >
-                                                            <div className="min-w-0 flex-1">
-                                                                <div className="flex items-start justify-between gap-1.5">
-                                                                    <span className="break-words text-[9px] font-black uppercase leading-tight">{leg.waypoint || 'PNT'}</span>
-                                                                    <span className="shrink-0 font-mono text-[8px] text-muted-foreground">
-                                                                        {leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}
-                                                                    </span>
+                                        <div
+                                            className="min-h-0 flex-1 overflow-y-auto"
+                                            style={{ overscrollBehaviorY: 'contain', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+                                            onWheelCapture={(event) => event.stopPropagation()}
+                                            onTouchMoveCapture={(event) => event.stopPropagation()}
+                                        >
+                                            <div className="space-y-2 p-2">
+                                                    {isRouteDraftMode ? (
+                                                        <div className="rounded-lg border bg-background/90 p-3">
+                                                            <div className="mb-3">
+                                                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Route Draft</p>
+                                                                <p className="mt-1 text-[10px] font-semibold text-muted-foreground">Name the route, save it if needed, then enter latitude first and longitude second.</p>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Input
+                                                                    value={routeDraftName}
+                                                                    onChange={(event) => setRouteDraftName(event.target.value)}
+                                                                    placeholder="Route name"
+                                                                    className="h-9 text-[10px] font-black uppercase"
+                                                                />
+                                                                <Button onClick={handleSaveRouteDraft} variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} disabled={isSaving || plannedLegs.length === 0}>
+                                                                    <Save className="mr-2 h-3.5 w-3.5" />
+                                                                    {savedRouteDraftId ? 'Update Saved Route' : 'Save Route'}
+                                                                </Button>
+                                                                <Input
+                                                                    value={manualWaypointName}
+                                                                    onChange={(event) => setManualWaypointName(event.target.value)}
+                                                                    placeholder="Waypoint label"
+                                                                    className="h-9 text-[10px] font-black uppercase"
+                                                                />
+                                                                <div className="space-y-2">
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Latitude</p>
+                                                                    <div className="grid grid-cols-[4.5rem_1fr_1fr_1fr] gap-2">
+                                                                        <Select value={manualLatHemisphere} onValueChange={(value) => setManualLatHemisphere(value as 'S' | 'N')}>
+                                                                            <SelectTrigger className="h-9 text-[10px] font-black uppercase">
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="S">South</SelectItem>
+                                                                                <SelectItem value="N">North</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <Input value={manualLatDegrees} onChange={(event) => handleCoordinatePartChange(event.target.value, setManualLatDegrees, latMinutesRef, 2)} placeholder="Deg" inputMode="numeric" maxLength={2} className="h-9 text-[10px] font-semibold" />
+                                                                        <Input ref={latMinutesRef} value={manualLatMinutes} onChange={(event) => handleCoordinatePartChange(event.target.value, setManualLatMinutes, latSecondsRef, 2)} placeholder="Min" inputMode="numeric" maxLength={2} className="h-9 text-[10px] font-semibold" />
+                                                                        <Input ref={latSecondsRef} value={manualLatSeconds} onChange={(event) => handleCoordinatePartChange(event.target.value, setManualLatSeconds, lonDegreesRef, 2)} placeholder="Sec" inputMode="numeric" maxLength={2} className="h-9 text-[10px] font-semibold" />
+                                                                    </div>
                                                                 </div>
-                                                                {[leg.frequencies, leg.layerInfo].filter(Boolean).map((line, index) => (
-                                                                    <p key={`${leg.id}-detail-${index}`} className="mt-0.5 text-[7px] font-semibold leading-tight text-slate-700">
-                                                                        {line}
+                                                                <div className="space-y-2">
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Longitude</p>
+                                                                    <div className="grid grid-cols-[4.5rem_1fr_1fr_1fr] gap-2">
+                                                                        <Select value={manualLonHemisphere} onValueChange={(value) => setManualLonHemisphere(value as 'E' | 'W')}>
+                                                                            <SelectTrigger className="h-9 text-[10px] font-black uppercase">
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="E">East</SelectItem>
+                                                                                <SelectItem value="W">West</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <Input ref={lonDegreesRef} value={manualLonDegrees} onChange={(event) => handleCoordinatePartChange(event.target.value, setManualLonDegrees, lonMinutesRef, 3)} placeholder="Deg" inputMode="numeric" maxLength={3} className="h-9 text-[10px] font-semibold" />
+                                                                        <Input ref={lonMinutesRef} value={manualLonMinutes} onChange={(event) => handleCoordinatePartChange(event.target.value, setManualLonMinutes, lonSecondsRef, 2)} placeholder="Min" inputMode="numeric" maxLength={2} className="h-9 text-[10px] font-semibold" />
+                                                                        <Input ref={lonSecondsRef} value={manualLonSeconds} onChange={(event) => handleCoordinatePartChange(event.target.value, setManualLonSeconds, undefined, 2)} placeholder="Sec" inputMode="numeric" maxLength={2} className="h-9 text-[10px] font-semibold" />
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-[9px] font-semibold text-muted-foreground">
+                                                                    Type each number separately, then tab to the next field.
+                                                                </p>
+                                                                <Button onClick={handleAddManualWaypoint} className={HEADER_ACTION_BUTTON_CLASS}>
+                                                                    <Plus className="mr-2 h-3.5 w-3.5" />
+                                                                    Add Coordinates
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : null}
+                                                    {plannedLegs.map((leg, index) => (
+                                                        (() => {
+                                                            const isOriginWaypoint = index === 0;
+                                                            const hasWaypointContext = Boolean(leg.waypointContext?.items?.length);
+                                                            const metaLine = [hasWaypointContext ? null : leg.frequencies || leg.layerInfo, formatLatLonDms(leg.latitude, leg.longitude)]
+                                                                .filter(Boolean)
+                                                                .join(' | ');
+
+                                                            return isMobile ? (
+                                                            <div
+                                                                key={leg.id}
+                                                                className="group flex min-h-0 flex-none flex-col overflow-hidden rounded-lg border bg-background px-3 py-2"
+                                                                style={{ minHeight: MOBILE_ROUTE_SUMMARY_CARD_HEIGHT }}
+                                                            >
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    {isRouteDraftMode ? (
+                                                                        <Input
+                                                                            value={leg.waypoint || 'PNT'}
+                                                                            onChange={(event) => {
+                                                                                const rawValue = event.target.value.trim();
+                                                                                setPlannedLegs((current) => current.map((item) =>
+                                                                                    item.id === leg.id ? { ...item, waypoint: rawValue.replace(/-\d+$/, '') || 'PNT' } : item
+                                                                                ));
+                                                                            }}
+                                                                            className="h-6 border-none p-0 text-[11px] font-black uppercase leading-tight text-foreground shadow-none focus-visible:ring-0"
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="min-w-0 text-[11px] font-black uppercase leading-tight text-foreground">
+                                                                            {leg.waypoint || 'PNT'}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {metaLine ? (
+                                                                    <p className="mt-1 line-clamp-2 min-h-0 text-[8px] font-semibold leading-[1.25] text-emerald-700">
+                                                                        {metaLine}
                                                                     </p>
-                                                                ))}
-                                                                <div className="mt-1 flex items-center gap-3">
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="text-[7px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                        <span className="text-[8px] font-black">{leg.distance?.toFixed(1) || '0.0'} NM</span>
+                                                                ) : null}
+                                                                <WaypointContextStack context={leg.waypointContext} />
+                                                                {isRouteDraftMode ? (
+                                                                    <Textarea
+                                                                        value={leg.notes ?? ''}
+                                                                        onChange={(event) => {
+                                                                            const nextNotes = event.target.value;
+                                                                            setPlannedLegs((current) => current.map((item) =>
+                                                                                item.id === leg.id ? { ...item, notes: nextNotes } : item
+                                                                            ));
+                                                                        }}
+                                                                        placeholder="Waypoint notes"
+                                                                        className="mt-2 min-h-[64px] resize-none border-border/70 bg-background px-2 py-2 text-[9px] font-semibold leading-tight placeholder:text-muted-foreground/70 focus-visible:ring-1"
+                                                                    />
+                                                                ) : leg.notes ? (
+                                                                    <div className="mt-2 rounded-md border border-border/70 bg-muted/10 px-2 py-2">
+                                                                        <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Notes</p>
+                                                                        <p className="mt-1 whitespace-pre-wrap text-[9px] font-semibold leading-tight text-foreground">{leg.notes}</p>
                                                                     </div>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="text-[7px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                        <span className="text-[8px] font-black">{leg.magneticHeading?.toFixed(0) || '0'}&deg;</span>
+                                                                ) : null}
+                                                                <div className="mt-auto flex items-center justify-between gap-3 pt-2">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">Dist</span>
+                                                                        <span className="text-[10px] font-black text-foreground">{isOriginWaypoint ? '---' : `${leg.distance?.toFixed(1) || '0.0'} NM`}</span>
                                                                     </div>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">TRK</span>
+                                                                        <span className="text-[10px] font-black text-foreground">{isOriginWaypoint ? '---' : `${formatHeadingDegrees(getReciprocalHeading(leg.magneticHeading))}°`}</span>
+                                                                    </div>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-5 w-5 shrink-0 text-destructive/80"
+                                                                        onClick={() => setPlannedLegs(plannedLegs.filter((l) => l.id !== leg.id))}
+                                                                    >
+                                                                        <Trash2 className="h-3 w-3" />
+                                                                    </Button>
                                                                 </div>
                                                             </div>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-5 w-5 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
-                                                                onClick={() => setPlannedLegs(plannedLegs.filter((l) => l.id !== leg.id))}
+                                                        ) : (
+                                                            <div
+                                                                key={leg.id}
+                                                                className="group flex min-h-0 items-start gap-2 overflow-hidden rounded-lg border bg-background p-2 transition-colors hover:bg-muted/20"
                                                             >
-                                                                <Trash2 className="h-2.5 w-2.5" />
-                                                            </Button>
-                                                        </div>
+                                                                <div className="flex min-w-0 flex-1 flex-col">
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        {isRouteDraftMode ? (
+                                                                            <Input
+                                                                                value={leg.waypoint || 'PNT'}
+                                                                                onChange={(event) => {
+                                                                                    const rawValue = event.target.value.trim();
+                                                                                    setPlannedLegs((current) => current.map((item) =>
+                                                                                        item.id === leg.id ? { ...item, waypoint: rawValue.replace(/-\d+$/, '') || 'PNT' } : item
+                                                                                    ));
+                                                                                }}
+                                                                                className="h-6 max-w-[16rem] border-none p-0 text-[10px] font-black uppercase leading-tight shadow-none focus-visible:ring-0"
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="break-words text-[10px] font-black uppercase leading-tight">{leg.waypoint || 'PNT'}</span>
+                                                                        )}
+                                                                    </div>
+                                                                    {metaLine ? (
+                                                                        <p className="mt-0.5 text-[8px] font-semibold leading-tight text-emerald-700">
+                                                                            {metaLine}
+                                                                        </p>
+                                                                    ) : null}
+                                                                    <WaypointContextStack context={leg.waypointContext} />
+                                                                    {isRouteDraftMode ? (
+                                                                        <Textarea
+                                                                            value={leg.notes ?? ''}
+                                                                            onChange={(event) => {
+                                                                                const nextNotes = event.target.value;
+                                                                                setPlannedLegs((current) => current.map((item) =>
+                                                                                    item.id === leg.id ? { ...item, notes: nextNotes } : item
+                                                                                ));
+                                                                            }}
+                                                                            placeholder="Waypoint notes"
+                                                                            className="mt-2 min-h-[68px] resize-none border-border/70 bg-background px-2 py-2 text-[9px] font-semibold leading-tight placeholder:text-muted-foreground/70 focus-visible:ring-1"
+                                                                        />
+                                                                    ) : leg.notes ? (
+                                                                        <div className="mt-2 rounded-md border border-border/70 bg-muted/10 px-2 py-2">
+                                                                            <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Notes</p>
+                                                                            <p className="mt-1 whitespace-pre-wrap text-[9px] font-semibold leading-tight text-foreground">{leg.notes}</p>
+                                                                        </div>
+                                                                    ) : null}
+                                                                    <div className="mt-2 flex items-center gap-4">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
+                                                                            <span className="text-[9px] font-black">{isOriginWaypoint ? '---' : `${leg.distance?.toFixed(1) || '0.0'} NM`}</span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-[8px] font-bold uppercase text-muted-foreground">TRK</span>
+                                                                            <span className="text-[9px] font-black">{isOriginWaypoint ? '---' : `${formatHeadingDegrees(getReciprocalHeading(leg.magneticHeading))}°`}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-6 w-6 shrink-0 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+                                                                    onClick={() => setPlannedLegs(plannedLegs.filter((l) => l.id !== leg.id))}
+                                                                >
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        );
+                                                        })()
                                                     ))}
                                                     {plannedLegs.length === 0 && (
-                                                        <div className="py-6 text-center">
+                                                        <div className="flex items-center justify-center rounded-lg border border-dashed bg-muted/5 px-4 py-6 text-center">
                                                             <p className="text-[10px] font-black uppercase italic text-muted-foreground opacity-40">Click the map to add waypoints</p>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-                                        ) : null}
                                     </Card>
                                 </div>
-                            ) : (
-                                <div className="relative order-2 z-10 flex flex-none flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
-                                    <Card className="flex h-auto min-h-0 flex-col overflow-hidden border-0 shadow-none">
-                                        <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b px-3 py-2.5">
-                                            <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                                                <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
-                                            </CardTitle>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowRouteSummary(true)}>
-                                                <ChevronRight className="h-4 w-4 rotate-180" />
-                                            </Button>
-                                        </CardHeader>
-                                    </Card>
-                                </div>
-                            )}
+                            ) : null}
                         </div>
                     </TabsContent>
 
@@ -1547,6 +2065,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         </Card>
     );
 }
+
 
 
 
