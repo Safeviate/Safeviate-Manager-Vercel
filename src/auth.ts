@@ -4,6 +4,7 @@ import { compare, hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { assertRequiredEnv } from '@/lib/server/env';
 import { BETA_NDA_VERSION } from '@/lib/server/beta-nda';
+import { MASTER_TENANT_ID } from '@/lib/server/tenant-access';
 
 assertRequiredEnv(['NEXTAUTH_SECRET'], 'authentication');
 
@@ -135,11 +136,12 @@ export const authOptions: NextAuthOptions = {
               });
             }
 
-            return {
-              id: dbUser.id,
-              email: dbUser.email,
-              name: `${dbUser.firstName} ${dbUser.lastName}`.trim(),
-            };
+          return {
+            id: dbUser.id,
+            tenantId: dbUser.tenantId || MASTER_TENANT_ID,
+            email: dbUser.email,
+            name: `${dbUser.firstName} ${dbUser.lastName}`.trim(),
+          };
           }
         }
 
@@ -163,6 +165,7 @@ export const authOptions: NextAuthOptions = {
 
           return {
             id: 'vercel-seed-admin',
+            tenantId: MASTER_TENANT_ID,
             email: seedEmail,
             name: 'Admin',
           };
@@ -179,6 +182,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.tenantId = user.tenantId || token.tenantId;
         token.email = user.email;
         token.name = user.name || token.name;
       }
@@ -187,6 +191,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = (token.id as string | undefined) || undefined;
+        session.user.tenantId = (token.tenantId as string | undefined) || undefined;
         session.user.email = (token.email as string | undefined) || undefined;
         session.user.name = (token.name as string | undefined) || undefined;
       }

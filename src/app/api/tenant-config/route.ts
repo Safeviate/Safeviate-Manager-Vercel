@@ -16,7 +16,10 @@ export async function GET(request: Request) {
 
     await ensureTenantConfigSchema();
 
-    const baseTenantId = (await prisma.user.findUnique({ where: { email }, select: { tenantId: true } }))?.tenantId || MASTER_TENANT_ID;
+    const baseTenantId =
+      session?.user?.tenantId?.trim() ||
+      (await prisma.user.findUnique({ where: { email }, select: { tenantId: true } }))?.tenantId ||
+      MASTER_TENANT_ID;
     const tenantId = isMasterTenantEmail(email)
       ? await resolveTenantOverride(request, email, baseTenantId)
       : baseTenantId;
