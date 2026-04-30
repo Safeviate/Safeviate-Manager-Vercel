@@ -158,22 +158,31 @@ const createAircraftIcon = (
   L.divIcon({
     className: '',
     html: `
-      <div style="display:flex;align-items:center;gap:${showLabel ? '8px' : '0'};transform:translate(-8px,-8px);">
-        <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
-          <div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:18px solid ${
-            isStale ? '#f59e0b' : onCourse === false ? '#ef4444' : '#10b981'
+      <div style="display:flex;align-items:center;gap:${showLabel ? '8px' : '0'};transform:translate(-14px,-14px);">
+        <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;position:relative;">
+          <div style="position:absolute;inset:0;border-radius:9999px;background:${
+            isStale ? 'rgba(245,158,11,0.22)' : onCourse === false ? 'rgba(239,68,68,0.22)' : 'rgba(14,165,233,0.22)'
+          };border:3px solid #ffffff;box-shadow:0 0 0 4px ${
+            isStale
+              ? 'rgba(245,158,11,0.28)'
+              : onCourse === false
+                ? 'rgba(239,68,68,0.28)'
+                : 'rgba(14,165,233,0.24)'
+          };"></div>
+          <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:16px solid ${
+            isStale ? '#f59e0b' : onCourse === false ? '#ef4444' : '#0ea5e9'
           };transform:rotate(${headingTrue ?? 0}deg);transform-origin:center 70%;filter:drop-shadow(0 0 6px ${
             isStale
-              ? 'rgba(245,158,11,0.35)'
+              ? 'rgba(245,158,11,0.45)'
               : onCourse === false
-                ? 'rgba(239,68,68,0.35)'
-                : 'rgba(16,185,129,0.35)'
-          });"></div>
+                ? 'rgba(239,68,68,0.45)'
+                : 'rgba(14,165,233,0.45)'
+          });position:relative;z-index:1;"></div>
         </div>
         ${
           showLabel
             ? `<div style="padding:4px 8px;border-radius:9999px;background:${
-                isStale ? 'rgba(120,53,15,0.92)' : onCourse === false ? 'rgba(127,29,29,0.92)' : 'rgba(15,23,42,0.9)'
+                isStale ? 'rgba(120,53,15,0.94)' : onCourse === false ? 'rgba(127,29,29,0.94)' : 'rgba(15,23,42,0.94)'
               };color:#f8fafc;font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;border:1px solid ${
                 isStale ? 'rgba(253,186,116,0.45)' : onCourse === false ? 'rgba(252,165,165,0.45)' : 'rgba(148,163,184,0.35)'
               };white-space:nowrap;">${label}</div>`
@@ -182,7 +191,7 @@ const createAircraftIcon = (
       </div>
     `,
     iconSize: showLabel ? [128, 36] : [28, 28],
-    iconAnchor: showLabel ? [20, 20] : [14, 14],
+    iconAnchor: showLabel ? [20, 20] : [15, 15],
   });
 
 const getTrailStyle = (session: FlightSession, isStale: boolean) => {
@@ -995,6 +1004,7 @@ export function FleetTrackerMap({
               <Marker
                 position={[position.latitude, position.longitude]}
                 icon={createAircraftIcon(session.aircraftRegistration, position.headingTrue, session.onCourse, stale, showAircraftNames) || DefaultIcon}
+                zIndexOffset={2500}
               >
                 <Popup>
                   <div className="space-y-1 text-xs">

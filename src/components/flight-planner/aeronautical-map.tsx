@@ -18,7 +18,9 @@ import { parseJsonResponse } from '@/lib/safe-json';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
 import type { ReactNode } from 'react';
 import type { WaypointContext, WaypointContextItem } from '@/types/booking';
+import type { FlightPosition } from '@/types/flight-session';
 import { formatLatLonDms } from '@/lib/coordinate-parser';
+import { cn } from '@/lib/utils';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -52,8 +54,102 @@ const createRouteWaypointIcon = (index: number) =>
     iconAnchor: [11, 11],
   });
 
+const createMeasurePointIcon = (label: string, color = '#0f172a') =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        min-width:22px;
+        height:22px;
+        padding:0 6px;
+        border-radius:9999px;
+        background:${color};
+        border:2px solid #fff;
+        box-shadow:0 0 0 2px rgba(15,23,42,0.28);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:11px;
+        font-weight:900;
+        line-height:1;
+        white-space:nowrap;
+      ">${label}</div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+
+const createMeasureLabelIcon = (label: string) => {
+  const width = Math.max(58, label.length * 7 + 16);
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        min-width:${width}px;
+        height:24px;
+        padding:0 8px;
+        border-radius:9999px;
+        background:rgba(15,23,42,0.92);
+        border:2px solid #fff;
+        box-shadow:0 0 0 2px rgba(15,23,42,0.24);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:10px;
+        font-weight:900;
+        line-height:1;
+        white-space:nowrap;
+      ">${label}</div>
+    `,
+    iconSize: [width, 24],
+    iconAnchor: [width / 2, 12],
+  });
+};
+
+const createOwnshipIcon = (headingTrue?: number | null) =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width:30px;
+        height:30px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        transform:rotate(${headingTrue != null && !Number.isNaN(headingTrue) ? headingTrue : 0}deg);
+        transform-origin:center;
+      ">
+        <div style="
+          position:relative;
+          width:30px;
+          height:30px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        ">
+          <div style="
+            position:absolute;
+            inset:2px;
+            border-radius:9999px;
+            background:rgba(14,165,233,0.16);
+            border:2px solid rgba(255,255,255,0.92);
+            box-shadow:0 0 0 4px rgba(14,165,233,0.16);
+          "></div>
+          <svg viewBox="0 0 24 24" aria-hidden="true" style="position:relative;z-index:1;width:18px;height:18px;fill:#0369a1;filter:drop-shadow(0 1px 1px rgba(15,23,42,0.2));">
+            <path d="M12 2l2.2 6.8 6.8 1.2-6.8 1.2L12 22l-2.2-10.8-6.8-1.2 6.8-1.2L12 2z" />
+          </svg>
+        </div>
+      </div>
+    `,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+
 interface AeronauticalMapProps {
   legs: NavlogLeg[];
+  aircraftRegistration?: string;
   onAddWaypoint: (
     lat: number,
     lon: number,
@@ -65,6 +161,7 @@ interface AeronauticalMapProps {
   onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
   hazards?: Hazard[];
   onAddHazard?: (lat: number, lng: number) => void;
+  ownshipPosition?: FlightPosition | null;
   isEditing?: boolean;
   isZoomPanelOpen?: boolean;
   onZoomPanelOpenChange?: (open: boolean) => void;
@@ -533,6 +630,19 @@ function MapZoomState({ onZoomChange }: { onZoomChange: (zoom: number) => void }
       onZoomChange(map.getZoom());
     },
   });
+
+  return null;
+}
+
+function OwnshipFocusController({ ownshipPosition }: { ownshipPosition: FlightPosition | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!ownshipPosition) return;
+    map.setView([ownshipPosition.latitude, ownshipPosition.longitude], Math.max(map.getZoom(), 14), {
+      animate: false,
+    });
+  }, [map, ownshipPosition?.latitude, ownshipPosition?.longitude]);
 
   return null;
 }
@@ -1190,10 +1300,12 @@ const SearchControl = ({
 
 export default function AeronauticalMap({
   legs,
+  aircraftRegistration,
   onAddWaypoint,
   onMoveWaypoint,
   hazards = [],
   onAddHazard,
+  ownshipPosition = null,
   isEditing = false,
   isZoomPanelOpen = false,
   onZoomPanelOpenChange,
@@ -1229,6 +1341,8 @@ export default function AeronauticalMap({
   const [minVisibleZoom, setMinVisibleZoom] = useState(4);
   const [maxVisibleZoom, setMaxVisibleZoom] = useState(16);
   const [draggingWaypointId, setDraggingWaypointId] = useState<string | null>(null);
+  const [measureMode, setMeasureMode] = useState(false);
+  const [measurePoints, setMeasurePoints] = useState<Array<{ lat: number; lon: number }>>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -1244,6 +1358,50 @@ export default function AeronauticalMap({
     onZoomPanelOpenChange?.(false);
     onLayersPanelOpenChange?.(false);
   }, [onLayersPanelOpenChange, onZoomPanelOpenChange]);
+
+  const clearMeasure = useCallback(() => {
+    setMeasurePoints([]);
+    setMeasureMode(false);
+    setPendingClickLabel(null);
+  }, []);
+
+  const toggleMeasureMode = useCallback(() => {
+    setMeasureMode((current) => {
+      const next = !current;
+      if (!next) {
+        setMeasurePoints([]);
+        setPendingClickLabel(null);
+      } else {
+        setPendingClickLabel('Click two points');
+      }
+      return next;
+    });
+  }, []);
+
+  const handleMeasureClick = useCallback((lat: number, lon: number) => {
+    setMeasurePoints((current) => {
+      const nextPoint = { lat, lon };
+      if (current.length >= 2) {
+        return [nextPoint];
+      }
+      return [...current, nextPoint];
+    });
+    setPendingClickLabel('Distance estimator');
+  }, []);
+
+  const measureDistanceNm = useMemo(() => {
+    if (measurePoints.length !== 2) return null;
+    return distanceNm(measurePoints[0].lat, measurePoints[0].lon, measurePoints[1].lat, measurePoints[1].lon);
+  }, [measurePoints]);
+
+  const measureDistanceKm = measureDistanceNm !== null ? measureDistanceNm * 1.852 : null;
+  const measureLabel = measureDistanceNm !== null ? `${measureDistanceNm.toFixed(1)} NM` : measurePoints.length === 1 ? 'Select second point' : 'Click two points';
+  const measureMidpoint = measurePoints.length === 2
+    ? [
+        (measurePoints[0].lat + measurePoints[1].lat) / 2,
+        (measurePoints[0].lon + measurePoints[1].lon) / 2,
+      ] as [number, number]
+    : null;
 
   const openAipFeatures = useMemo(() => mergeOpenAipFeatures(viewportFeatures, searchFeatures), [searchFeatures, viewportFeatures]);
   const airportFeatures = useMemo(
@@ -1508,6 +1666,11 @@ export default function AeronauticalMap({
   ]);
   const handleMapClick = useCallback((lat: number, lon: number) => {
     closeUtilityPanels();
+    if (measureMode) {
+      handleMeasureClick(lat, lon);
+      return;
+    }
+
     if (!isEditing) return;
 
     const candidates = openAipFeatures.filter((item) => {
@@ -1545,14 +1708,18 @@ export default function AeronauticalMap({
     const context = buildWaypointContext(info);
     setPendingClickLabel('PNT');
     onAddWaypoint(lat, lon, 'PNT', undefined, context, info);
-  }, [airportsVisible, buildLayerInfo, buildWaypointContext, closeUtilityPanels, isEditing, navaidsVisible, openAipFeatures, onAddWaypoint, reportingVisible]);
+  }, [airportsVisible, buildLayerInfo, buildWaypointContext, closeUtilityPanels, handleMeasureClick, isEditing, measureMode, navaidsVisible, openAipFeatures, onAddWaypoint, reportingVisible]);
 
   const handleLongPress = useCallback((lat: number, lon: number) => {
     closeUtilityPanels();
+    if (measureMode) {
+      handleMeasureClick(lat, lon);
+      return;
+    }
     if (isEditing) return;
     setPendingClickLabel('Layer info');
     setLayerInfo(buildLayerInfo(lat, lon));
-  }, [buildLayerInfo, closeUtilityPanels, isEditing]);
+  }, [buildLayerInfo, closeUtilityPanels, handleMeasureClick, isEditing, measureMode]);
 
   useEffect(() => {
     if (isEditing) {
@@ -1615,16 +1782,17 @@ export default function AeronauticalMap({
     : [-25.9, 27.9];
 
   return (
-    <div className="relative h-full w-full">
+    <div className={cn('aeronautical-map-shell relative h-full w-full', measureMode && 'is-measuring', isEditing && 'is-editing')}>
       <LeafletMapFrame
         center={center}
         zoom={8}
         minZoom={minVisibleZoom}
         maxZoom={maxVisibleZoom}
-      preferCanvas
-      className="h-full w-full outline-none"
+        preferCanvas
+        className="h-full w-full outline-none"
         style={{ background: '#0f172a' }}
       >
+        <OwnshipFocusController ownshipPosition={ownshipPosition} />
       <LayersControl position="topleft" collapsed>
         <LayersControl.BaseLayer checked={selectedBaseLayer === 'light'} name="Light (Standard)">
           <TileLayer
@@ -2028,6 +2196,42 @@ export default function AeronauticalMap({
         canAddWaypoint={isEditing}
       />
 
+      <div className="absolute left-3 top-3 z-[1000] flex flex-col gap-2">
+        <button
+          type="button"
+          className={cn(
+            'rounded-full border px-3 py-2 text-[9px] font-black uppercase tracking-[0.16em] shadow-lg backdrop-blur',
+            measureMode
+              ? 'border-slate-900 bg-slate-900 text-white'
+              : 'border-slate-200 bg-white/95 text-slate-700 hover:bg-slate-50'
+          )}
+          onClick={toggleMeasureMode}
+        >
+          {measureMode ? 'Distance On' : 'Distance Estimator'}
+        </button>
+        {measureMode ? (
+          <button
+            type="button"
+            className="rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-lg backdrop-blur hover:bg-slate-50"
+            onClick={clearMeasure}
+          >
+            Clear Measure
+          </button>
+        ) : null}
+        {measureMode ? (
+          <div className="max-w-[220px] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-[9px] font-semibold text-slate-700 shadow-xl backdrop-blur">
+            <p className="font-black uppercase tracking-[0.16em] text-slate-500">Distance Estimator</p>
+            <p className="mt-1">{measureLabel}</p>
+            {measureDistanceNm !== null ? (
+              <p className="mt-1 font-black text-slate-900">
+                {measureDistanceNm.toFixed(1)} NM
+                {measureDistanceKm !== null ? ` • ${measureDistanceKm.toFixed(1)} KM` : ''}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
       {pendingClickLabel && (
         <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border bg-background/95 px-3 py-2 text-[10px] font-black uppercase tracking-widest shadow-xl backdrop-blur">
           Last click: {pendingClickLabel}
@@ -2130,6 +2334,49 @@ export default function AeronauticalMap({
           opacity={0.8}
         />
       )}
+
+      {measurePoints.length === 2 ? (
+        <>
+          <Polyline
+            positions={measurePoints.map((point) => [point.lat, point.lon]) as Array<[number, number]>}
+            color="#0f172a"
+            weight={3}
+            dashArray="8, 8"
+            opacity={0.9}
+          />
+          <Marker position={[measurePoints[0].lat, measurePoints[0].lon]} icon={createMeasurePointIcon('A', '#0f172a')} interactive={false} />
+          <Marker position={[measurePoints[1].lat, measurePoints[1].lon]} icon={createMeasurePointIcon('B', '#0f172a')} interactive={false} />
+          {measureMidpoint ? (
+            <Marker
+              position={measureMidpoint}
+              icon={createMeasureLabelIcon(measureDistanceNm !== null ? `${measureDistanceNm.toFixed(1)} NM` : measureLabel)}
+              interactive={false}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      {ownshipPosition ? (
+        <Marker
+          position={[ownshipPosition.latitude, ownshipPosition.longitude]}
+          icon={createOwnshipIcon(ownshipPosition.headingTrue)}
+          zIndexOffset={2500}
+          interactive={false}
+        >
+          {aircraftRegistration ? (
+            <Tooltip
+              direction="top"
+              offset={[0, -8]}
+              opacity={1}
+              permanent={false}
+              sticky
+              className="text-[10px] font-black uppercase tracking-[0.08em]"
+            >
+              {aircraftRegistration}
+            </Tooltip>
+          ) : null}
+        </Marker>
+      ) : null}
 
       {legs.map((leg, index) => (
         <Marker
@@ -2373,6 +2620,26 @@ export default function AeronauticalMap({
         </div>
       ) : null}
       <style jsx global>{`
+        .aeronautical-map-shell .leaflet-container {
+          cursor: grab;
+        }
+
+        .aeronautical-map-shell .leaflet-container.leaflet-dragging {
+          cursor: grabbing !important;
+        }
+
+        .aeronautical-map-shell.is-editing .leaflet-container,
+        .aeronautical-map-shell.is-editing .leaflet-interactive,
+        .aeronautical-map-shell.is-measuring .leaflet-container,
+        .aeronautical-map-shell.is-measuring .leaflet-interactive {
+          cursor: crosshair !important;
+        }
+
+        .aeronautical-map-shell.is-measuring .leaflet-marker-icon,
+        .aeronautical-map-shell.is-measuring .leaflet-marker-shadow {
+          cursor: crosshair !important;
+        }
+
         .active-flight-map-label,
         .active-flight-map-airspace-label {
           margin: 0 !important;
@@ -2400,6 +2667,10 @@ export default function AeronauticalMap({
           bottom: 0.2rem !important;
         }
 
+        .leaflet-top.leaflet-left {
+          top: 4.9rem !important;
+        }
+
         .leaflet-control-attribution {
           max-width: calc(100vw - 5.5rem);
           overflow: hidden;
@@ -2415,7 +2686,7 @@ export default function AeronauticalMap({
 
         @media (max-width: 639px) {
           .leaflet-top.leaflet-left {
-            top: 4.25rem !important;
+            top: 5.1rem !important;
           }
 
           .leaflet-control-attribution {

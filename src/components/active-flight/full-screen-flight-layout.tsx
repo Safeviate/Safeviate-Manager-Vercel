@@ -16,6 +16,8 @@ type FullScreenFlightLayoutProps = {
   aircraftRegistration?: string;
   activeLegIndex?: number;
   activeLegState?: ActiveLegState | null;
+  showRouteSummary?: boolean;
+  onShowRouteSummaryChange?: (open: boolean) => void;
   heading: number | null;
   speed: number | null;
   altitude: number | null;
@@ -43,6 +45,8 @@ export function FullScreenFlightLayout({
   aircraftRegistration,
   activeLegIndex,
   activeLegState,
+  showRouteSummary,
+  onShowRouteSummaryChange,
   heading,
   speed,
   altitude,
@@ -91,6 +95,8 @@ export function FullScreenFlightLayout({
                 aircraftRegistration={aircraftRegistration}
                 activeLegIndex={activeLegIndex}
                 activeLegState={activeLegState}
+                showRouteSummary={showRouteSummary}
+                onShowRouteSummaryChange={onShowRouteSummaryChange}
               />
             </div>
           </div>

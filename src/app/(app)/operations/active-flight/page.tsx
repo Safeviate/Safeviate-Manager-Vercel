@@ -198,11 +198,16 @@ export default function ActiveFlightPage() {
   const [mapRecenterSignal, setMapRecenterSignal] = useState(0);
   const [isLayersCardOpen, setIsLayersCardOpen] = useState(false);
   const [isMapZoomCardOpen, setIsMapZoomCardOpen] = useState(false);
+  const [isRouteSummaryOpen, setIsRouteSummaryOpen] = useState(!isMobile);
   const selectionHydratedRef = useRef<string | null>(null);
   const resumeHydratedRef = useRef<string | null>(null);
   const lastWriteRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
   const isModern = uiMode === 'modern';
+  useEffect(() => {
+    setIsRouteSummaryOpen(!isMobile);
+  }, [isMobile]);
+
   useEffect(() => {
     const binding = getOrCreateDeviceBinding();
     if (!binding) return;
@@ -547,6 +552,16 @@ export default function ActiveFlightPage() {
       disabled: !selectedBooking,
     },
     {
+      value: 'route-summary',
+      label: isRouteSummaryOpen ? 'Hide Route Summary' : 'Show Route Summary',
+      onClick: () => {
+        setIsRouteSummaryOpen((current) => !current);
+      },
+      className: isRouteSummaryOpen
+        ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+        : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
+    {
       value: 'layers',
       label: 'Layers',
       onClick: () => {
@@ -603,6 +618,17 @@ export default function ActiveFlightPage() {
         setIsMapZoomCardOpen(false);
       },
       className: isFocusMapOpen ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
+    {
+      value: 'fullscreen-map',
+      label: isFullscreenMapOpen ? 'Close Fullscreen Map' : 'Open Fullscreen Map',
+      onClick: () => {
+        setIsFullscreenMapOpen((current) => !current);
+        setIsFocusMapOpen(false);
+      },
+      className: isFullscreenMapOpen
+        ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+        : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
     },
   ];
 
@@ -903,6 +929,8 @@ export default function ActiveFlightPage() {
             aircraftRegistration={selectedAircraft?.tailNumber}
             activeLegIndex={activeLegState?.activeLegIndex}
             activeLegState={activeLegState}
+            showRouteSummary={isRouteSummaryOpen}
+            onShowRouteSummaryChange={setIsRouteSummaryOpen}
           />
         </div>
 
@@ -1444,6 +1472,8 @@ export default function ActiveFlightPage() {
                 aircraftRegistration={selectedAircraft?.tailNumber}
                 activeLegIndex={activeLegState?.activeLegIndex}
                 activeLegState={activeLegState}
+                showRouteSummary={isRouteSummaryOpen}
+                onShowRouteSummaryChange={setIsRouteSummaryOpen}
                 heading={liveTelemetry.heading}
                 speed={liveTelemetry.speed}
                 altitude={liveTelemetry.altitude}
@@ -1473,6 +1503,8 @@ export default function ActiveFlightPage() {
                 isMapZoomCardOpen={isMapZoomCardOpen}
                 onLayersCardOpenChange={setIsLayersCardOpen}
                 onMapZoomCardOpenChange={setIsMapZoomCardOpen}
+                showRouteSummary={isRouteSummaryOpen}
+                onShowRouteSummaryChange={setIsRouteSummaryOpen}
               />
             ) : (
                 <div className={cn('flex items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import type { NavlogLeg, Hazard, WaypointContext } from '@/types/booking';
+import type { FlightPosition } from '@/types/flight-session';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
@@ -24,6 +25,8 @@ interface BookingPlanningMapProps {
   isEditing?: boolean;
   isLayersPanelOpen?: boolean;
   onLayersPanelOpenChange?: (open: boolean) => void;
+  position?: FlightPosition | null;
+  aircraftRegistration?: string;
   rightAccessory?: React.ReactNode;
 }
 
@@ -35,6 +38,8 @@ export function BookingPlanningMap({
   isEditing = false,
   isLayersPanelOpen = false,
   onLayersPanelOpenChange,
+  position = null,
+  aircraftRegistration,
   rightAccessory,
 }: BookingPlanningMapProps) {
   const isMobile = useIsMobile();
@@ -49,6 +54,8 @@ export function BookingPlanningMap({
         isEditing={isEditing}
         isLayersPanelOpen={isLayersPanelOpen}
         onLayersPanelOpenChange={onLayersPanelOpenChange}
+        ownshipPosition={position}
+        aircraftRegistration={aircraftRegistration}
       />
       {rightAccessory ? (
         <div
@@ -59,12 +66,7 @@ export function BookingPlanningMap({
       ) : null}
       <style jsx global>{`
         .booking-planning-map .leaflet-container {
-          cursor: pointer;
-        }
-        .booking-planning-map .leaflet-grab,
-        .booking-planning-map .leaflet-dragging,
-        .booking-planning-map .leaflet-interactive {
-          cursor: pointer !important;
+          cursor: inherit;
         }
         @media (max-width: 639px) {
           .booking-planning-map .leaflet-top.leaflet-left {

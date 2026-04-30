@@ -132,10 +132,14 @@ export default function TrainingRoutesPage() {
     routePlannerCompactButtonClass,
     'border border-input bg-background text-foreground hover:bg-muted/50',
   );
-  const routePlannerPrimaryButtonClass = cn(
+  const routePlannerModeButtonClass = cn(
     routePlannerCompactButtonClass,
-    'border border-slate-900 bg-slate-900 text-white hover:bg-slate-800',
+    'transition-colors',
+    isEditing
+      ? 'border border-emerald-600 bg-emerald-600 text-white shadow-sm hover:bg-emerald-500'
+      : 'border border-input bg-background text-foreground hover:bg-muted/50',
   );
+  const routePlannerModeButtonLabel = isEditing ? 'Exit Route Planner' : 'New Route';
 
   useEffect(() => {
     if (isMobile) {
@@ -177,10 +181,16 @@ export default function TrainingRoutesPage() {
   };
 
   const handleCreateNew = () => {
-    const newRoute = createEmptyRoute();
-    setActiveRoute(newRoute);
-    setIsEditing(true);
-    setShowRouteSummary(true);
+    setIsEditing((current) => {
+      const next = !current;
+      if (next && !activeRoute) {
+        setActiveRoute(createEmptyRoute());
+      }
+      if (next) {
+        setShowRouteSummary(true);
+      }
+      return next;
+    });
   };
 
   const handleAddWaypoint = (
@@ -400,9 +410,11 @@ export default function TrainingRoutesPage() {
               </Button>
               <Button
                 onClick={handleCreateNew}
-                className={cn(routePlannerPrimaryButtonClass, isModern && 'border-slate-200 bg-slate-800 text-white hover:bg-slate-700')}
+                aria-pressed={isEditing}
+                className={cn(routePlannerModeButtonClass, isModern && !isEditing && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50', isModern && isEditing && 'border-emerald-500 bg-emerald-600 text-white hover:bg-emerald-500')}
               >
-                <Plus size={14} className="mr-2" /> New Route
+                <Plus size={14} className="mr-2" />
+                {routePlannerModeButtonLabel}
               </Button>
             </div>
             <MobileActionDropdown icon={Navigation} label="Route Actions" className="md:hidden">
@@ -435,7 +447,7 @@ export default function TrainingRoutesPage() {
                 className="text-[11px] font-semibold uppercase"
               >
                 <Plus size={14} className="mr-2" />
-                New Route
+                {routePlannerModeButtonLabel} {isEditing ? '(Active)' : '(Off)'}
               </DropdownMenuItem>
             </MobileActionDropdown>
           </div>
@@ -482,7 +494,7 @@ export default function TrainingRoutesPage() {
 
             {showRouteSummary ? (
               <div className="absolute inset-x-3 bottom-3 z-30 md:inset-y-3 md:left-auto md:right-3 md:w-[22rem]">
-                <Card className="flex max-h-[42svh] min-h-0 flex-col overflow-hidden border border-border/70 bg-background/98 shadow-2xl backdrop-blur md:h-full md:max-h-none">
+                <Card className="flex h-[42svh] min-h-0 flex-col overflow-hidden border border-border/70 bg-background/98 shadow-2xl backdrop-blur md:h-full md:max-h-none md:min-h-0">
                   <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b px-3 py-2.5">
                     <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
                       <MapIcon className="h-3.5 w-3.5 text-emerald-600" />
@@ -492,7 +504,7 @@ export default function TrainingRoutesPage() {
                       <Route className="h-4 w-4" />
                     </Button>
                   </CardHeader>
-                  <ScrollArea className="min-h-0 flex-1">
+                  <ScrollArea className="h-0 min-h-0 flex-1">
                     <div className="space-y-6 p-3">
                       {activeRoute ? (
                         <>
@@ -772,7 +784,7 @@ export default function TrainingRoutesPage() {
                             </Select>
                             <Button onClick={handleCreateNew} className={HEADER_ACTION_BUTTON_CLASS}>
                               <Plus size={14} className="mr-2" />
-                              New Route
+                              {routePlannerModeButtonLabel}
                             </Button>
                           </div>
                         </div>
