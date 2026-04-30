@@ -20,7 +20,7 @@ import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { MobileActionDropdown } from '@/components/mobile-action-dropdown';
 import { useTheme } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
-import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { createNavlogLegFromCoordinates, getRouteSummarySegmentLabel } from '@/lib/flight-planner';
 import { coordinatePartsToDecimal, formatLatLonDms } from '@/lib/coordinate-parser';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
@@ -627,7 +627,7 @@ export default function TrainingRoutesPage() {
                             <div className="space-y-2">
                               {activeRoute.legs.map((leg, i) => {
                                 const displayTitle = leg.waypoint || 'PNT';
-                                const isOriginWaypoint = i === 0;
+                                const segment = getRouteSummarySegmentLabel(activeRoute.legs, i);
                                 const hasWaypointContext = Boolean(leg.waypointContext?.items?.length);
                                 const metaLine = [hasWaypointContext ? null : leg.frequencies || leg.layerInfo, formatLatLonDms(leg.latitude, leg.longitude)]
                                   .filter(Boolean)
@@ -652,6 +652,9 @@ export default function TrainingRoutesPage() {
                                         ) : (
                                           <p className="break-words text-[11px] font-black uppercase leading-tight text-slate-900">{displayTitle}</p>
                                         )}
+                                        <p className="mt-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+                                          {segment.segmentLabel}
+                                        </p>
 
                                         {metaLine ? (
                                           <p className="mt-1 text-[8px] font-semibold leading-tight text-emerald-700">
@@ -664,11 +667,11 @@ export default function TrainingRoutesPage() {
                                         <div className="mt-2 flex gap-5">
                                           <div className="flex flex-col">
                                             <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                            <span className="text-[10px] font-black text-slate-900">{isOriginWaypoint ? '---' : `${leg.distance?.toFixed(1) || '0.0'} NM`}</span>
+                                            <span className="text-[10px] font-black text-slate-900">{segment.hasNextLeg ? `${segment.nextDistance?.toFixed(1) || '0.0'} NM` : '---'}</span>
                                           </div>
                                           <div className="flex flex-col">
                                             <span className="text-[8px] font-bold uppercase text-muted-foreground">TRK</span>
-                                            <span className="text-[10px] font-black text-slate-900">{isOriginWaypoint ? '---' : `${formatHeadingDegrees(getReciprocalHeading(leg.magneticHeading))}°`}</span>
+                                            <span className="text-[10px] font-black text-slate-900">{segment.hasNextLeg ? `${formatHeadingDegrees(segment.nextDisplayTrack)}°` : '---'}</span>
                                           </div>
                                         </div>
                                       </div>

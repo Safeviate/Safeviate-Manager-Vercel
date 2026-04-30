@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
@@ -32,7 +32,7 @@ import { BackNavButton } from '@/components/back-nav-button';
 import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { v4 as uuidv4 } from 'uuid';
-import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { createNavlogLegFromCoordinates, getRouteSummarySegmentLabel } from '@/lib/flight-planner';
 import { coordinatePartsToDecimal, formatCoordinateDms, formatLatLonDms } from '@/lib/coordinate-parser';
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import { findOpenAipAirportByIcao } from '@/lib/openaip-airports';
@@ -318,6 +318,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const { tenantId, userProfile } = useUserProfile();
     const [activeTab, setActiveTab] = useState('flight-details');
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeletingRouteDraft, setIsDeletingRouteDraft] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
     const [approvingSection, setApprovingSection] = useState<CheckApprovalKey | null>(null);
     const [showRouteSummary, setShowRouteSummary] = useState(!isMobile);
@@ -458,12 +459,20 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
+    const [committedLegs, setCommittedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
     const [depIcao, setDepIcao] = useState(booking.navlog?.departureIcao || '');
     const [arrIcao, setArrIcao] = useState(booking.navlog?.arrivalIcao || '');
     const [depLat, setDepLat] = useState(booking.navlog?.departureLatitude?.toString() || '');
     const [depLon, setDepLon] = useState(booking.navlog?.departureLongitude?.toString() || '');
     const [arrLat, setArrLat] = useState(booking.navlog?.arrivalLatitude?.toString() || '');
     const [arrLon, setArrLon] = useState(booking.navlog?.arrivalLongitude?.toString() || '');
+    const [committedDepartureIcao, setCommittedDepartureIcao] = useState(booking.navlog?.departureIcao || '');
+    const [committedArrivalIcao, setCommittedArrivalIcao] = useState(booking.navlog?.arrivalIcao || '');
+    const [committedDepartureLat, setCommittedDepartureLat] = useState(booking.navlog?.departureLatitude?.toString() || '');
+    const [committedDepartureLon, setCommittedDepartureLon] = useState(booking.navlog?.departureLongitude?.toString() || '');
+    const [committedArrivalLat, setCommittedArrivalLat] = useState(booking.navlog?.arrivalLatitude?.toString() || '');
+    const [committedArrivalLon, setCommittedArrivalLon] = useState(booking.navlog?.arrivalLongitude?.toString() || '');
+    const [lastCommittedAt, setLastCommittedAt] = useState<string | null>(null);
     const [showDepWeather, setShowDepWeather] = useState(true);
     const [showArrWeather, setShowArrWeather] = useState(true);
     const [isLookingUpDep, setIsLookingUpDep] = useState(false);
@@ -484,6 +493,36 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const lonDegreesRef = useRef<HTMLInputElement | null>(null);
     const lonMinutesRef = useRef<HTMLInputElement | null>(null);
     const lonSecondsRef = useRef<HTMLInputElement | null>(null);
+
+    useEffect(() => {
+        setCommittedLegs(booking.navlog?.legs || []);
+        setCommittedDepartureIcao(booking.navlog?.departureIcao || '');
+        setCommittedArrivalIcao(booking.navlog?.arrivalIcao || '');
+        setCommittedDepartureLat(booking.navlog?.departureLatitude?.toString() || '');
+        setCommittedDepartureLon(booking.navlog?.departureLongitude?.toString() || '');
+        setCommittedArrivalLat(booking.navlog?.arrivalLatitude?.toString() || '');
+        setCommittedArrivalLon(booking.navlog?.arrivalLongitude?.toString() || '');
+    }, [
+        booking.id,
+        booking.navlog?.arrivalIcao,
+        booking.navlog?.arrivalLatitude,
+        booking.navlog?.arrivalLongitude,
+        booking.navlog?.departureIcao,
+        booking.navlog?.departureLatitude,
+        booking.navlog?.departureLongitude,
+        booking.navlog?.legs,
+    ]);
+
+    const clearPlanningRoute = () => {
+        setPlannedLegs([]);
+        setDepIcao('');
+        setArrIcao('');
+        setDepLat('');
+        setDepLon('');
+        setArrLat('');
+        setArrLon('');
+        setRouteDraftBackup(null);
+    };
 
     useEffect(() => {
         if (aircraft) {
@@ -536,6 +575,50 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             : false;
         setResults({ cg: roundedCg, weight: roundedWeight, isSafe: safe });
     }, [stations, basicEmpty, graphConfig.envelope]);
+
+    const committedRouteSignature = JSON.stringify({
+        legs: stripUndefinedDeep(committedLegs),
+        departureIcao: committedDepartureIcao,
+        arrivalIcao: committedArrivalIcao,
+        departureLatitude: committedDepartureLat,
+        departureLongitude: committedDepartureLon,
+        arrivalLatitude: committedArrivalLat,
+        arrivalLongitude: committedArrivalLon,
+    });
+
+    const currentRouteSignature = JSON.stringify({
+        legs: stripUndefinedDeep(plannedLegs),
+        departureIcao: depIcao,
+        arrivalIcao: arrIcao,
+        departureLatitude: depLat,
+        departureLongitude: depLon,
+        arrivalLatitude: arrLat,
+        arrivalLongitude: arrLon,
+    });
+
+    const hasUncommittedPlanningChanges = committedRouteSignature !== currentRouteSignature;
+
+    const loadCommittedRouteIntoPlanning = () => {
+        setPlannedLegs(committedLegs);
+        setDepIcao(committedDepartureIcao);
+        setArrIcao(committedArrivalIcao);
+        setDepLat(committedDepartureLat);
+        setDepLon(committedDepartureLon);
+        setArrLat(committedArrivalLat);
+        setArrLon(committedArrivalLon);
+        setIsRouteDraftMode(false);
+        setRouteDraftBackup(null);
+        setSavedRouteDraftId(null);
+        setShowRouteSummary(committedLegs.length > 0);
+        toast({
+            title: 'Committed route loaded',
+            description: 'Planning now matches the booking route saved to the database.',
+        });
+    };
+
+    const committedRouteWaypointSummary = committedLegs.length > 0
+        ? committedLegs.map((leg) => leg.waypoint || 'PNT').join(' -> ')
+        : 'No committed route on this booking yet';
 
     const handleStationWeightChange = (id: number, weight: string) => {
         if (weight === '') {
@@ -946,7 +1029,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const handleAddRoute = () => {
         setActiveTab('planning');
         if (isRouteDraftMode) {
-            const restoredLegs = routeDraftBackup ?? (booking.navlog?.legs || []);
+            const restoredLegs = routeDraftBackup ?? committedLegs;
             setPlannedLegs(restoredLegs);
             setRouteDraftBackup(null);
             setIsRouteDraftMode(false);
@@ -963,7 +1046,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
 
         setRouteDraftBackup(plannedLegs);
-        setPlannedLegs([]);
+        clearPlanningRoute();
         setIsRouteDraftMode(true);
         setShowRouteSummary(true);
     };
@@ -1005,6 +1088,114 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             });
         } catch (error: unknown) {
             toast({ variant: 'destructive', title: 'Save failed', description: error instanceof Error ? error.message : 'Failed to save route.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteRouteDraft = async () => {
+        if (!savedRouteDraftId) {
+            toast({ variant: 'destructive', title: 'No saved route', description: 'Save the route first before deleting it.' });
+            return;
+        }
+
+        const confirmed = window.confirm('Delete this saved route permanently? This cannot be undone.');
+        if (!confirmed) return;
+
+        setIsDeletingRouteDraft(true);
+        try {
+            const res = await fetch(`/api/training-routes?id=${encodeURIComponent(savedRouteDraftId)}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Failed to delete route.');
+            }
+
+            setSavedRouteDraftId(null);
+            toast({
+                title: 'Route deleted',
+                description: 'The saved route was removed from the route planner.',
+            });
+        } catch (error: unknown) {
+            toast({ variant: 'destructive', title: 'Delete failed', description: error instanceof Error ? error.message : 'Failed to delete route.' });
+        } finally {
+            setIsDeletingRouteDraft(false);
+        }
+    };
+
+    const handleDeleteCommittedRoute = async () => {
+        if (!committedLegs.length && !booking.navlog?.legs?.length) {
+            toast({ variant: 'destructive', title: 'No committed route', description: 'There is no committed route to delete.' });
+            return;
+        }
+
+        const confirmed = window.confirm('Delete the committed booking route permanently? This removes all navlog waypoints from the booking.');
+        if (!confirmed) return;
+
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        navlog: null,
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            navlog: false,
+                        },
+                        workflowApprovals: {
+                            ...workflowApprovals,
+                            navlog: undefined,
+                        },
+                        checkApprovals: {
+                            ...checkApprovals,
+                            navlog: undefined,
+                        },
+                    },
+                }),
+            });
+
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Failed to delete committed route.');
+            }
+
+            clearPlanningRoute();
+            setIsRouteDraftMode(false);
+            setCommittedLegs([]);
+            setCommittedDepartureIcao('');
+            setCommittedArrivalIcao('');
+            setCommittedDepartureLat('');
+            setCommittedDepartureLon('');
+            setCommittedArrivalLat('');
+            setCommittedArrivalLon('');
+            setLastCommittedAt(null);
+            setWorkflowCompletion((current) => ({
+                ...current,
+                navlog: false,
+            }));
+            setWorkflowApprovals((current) => ({
+                ...current,
+                navlog: undefined,
+            }));
+            setCheckApprovals((current) => ({
+                ...current,
+                navlog: undefined,
+            }));
+            window.dispatchEvent(new Event('safeviate-bookings-updated'));
+            toast({
+                title: 'Committed route deleted',
+                description: 'All navlog waypoints were removed from the booking.',
+            });
+        } catch (error: unknown) {
+            toast({
+                variant: 'destructive',
+                title: 'Delete failed',
+                description: error instanceof Error ? error.message : 'Failed to delete committed route.',
+            });
         } finally {
             setIsSaving(false);
         }
@@ -1102,10 +1293,24 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                 planning: true,
                 navlog: true,
             }));
+            setCommittedLegs(sanitizedLegs as NavlogLeg[]);
+            setCommittedDepartureIcao(depIcao);
+            setCommittedArrivalIcao(arrIcao);
+            setCommittedDepartureLat(depLat);
+            setCommittedDepartureLon(depLon);
+            setCommittedArrivalLat(arrLat);
+            setCommittedArrivalLon(arrLon);
+            const committedAt = new Date().toISOString();
+            setLastCommittedAt(committedAt);
             setIsRouteDraftMode(false);
             setRouteDraftBackup(null);
             window.dispatchEvent(new Event('safeviate-bookings-updated'));
-            toast({ title: "Route Committed", description: "The navigation log and airport details have been updated." });
+            toast({
+                title: "Route Committed",
+                description: sanitizedLegs.length > 0
+                    ? `Saved route: ${sanitizedLegs.map((leg: NavlogLeg) => leg.waypoint || 'PNT').join(' -> ')}`
+                    : "The navigation log and airport details have been updated.",
+            });
         } catch (error: unknown) {
             toast({ variant: "destructive", title: "Commit Failed", description: error instanceof Error ? error.message : 'Commit failed.' });
         } finally {
@@ -1246,7 +1451,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             {showRouteSummary ? 'Hide Route' : 'Show Route'}
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => setPlannedLegs([])}
+                                            onClick={clearPlanningRoute}
                                             disabled={plannedLegs.length === 0}
                                             className="text-[10px] font-bold uppercase"
                                         >
@@ -1297,7 +1502,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </Button>
                                     <Button 
                                         variant="outline"
-                                        onClick={() => setPlannedLegs([])}
+                                        onClick={clearPlanningRoute}
                                         className={BOOKING_PLANNING_SECONDARY_BUTTON_CLASS}
                                         disabled={plannedLegs.length === 0}
                                     >
@@ -1586,6 +1791,26 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 <CardTitle className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
                                                     <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
                                                 </CardTitle>
+                                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                    <span className={cn(
+                                                        "rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em]",
+                                                        hasUncommittedPlanningChanges
+                                                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                                                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                    )}>
+                                                        {hasUncommittedPlanningChanges ? 'Planning differs from committed route' : 'Planning matches committed route'}
+                                                    </span>
+                                                    {committedLegs.length > 0 ? (
+                                                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-slate-600">
+                                                            {committedLegs.length} committed legs
+                                                        </span>
+                                                    ) : null}
+                                                    {lastCommittedAt ? (
+                                                        <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-sky-700">
+                                                            Last committed {new Date(lastCommittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
                                                 {(isRouteDraftMode || savedRouteDraftId) && routeDraftName.trim() ? (
                                                     <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
                                                         <p className="truncate text-[10px] font-black uppercase tracking-[0.14em] text-slate-700">
@@ -1610,6 +1835,47 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             onTouchMoveCapture={(event) => event.stopPropagation()}
                                         >
                                             <div className="space-y-2 p-2">
+                                                    <div className="rounded-lg border bg-slate-50/90 p-3">
+                                                        <div className="flex flex-wrap items-start justify-between gap-2">
+                                                            <div className="min-w-0">
+                                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-700">Committed Booking Route</p>
+                                                                <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                                                                    This is the route Active Flight should follow from the saved booking navlog.
+                                                                </p>
+                                                                <p className={cn(
+                                                                    "mt-2 text-[10px] font-black uppercase tracking-[0.12em]",
+                                                                    committedLegs.length > 0 ? "text-slate-700" : "text-slate-500"
+                                                                )}>
+                                                                    {committedRouteWaypointSummary}
+                                                                </p>
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 text-[10px] font-black uppercase"
+                                                                onClick={loadCommittedRouteIntoPlanning}
+                                                                disabled={committedLegs.length === 0}
+                                                            >
+                                                                Load committed route
+                                                            </Button>
+                                                        </div>
+                                                        {committedLegs.length > 0 ? (
+                                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className={cn('h-8 text-[10px] font-black uppercase', 'border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive')}
+                                                                    onClick={handleDeleteCommittedRoute}
+                                                                    disabled={isSaving}
+                                                                >
+                                                                    <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                                    Delete Committed Route
+                                                                </Button>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
                                                     {isRouteDraftMode ? (
                                                         <div className="rounded-lg border bg-background/90 p-3">
                                                             <div className="mb-3">
@@ -1623,10 +1889,24 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                     placeholder="Route name"
                                                                     className="h-9 text-[10px] font-black uppercase"
                                                                 />
-                                                                <Button onClick={handleSaveRouteDraft} variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} disabled={isSaving || plannedLegs.length === 0}>
-                                                                    <Save className="mr-2 h-3.5 w-3.5" />
-                                                                    {savedRouteDraftId ? 'Update Saved Route' : 'Save Route'}
-                                                                </Button>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    <Button onClick={handleSaveRouteDraft} variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS} disabled={isSaving || plannedLegs.length === 0}>
+                                                                        <Save className="mr-2 h-3.5 w-3.5" />
+                                                                        {savedRouteDraftId ? 'Update Saved Route' : 'Save Route'}
+                                                                    </Button>
+                                                                    {savedRouteDraftId ? (
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            onClick={handleDeleteRouteDraft}
+                                                                            className={cn(HEADER_SECONDARY_BUTTON_CLASS, 'border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive')}
+                                                                            disabled={isSaving || isDeletingRouteDraft}
+                                                                        >
+                                                                            {isDeletingRouteDraft ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-2 h-3.5 w-3.5" />}
+                                                                            Delete Saved Route
+                                                                        </Button>
+                                                                    ) : null}
+                                                                </div>
                                                                 <Input
                                                                     value={manualWaypointName}
                                                                     onChange={(event) => setManualWaypointName(event.target.value)}
@@ -1679,7 +1959,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     ) : null}
                                                     {plannedLegs.map((leg, index) => (
                                                         (() => {
-                                                            const isOriginWaypoint = index === 0;
+                                                            const segment = getRouteSummarySegmentLabel(plannedLegs, index);
                                                             const hasWaypointContext = Boolean(leg.waypointContext?.items?.length);
                                                             const metaLine = [hasWaypointContext ? null : leg.frequencies || leg.layerInfo, formatLatLonDms(leg.latitude, leg.longitude)]
                                                                 .filter(Boolean)
@@ -1708,6 +1988,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                             {leg.waypoint || 'PNT'}
                                                                         </span>
                                                                     )}
+                                                                    <p className="mt-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+                                                                        {segment.segmentLabel}
+                                                                    </p>
                                                                 </div>
                                                                 {metaLine ? (
                                                                     <p className="mt-1 line-clamp-2 min-h-0 text-[8px] font-semibold leading-[1.25] text-emerald-700">
@@ -1736,11 +2019,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                 <div className="mt-auto flex items-center justify-between gap-3 pt-2">
                                                                     <div className="flex items-center gap-1.5">
                                                                         <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">Dist</span>
-                                                                        <span className="text-[10px] font-black text-foreground">{isOriginWaypoint ? '---' : `${leg.distance?.toFixed(1) || '0.0'} NM`}</span>
+                                                                        <span className="text-[10px] font-black text-foreground">{segment.hasNextLeg ? `${segment.nextDistance?.toFixed(1) || '0.0'} NM` : '---'}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-1.5">
                                                                         <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">TRK</span>
-                                                                        <span className="text-[10px] font-black text-foreground">{isOriginWaypoint ? '---' : `${formatHeadingDegrees(getReciprocalHeading(leg.magneticHeading))}°`}</span>
+                                                                        <span className="text-[10px] font-black text-foreground">{segment.hasNextLeg ? `${formatHeadingDegrees(segment.nextDisplayTrack)}°` : '---'}</span>
                                                                     </div>
                                                                     <Button
                                                                         variant="ghost"
@@ -1774,6 +2057,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                             <span className="break-words text-[10px] font-black uppercase leading-tight">{leg.waypoint || 'PNT'}</span>
                                                                         )}
                                                                     </div>
+                                                                    <p className="mt-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+                                                                        {segment.segmentLabel}
+                                                                    </p>
                                                                     {metaLine ? (
                                                                         <p className="mt-0.5 text-[8px] font-semibold leading-tight text-emerald-700">
                                                                             {metaLine}
@@ -1801,11 +2087,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                     <div className="mt-2 flex items-center gap-4">
                                                                         <div className="flex items-center gap-1">
                                                                             <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                            <span className="text-[9px] font-black">{isOriginWaypoint ? '---' : `${leg.distance?.toFixed(1) || '0.0'} NM`}</span>
+                                                                            <span className="text-[9px] font-black">{segment.hasNextLeg ? `${segment.nextDistance?.toFixed(1) || '0.0'} NM` : '---'}</span>
                                                                         </div>
                                                                         <div className="flex items-center gap-1">
                                                                             <span className="text-[8px] font-bold uppercase text-muted-foreground">TRK</span>
-                                                                            <span className="text-[9px] font-black">{isOriginWaypoint ? '---' : `${formatHeadingDegrees(getReciprocalHeading(leg.magneticHeading))}°`}</span>
+                                                                             <span className="text-[9px] font-black">{segment.hasNextLeg ? `${formatHeadingDegrees(segment.nextDisplayTrack)}°` : '---'}</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>

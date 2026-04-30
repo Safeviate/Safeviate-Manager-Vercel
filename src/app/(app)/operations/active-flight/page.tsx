@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Loader2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, Loader2, Minimize2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
@@ -180,7 +180,7 @@ export default function ActiveFlightPage() {
   const [isMobileSelectorOpen, setIsMobileSelectorOpen] = useState(false);
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedBookingFilterId, setSelectedBookingFilterId] = useState('');
-  const [selectedBookingId, setSelectedBookingId] = useState('');
+  const [loadedRouteBookingId, setLoadedRouteBookingId] = useState('');
   const [deviceLabelInput, setDeviceLabelInput] = useState('');
   const [savedDeviceLabel, setSavedDeviceLabel] = useState('');
   const [isTrackingActive, setIsTrackingActive] = useState(false);
@@ -191,6 +191,7 @@ export default function ActiveFlightPage() {
   const [locationCalibration, setLocationCalibration] = useState<LocationCalibration | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [isFullscreenMapOpen, setIsFullscreenMapOpen] = useState(false);
+  const [isFocusMapOpen, setIsFocusMapOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [hasQueuedSession, setHasQueuedSession] = useState(false);
   const [followOwnship, setFollowOwnship] = useState(true);
@@ -209,32 +210,74 @@ export default function ActiveFlightPage() {
     setDeviceLabelInput(binding.deviceLabel || '');
   }, []);
 
+  const loadActiveFlightData = useCallback(async () => {
+    const [aircraftRes, scheduleRes, bookingsRes, sessionsRes] = await Promise.all([
+      fetch('/api/aircraft', { cache: 'no-store' }),
+      fetch('/api/schedule-data', { cache: 'no-store' }),
+      fetch('/api/bookings', { cache: 'no-store' }),
+      fetch('/api/flight-sessions', { cache: 'no-store' }),
+    ]);
+
+    let scheduleAircrafts: Aircraft[] = [];
+    let directBookings: Booking[] = [];
+
+    if (bookingsRes.ok) {
+      const data = await bookingsRes.json();
+      directBookings = Array.isArray(data.bookings) ? data.bookings : [];
+    }
+
+    if (scheduleRes.ok) {
+      const data = await scheduleRes.json();
+      scheduleAircrafts = Array.isArray(data.aircraft) ? data.aircraft : [];
+      setAircrafts(scheduleAircrafts);
+      setBookings(directBookings.length > 0 ? directBookings : Array.isArray(data.bookings) ? data.bookings : []);
+    } else if (directBookings.length > 0) {
+      setBookings(directBookings);
+    }
+
+    if (scheduleAircrafts.length === 0 && aircraftRes.ok) {
+      const data = await aircraftRes.json();
+      setAircrafts(Array.isArray(data.aircraft) ? data.aircraft : []);
+    }
+
+    setScheduleDataLoaded(true);
+
+    if (sessionsRes.ok) {
+      const data = await sessionsRes.json();
+      setFlightSessions(Array.isArray(data.sessions) ? data.sessions : []);
+    }
+  }, []);
+
   useEffect(() => {
-    const load = async () => {
-      const [aircraftRes, scheduleRes, sessionsRes] = await Promise.all([
-        fetch('/api/aircraft', { cache: 'no-store' }),
-        fetch('/api/schedule-data', { cache: 'no-store' }),
-        fetch('/api/flight-sessions', { cache: 'no-store' }),
-      ]);
-      let scheduleAircrafts: Aircraft[] = [];
-      if (scheduleRes.ok) {
-        const data = await scheduleRes.json();
-        scheduleAircrafts = Array.isArray(data.aircraft) ? data.aircraft : [];
-        setAircrafts(scheduleAircrafts);
-        setBookings(Array.isArray(data.bookings) ? data.bookings : []);
-      }
-      if (scheduleAircrafts.length === 0 && aircraftRes.ok) {
-        const data = await aircraftRes.json();
-        setAircrafts(Array.isArray(data.aircraft) ? data.aircraft : []);
-      }
-      setScheduleDataLoaded(true);
-      if (sessionsRes.ok) {
-        const data = await sessionsRes.json();
-        setFlightSessions(Array.isArray(data.sessions) ? data.sessions : []);
+    void loadActiveFlightData();
+  }, [loadActiveFlightData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleRefresh = () => {
+      void loadActiveFlightData();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleRefresh();
       }
     };
-    void load();
-  }, []);
+
+    window.addEventListener('focus', handleRefresh);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleRefresh);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadActiveFlightData]);
+
+  useEffect(() => {
+    if (!selectedBookingFilterId) return;
+    void loadActiveFlightData();
+  }, [loadActiveFlightData, selectedBookingFilterId]);
 
   const reloadFlightSessions = async () => {
     const response = await fetch('/api/flight-sessions', { cache: 'no-store' });
@@ -300,18 +343,28 @@ export default function ActiveFlightPage() {
     () => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()),
     [bookings, selectedAircraftId],
   );
-  const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
-  const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
   const selectedBookingFilter = useMemo(() => bookingChoices.find((booking) => booking.id === selectedBookingFilterId) || null, [bookingChoices, selectedBookingFilterId]);
+  const selectedBooking = useMemo(() => {
+    if (!selectedBookingFilter) return null;
+    return (selectedBookingFilter.navlog?.legs?.length || 0) > 0 ? selectedBookingFilter : null;
+  }, [selectedBookingFilter]);
+  const loadedRouteBooking = useMemo(() => {
+    if (!selectedBooking) return null;
+    return selectedBooking.id === loadedRouteBookingId ? selectedBooking : null;
+  }, [loadedRouteBookingId, selectedBooking]);
   const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
   const selectedBookingFilterValue = selectedBookingFilter ? selectedBookingFilterId : undefined;
-  const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
   const mobileSelectorSummary = selectedAircraft?.tailNumber || selectedBookingFilter?.bookingNumber || selectedBooking?.bookingNumber
-    ? [selectedAircraft?.tailNumber, selectedBookingFilter ? `Booking #${selectedBookingFilter.bookingNumber}` : null, selectedBooking ? `Route #${selectedBooking.bookingNumber}` : null]
+    ? [selectedAircraft?.tailNumber, selectedBookingFilter ? `Booking #${selectedBookingFilter.bookingNumber}` : null, loadedRouteBooking ? `${loadedRouteBooking.navlog?.legs?.length || 0} legs loaded` : null]
         .filter(Boolean)
         .join(' • ')
     : 'Flight Setup';
-  const selectedLegs = selectedBooking?.navlog?.legs || [];
+  const selectedLegs = loadedRouteBooking?.navlog?.legs || [];
+  const validSelectedLegs = useMemo(
+    () => selectedLegs.filter((leg) => leg.latitude !== undefined && leg.longitude !== undefined),
+    [selectedLegs]
+  );
+  const plannedNextLeg = validSelectedLegs.length > 1 ? validSelectedLegs[1] : null;
   const currentDeviceSession = useMemo(
     () => flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId) || null,
     [deviceBinding?.deviceId, flightSessions],
@@ -365,12 +418,76 @@ export default function ActiveFlightPage() {
         : 'Waiting for GPS';
   const nextWaypointNumber = activeLegState?.activeLegIndex != null ? `${activeLegState.activeLegIndex + 2}` : 'N/A';
   const etaToNextLabel = activeLegState?.etaToNextMinutes != null ? `${Math.max(1, Math.round(activeLegState.etaToNextMinutes))} min` : 'N/A';
+  const displayedNextWaypointNumber = activeLegState ? nextWaypointNumber : plannedNextLeg ? '2' : 'N/A';
+  const displayedDistanceToNextLabel =
+    activeLegState?.distanceToNextNm != null
+      ? `${activeLegState.distanceToNextNm.toFixed(1)} NM`
+      : plannedNextLeg?.distance != null
+        ? `${plannedNextLeg.distance.toFixed(1)} NM`
+        : 'N/A';
+  const displayedWaypointLabel = activeLegState?.toWaypoint || plannedNextLeg?.waypoint || 'N/A';
+  const displayedBearingLabel =
+    activeLegState?.bearingToNext != null
+      ? `${activeLegState.bearingToNext.toFixed(0)}°`
+      : plannedNextLeg?.trueCourse != null
+        ? `${plannedNextLeg.trueCourse.toFixed(0)}°`
+        : 'N/A';
+  const displayedEtaLabel =
+    activeLegState?.etaToNextMinutes != null
+      ? etaToNextLabel
+      : plannedNextLeg?.ete != null
+        ? `${Math.max(1, Math.round(plannedNextLeg.ete))} min`
+        : 'N/A';
   const syncStatusLabel = hasQueuedSession ? 'Queued for Sync' : isOnline ? 'Online' : 'Offline';
   const syncStatusClassName = hasQueuedSession
     ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50'
     : isOnline
       ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50'
       : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50';
+  const telemetryItems = [
+    { label: 'ALT', value: liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A' },
+    { label: 'SPD', value: liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A' },
+    { label: 'DIR', value: liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A' },
+    { label: 'NXT', value: activeLegState ? nextWaypointNumber : plannedNextLeg ? '2' : 'N/A' },
+    {
+      label: 'DST',
+      value:
+        activeLegState?.distanceToNextNm != null
+          ? `${activeLegState.distanceToNextNm.toFixed(1)} NM`
+          : plannedNextLeg?.distance != null
+            ? `${plannedNextLeg.distance.toFixed(1)} NM`
+            : 'N/A',
+    },
+    {
+      label: 'WPT',
+      value: activeLegState?.toWaypoint || plannedNextLeg?.waypoint || 'N/A',
+      modeTag: activeLegState ? 'LIVE' : plannedNextLeg ? 'PLN' : null,
+    },
+    {
+      label: 'BRG',
+      value:
+        activeLegState?.bearingToNext != null
+          ? `${activeLegState.bearingToNext.toFixed(0)}°`
+          : plannedNextLeg?.trueCourse != null
+            ? `${plannedNextLeg.trueCourse.toFixed(0)}°`
+            : 'N/A',
+    },
+    {
+      label: 'ETA',
+      value:
+        activeLegState?.etaToNextMinutes != null
+          ? etaToNextLabel
+          : plannedNextLeg?.ete != null
+            ? `${Math.max(1, Math.round(plannedNextLeg.ete))} min`
+            : 'N/A',
+    },
+  ];
+  const telemetrySourceLabel = activeLegState ? 'Live Leg Data' : plannedNextLeg ? 'Planned First Leg' : 'No Route Data';
+  const telemetrySourceClassName = activeLegState
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+    : plannedNextLeg
+      ? 'border-amber-200 bg-amber-50 text-amber-800'
+      : 'border-slate-200 bg-slate-50 text-slate-600';
 
   const conflictingAircraftSession = useMemo(() => {
     if (!selectedAircraft || !deviceBinding?.deviceId) return null;
@@ -392,6 +509,42 @@ export default function ActiveFlightPage() {
         ? 'border-rose-600 bg-rose-600 text-white hover:bg-rose-700'
         : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
       disabled: !isTrackingActive && (!selectedAircraft || Boolean(conflictingAircraftSession)),
+    },
+    {
+      value: 'load-route',
+      label: loadedRouteBooking ? 'Route Loaded' : 'Load Route',
+      onClick: async () => {
+        if (!selectedBooking) {
+          toast({
+            title: 'No route to load',
+            description: 'Select a booking with a committed navlog first.',
+          });
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/bookings', { cache: 'no-store' });
+          if (response.ok) {
+            const data = await response.json();
+            const freshBookings = Array.isArray(data.bookings) ? data.bookings : [];
+            if (freshBookings.length > 0) {
+              setBookings(freshBookings);
+            }
+          }
+        } catch {
+          // Fall back to the current in-memory booking if the refresh fails.
+        }
+
+        toast({
+          title: 'Route loaded',
+          description: `Loaded the latest committed route from booking #${selectedBooking.bookingNumber}.`,
+        });
+        setLoadedRouteBookingId(selectedBooking.id);
+      },
+      className: loadedRouteBooking
+        ? 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700'
+        : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+      disabled: !selectedBooking,
     },
     {
       value: 'layers',
@@ -441,25 +594,28 @@ export default function ActiveFlightPage() {
       },
       className: followOwnship ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
     },
+    {
+      value: 'focus-map',
+      label: isFocusMapOpen ? 'Close Focus Map' : 'Focus Map',
+      onClick: () => {
+        setIsFocusMapOpen((current) => !current);
+        setIsLayersCardOpen(false);
+        setIsMapZoomCardOpen(false);
+      },
+      className: isFocusMapOpen ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+    },
   ];
 
   const handleAircraftSelectionChange = (aircraftId: string) => {
     setSelectedAircraftId(aircraftId);
+    setLoadedRouteBookingId('');
     if (!deviceBinding?.deviceId) return;
-    saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId: selectedBookingId || undefined });
+    saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId: selectedBookingFilterId || undefined });
   };
 
   const handleBookingFilterSelectionChange = (bookingId: string) => {
     setSelectedBookingFilterId(bookingId);
-    if (!deviceBinding?.deviceId) return;
-    saveActiveTrackingSelection(deviceBinding.deviceId, {
-      aircraftId: selectedAircraftId,
-      bookingId: selectedBookingId || undefined,
-    });
-  };
-
-  const handleBookingSelectionChange = (bookingId: string) => {
-    setSelectedBookingId(bookingId);
+    setLoadedRouteBookingId('');
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraftId,
@@ -480,9 +636,6 @@ export default function ActiveFlightPage() {
     }
 
     if (savedSelection.bookingId) {
-      setSelectedBookingId(savedSelection.bookingId);
-    }
-    if (savedSelection.bookingId) {
       setSelectedBookingFilterId(savedSelection.bookingId);
     }
   }, [deviceBinding?.deviceId]);
@@ -493,13 +646,6 @@ export default function ActiveFlightPage() {
     if (selectedAircraft) return;
     setSelectedAircraftId('');
   }, [scheduleDataLoaded, selectedAircraft, selectedAircraftId]);
-
-  useEffect(() => {
-    if (!scheduleDataLoaded) return;
-    if (!selectedBookingId) return;
-    if (selectedBooking) return;
-    setSelectedBookingId('');
-  }, [scheduleDataLoaded, selectedBooking, selectedBookingId]);
 
   useEffect(() => {
     if (!deviceBinding?.deviceId) return;
@@ -517,15 +663,15 @@ export default function ActiveFlightPage() {
       setSelectedAircraftId(resumeSource.aircraftId);
     }
 
-    if (resumeSource.bookingId && resumeSource.bookingId !== selectedBookingId) {
-      setSelectedBookingId(resumeSource.bookingId);
+    if (resumeSource.bookingId && resumeSource.bookingId !== selectedBookingFilterId) {
+      setSelectedBookingFilterId(resumeSource.bookingId);
     }
 
     if (!isTrackingActive) {
       setIsTrackingActive(true);
       startWatching();
     }
-  }, [deviceBinding?.deviceId, flightSessions, isTrackingActive, selectedAircraftId, selectedBookingId, startWatching]);
+  }, [deviceBinding?.deviceId, flightSessions, isTrackingActive, selectedAircraftId, selectedBookingFilterId, startWatching]);
 
   const buildBreadcrumb = (existing: FlightPosition[] | undefined, nextPosition: FlightPosition | null) => {
     if (!nextPosition) return existing || [];
@@ -751,7 +897,7 @@ export default function ActiveFlightPage() {
 
         <div className="min-h-0 overflow-hidden rounded-2xl border border-slate-800 bg-black shadow-[0_22px_50px_rgba(15,23,42,0.35)] md:rounded-2xl">
           <ActiveFlightLiveMap
-            booking={selectedBooking}
+            booking={loadedRouteBooking}
             legs={selectedLegs}
             position={effectivePosition}
             aircraftRegistration={selectedAircraft?.tailNumber}
@@ -848,7 +994,7 @@ export default function ActiveFlightPage() {
     return (
       <div className="relative h-full min-h-0 overflow-hidden bg-black">
         <ActiveFlightLiveMap
-          booking={selectedBooking}
+                booking={loadedRouteBooking}
           legs={selectedLegs}
           position={effectivePosition}
           aircraftRegistration={selectedAircraft?.tailNumber}
@@ -1048,15 +1194,6 @@ export default function ActiveFlightPage() {
                       <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
-                    <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
-                      <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
-                        <SelectValue placeholder="Optional: select a booking with a navlog" />
-                      </SelectTrigger>
-                      <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
                 </CollapsibleContent>
               </div>
             </Collapsible>
@@ -1078,15 +1215,6 @@ export default function ActiveFlightPage() {
                     <SelectValue placeholder="Select a booking" />
                   </SelectTrigger>
                   <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="min-w-[240px] flex-1 space-y-1">
-                <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
-                <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
-                  <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
-                    <SelectValue placeholder="Optional: select a booking with a navlog" />
-                  </SelectTrigger>
-                  <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -1139,36 +1267,178 @@ export default function ActiveFlightPage() {
           </div>
         </div>
         <div className="border-b border-slate-200/80 bg-white">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 px-2 py-1 sm:px-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Telemetry Source</p>
+            <Badge className={cn('px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] hover:bg-transparent', telemetrySourceClassName)}>
+              {telemetrySourceLabel}
+            </Badge>
+          </div>
           <div className="grid grid-cols-4 gap-px bg-slate-200/80 lg:grid-cols-8">
-            {[
-              { label: 'ALT', value: liveTelemetry.altitude != null ? `${Math.round(liveTelemetry.altitude)} m` : 'N/A' },
-              { label: 'SPD', value: liveTelemetry.speed != null ? `${liveTelemetry.speed.toFixed(0)} kt` : 'N/A' },
-              { label: 'DIR', value: liveTelemetry.heading != null ? `${liveTelemetry.heading.toFixed(0)}°` : 'N/A' },
-              { label: 'NXT', value: nextWaypointNumber },
-              { label: 'DST', value: activeLegState?.distanceToNextNm != null ? `${activeLegState.distanceToNextNm.toFixed(1)} NM` : 'N/A' },
-              { label: 'WPT', value: activeLegState?.toWaypoint || 'N/A' },
-              { label: 'BRG', value: activeLegState?.bearingToNext != null ? `${activeLegState.bearingToNext.toFixed(0)}°` : 'N/A' },
-              { label: 'ETA', value: etaToNextLabel },
-            ].map((item) => (
+            {telemetryItems.map((item) => (
               <div key={item.label} className="flex min-w-0 items-center gap-1 bg-white px-1.5 py-1 sm:px-3">
                 <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
                   {item.label}
                 </span>
-                <span className="min-w-0 truncate text-[10px] font-black leading-none text-foreground">
-                  {item.value}
+                <span className="flex min-w-0 items-center gap-1 truncate text-[10px] font-black leading-none text-foreground">
+                  <span className="min-w-0 truncate">{item.value}</span>
+                  {item.label === 'WPT' && item.modeTag ? (
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-black tracking-[0.14em]',
+                        item.modeTag === 'LIVE'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                          : 'border-amber-200 bg-amber-50 text-amber-800'
+                      )}
+                    >
+                      {item.modeTag}
+                    </span>
+                  ) : null}
                 </span>
               </div>
             ))}
           </div>
         </div>
         <CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+          <Dialog open={isFocusMapOpen} onOpenChange={setIsFocusMapOpen}>
+            <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-slate-950 p-0 text-slate-100 shadow-none">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Focus Map</DialogTitle>
+              </DialogHeader>
+              <div className="relative flex h-full min-h-0 flex-col bg-slate-950">
+                <div className="relative z-10 border-b border-slate-200/15 bg-slate-950/90 px-2 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] backdrop-blur">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Focus Map</p>
+                      <p className="truncate text-[11px] font-semibold text-slate-200">
+                        {selectedAircraft?.tailNumber || 'Aircraft not selected'} · {selectedBooking ? `Route #${selectedBooking.bookingNumber}` : 'No navlog route'}
+                      </p>
+                    </div>
+                    <DialogClose asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 shrink-0 rounded-full border-slate-700 bg-slate-900 px-3 text-[10px] font-black uppercase tracking-[0.12em] text-slate-100 hover:bg-slate-800"
+                      >
+                        <Minimize2 className="mr-1.5 h-3.5 w-3.5" />
+                        Close
+                      </Button>
+                    </DialogClose>
+                  </div>
+                  <div className="mb-2 flex items-center justify-end px-1">
+                    <Badge className={cn('px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] hover:bg-transparent', telemetrySourceClassName)}>
+                      {telemetrySourceLabel}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-4 gap-px overflow-hidden rounded-xl border border-slate-700/80 bg-slate-700/80 lg:grid-cols-8">
+                    {telemetryItems.map((item) => (
+                      <div key={item.label} className="flex min-w-0 items-center gap-1 bg-slate-900 px-1.5 py-1.5 sm:px-3">
+                        <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                          {item.label}
+                        </span>
+                        <span className="flex min-w-0 items-center gap-1 truncate text-[10px] font-black leading-none text-slate-100">
+                          <span className="min-w-0 truncate">{item.value}</span>
+                          {item.label === 'WPT' && item.modeTag ? (
+                            <span
+                              className={cn(
+                                'shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-black tracking-[0.14em]',
+                                item.modeTag === 'LIVE'
+                                  ? 'border-emerald-200/60 bg-emerald-500/15 text-emerald-200'
+                                  : 'border-amber-200/60 bg-amber-500/15 text-amber-200'
+                              )}
+                            >
+                              {item.modeTag}
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        'h-8 rounded-full border-slate-700 bg-slate-900 px-3 text-[10px] font-black uppercase tracking-[0.12em] text-slate-100 hover:bg-slate-800',
+                        isLayersCardOpen && 'border-slate-100 bg-slate-100 text-slate-950 hover:bg-slate-200'
+                      )}
+                      onClick={() => {
+                        setIsLayersCardOpen((current) => !current);
+                        setIsMapZoomCardOpen(false);
+                      }}
+                    >
+                      Layers
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        'h-8 rounded-full border-slate-700 bg-slate-900 px-3 text-[10px] font-black uppercase tracking-[0.12em] text-slate-100 hover:bg-slate-800',
+                        isMapZoomCardOpen && 'border-slate-100 bg-slate-100 text-slate-950 hover:bg-slate-200'
+                      )}
+                      onClick={() => {
+                        setIsMapZoomCardOpen((current) => !current);
+                        setIsLayersCardOpen(false);
+                      }}
+                    >
+                      Map Zoom
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-8 rounded-full border-slate-700 bg-slate-900 px-3 text-[10px] font-black uppercase tracking-[0.12em] text-slate-100 hover:bg-slate-800"
+                      onClick={() => {
+                        setMapRecenterSignal((current) => current + 1);
+                        setIsLayersCardOpen(false);
+                        setIsMapZoomCardOpen(false);
+                      }}
+                    >
+                      Centre
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        'h-8 rounded-full border-slate-700 bg-slate-900 px-3 text-[10px] font-black uppercase tracking-[0.12em] text-slate-100 hover:bg-slate-800',
+                        followOwnship && 'border-slate-100 bg-slate-100 text-slate-950 hover:bg-slate-200'
+                      )}
+                      onClick={() => {
+                        setFollowOwnship((current) => !current);
+                        setIsLayersCardOpen(false);
+                        setIsMapZoomCardOpen(false);
+                      }}
+                    >
+                      {followOwnship ? 'Track Up' : 'North Up'}
+                    </Button>
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <ActiveFlightLiveMap
+                    booking={loadedRouteBooking}
+                    legs={selectedLegs}
+                    position={effectivePosition}
+                    aircraftRegistration={selectedAircraft?.tailNumber}
+                    activeLegIndex={activeLegState?.activeLegIndex}
+                    activeLegState={activeLegState}
+                    showControls={false}
+                    followOwnship={followOwnship}
+                    onFollowOwnshipChange={setFollowOwnship}
+                    recenterSignal={mapRecenterSignal}
+                    isLayersCardOpen={isLayersCardOpen}
+                    isMapZoomCardOpen={isMapZoomCardOpen}
+                    onLayersCardOpenChange={setIsLayersCardOpen}
+                    onMapZoomCardOpenChange={setIsMapZoomCardOpen}
+                  />
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isFullscreenMapOpen} onOpenChange={setIsFullscreenMapOpen}>
             <DialogContent className="fixed inset-0 m-0 h-[100dvh] w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 overflow-hidden border-0 bg-black p-0 text-slate-100 shadow-none">
               <DialogHeader className="sr-only">
                 <DialogTitle>Full Flight Tracking View</DialogTitle>
               </DialogHeader>
               <FullScreenFlightLayout
-                booking={selectedBooking}
+                booking={loadedRouteBooking}
                 legs={selectedLegs}
                 position={effectivePosition}
                 aircraftRegistration={selectedAircraft?.tailNumber}
@@ -1189,7 +1459,7 @@ export default function ActiveFlightPage() {
           <div className="flex min-h-0 flex-1 flex-col space-y-4 px-0 pb-0 pt-0">
             {!isFullscreenMapOpen ? (
               <ActiveFlightLiveMap
-                booking={selectedBooking}
+                booking={loadedRouteBooking}
                 legs={selectedLegs}
                 position={effectivePosition}
                 aircraftRegistration={selectedAircraft?.tailNumber}

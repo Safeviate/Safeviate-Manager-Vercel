@@ -177,7 +177,7 @@ const BookingsTable = ({
                                 </Button>
                                 {b.type === 'Training Flight' && b.status === 'Completed' && (
                                     <Button asChild variant="secondary" size="icon" className="h-8 w-8">
-                                        <Link href={`/training/student-debriefs/new?bookingId=${b.id}`}>
+                                        <Link href={`/training/student-debriefs/new?bookingId=${b.id}&bookingNumber=${b.bookingNumber}`}>
                                             <FilePlus className="h-4 w-4" />
                                             <span className="sr-only">Debrief</span>
                                         </Link>

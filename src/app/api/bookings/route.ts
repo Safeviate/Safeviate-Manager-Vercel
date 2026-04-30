@@ -239,6 +239,22 @@ export async function PUT(request: Request) {
       ...incoming,
     };
 
+    if (incoming.navlog === null) {
+      delete mergedData.navlog;
+
+      if (mergedData.workflowCompletion && typeof mergedData.workflowCompletion === 'object') {
+        delete (mergedData.workflowCompletion as Record<string, unknown>).navlog;
+      }
+
+      if (mergedData.workflowApprovals && typeof mergedData.workflowApprovals === 'object') {
+        delete (mergedData.workflowApprovals as Record<string, unknown>).navlog;
+      }
+
+      if (mergedData.checkApprovals && typeof mergedData.checkApprovals === 'object') {
+        delete (mergedData.checkApprovals as Record<string, unknown>).navlog;
+      }
+    }
+
     await prisma.bookingRecord.upsert({
       where: { id: bookingId },
       create: {

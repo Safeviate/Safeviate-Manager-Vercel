@@ -83,6 +83,22 @@ export function createNavlogLegFromCoordinates(
   };
 }
 
+export function getRouteSummarySegmentLabel(legs: NavlogLeg[], index: number) {
+  const currentLeg = legs[index];
+  const nextLeg = legs[index + 1];
+  const currentLabel = currentLeg?.waypoint || `WPT-${index + 1}`;
+  const nextLabel = nextLeg?.waypoint || `WPT-${index + 2}`;
+  const nextDisplayTrack = nextLeg?.magneticHeading === undefined ? undefined : (nextLeg.magneticHeading + 180) % 360;
+
+  return {
+    segmentLabel: nextLeg ? `${currentLabel} to ${nextLabel}` : currentLabel,
+    nextDistance: nextLeg?.distance,
+    nextTrack: nextLeg?.magneticHeading,
+    nextDisplayTrack,
+    hasNextLeg: Boolean(nextLeg),
+  };
+}
+
 /**
  * Full E6B recalculation engine.
  * Takes raw legs + global flight params and produces fully-calculated legs

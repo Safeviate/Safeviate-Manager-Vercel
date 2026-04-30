@@ -53,6 +53,7 @@ function NewDebriefContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const bookingId = searchParams?.get('bookingId') ?? '';
+    const bookingNumber = searchParams?.get('bookingNumber') ?? '';
     const { toast } = useToast();
     const tenantId = 'safeviate';
 
@@ -72,7 +73,7 @@ function NewDebriefContent() {
                 const students = Array.isArray(payload?.students) ? payload.students : [];
                 const instructors = Array.isArray(payload?.instructors) ? payload.instructors : [];
 
-                const b = bookings.find((x: Booking) => x.id === bookingId);
+                const b = bookings.find((x: Booking) => x.id === bookingId || (bookingNumber && x.bookingNumber === bookingNumber));
                 if (b && !cancelled) {
                     setBooking(b);
                     setStudent(students.find((s: PilotProfile) => s.id === b.studentId) || null);
@@ -89,7 +90,7 @@ function NewDebriefContent() {
         return () => {
             cancelled = true;
         };
-    }, [bookingId]);
+    }, [bookingId, bookingNumber]);
 
     const isLoadingBooking = isLoading;
     const isLoadingStudent = isLoading;

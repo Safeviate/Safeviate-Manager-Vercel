@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ import { BackNavButton } from '@/components/back-nav-button';
 import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
-import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { createNavlogLegFromCoordinates, getRouteSummarySegmentLabel } from '@/lib/flight-planner';
 import { formatLatLonDms } from '@/lib/coordinate-parser';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 import { isBookingEligibleForTracking } from '@/lib/booking-tracking';
@@ -102,6 +103,8 @@ const formatDateSafe = (dateString: string | undefined, formatString: string): s
     }
 };
 
+const formatHeadingDegrees = (value?: number) => (value === undefined || Number.isNaN(value) ? '---' : Math.round(value).toString().padStart(3, '0'));
+
 function stripUndefinedDeep<T>(value: T): T {
     if (Array.isArray(value)) {
         return value.map((item) => stripUndefinedDeep(item)).filter((item) => item !== undefined) as T;
@@ -121,6 +124,7 @@ function stripUndefinedDeep<T>(value: T): T {
 const getStatusLabel = (status: Booking['status']) => (status === 'Completed' ? 'Complete' : status);
 
 export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
+    const router = useRouter();
     const isMobile = useIsMobile();
     const { toast } = useToast();
     const { tenantId, userProfile } = useUserProfile();
@@ -204,6 +208,18 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [depLon, setDepLon] = useState(booking.navlog?.departureLongitude?.toString() || '');
     const [arrLat, setArrLat] = useState(booking.navlog?.arrivalLatitude?.toString() || '');
     const [arrLon, setArrLon] = useState(booking.navlog?.arrivalLongitude?.toString() || '');
+
+    const clearPlanningRoute = () => {
+        setPlannedLegs([]);
+        setDepartureLegId(null);
+        setArrivalLegId(null);
+        setDepIcao('');
+        setArrIcao('');
+        setDepLat('');
+        setDepLon('');
+        setArrLat('');
+        setArrLon('');
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -581,6 +597,53 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
+    const handleDeleteCommittedRoute = async () => {
+        if (!(booking.navlog?.legs?.length || 0)) {
+            return;
+        }
+
+        const confirmed = window.confirm('Delete the committed navlog route permanently? This removes all waypoints from the booking.');
+        if (!confirmed) return;
+
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking: {
+                        ...booking,
+                        navlog: null,
+                        workflowCompletion: {
+                            ...workflowCompletion,
+                            navlog: false,
+                        },
+                    },
+                }),
+            });
+
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'Failed to delete committed route.');
+            }
+
+            clearPlanningRoute();
+            router.refresh();
+            toast({
+                title: 'Committed route deleted',
+                description: 'All navlog waypoints were removed from the booking.',
+            });
+        } catch (error: unknown) {
+            toast({
+                variant: 'destructive',
+                title: 'Delete failed',
+                description: error instanceof Error ? error.message : 'Failed to delete committed route.',
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     if (!initialDetailsLoaded && (loadingAc || loadingPeople)) return <Skeleton className="h-64 w-full" />;
 
     const envelope = graphConfig.envelope;
@@ -634,12 +697,25 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     Locked by #{blockingBooking.bookingNumber}
                                 </Badge>
                             )}
+                            {activeTab === 'navlog' && (booking.navlog?.legs?.length || 0) > 0 && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 border-destructive/30 bg-background px-4 text-[10px] font-black uppercase tracking-widest text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={handleDeleteCommittedRoute}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-2 h-3.5 w-3.5" />}
+                                    Delete Route
+                                </Button>
+                            )}
                             {activeTab === 'planning' && (
                                 <>
                                     <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => setPlannedLegs([])}
+                                        onClick={clearPlanningRoute}
                                         className="h-8 border-slate-300 text-[10px] font-black uppercase"
                                         disabled={plannedLegs.length === 0}
                                     >
@@ -696,11 +772,11 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden relative">
-                            <div className="flex-1 min-h-0 w-full relative z-0">
-                                <AeronauticalMap 
-                                    legs={plannedLegs} 
-                                    onAddWaypoint={handleAddWaypoint}
+                                <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden relative">
+                                    <div className="flex-1 min-h-0 w-full relative z-0">
+                                        <AeronauticalMap 
+                                            legs={plannedLegs} 
+                                            onAddWaypoint={handleAddWaypoint}
                                 />
                                 
                                 {/* Absolute positioned leg summary cards - higher Z index */}
@@ -717,25 +793,36 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 {plannedLegs.map((leg) => (
                                                     <div key={leg.id} className="flex items-start gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
                                                         <div className="flex-1 min-w-0">
-         <div className="flex items-start justify-between gap-2">
-             <span className="text-[11px] font-black uppercase leading-tight break-words">{leg.waypoint || 'PNT'}</span>
-                                    <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{formatLatLonDms(leg.latitude, leg.longitude)}</span>
-         </div>
-         {[leg.frequencies, leg.layerInfo].filter(Boolean).map((line, index) => (
-             <p key={`${leg.id}-detail-${index}`} className="mt-1 text-[9px] font-semibold leading-tight text-slate-700">
-                 {line}
-             </p>
-         ))}
-         <div className="mt-2 flex gap-5">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                    <span className="text-[10px] font-black">{leg.distance?.toFixed(1) || '0.0'} NM</span>
-                                                                </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                    <span className="text-[10px] font-black">{leg.magneticHeading?.toFixed(0) || '0'}&deg;</span>
-                                                                </div>
-                                                            </div>
+                                                            {(() => {
+                                                                const segment = getRouteSummarySegmentLabel(plannedLegs, plannedLegs.findIndex((item) => item.id === leg.id));
+                                                                const hasWaypointContext = Boolean(leg.waypointContext?.items?.length);
+                                                                const metaLine = [hasWaypointContext ? null : leg.frequencies || leg.layerInfo, formatLatLonDms(leg.latitude, leg.longitude)]
+                                                                    .filter(Boolean)
+                                                                    .join(' | ');
+
+                                                                return (
+                                                                    <>
+                                                                        <div className="flex items-start justify-between gap-2">
+                                                                            <span className="text-[11px] font-black uppercase leading-tight break-words">{leg.waypoint || 'PNT'}</span>
+                                                                            <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{formatLatLonDms(leg.latitude, leg.longitude)}</span>
+                                                                        </div>
+                                                                        <p className="mt-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">{segment.segmentLabel}</p>
+                                                                        {metaLine ? (
+                                                                            <p className="mt-1 text-[9px] font-semibold leading-tight text-slate-700">{metaLine}</p>
+                                                                        ) : null}
+                                                                        <div className="mt-2 flex gap-5">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
+                                                                                <span className="text-[10px] font-black">{segment.hasNextLeg ? `${segment.nextDistance?.toFixed(1) || '0.0'} NM` : '---'}</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[8px] font-bold uppercase text-muted-foreground">TRK</span>
+                                                                                <span className="text-[10px] font-black">{segment.hasNextLeg ? `${formatHeadingDegrees(segment.nextDisplayTrack)}°` : '---'}</span>
+                                                                        </div>
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })()}
                                                         </div>
                                                         <Button 
                                                             variant="ghost" 

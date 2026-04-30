@@ -45,6 +45,8 @@ const EMPTY_SUMMARY = {
 };
 
 type SummaryBookingRecord = {
+  id?: string | null;
+  bookingNumber?: string | null;
   aircraftId?: string | null;
   date?: string | null;
   status?: string | null;
@@ -95,6 +97,8 @@ const projectBookingSummary = (value: unknown): SummaryBookingRecord => {
       : null;
 
   return {
+    id: typeof booking.id === 'string' ? booking.id : null,
+    bookingNumber: typeof booking.bookingNumber === 'string' ? booking.bookingNumber : null,
     aircraftId: typeof booking.aircraftId === 'string' ? booking.aircraftId : null,
     date: typeof booking.date === 'string' ? booking.date : null,
     status: typeof booking.status === 'string' ? booking.status : null,

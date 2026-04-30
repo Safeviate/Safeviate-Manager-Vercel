@@ -28,12 +28,29 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const RouteWaypointIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:14px;height:14px;border-radius:9999px;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px rgba(239,68,68,0.35);"></div>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
+const createRouteWaypointIcon = (index: number) =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width:22px;
+        height:22px;
+        border-radius:9999px;
+        background:#ef4444;
+        border:2px solid #fff;
+        box-shadow:0 0 0 2px rgba(239,68,68,0.35);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:12px;
+        font-weight:900;
+        line-height:1;
+      ">${index}</div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
 
 interface AeronauticalMapProps {
   legs: NavlogLeg[];
@@ -351,8 +368,21 @@ function MapEvents({
   // Mouse events via Leaflet's useMapEvents
   useMapEvents({
     mousedown(e) {
-      if ((e.originalEvent as MouseEvent).button !== 0) return;
+      const originalEvent = e.originalEvent as MouseEvent;
+      if (originalEvent.button !== 0) return;
+      if (originalEvent.ctrlKey || originalEvent.metaKey || originalEvent.shiftKey || originalEvent.altKey) {
+        clearPress();
+        return;
+      }
       startPress(e.latlng);
+    },
+    mousemove(e) {
+      const press = pressRef.current;
+      if (!press) return;
+      const movedMeters = map.distance(press.latlng, e.latlng);
+      if (movedMeters > CLICK_MOVE_TOLERANCE_METERS) {
+        clearPress();
+      }
     },
     mouseup(e) {
       endPress(e.latlng);
@@ -1337,6 +1367,9 @@ export default function AeronauticalMap({
   }, []);
   const buildWaypointContext = useCallback((info: LayerInfoState) => {
     const primary =
+      [...info.items]
+        .filter((item) => typeof item.distanceNm === 'number')
+        .sort((a, b) => (a.distanceNm ?? Number.POSITIVE_INFINITY) - (b.distanceNm ?? Number.POSITIVE_INFINITY))[0] ||
       info.items.find((item) => item.layer === 'OpenAIP Airports') ||
       info.items.find((item) => item.layer === 'OpenAIP Navaids') ||
       info.items.find((item) => item.layer === 'OpenAIP Reporting Points') ||
@@ -1412,9 +1445,9 @@ export default function AeronauticalMap({
         });
       }
     };
-    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'airports' && airportsVisible), 'OpenAIP Airports', 20);
-    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'navaids' && navaidsVisible), 'OpenAIP Navaids', 20);
-    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'reporting-points' && reportingVisible), 'OpenAIP Reporting Points', 20);
+    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'airports' && airportsVisible), 'OpenAIP Airports', CLICK_SNAP_THRESHOLD_NM);
+    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'navaids' && navaidsVisible), 'OpenAIP Navaids', CLICK_SNAP_THRESHOLD_NM);
+    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'reporting-points' && reportingVisible), 'OpenAIP Reporting Points', CLICK_SNAP_THRESHOLD_NM);
 
     const obstacleNearest = obstacleFeatures
       .map((feature) => {
@@ -1440,12 +1473,19 @@ export default function AeronauticalMap({
       });
     }
 
+    const sortedItems = [...items].sort((a, b) => {
+      const aDistance = typeof a.distanceNm === 'number' ? a.distanceNm : Number.POSITIVE_INFINITY;
+      const bDistance = typeof b.distanceNm === 'number' ? b.distanceNm : Number.POSITIVE_INFINITY;
+      if (aDistance !== bDistance) return aDistance - bDistance;
+      return a.label.localeCompare(b.label);
+    });
+
     return {
       lat,
       lon,
-      title: items[0]?.label || 'Map Position',
+      title: sortedItems[0]?.label || 'Map Position',
       subtitle: airspaceMatches[0]?.layer || undefined,
-      items: items.slice(0, 5),
+      items: sortedItems.slice(0, 5),
       activeLayers: activeLayerLabels,
     };
   }, [
@@ -2095,7 +2135,7 @@ export default function AeronauticalMap({
         <Marker
           key={leg.id}
           position={[leg.latitude!, leg.longitude!]}
-          icon={RouteWaypointIcon}
+          icon={createRouteWaypointIcon(index + 1)}
           draggable={isEditing}
           eventHandlers={{
             dragstart: () => {
