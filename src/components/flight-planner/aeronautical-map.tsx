@@ -15,6 +15,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
+import { ROUTE_LINE_COLOR, ROUTE_LINE_OPACITY, ROUTE_LINE_WIDTH } from '@/components/maps/route-line-style';
+import { createNumberedWaypointIcon } from '@/components/maps/waypoint-marker-style';
 import type { ReactNode } from 'react';
 
 const DefaultIcon = L.icon({
@@ -25,12 +27,106 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const RouteWaypointIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:14px;height:14px;border-radius:9999px;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 2px rgba(239,68,68,0.35);"></div>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
+const createMeasurePointIcon = (label: string, color = '#0f172a') =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        min-width:22px;
+        height:22px;
+        padding:0 6px;
+        border-radius:9999px;
+        background:${color};
+        border:2px solid #fff;
+        box-shadow:0 0 0 2px rgba(15,23,42,0.28);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:11px;
+        font-weight:900;
+        line-height:1;
+        white-space:nowrap;
+      ">${label}</div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+
+const createMeasureLabelIcon = (label: string) => {
+  const width = Math.max(58, label.length * 7 + 16);
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        min-width:${width}px;
+        height:24px;
+        padding:0 8px;
+        border-radius:9999px;
+        background:rgba(15,23,42,0.92);
+        border:2px solid #fff;
+        box-shadow:0 0 0 2px rgba(15,23,42,0.24);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:10px;
+        font-weight:900;
+        line-height:1;
+        white-space:nowrap;
+      ">${label}</div>
+    `,
+    iconSize: [width, 24],
+    iconAnchor: [width / 2, 12],
+  });
+};
+
+const getOwnshipInnerMarkup = (style: OwnshipIconStyle = 'triangle') =>
+  style === 'aircraft'
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true" style="position:relative;z-index:1;width:19px;height:19px;fill:#0369a1;filter:drop-shadow(0 1px 1px rgba(15,23,42,0.2));"><path d="M12 2l2.6 6.6 6.4 1.2-6.4 1.4L12 22l-2.6-10.8-6.4-1.4 6.4-1.2L12 2z" /></svg>'
+    : style === 'dot-line'
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true" style="position:relative;z-index:1;width:20px;height:20px;overflow:visible;filter:drop-shadow(0 1px 1px rgba(15,23,42,0.2));"><path d="M3 12h11" stroke="#0369a1" stroke-width="3.25" stroke-linecap="round"/><path d="M14 6l8 6-8 6v-4H10v-4h4z" fill="#0369a1"/><circle cx="4.5" cy="12" r="3.5" fill="#0369a1" stroke="#fff" stroke-width="1.75"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true" style="position:relative;z-index:1;width:19px;height:19px;fill:#0369a1;filter:drop-shadow(0 1px 1px rgba(15,23,42,0.2));"><path d="M12 2l8 20-8-4-8 4z" /></svg>';
+
+const getOwnshipIconMarkup = (headingTrue?: number | null, style: OwnshipIconStyle = 'triangle') =>
+  `
+      <div style="
+        width:32px;
+        height:32px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        transform:rotate(${headingTrue != null && !Number.isNaN(headingTrue) ? headingTrue : 0}deg);
+        transform-origin:center;
+      ">
+        <div style="
+          position:relative;
+          width:30px;
+          height:30px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        ">
+          <div style="
+            position:absolute;
+            inset:2px;
+            border-radius:9999px;
+            background:rgba(14,165,233,0.08);
+            border:2px solid rgba(255,255,255,0.92);
+            box-shadow:0 0 0 4px rgba(14,165,233,0.14);
+          "></div>
+          ${getOwnshipInnerMarkup(style)}
+        </div>
+      </div>
+    `;
+
+const createOwnshipIcon = (headingTrue?: number | null, style: OwnshipIconStyle = 'triangle') =>
+  L.divIcon({
+    className: '',
+    html: getOwnshipIconMarkup(headingTrue, style),
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
 
 interface AeronauticalMapProps {
   legs: NavlogLeg[];
@@ -230,6 +326,8 @@ type FlightPlannerMapSettings = {
   showHangGlidings?: boolean;
   showOnlyActiveAirspace?: boolean;
 };
+
+type OwnshipIconStyle = 'triangle' | 'aircraft' | 'dot-line';
 
 const FLIGHT_PLANNER_MAP_SETTINGS_KEY = 'safeviate.flight-planner-map-settings';
 const DEFAULT_FLIGHT_PLANNER_MAP_SETTINGS: Required<Omit<FlightPlannerMapSettings, 'id'>> = {
@@ -2018,18 +2116,18 @@ export default function AeronauticalMap({
       {polylinePositions.length > 1 && (
         <Polyline
           positions={polylinePositions}
-          color="#10b981"
-          weight={4}
+          color={ROUTE_LINE_COLOR}
+          weight={ROUTE_LINE_WIDTH}
           dashArray="10, 10"
-          opacity={0.8}
+          opacity={ROUTE_LINE_OPACITY}
         />
       )}
 
       {legs.map((leg, index) => (
-        <Marker
+      <Marker
           key={leg.id}
           position={[leg.latitude!, leg.longitude!]}
-          icon={RouteWaypointIcon}
+          icon={createNumberedWaypointIcon(index + 1)}
           draggable={isEditing}
           eventHandlers={{
             dragstart: () => {

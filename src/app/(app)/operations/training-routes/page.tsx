@@ -244,8 +244,8 @@ export default function TrainingRoutesPage() {
         </CardHeader>
 
         <CardContent className="flex-1 overflow-hidden p-0">
-          <div className={cn('grid grid-cols-1 overflow-hidden lg:h-full lg:grid-cols-[minmax(0,1fr)_350px]', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
-              <div className={cn('relative order-1 z-20 flex flex-col overflow-visible bg-slate-900', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'bg-white')}>
+          <div className={cn('grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_350px] lg:grid-rows-none lg:h-full', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
+              <div className={cn('relative order-1 z-20 flex h-full min-h-0 flex-col overflow-hidden bg-slate-900', isModern && 'bg-white')}>
                 <AeronauticalMap
                   legs={activeRoute?.legs || []}
                   hazards={activeRoute?.hazards || []}
@@ -261,9 +261,9 @@ export default function TrainingRoutesPage() {
               {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
-            <div className={cn('relative order-2 z-10 flex min-h-0 flex-col overflow-hidden border-t bg-background lg:h-full lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
+            <div className={cn('relative order-2 z-10 flex h-full min-h-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
               {activeRoute ? (
-                <ScrollArea className="flex-1">
+                <ScrollArea className="h-full flex-1 overscroll-contain">
                   <div className="space-y-8 p-6 pb-12">
                     <div className={cn('space-y-4 border-b pb-6', isModern && 'border-slate-200/80')}>
                     <div className="flex items-center justify-between">

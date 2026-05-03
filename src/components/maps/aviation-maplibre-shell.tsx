@@ -6,6 +6,11 @@ import type { FlightSession } from '@/types/flight-session';
 import type { Hazard, NavlogLeg } from '@/types/booking';
 import { MAPLIBRE_BASE_STYLES, OPENAIP_VECTOR_TILE_URL } from '@/lib/maplibre-map-config';
 import { parseJsonResponse } from '@/lib/safe-json';
+import {
+  ROUTE_LINE_COLOR,
+  ROUTE_LINE_OPACITY,
+  ROUTE_LINE_WIDTH,
+} from '@/components/maps/route-line-style';
 
 type Point = [number, number];
 
@@ -695,21 +700,7 @@ export function AviationMapLibreShell({
     const handleMapInteraction = () => onUserInteractedRef.current?.();
 
     map.on('load', () => {
-      map.addSource('route', { type: 'geojson', data: routeGeoJson as any });
-      map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        paint: {
-          'line-color': '#10b981',
-          'line-width': 4,
-          'line-opacity': 0.85,
-          'line-dasharray': [10, 10],
-        },
-        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(true) },
-      });
-
-        if (mode === 'fleet-tracker') {
+      if (mode === 'fleet-tracker') {
         map.addSource('fleet-tracker-aircraft-trails', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } as any });
         map.addLayer({
           id: 'fleet-tracker-aircraft-trails',
@@ -1011,6 +1002,20 @@ export function AviationMapLibreShell({
           paint: { 'text-color': '#0f172a', 'text-halo-color': '#ffffff', 'text-halo-width': 1.25 },
         } as any);
       }
+
+      map.addSource('route', { type: 'geojson', data: routeGeoJson as any });
+      map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        paint: {
+          'line-color': ROUTE_LINE_COLOR,
+          'line-width': ROUTE_LINE_WIDTH,
+          'line-opacity': ROUTE_LINE_OPACITY,
+          'line-dasharray': [10, 10],
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(true) },
+      });
 
       const markerIds: string[] = [];
       const addMarker = (id: string, marker: maplibregl.Marker) => {

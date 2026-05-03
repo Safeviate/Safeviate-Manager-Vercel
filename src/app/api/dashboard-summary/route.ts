@@ -45,6 +45,9 @@ const EMPTY_SUMMARY = {
 };
 
 type SummaryBookingRecord = {
+  id?: string;
+  bookingNumber?: string | null;
+  type?: string | null;
   aircraftId?: string | null;
   date?: string | null;
   status?: string | null;
@@ -95,6 +98,9 @@ const projectBookingSummary = (value: unknown): SummaryBookingRecord => {
       : null;
 
   return {
+    id: typeof booking.id === 'string' ? booking.id : undefined,
+    bookingNumber: typeof booking.bookingNumber === 'string' ? booking.bookingNumber : null,
+    type: typeof booking.type === 'string' ? booking.type : null,
     aircraftId: typeof booking.aircraftId === 'string' ? booking.aircraftId : null,
     date: typeof booking.date === 'string' ? booking.date : null,
     status: typeof booking.status === 'string' ? booking.status : null,
@@ -214,7 +220,7 @@ export async function GET() {
       riskRows,
       attendanceRows,
       meetingRows,
-    ] = await getOrSetRouteCache(`dashboard-summary:${resolvedTenantId}`, 30_000, async () => Promise.all([
+    ] = await getOrSetRouteCache(`dashboard-summary:v2:${resolvedTenantId}`, 30_000, async () => Promise.all([
       safeFindMany('bookings', prisma.bookingRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
       safeFindMany('aircrafts', prisma.aircraftRecord.findMany({ where: { tenantId: resolvedTenantId }, select: { data: true } })),
       safeFindMany(

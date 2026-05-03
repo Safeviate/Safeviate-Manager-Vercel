@@ -4,6 +4,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl';
 
 import { MAPLIBRE_BASE_STYLES, OPENAIP_VECTOR_TILE_URL } from '@/lib/maplibre-map-config';
+import type { NavlogLeg } from '@/types/booking';
+import {
+  ROUTE_LINE_COLOR,
+  ROUTE_LINE_CASING_COLOR,
+  ROUTE_LINE_CASING_OPACITY,
+  ROUTE_LINE_CASING_WIDTH,
+  ROUTE_LINE_OPACITY,
+  ROUTE_LINE_WIDTH,
+} from '@/components/maps/route-line-style';
+import { createNumberedWaypointElement } from '@/components/maps/waypoint-marker-style';
 
 type Point = [number, number];
 
@@ -20,6 +30,7 @@ type ActiveFlightMapLibreShellProps = {
   routePoints: Point[];
   trackHistory: Point[];
   legs: Array<{ id: string; latitude?: number; longitude?: number; waypoint: string }>;
+  activeLegIndex?: number;
   airportFeatures: Array<{ _id: string; name: string; type?: string; icaoCode?: string; identifier?: string; geometry?: { coordinates?: [number, number] }; sourceLayer: 'airports' | 'navaids' | 'reporting-points' }>;
   navaidFeatures: Array<{ _id: string; name: string; type?: string; icaoCode?: string; identifier?: string; geometry?: { coordinates?: [number, number] }; sourceLayer: 'airports' | 'navaids' | 'reporting-points' }>;
   reportingPointFeatures: Array<{ _id: string; name: string; type?: string; icaoCode?: string; identifier?: string; geometry?: { coordinates?: [number, number] }; sourceLayer: 'airports' | 'navaids' | 'reporting-points' }>;
@@ -86,6 +97,89 @@ const toLayerVisibility = (visible: boolean) => (visible ? 'visible' : 'none') a
 
 const tileUrl = OPENAIP_VECTOR_TILE_URL ? `${OPENAIP_VECTOR_TILE_URL.replace(/\/$/, '')}/{z}/{x}/{y}.pbf` : '';
 const masterChartTileUrl = '/api/openaip/tiles/openaip/{z}/{x}/{y}';
+
+type WaypointContextItem = {
+  kind?: string;
+  label: string;
+  layer?: string;
+  distanceNm?: number;
+  detail?: string;
+  frequencies?: string;
+};
+
+const formatLatLonDms = (latitude?: number, longitude?: number) => {
+  if (latitude == null || longitude == null) return 'N/A';
+  return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const buildWaypointPopupMarkup = (leg: NavlogLeg, legIndex: number, activeLegIndex?: number) => {
+  const legWithContext = leg as NavlogLeg & { waypointContext?: { items?: WaypointContextItem[] } };
+  const coordinates = formatLatLonDms(leg.latitude, leg.longitude);
+  const isActiveToWaypoint = activeLegIndex != null && legIndex === activeLegIndex;
+  const isNextWaypoint = activeLegIndex != null && legIndex === activeLegIndex + 1;
+  const badges = [
+    isActiveToWaypoint
+      ? '<span style="display:inline-flex;align-items:center;border:1px solid rgba(14,165,233,0.2);background:#e0f2fe;color:#0c4a6e;border-radius:9999px;padding:2px 8px;font-size:9px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;">Active Leg</span>'
+      : '',
+    isNextWaypoint
+      ? '<span style="display:inline-flex;align-items:center;border:1px solid rgba(16,185,129,0.2);background:#ecfdf5;color:#065f46;border-radius:9999px;padding:2px 8px;font-size:9px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;">Next Waypoint</span>'
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const contextItems = legWithContext.waypointContext?.items ?? [];
+  const contextMarkup = contextItems
+    .slice(0, 4)
+    .map((item) => {
+      const detailLine = [item.layer, item.distanceNm != null ? `${item.distanceNm.toFixed(1)} NM` : null]
+        .filter(Boolean)
+        .map((value) => escapeHtml(value!))
+        .join(' • ');
+      return `
+          <div style="border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:8px 10px;background:#f8fafc;">
+            <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#059669;">${escapeHtml(item.kind || 'waypoint')}</p>
+            <p style="margin:2px 0 0;font-size:13px;font-weight:800;color:#0f172a;">${escapeHtml(item.label)}</p>
+            ${detailLine ? `<p style="margin:2px 0 0;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;">${detailLine}</p>` : ''}
+            ${item.detail ? `<p style="margin:5px 0 0;font-size:11px;line-height:1.35;color:#0f172a;">${escapeHtml(item.detail)}</p>` : ''}
+            ${item.frequencies ? `<p style="margin:5px 0 0;font-size:11px;font-weight:800;color:#047857;">${escapeHtml(item.frequencies)}</p>` : ''}
+          </div>
+        `;
+    })
+    .join('');
+
+  const notesMarkup = leg.notes
+    ? `
+        <div style="border-top:1px solid rgba(148,163,184,0.2);padding-top:10px;">
+          <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#64748b;">Leg Notes</p>
+          <p style="margin:4px 0 0;font-size:11px;line-height:1.45;color:#0f172a;white-space:pre-wrap;">${escapeHtml(leg.notes)}</p>
+        </div>
+      `
+    : '';
+
+  return `
+    <div style="font-family:Inter,system-ui,sans-serif;max-width:340px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div>
+          <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#64748b;">Waypoint ${legIndex + 1}</p>
+          <h3 style="margin:4px 0 0;font-size:16px;font-weight:800;color:#0f172a;">${escapeHtml(leg.waypoint)}</h3>
+          <p style="margin:4px 0 0;font-size:11px;color:#475569;">${coordinates}</p>
+        </div>
+        ${badges ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">${badges}</div>` : ''}
+      </div>
+      ${contextMarkup ? `<div style="display:grid;gap:8px;margin-top:12px;">${contextMarkup}</div>` : ''}
+      ${notesMarkup}
+    </div>
+  `;
+};
 
 const fetchOpenAipJson = async <T,>(url: string): Promise<T | null> => {
   try {
@@ -241,6 +335,7 @@ export function ActiveFlightMapLibreShell({
   routePoints,
   trackHistory,
   legs,
+  activeLegIndex,
   airportFeatures,
   navaidFeatures,
   reportingPointFeatures,
@@ -452,23 +547,6 @@ export function ActiveFlightMapLibreShell({
     };
 
     map.on('load', () => {
-      map.addSource('route', {
-        type: 'geojson',
-        data: routeGeoJson as any,
-      });
-      map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        paint: {
-          'line-color': '#10b981',
-          'line-width': 4,
-          'line-opacity': 0.85,
-          'line-dasharray': [10, 10],
-        },
-        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(showRouteLine) },
-      });
-
       map.addSource('track', {
         type: 'geojson',
         data: trackGeoJson as any,
@@ -866,6 +944,33 @@ export function ActiveFlightMapLibreShell({
         } as any);
       }
 
+      map.addSource('route', {
+        type: 'geojson',
+        data: routeGeoJson as any,
+      });
+      map.addLayer({
+        id: 'route-line-casing',
+        type: 'line',
+        source: 'route',
+        paint: {
+          'line-color': ROUTE_LINE_CASING_COLOR,
+          'line-width': ROUTE_LINE_CASING_WIDTH,
+          'line-opacity': ROUTE_LINE_CASING_OPACITY,
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(showRouteLine) },
+      });
+      map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        paint: {
+          'line-color': ROUTE_LINE_COLOR,
+          'line-width': ROUTE_LINE_WIDTH,
+          'line-opacity': ROUTE_LINE_OPACITY,
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(showRouteLine) },
+      });
+
       bringAerialLayersToFront(map, [
         'openaip-airport-points',
         'openaip-airport-labels',
@@ -1102,21 +1207,32 @@ export function ActiveFlightMapLibreShell({
 
     if (!showWaypointMarkers) return;
 
-    for (const leg of waypointLegs) {
-      const el = document.createElement('div');
-      el.style.width = '14px';
-      el.style.height = '14px';
-      el.style.borderRadius = '9999px';
-      el.style.background = '#10b981';
-      el.style.border = '2px solid white';
-      el.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.28)';
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+    for (const [legIndex, leg] of waypointLegs.entries()) {
+      const isActiveToWaypoint = activeLegIndex != null && legIndex === activeLegIndex;
+      const isNextWaypoint = activeLegIndex != null && legIndex === activeLegIndex + 1;
+      const marker = new maplibregl.Marker({
+        element: createNumberedWaypointElement(legIndex + 1, {
+          backgroundColor: isActiveToWaypoint ? '#0ea5e9' : isNextWaypoint ? '#f59e0b' : '#ef4444',
+          shadowColor: isActiveToWaypoint
+            ? 'rgba(14,165,233,0.35)'
+            : isNextWaypoint
+              ? 'rgba(245,158,11,0.30)'
+              : 'rgba(239,68,68,0.35)',
+        }),
+        anchor: 'center',
+      })
+        .setPopup(
+          new maplibregl.Popup({
+            offset: 14,
+            closeButton: false,
+            maxWidth: '340px',
+          }).setHTML(buildWaypointPopupMarkup(leg, legIndex, activeLegIndex))
+        )
         .setLngLat([leg.longitude!, leg.latitude!])
         .addTo(map);
       waypointMarkersRef.current.push(marker);
     }
-  }, [showWaypointMarkers, waypointLegs]);
+  }, [activeLegIndex, showWaypointMarkers, waypointLegs]);
 
   useEffect(() => {
     const map = mapRef.current;

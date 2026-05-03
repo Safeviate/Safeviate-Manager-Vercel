@@ -130,19 +130,20 @@ export default function FlightPlannerPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.3fr_0.7fr]">
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <div className={cn('grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] gap-6 overflow-hidden p-6 lg:grid-cols-[1.3fr_0.7fr] lg:grid-rows-none', isModern && 'gap-6')}>
           <Card className={cn('self-stretch border shadow-none', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'overflow-hidden border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
             <CardHeader>
               <CardTitle className="text-sm font-black uppercase tracking-widest">Planning Map Surface</CardTitle>
               <CardDescription>Search, click, and build the route directly on the aeronautical chart.</CardDescription>
             </CardHeader>
-            <CardContent className={cn('relative h-full p-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
+            <CardContent className={cn('relative h-full min-h-0 p-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
               <AeronauticalMap legs={legs} onAddWaypoint={handleAddWaypoint} />
             </CardContent>
           </Card>
 
-          <div className="space-y-6">
-            <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
+          <div className="flex min-h-0 flex-col gap-6 overflow-hidden">
+            <Card className={cn('shrink-0 border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
               <CardHeader className="flex flex-row items-start justify-between gap-3">
                 <div className="space-y-1">
                   <CardTitle className="text-sm font-black uppercase tracking-widest">Route Summary</CardTitle>
@@ -181,13 +182,13 @@ export default function FlightPlannerPage() {
               </CardContent>
             </Card>
 
-            <Card className={cn('border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
+            <Card className={cn('flex min-h-0 flex-1 flex-col border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
               <CardHeader>
                 <CardTitle className="text-sm font-black uppercase tracking-widest">Route Legs</CardTitle>
                 <CardDescription>Waypoint sequence, leg math, and departure or arrival selection.</CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[calc(100vh-24rem)] min-h-[420px]">
+              <CardContent className="flex min-h-0 flex-1 p-0">
+                <ScrollArea className="h-full flex-1 overscroll-contain">
                   <div className="space-y-2 p-3">
                     {legs.length === 0 ? (
                       <div className="flex h-[320px] items-center justify-center rounded-xl border border-dashed bg-background/60 text-center">
@@ -297,6 +298,7 @@ export default function FlightPlannerPage() {
                 </ScrollArea>
               </CardContent>
             </Card>
+          </div>
           </div>
         </CardContent>
       </Card>
