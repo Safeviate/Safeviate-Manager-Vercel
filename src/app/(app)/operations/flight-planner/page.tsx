@@ -152,8 +152,8 @@ export default function FlightPlannerPage() {
             <Card className={cn('shrink-0 border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
               <CardHeader className="flex flex-row items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest">Route Summary</CardTitle>
-                  <CardDescription>Totals and route endpoints update as waypoints are added.</CardDescription>
+                  <CardTitle className="text-sm font-black uppercase tracking-widest">Planning Summary</CardTitle>
+                  <CardDescription>Totals, endpoints, and leg details update as waypoints are added.</CardDescription>
                 </div>
                 <Badge variant="secondary" className="shrink-0 text-[10px] font-black uppercase">
                   {legs.length} WP
@@ -177,11 +177,11 @@ export default function FlightPlannerPage() {
 
                 <div className={cn('grid grid-cols-2 gap-2 rounded-xl border bg-background p-3', isModern && 'rounded-2xl border-slate-200 bg-slate-50/70')}>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Departure</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">From</p>
                     <p className="truncate text-sm font-black uppercase">{departureLeg?.waypoint || 'Not set'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Arrival</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">To</p>
                     <p className="truncate text-sm font-black uppercase">{arrivalLeg?.waypoint || 'Not set'}</p>
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export default function FlightPlannerPage() {
 
             <Card className={cn('flex min-h-0 flex-1 flex-col border shadow-none', isModern && 'border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]')}>
               <CardHeader>
-                <CardTitle className="text-sm font-black uppercase tracking-widest">Route Legs</CardTitle>
+                <CardTitle className="text-sm font-black uppercase tracking-widest">Planned Legs</CardTitle>
                 <CardDescription>Waypoint sequence, leg math, and departure or arrival selection.</CardDescription>
               </CardHeader>
               <CardContent className="flex min-h-0 flex-1 p-0">
@@ -223,11 +223,11 @@ export default function FlightPlannerPage() {
                           <div className="min-w-0 flex-1 space-y-2">
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0 space-y-1">
-                                <p className="truncate text-sm font-black uppercase">
-                                  {index === 0
-                                    ? `${legs[index]?.waypoint || 'WP 1'} to ${legs[index + 1]?.waypoint || `WP ${index + 2}`}`
-                                    : `${legs[index - 1]?.waypoint || `WP ${index}`} to ${leg.waypoint || `WP ${index + 1}`}`
-                                  }
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                  From {index === 0 ? 'Origin' : legs[index - 1]?.waypoint || `WP ${index}`}
+                                </p>
+                                <p className="text-sm font-black uppercase">
+                                  To {leg.waypoint || `WP ${index + 1}`}
                                 </p>
                                 <p className="text-[9px] font-mono font-bold text-muted-foreground">
                                   {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -186,6 +186,8 @@ export default function ActiveFlightPage() {
   const [hasQueuedSession, setHasQueuedSession] = useState(false);
   const [followOwnship, setFollowOwnship] = useState(true);
   const [mapRecenterSignal, setMapRecenterSignal] = useState(0);
+  const [loadedBookingId, setLoadedBookingId] = useState('');
+  const [loadedPlannerRouteId, setLoadedPlannerRouteId] = useState('');
   const [isLayersCardOpen, setIsLayersCardOpen] = useState(false);
   const [isMapZoomCardOpen, setIsMapZoomCardOpen] = useState(false);
   const resumeHydratedRef = useRef<string | null>(null);
@@ -312,15 +314,17 @@ export default function ActiveFlightPage() {
   );
   const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
   const plannerRouteChoices = useMemo(() => [...trainingRoutes].sort((a, b) => (a.name || '').localeCompare(b.name || '')), [trainingRoutes]);
-  const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
+  const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === loadedBookingId) || null, [candidateBookings, loadedBookingId]);
   const selectedBookingFilter = useMemo(() => bookingChoices.find((booking) => booking.id === selectedBookingFilterId) || null, [bookingChoices, selectedBookingFilterId]);
-  const selectedPlannerRoute = useMemo(() => plannerRouteChoices.find((route) => route.id === selectedPlannerRouteId) || null, [plannerRouteChoices, selectedPlannerRouteId]);
+  const selectedPlannerRoute = useMemo(() => plannerRouteChoices.find((route) => route.id === loadedPlannerRouteId) || null, [plannerRouteChoices, loadedPlannerRouteId]);
+  const selectedBookingChoice = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
+  const selectedPlannerRouteChoice = useMemo(() => plannerRouteChoices.find((route) => route.id === selectedPlannerRouteId) || null, [plannerRouteChoices, selectedPlannerRouteId]);
   const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
   const selectedBookingFilterValue = selectedBookingFilter ? selectedBookingFilterId : undefined;
-  const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
-  const selectedPlannerRouteValue = selectedPlannerRoute ? selectedPlannerRouteId : undefined;
-  const mobileSelectorSummary = selectedAircraft?.tailNumber || selectedBookingFilter?.bookingNumber || selectedBooking?.bookingNumber || selectedPlannerRoute?.name
-    ? [selectedAircraft?.tailNumber, selectedBookingFilter ? `Booking #${selectedBookingFilter.bookingNumber}` : null, selectedBooking ? `Route #${selectedBooking.bookingNumber}` : null, selectedPlannerRoute ? `Planner Route ${selectedPlannerRoute.name}` : null]
+  const selectedBookingValue = selectedBookingId || undefined;
+  const selectedPlannerRouteValue = selectedPlannerRouteId || undefined;
+  const mobileSelectorSummary = selectedAircraft?.tailNumber || selectedBookingFilter?.bookingNumber || selectedBookingChoice?.bookingNumber || selectedPlannerRouteChoice?.name
+    ? [selectedAircraft?.tailNumber, selectedBookingFilter ? `Booking #${selectedBookingFilter.bookingNumber}` : null, selectedBookingChoice ? `Route #${selectedBookingChoice.bookingNumber}` : null, selectedPlannerRouteChoice ? `Planner Route ${selectedPlannerRouteChoice.name}` : null]
         .filter(Boolean)
         .join(' • ')
     : 'Flight Setup';
@@ -481,6 +485,8 @@ export default function ActiveFlightPage() {
     if (bookingId) {
       setSelectedPlannerRouteId('');
     }
+    setLoadedBookingId('');
+    setLoadedPlannerRouteId('');
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraftId,
@@ -494,6 +500,8 @@ export default function ActiveFlightPage() {
     if (routeId !== 'none') {
       setSelectedBookingId('');
     }
+    setLoadedBookingId('');
+    setLoadedPlannerRouteId('');
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraftId,
@@ -505,6 +513,8 @@ export default function ActiveFlightPage() {
   const handleClearRouteSelection = () => {
     setSelectedBookingId('');
     setSelectedPlannerRouteId('');
+    setLoadedBookingId('');
+    setLoadedPlannerRouteId('');
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraftId,
@@ -513,19 +523,44 @@ export default function ActiveFlightPage() {
     });
   };
 
+  const forceRouteLoad = (source: 'booking' | 'route') => {
+    const bookingRouteId = selectedBookingId || '';
+    const plannerRouteId = selectedPlannerRouteId || '';
+
+    if (source === 'booking') {
+      if (!bookingRouteId) {
+        toast({
+          variant: 'destructive',
+          title: 'No booking route selected',
+          description: 'Choose a navlog route first, then load it.',
+        });
+        return;
+      }
+
+      setLoadedBookingId(bookingRouteId);
+      setLoadedPlannerRouteId('');
+      return;
+    }
+
+    if (!plannerRouteId) {
+      toast({
+        variant: 'destructive',
+        title: 'No planner route selected',
+        description: 'Choose a planner route first, then load it.',
+      });
+      return;
+    }
+
+    setLoadedPlannerRouteId(plannerRouteId);
+    setLoadedBookingId('');
+  };
+
   useEffect(() => {
     if (!scheduleDataLoaded) return;
     if (!selectedAircraftId) return;
     if (selectedAircraft) return;
     setSelectedAircraftId('');
   }, [scheduleDataLoaded, selectedAircraft, selectedAircraftId]);
-
-  useEffect(() => {
-    if (!scheduleDataLoaded) return;
-    if (!selectedBookingId) return;
-    if (selectedBooking) return;
-    setSelectedBookingId('');
-  }, [scheduleDataLoaded, selectedBooking, selectedBookingId]);
 
   useEffect(() => {
     if (!deviceBinding?.deviceId) return;
@@ -1115,8 +1150,26 @@ export default function ActiveFlightPage() {
                         type="button"
                         variant="outline"
                         className="h-7 shrink-0 border-slate-300 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
+                        onClick={() => forceRouteLoad('booking')}
+                        disabled={!selectedBookingId}
+                      >
+                        Load Navlog
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-7 shrink-0 border-slate-300 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
+                        onClick={() => forceRouteLoad('route')}
+                        disabled={!selectedPlannerRouteId}
+                      >
+                        Load Route
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-7 shrink-0 border-slate-300 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
                         onClick={handleClearRouteSelection}
-                        disabled={!selectedBookingId && !selectedPlannerRouteId}
+                        disabled={!selectedBookingId && !selectedPlannerRouteId && !loadedBookingId && !loadedPlannerRouteId}
                       >
                         Clear Route
                       </Button>
@@ -1161,21 +1214,39 @@ export default function ActiveFlightPage() {
                     <SelectTrigger id="active-flight-planner-route-select" aria-label="Planner route" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
                       <SelectValue placeholder="No planner route selected" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No planner route selected</SelectItem>
-                      {plannerRouteChoices.map((route) => (
-                        <SelectItem key={route.id} value={route.id}>
-                          {route.name} ? {(route.legs?.length || 0)} waypoints
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                  <SelectContent>
+                    <SelectItem value="none">No planner route selected</SelectItem>
+                    {plannerRouteChoices.map((route) => (
+                      <SelectItem key={route.id} value={route.id}>
+                        {route.name} ? {(route.legs?.length || 0)} waypoints
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                   </Select>
                   <Button
                     type="button"
                     variant="outline"
                     className="h-8 shrink-0 border-slate-300 bg-white px-3 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
+                    onClick={() => forceRouteLoad('booking')}
+                    disabled={!selectedBookingId}
+                  >
+                    Load Navlog
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 shrink-0 border-slate-300 bg-white px-3 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
+                    onClick={() => forceRouteLoad('route')}
+                    disabled={!selectedPlannerRouteId}
+                  >
+                    Load Route
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 shrink-0 border-slate-300 bg-white px-3 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
                     onClick={handleClearRouteSelection}
-                    disabled={!selectedBookingId && !selectedPlannerRouteId}
+                    disabled={!selectedBookingId && !selectedPlannerRouteId && !loadedBookingId && !loadedPlannerRouteId}
                   >
                     Clear Route
                   </Button>

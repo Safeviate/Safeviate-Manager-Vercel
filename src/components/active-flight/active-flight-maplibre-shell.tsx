@@ -383,6 +383,10 @@ export function ActiveFlightMapLibreShell({
   const [loadedReportingPointFeatures, setLoadedReportingPointFeatures] = useState(reportingPointFeatures);
   const [loadedAirspaceCollections, setLoadedAirspaceCollections] = useState(airspaceCollections);
   const [loadedObstacleGeoJson, setLoadedObstacleGeoJson] = useState(obstacleGeoJson);
+  const [isCompactViewport, setIsCompactViewport] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+  const labelMinZoom = isCompactViewport ? 11 : 9.5;
+  const airspaceLabelMinZoom = isCompactViewport ? 11.5 : 10;
+  const obstacleLabelMinZoom = isCompactViewport ? 11.5 : 10.5;
 
   const routeGeoJson = useMemo(() => makeLineFeatureCollection(routePoints), [routePoints]);
   const trackGeoJson = useMemo(() => makeLineFeatureCollection(trackHistory), [trackHistory]);
@@ -498,6 +502,24 @@ export function ActiveFlightMapLibreShell({
   }, [onCenterChange]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateCompactViewport = () => {
+      const width = window.visualViewport?.width ?? window.innerWidth;
+      setIsCompactViewport(width < 768);
+    };
+
+    updateCompactViewport();
+    window.addEventListener('resize', updateCompactViewport);
+    window.visualViewport?.addEventListener('resize', updateCompactViewport);
+
+    return () => {
+      window.removeEventListener('resize', updateCompactViewport);
+      window.visualViewport?.removeEventListener('resize', updateCompactViewport);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
@@ -512,7 +534,6 @@ export function ActiveFlightMapLibreShell({
       interactive: true,
       dragRotate: true,
       touchPitch: true,
-      cooperativeGestures: true,
     });
 
     mapRef.current = map;
@@ -589,12 +610,12 @@ export function ActiveFlightMapLibreShell({
 
         const pointLabelLayout = {
           'text-field': ['coalesce', ['get', 'icaoCode'], ['get', 'identifier'], ['get', 'name']],
-          'text-size': 11,
+          'text-size': isCompactViewport ? 9 : 11,
           'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-          'text-offset': [0, 1],
+          'text-offset': [0, isCompactViewport ? 0.8 : 1],
           'text-anchor': 'top',
-          'text-allow-overlap': true,
-          'text-ignore-placement': true,
+          'text-allow-overlap': !isCompactViewport,
+          'text-ignore-placement': !isCompactViewport,
           'text-rotation-alignment': 'viewport',
           'text-pitch-alignment': 'viewport',
           'icon-rotation-alignment': 'map',
@@ -624,6 +645,7 @@ export function ActiveFlightMapLibreShell({
           type: 'symbol',
           source: 'openaip',
           'source-layer': 'airports',
+          minzoom: labelMinZoom,
           layout: {
             ...pointLabelLayout,
             visibility: toLayerVisibility(showLabels && showMasterChart && showAirports),
@@ -652,6 +674,7 @@ export function ActiveFlightMapLibreShell({
           type: 'symbol',
           source: 'openaip',
           'source-layer': 'navaids',
+          minzoom: labelMinZoom,
           layout: {
             ...pointLabelLayout,
             visibility: toLayerVisibility(showLabels && showMasterChart && showNavaids),
@@ -680,6 +703,7 @@ export function ActiveFlightMapLibreShell({
           type: 'symbol',
           source: 'openaip',
           'source-layer': 'reporting-points',
+          minzoom: labelMinZoom,
           layout: {
             ...pointLabelLayout,
             visibility: toLayerVisibility(showLabels && showMasterChart && showReportingPoints),
@@ -735,13 +759,14 @@ export function ActiveFlightMapLibreShell({
           source: 'openaip',
           'source-layer': 'airspaces',
           filter: activeAirspaceFilter,
+          minzoom: airspaceLabelMinZoom,
           layout: {
             'text-field': ['coalesce', ['get', 'name'], ['get', 'limits']],
-            'text-size': 11,
+            'text-size': isCompactViewport ? 9 : 11,
             'text-offset': [0, 0],
             'text-anchor': 'center',
-            'text-allow-overlap': true,
-            'text-ignore-placement': true,
+            'text-allow-overlap': !isCompactViewport,
+            'text-ignore-placement': !isCompactViewport,
             'text-rotation-alignment': 'viewport',
             'text-pitch-alignment': 'viewport',
             visibility: toLayerVisibility(showLabels && showMasterChart && (showAirspaces || showClassE || showClassF || showClassG || showMilitaryAreas || showTrainingAreas || showGlidingSectors || showHangGlidings)),
@@ -772,6 +797,7 @@ export function ActiveFlightMapLibreShell({
           type: 'symbol',
           source: 'openaip',
           'source-layer': 'obstacles',
+          minzoom: obstacleLabelMinZoom,
           layout: {
             'text-field': ['coalesce', ['get', 'name'], ['get', '_id']],
             'text-size': 11,
@@ -835,6 +861,7 @@ export function ActiveFlightMapLibreShell({
             id: `${id}-labels`,
             type: 'symbol',
             source,
+            minzoom: labelMinZoom,
             layout: {
               ...labelLayout,
               visibility: toLayerVisibility(labelsVisible),
@@ -887,6 +914,7 @@ export function ActiveFlightMapLibreShell({
           id: 'openaip-airspace-labels',
           type: 'symbol',
           source: 'openaip-airspaces-ctr',
+          minzoom: airspaceLabelMinZoom,
           layout: {
             'text-field': ['coalesce', ['get', 'name'], ['get', 'limits']],
             'text-size': 11,
@@ -922,14 +950,15 @@ export function ActiveFlightMapLibreShell({
           id: 'openaip-obstacle-labels',
           type: 'symbol',
           source: 'openaip-obstacles',
+          minzoom: obstacleLabelMinZoom,
           layout: {
             'text-field': ['coalesce', ['get', 'name'], ['get', '_id']],
-            'text-size': 11,
+            'text-size': isCompactViewport ? 9 : 11,
             'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-            'text-offset': [0, 1],
+            'text-offset': [0, isCompactViewport ? 0.8 : 1],
             'text-anchor': 'top',
-            'text-allow-overlap': true,
-            'text-ignore-placement': true,
+            'text-allow-overlap': !isCompactViewport,
+            'text-ignore-placement': !isCompactViewport,
             'text-rotation-alignment': 'viewport',
             'text-pitch-alignment': 'viewport',
             visibility: toLayerVisibility(showLabels && showMasterChart && showObstacles),

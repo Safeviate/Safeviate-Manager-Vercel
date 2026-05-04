@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -216,7 +216,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
                                 <div className="flex items-center gap-2">
                                     <Wind className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'}Ã‚Â°</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.wspd || 0}KT @ {data.metar.wdir || '0'}°</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Eye className="h-3 w-3 text-sky-500" />
@@ -224,7 +224,7 @@ const WeatherCard = ({ icao, title, onHide }: { icao?: string, title: string, on
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Thermometer className="h-3 w-3 text-sky-500" />
-                                    <span className="text-[10px] font-black uppercase">{data.metar.temp}Ã‚Â°C / {data.metar.dewp}Ã‚Â°C</span>
+                                    <span className="text-[10px] font-black uppercase">{data.metar.temp}°C / {data.metar.dewp}°C</span>
                                 </div>
                             </div>
                         </div>
@@ -501,7 +501,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Fuel sync between M&B and NavLog Ã¢â€â‚¬Ã¢â€â‚¬
+    // Fuel sync between M&B and NavLog
     const fuelStation = useMemo(() => stations.find(s => s.type === 'fuel'), [stations]);
     const fuelWeightLbs = fuelStation ? (parseFloat(String(fuelStation.weight)) || 0) : undefined;
 
@@ -1246,25 +1246,25 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                     {plannedLegs.map((leg, i) => (
                                                         <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
                                                             <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="font-black text-[11px] uppercase truncate">
-                                                            {i === 0
-                                                                ? `${plannedLegs[i]?.waypoint || 'WP 1'} to ${plannedLegs[i + 1]?.waypoint || `WP ${i + 2}`}`
-                                                                : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
-                                                            }
-                                                        </span>
-                                                    <span className="font-mono text-[9px] text-muted-foreground">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
-                                                    </div>
-                            {leg.frequencies && (
-                                <p className="mt-1 text-[9px] font-semibold text-emerald-700">
-                                    {leg.frequencies}
-                                </p>
-                            )}
-                            {leg.layerInfo && (
-                                <p className="text-[9px] font-semibold text-primary">
-                                    {leg.layerInfo}
-                                </p>
-                            )}
+                                                                <div className="space-y-1">
+                                                                    <span className="font-black text-[11px] uppercase truncate block">
+                                                                        {i === 0
+                                                                            ? `${plannedLegs[i]?.waypoint || 'WP 1'} to ${plannedLegs[i + 1]?.waypoint || `WP ${i + 2}`}`
+                                                                            : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
+                                                                        }
+                                                                    </span>
+                                                                    <span className="font-mono text-[9px] text-muted-foreground block">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
+                                                                </div>
+                                                                {leg.frequencies && (
+                                                                    <p className="mt-1 text-[9px] font-semibold text-emerald-700">
+                                                                        {leg.frequencies}
+                                                                    </p>
+                                                                )}
+                                                                {leg.layerInfo && (
+                                                                    <p className="text-[9px] font-semibold text-primary">
+                                                                        {leg.layerInfo}
+                                                                    </p>
+                                                                )}
                                                     <div className="flex gap-3 mt-1">
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
@@ -1272,7 +1272,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                     </div>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                        <span className="text-[10px] font-black">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}Ã‚Â°</span>
+                                                                        <span className="text-[10px] font-black">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}{"\u00B0"}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -1532,5 +1532,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         </Card>
     );
 }
+
 
 

@@ -54,7 +54,7 @@ export function LeafletMapFrame({
       wheelPxPerZoomLevel={wheelPxPerZoomLevel}
       zoomAnimation={zoomAnimation}
       preferCanvas={preferCanvas}
-      className={className}
+      className={className ? `${className} cursor-crosshair` : 'cursor-crosshair'}
       style={mergedStyle}
     >
       {children}

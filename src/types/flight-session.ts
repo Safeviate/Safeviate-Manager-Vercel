@@ -23,6 +23,7 @@ export interface FlightSession {
   aircraftId: string;
   aircraftRegistration: string;
   bookingId?: string;
+  plannerRouteId?: string;
   status: FlightSessionStatus;
   deviceId: string;
   deviceLabel?: string;

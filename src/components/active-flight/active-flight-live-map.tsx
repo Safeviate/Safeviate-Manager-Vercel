@@ -4,10 +4,11 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 import { FeatureGroup, GeoJSON, Marker, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Loader2, X } from 'lucide-react';
+import { ChevronDown, Loader2, Route, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ActiveFlightMapLibreShell } from '@/components/active-flight/active-flight-maplibre-shell';
 import { OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 import { OPENAIP_VECTOR_TILE_URL } from '@/lib/maplibre-map-config';
@@ -17,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { Slider } from '@/components/ui/slider';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 
 const WaypointIcon = L.divIcon({
   className: '',
@@ -831,6 +833,169 @@ function MenuCloseButton({ onClose }: { onClose?: () => void }) {
   );
 }
 
+function RouteLegDrawer({
+  open,
+  onOpenChange,
+  legs,
+  activeLegIndex,
+  activeLegState,
+  bookingLabel,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  legs: NavlogLeg[];
+  activeLegIndex?: number;
+  activeLegState?: ActiveLegState | null;
+  bookingLabel?: string | null;
+}) {
+  const segmentLegs = legs.filter((leg) => leg.latitude !== undefined && leg.longitude !== undefined).slice(1);
+  const segmentCount = segmentLegs.length;
+  const [expandedLegId, setExpandedLegId] = useState<string | null>(null);
+  const currentLabel =
+    activeLegState?.fromWaypoint && activeLegState?.toWaypoint
+      ? `${activeLegState.fromWaypoint} → ${activeLegState.toWaypoint}`
+      : bookingLabel || 'Loaded route';
+
+  useEffect(() => {
+    if (!open) return;
+    const activeLeg = activeLegIndex != null ? segmentLegs[activeLegIndex - 1] : null;
+    if (activeLeg && expandedLegId == null) {
+      setExpandedLegId(activeLeg.id);
+    }
+  }, [activeLegIndex, expandedLegId, open, segmentLegs]);
+
+  useEffect(() => {
+    if (open) return;
+    setExpandedLegId(null);
+  }, [open]);
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[1200]">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="pointer-events-auto absolute right-4 top-4 z-[1100] h-9 rounded-full border-slate-200 bg-white/95 px-4 text-[10px] font-black uppercase tracking-[0.12em] text-slate-800 shadow-lg backdrop-blur hover:bg-white hover:text-slate-800 active:scale-95 active:translate-y-px sm:right-4 sm:top-4"
+        onClick={() => onOpenChange(!open)}
+      >
+        <Route className="mr-2 h-4 w-4" />
+        Route {segmentCount > 0 ? `(${segmentCount})` : ''}
+      </Button>
+
+      {open ? (
+        <div className="pointer-events-auto fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[1200] flex h-[min(48dvh,calc(100dvh-11rem))] min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 text-slate-900 shadow-2xl backdrop-blur sm:left-auto sm:right-8 sm:inset-x-auto sm:h-[min(56dvh,calc(100dvh-10rem))] sm:w-[min(340px,calc(100%-4rem))] lg:right-28 lg:w-[300px] xl:right-36 2xl:right-44">
+          <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Route / Navlog</p>
+              <p className="mt-1 truncate text-sm font-black uppercase text-slate-900">{currentLabel}</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {segmentCount > 0 ? `${segmentCount} leg${segmentCount === 1 ? '' : 's'}` : 'No legs loaded'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="space-y-1.5 p-3">
+              {segmentLegs.length > 0 ? (
+                segmentLegs.map((leg, index) => {
+                  const fromWaypoint = legs[index]?.waypoint || `WP ${index + 1}`;
+                  const toWaypoint = leg.waypoint || `WP ${index + 2}`;
+                  const isActiveLeg = activeLegIndex === index + 1;
+                  const isExpanded = expandedLegId === leg.id;
+                  const heading = (((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0);
+                  const summaryCoords = formatWaypointCoordinatesDms(leg.latitude, leg.longitude);
+
+                  return (
+                    <div
+                      key={leg.id}
+                      className={cn(
+                        'group rounded-xl border bg-slate-50/70 transition-colors',
+                        isActiveLeg ? 'border-emerald-500 bg-emerald-50/70' : 'border-slate-200 bg-slate-50/70'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3 px-3 py-2.5">
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => {
+                            setExpandedLegId((current) => (current === leg.id ? null : leg.id));
+                          }}
+                        >
+                          <p className="break-words text-[11px] font-black uppercase leading-tight text-slate-900">
+                            {fromWaypoint} to {toWaypoint}
+                          </p>
+                          <p className="mt-1 break-words font-mono text-[8px] leading-tight text-slate-500">{summaryCoords}</p>
+                        </button>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {isActiveLeg ? (
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                              Active
+                            </span>
+                          ) : null}
+                          <span className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                            {segmentLegs.length > 1 ? `${index + 1}/${segmentLegs.length}` : 'Leg'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="border-t border-slate-200 px-3 py-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-7 w-full justify-between px-2 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            setExpandedLegId((current) => (current === leg.id ? null : leg.id));
+                          }}
+                        >
+                          <span>{isExpanded ? 'Hide leg details' : 'Show leg details'}</span>
+                          <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />
+                        </Button>
+
+                        {isExpanded ? (
+                          <div className="pt-2">
+                            {leg.frequencies && (
+                            <p className="break-words text-[9px] font-semibold leading-snug text-emerald-700">{leg.frequencies}</p>
+                          )}
+                          {leg.layerInfo && (
+                              <p className="mt-1 break-words text-[9px] font-semibold leading-snug text-primary">{leg.layerInfo}</p>
+                            )}
+                            <div className="mt-2 flex gap-5">
+                              <div className="flex flex-col">
+                                <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
+                                <span className="text-[10px] font-black text-slate-900">{leg.distance?.toFixed(1) || '0.0'} NM</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
+                                <span className="text-[10px] font-black text-slate-900">{heading}{"\u00B0"}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-500">
+                  Load a booking or route to view the planned legs here.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const OFFLINE_TILE_CACHE_PREFIX = 'safeviate-tiles-';
 const ACTIVE_FLIGHT_MAP_LAYER_SETTINGS_KEY = 'safeviate.active-flight-map-layer-settings';
 const MAP_MIN_ZOOM = 4;
@@ -1020,6 +1185,7 @@ export function ActiveFlightLiveMap({
   const [routeDownloadState, setRouteDownloadState] = useState<'idle' | 'downloading' | 'complete'>('idle');
   const [isDownloadingRoute, setIsDownloadingRoute] = useState(false);
   const [offlineManagerOpen, setOfflineManagerOpen] = useState(false);
+  const [isRouteDrawerOpen, setIsRouteDrawerOpen] = useState(false);
   const [offlineTileCount, setOfflineTileCount] = useState(0);
   const [offlineCacheCount, setOfflineCacheCount] = useState(0);
   const [offlineUsageLabel, setOfflineUsageLabel] = useState('Checking browser storage on this device...');
@@ -1678,6 +1844,14 @@ export function ActiveFlightLiveMap({
               onZoomChange={setCurrentZoom}
               onCenterChange={(nextCenter) => setMapCenter(nextCenter)}
           />
+            <RouteLegDrawer
+              open={isRouteDrawerOpen}
+              onOpenChange={setIsRouteDrawerOpen}
+              legs={legs}
+              activeLegIndex={activeLegIndex}
+              activeLegState={activeLegState}
+              bookingLabel={booking?.bookingNumber || aircraftRegistration || null}
+            />
           </div>
         </div>
 
@@ -2097,6 +2271,14 @@ export function ActiveFlightLiveMap({
             obstacleGeoJson={obstacleGeoJson}
             onZoomChange={setCurrentZoom}
             onCenterChange={(nextCenter) => setMapCenter(nextCenter)}
+          />
+          <RouteLegDrawer
+            open={isRouteDrawerOpen}
+            onOpenChange={setIsRouteDrawerOpen}
+            legs={legs}
+            activeLegIndex={activeLegIndex}
+            activeLegState={activeLegState}
+            bookingLabel={booking?.bookingNumber || aircraftRegistration || null}
           />
         </div>
         <style jsx>{`

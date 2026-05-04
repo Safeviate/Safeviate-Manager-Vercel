@@ -772,6 +772,7 @@ function LayerStateSync({
 }
 
 const CLICK_SNAP_THRESHOLD_NM = 8;
+const AIRPORT_CLICK_SNAP_THRESHOLD_NM = 0.5;
 const AVAILABLE_ZOOM_LEVELS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
 
 const toRadians = (value: number) => (value * Math.PI) / 180;
@@ -1476,7 +1477,7 @@ export default function AeronauticalMap({
         });
       }
     };
-    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'airports' && airportsVisible), 'OpenAIP Airports', 20);
+    collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'airports' && airportsVisible), 'OpenAIP Airports', 1);
     collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'navaids' && navaidsVisible), 'OpenAIP Navaids', 20);
     collectNearest(openAipFeatures.filter((item) => item.sourceLayer === 'reporting-points' && reportingVisible), 'OpenAIP Reporting Points', 20);
 
@@ -1552,7 +1553,16 @@ export default function AeronauticalMap({
       }
     }
 
-    if (nearest && nearestDistance <= CLICK_SNAP_THRESHOLD_NM) {
+    if (nearest && nearest.sourceLayer === 'airports' && nearestDistance <= AIRPORT_CLICK_SNAP_THRESHOLD_NM) {
+      const identifier = nearest.icaoCode || nearest.identifier || nearest.name;
+      const frequencies = formatWaypointFrequencies(nearest.frequencies);
+      const context = buildWaypointContext(buildLayerInfo(lat, lon));
+      setPendingClickLabel(identifier);
+      onAddWaypoint(lat, lon, identifier, frequencies, context);
+      return;
+    }
+
+    if (nearest && nearest.sourceLayer !== 'airports' && nearestDistance <= CLICK_SNAP_THRESHOLD_NM) {
       const identifier = nearest.icaoCode || nearest.identifier || nearest.name;
       const frequencies = formatWaypointFrequencies(nearest.frequencies);
       const context = buildWaypointContext(buildLayerInfo(lat, lon));

@@ -367,7 +367,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }));
     };
 
-    // â”€â”€ Fuel sync between M&B and NavLog â”€â”€
+    // Fuel sync between M&B and NavLog
     const fuelStation = useMemo(() => stations.find(s => s.type === 'fuel'), [stations]);
     const fuelWeightLbs = fuelStation ? (parseFloat(String(fuelStation.weight)) || 0) : undefined;
 
@@ -607,9 +607,9 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-1 flex-col">
                 <BookingDetailHeader
                     title={booking.type}
-                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} â€¢ Inst: ${instructorLabel} â€¢ Stud: ${studentLabel}`}
+                    subtitle={`${booking.bookingNumber} - ${aircraft ? aircraft.tailNumber : booking.aircraftId} • Inst: ${instructorLabel} • Stud: ${studentLabel}`}
                     status={booking.status}
-                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` â€¢ ${formatDateSafe(booking.approvedAt, 'PPP p')}` : ''}` : 'Awaiting instructor approval'}
+                    approvalMeta={booking.approvedByName ? `Approved by ${booking.approvedByName}${booking.approvedAt ? ` • ${formatDateSafe(booking.approvedAt, 'PPP p')}` : ''}` : 'Awaiting instructor approval'}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     headerAction={isMobile ? null : <BackNavButton href="/bookings/schedule" text="Back to Schedule" />}
@@ -713,33 +713,33 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                 {plannedLegs.map((leg, i) => (
                                                     <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
                                                         <div className="flex-1 min-w-0">
-         <div className="flex justify-between items-center">
-             <span className="font-black text-[11px] uppercase truncate">
-                 {i === 0
-                     ? `${plannedLegs[i]?.waypoint || 'WP 1'} to ${plannedLegs[i + 1]?.waypoint || `WP ${i + 2}`}`
-                     : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
-                 }
-             </span>
-             <span className="font-mono text-[9px] text-muted-foreground">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
-         </div>
-         {leg.frequencies && (
-             <p className="mt-1 text-[9px] font-semibold text-emerald-700">
-                 {leg.frequencies}
-             </p>
-         )}
-         {leg.layerInfo && (
-             <p className="mt-1 text-[9px] font-semibold text-primary">
-                 {leg.layerInfo}
-             </p>
-         )}
-         <div className="flex gap-3 mt-1">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                    <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>
+                                                            <div className="space-y-1">
+                                                                <span className="font-black text-[11px] uppercase truncate block">
+                                                                    {i === 0
+                                                                        ? `${plannedLegs[i]?.waypoint || 'WP 1'} to ${plannedLegs[i + 1]?.waypoint || `WP ${i + 2}`}`
+                                                                        : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
+                                                                    }
+                                                                </span>
+                                                                <span className="font-mono text-[9px] text-muted-foreground block">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
+                                                            </div>
+                                                            {leg.frequencies && (
+                                                                <p className="mt-1 text-[9px] font-semibold text-emerald-700">
+                                                                    {leg.frequencies}
+                                                                </p>
+                                                            )}
+                                                            {leg.layerInfo && (
+                                                                <p className="mt-1 text-[9px] font-semibold text-primary">
+                                                                    {leg.layerInfo}
+                                                                </p>
+                                                            )}
+                                                    <div className="flex gap-3 mt-1">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
+                                                                        <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>
                                                                 </div>
                                                                 <div className="flex flex-col">
                                                                     <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                    <span className="text-[10px] font-black">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}Â°</span>
+                                                                    <span className="text-[10px] font-black">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}{"\u00B0"}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1011,5 +1011,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         </Card>
     );
 }
+
 
 

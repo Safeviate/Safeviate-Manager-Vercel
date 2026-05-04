@@ -336,7 +336,6 @@ export default function TrainingRoutesPage() {
                             const fromLeg = activeRoute.legs[i];
                             const fromWaypoint = fromLeg?.waypoint || `WP ${i + 1}`;
                             const toWaypoint = leg.waypoint || `WP ${i + 2}`;
-                            const displayTitle = `${fromWaypoint} to ${toWaypoint}`;
                             const detailLines = [leg.frequencies, leg.layerInfo].filter(Boolean);
 
                             return (
@@ -344,20 +343,35 @@ export default function TrainingRoutesPage() {
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0 flex-1">
                                     {isEditing ? (
-                                      <Input
-                                        value={displayTitle}
-                                        onChange={(e) => {
-                                          const rawValue = e.target.value.trim();
-                                          const next = [...activeRoute.legs];
-                                          next[i + 1].waypoint = rawValue.replace(/-\d+$/, '') || 'PNT';
-                                          setActiveRoute({ ...activeRoute, legs: next });
-                                        }}
-                                        className="h-6 w-full max-w-[16rem] border-none p-0 text-[11px] font-black uppercase text-slate-900 shadow-none focus-visible:ring-0"
-                                        readOnly={!isEditing}
-                                      />
+                                      <div className="space-y-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                          From {fromWaypoint}
+                                        </p>
+                                        <Input
+                                          value={leg.waypoint}
+                                          onChange={(e) => {
+                                            const next = [...activeRoute.legs];
+                                            next[i + 1] = { ...next[i + 1], waypoint: e.target.value };
+                                            setActiveRoute({ ...activeRoute, legs: next });
+                                          }}
+                                          className="h-6 w-full max-w-[16rem] border-none p-0 text-[11px] font-black uppercase text-slate-900 shadow-none focus-visible:ring-0"
+                                          placeholder={`WP ${i + 2}`}
+                                        />
+                                      </div>
                                     ) : (
-                                      <p className="text-[11px] font-black uppercase leading-tight text-slate-900 break-words">{displayTitle}</p>
+                                      <div className="space-y-0.5">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                          From {fromWaypoint}
+                                        </p>
+                                        <p className="break-words text-[11px] font-black uppercase leading-tight text-slate-900">
+                                          To {toWaypoint}
+                                        </p>
+                                      </div>
                                     )}
+
+                                    <p className="mt-1 font-mono text-[8px] text-muted-foreground">
+                                      {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}
+                                    </p>
 
                                     {detailLines.map((line, index) => (
                                       <p
@@ -378,26 +392,20 @@ export default function TrainingRoutesPage() {
                                       </div>
                                       <div className="flex flex-col">
                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                        <span className="text-[10px] font-black text-slate-900">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}Â°</span>
+                                        <span className="text-[10px] font-black text-slate-900">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}{"\u00B0"}</span>
                                       </div>
                                     </div>
                                   </div>
-
-                                  <div className="shrink-0 flex flex-col items-end gap-2">
-                                    <span className="font-mono text-[8px] text-muted-foreground">
-                                        {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}
-                                    </span>
-                                    {isEditing ? (
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
-                                        onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}
-                                      >
-                                        <Trash2 size={12} />
-                                      </Button>
-                                    ) : null}
-                                  </div>
+                                  {isEditing ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="shrink-0 h-7 w-7 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+                                      onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}
+                                    >
+                                      <Trash2 size={12} />
+                                    </Button>
+                                  ) : null}
                                 </div>
                               </div>
                             );
@@ -461,4 +469,5 @@ export default function TrainingRoutesPage() {
     </div>
   );
 }
+
 

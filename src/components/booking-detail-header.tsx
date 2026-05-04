@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { ReactNode } from 'react';
 import { Clock, FileText, Map as NavIcon, Scale, Settings2, ClipboardCheck } from 'lucide-react';
@@ -25,7 +25,7 @@ function splitSubtitle(subtitle: string, subtitleSecondary?: string) {
   }
 
   return subtitle
-    .replace(/Ã¢â‚¬Â¢|â€¢/g, '•')
+    .replace(/[•]/g, '•')
     .split('•')
     .map((part) => part.trim())
     .filter(Boolean);
