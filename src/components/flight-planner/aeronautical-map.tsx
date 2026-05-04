@@ -16,6 +16,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { LeafletMapFrame } from '@/components/maps/leaflet-map-frame';
 import { ROUTE_LINE_COLOR, ROUTE_LINE_OPACITY, ROUTE_LINE_WIDTH } from '@/components/maps/route-line-style';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 import { createNumberedWaypointIcon } from '@/components/maps/waypoint-marker-style';
 import type { ReactNode } from 'react';
 
@@ -1236,6 +1237,7 @@ export default function AeronauticalMap({
   onZoomPanelOpenChange,
   isLayersPanelOpen = false,
   onLayersPanelOpenChange,
+  rightAccessory,
 }: AeronauticalMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [layerPanelTab, setLayerPanelTab] = useState<'layers' | 'labels'>('layers');
@@ -2037,6 +2039,12 @@ export default function AeronauticalMap({
         }}
       />
 
+      {rightAccessory ? (
+        <div className="pointer-events-auto absolute right-4 top-4 z-[1000]">
+          {rightAccessory}
+        </div>
+      ) : null}
+
       {pendingClickLabel && (
         <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border bg-background/95 px-3 py-2 text-[10px] font-black uppercase tracking-widest shadow-xl backdrop-blur">
           Last click: {pendingClickLabel}
@@ -2058,7 +2066,7 @@ export default function AeronauticalMap({
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary">{layerInfo.subtitle}</p>
               )}
               <p className="text-[10px] text-muted-foreground">
-                {layerInfo.lat.toFixed(4)}, {layerInfo.lon.toFixed(4)}
+                {formatWaypointCoordinatesDms(layerInfo.lat, layerInfo.lon)}
               </p>
             </div>
 
@@ -2121,7 +2129,7 @@ export default function AeronauticalMap({
               <p className="text-xs font-bold leading-relaxed">{h.note || 'No description provided.'}</p>
               <div className="pt-1 flex items-center justify-between border-t border-muted">
                  <span className="text-[8px] text-muted-foreground uppercase font-black">Coordinates</span>
-                 <span className="text-[8px] font-mono font-bold text-muted-foreground">{h.lat.toFixed(4)}, {h.lng.toFixed(4)}</span>
+                <span className="text-[8px] font-mono font-bold text-muted-foreground">{formatWaypointCoordinatesDms(h.lat, h.lng)}</span>
               </div>
             </div>
           </Popup>

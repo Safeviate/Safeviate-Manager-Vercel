@@ -13,7 +13,9 @@ import {
   ROUTE_LINE_OPACITY,
   ROUTE_LINE_WIDTH,
 } from '@/components/maps/route-line-style';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 import { createNumberedWaypointElement } from '@/components/maps/waypoint-marker-style';
+import { buildWaypointPopupMarkup as buildWaypointDetailsMarkup } from '@/components/maps/waypoint-popup-content';
 
 type Point = [number, number];
 
@@ -109,7 +111,7 @@ type WaypointContextItem = {
 
 const formatLatLonDms = (latitude?: number, longitude?: number) => {
   if (latitude == null || longitude == null) return 'N/A';
-  return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  return formatWaypointCoordinatesDms(latitude, longitude);
 };
 
 const escapeHtml = (value: string) =>
@@ -122,7 +124,6 @@ const escapeHtml = (value: string) =>
 
 const buildWaypointPopupMarkup = (leg: NavlogLeg, legIndex: number, activeLegIndex?: number) => {
   const legWithContext = leg as NavlogLeg & { waypointContext?: { items?: WaypointContextItem[] } };
-  const coordinates = formatLatLonDms(leg.latitude, leg.longitude);
   const isActiveToWaypoint = activeLegIndex != null && legIndex === activeLegIndex;
   const isNextWaypoint = activeLegIndex != null && legIndex === activeLegIndex + 1;
   const badges = [
@@ -156,6 +157,7 @@ const buildWaypointPopupMarkup = (leg: NavlogLeg, legIndex: number, activeLegInd
     })
     .join('');
 
+  const summaryMarkup = buildWaypointDetailsMarkup(leg, legIndex);
   const notesMarkup = leg.notes
     ? `
         <div style="border-top:1px solid rgba(148,163,184,0.2);padding-top:10px;">
@@ -168,11 +170,7 @@ const buildWaypointPopupMarkup = (leg: NavlogLeg, legIndex: number, activeLegInd
   return `
     <div style="font-family:Inter,system-ui,sans-serif;max-width:340px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
-        <div>
-          <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#64748b;">Waypoint ${legIndex + 1}</p>
-          <h3 style="margin:4px 0 0;font-size:16px;font-weight:800;color:#0f172a;">${escapeHtml(leg.waypoint)}</h3>
-          <p style="margin:4px 0 0;font-size:11px;color:#475569;">${coordinates}</p>
-        </div>
+        <div style="flex:1 1 auto;">${summaryMarkup}</div>
         ${badges ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">${badges}</div>` : ''}
       </div>
       ${contextMarkup ? `<div style="display:grid;gap:8px;margin-top:12px;">${contextMarkup}</div>` : ''}

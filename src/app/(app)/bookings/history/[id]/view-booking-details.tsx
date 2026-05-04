@@ -31,6 +31,8 @@ import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
+import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 
@@ -1212,15 +1214,18 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                   legs={plannedLegs}
                                   onAddWaypoint={handleAddWaypoint}
                                   rightAccessory={
-                                    <button
-                                      type="button"
-                                      className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-                                      onClick={() => setShowRouteSummary((current) => !current)}
-                                      aria-label={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
-                                      title={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
-                                    >
-                                      <Route className="h-4 w-4" />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                      <WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />
+                                      <button
+                                        type="button"
+                                        className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
+                                        onClick={() => setShowRouteSummary((current) => !current)}
+                                        aria-label={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                                        title={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
+                                      >
+                                        <Route className="h-4 w-4" />
+                                      </button>
+                                    </div>
                                   }
                                 />
                                 
@@ -1248,7 +1253,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                                                 : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
                                                             }
                                                         </span>
-                                                        <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+                                                    <span className="font-mono text-[9px] text-muted-foreground">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
                                                     </div>
                             {leg.frequencies && (
                                 <p className="mt-1 text-[9px] font-semibold text-emerald-700">

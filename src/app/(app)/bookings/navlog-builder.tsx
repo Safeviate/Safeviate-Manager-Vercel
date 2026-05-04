@@ -16,6 +16,7 @@ import type { TrainingRoute } from '@/types/booking';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Library, Search } from 'lucide-react';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 
 /** Weight of AVGAS per gallon in lbs */
 const FUEL_WEIGHT_PER_GALLON = 6;
@@ -399,7 +400,7 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
                                                 {leg.waypoint}
                                             </span>
                                             <span className="text-[8px] font-mono font-bold text-muted-foreground">
-                                                {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
+                                                {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}
                                             </span>
                                             {leg.frequencies && (
                                                 <span className="text-[8px] font-semibold text-emerald-700">

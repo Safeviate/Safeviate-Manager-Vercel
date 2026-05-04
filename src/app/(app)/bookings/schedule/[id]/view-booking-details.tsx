@@ -29,6 +29,8 @@ import { PhotoViewerDialog } from '@/components/photo-viewer-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
+import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 import { isBookingEligibleForTracking } from '@/lib/booking-tracking';
 
@@ -694,6 +696,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 <AeronauticalMap 
                                     legs={plannedLegs} 
                                     onAddWaypoint={handleAddWaypoint}
+                                    rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />}
                                 />
                                 
                                 {/* Absolute positioned leg summary cards - higher Z index */}
@@ -717,7 +720,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                      : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
                  }
              </span>
-             <span className="font-mono text-[9px] text-muted-foreground">{leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}</span>
+             <span className="font-mono text-[9px] text-muted-foreground">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
          </div>
          {leg.frequencies && (
              <p className="mt-1 text-[9px] font-semibold text-emerald-700">

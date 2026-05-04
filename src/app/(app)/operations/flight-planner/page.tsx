@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 import { cn } from '@/lib/utils';
 import { calculateRouteTotals, createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
@@ -138,7 +140,11 @@ export default function FlightPlannerPage() {
               <CardDescription>Search, click, and build the route directly on the aeronautical chart.</CardDescription>
             </CardHeader>
             <CardContent className={cn('relative h-full min-h-0 p-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
-              <AeronauticalMap legs={legs} onAddWaypoint={handleAddWaypoint} />
+              <AeronauticalMap
+                legs={legs}
+                onAddWaypoint={handleAddWaypoint}
+                rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />}
+              />
             </CardContent>
           </Card>
 
@@ -224,7 +230,7 @@ export default function FlightPlannerPage() {
                                   }
                                 </p>
                                 <p className="text-[9px] font-mono font-bold text-muted-foreground">
-                                  {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
+                                  {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}
                                 </p>
                                 {leg.frequencies && <p className="text-[9px] font-semibold text-emerald-700">{leg.frequencies}</p>}
                                 {leg.layerInfo && <p className="text-[9px] font-semibold text-primary">{leg.layerInfo}</p>}

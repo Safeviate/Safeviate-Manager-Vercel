@@ -22,6 +22,8 @@ import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/li
 import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
+import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 
 const getRouteTypeLabel = (routeType?: TrainingRoute['routeType']) =>
   routeType === 'other' ? 'Other Route' : 'Training Route';
@@ -249,15 +251,16 @@ export default function TrainingRoutesPage() {
                 <AeronauticalMap
                   legs={activeRoute?.legs || []}
                   hazards={activeRoute?.hazards || []}
-                onAddWaypoint={handleAddWaypoint}
-                onMoveWaypoint={handleMoveWaypoint}
-                onAddHazard={handleAddHazardRequest}
-                isEditing={isEditing}
-                isZoomPanelOpen={isMapZoomPanelOpen}
-                onZoomPanelOpenChange={setIsMapZoomPanelOpen}
-                isLayersPanelOpen={isMapLayersPanelOpen}
-                onLayersPanelOpenChange={setIsMapLayersPanelOpen}
-              />
+                  onAddWaypoint={handleAddWaypoint}
+                  onMoveWaypoint={handleMoveWaypoint}
+                  onAddHazard={handleAddHazardRequest}
+                  isEditing={isEditing}
+                  isZoomPanelOpen={isMapZoomPanelOpen}
+                  onZoomPanelOpenChange={setIsMapZoomPanelOpen}
+                  isLayersPanelOpen={isMapLayersPanelOpen}
+                  onLayersPanelOpenChange={setIsMapLayersPanelOpen}
+                  rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />}
+                />
               {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
@@ -382,7 +385,7 @@ export default function TrainingRoutesPage() {
 
                                   <div className="shrink-0 flex flex-col items-end gap-2">
                                     <span className="font-mono text-[8px] text-muted-foreground">
-                                      {leg.latitude?.toFixed(2)}, {leg.longitude?.toFixed(2)}
+                                        {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}
                                     </span>
                                     {isEditing ? (
                                       <Button
@@ -413,7 +416,7 @@ export default function TrainingRoutesPage() {
                                 {isEditing && <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.filter((item) => item.id !== hazard.id) })}><Trash2 size={12} /></Button>}
                               </div>
                               <Textarea value={hazard.note} onChange={(e) => setActiveRoute({ ...activeRoute, hazards: activeRoute.hazards.map((item) => item.id === hazard.id ? { ...item, note: e.target.value } : item) })} className="h-16 resize-none border-none bg-transparent p-0 text-[10px] font-bold leading-relaxed shadow-none focus-visible:ring-0" placeholder="Hazard description..." readOnly={!isEditing} />
-                              <p className="font-mono text-[8px] font-black text-destructive/60">{hazard.lat.toFixed(4)}, {hazard.lng.toFixed(4)}</p>
+                              <p className="font-mono text-[8px] font-black text-destructive/60">{formatWaypointCoordinatesDms(hazard.lat, hazard.lng)}</p>
                             </div>
                           ))}
                           {activeRoute.hazards.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><AlertTriangle className="mx-auto mb-2 h-6 w-6 opacity-40 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mark hazards from the map</p></div>}
@@ -447,7 +450,7 @@ export default function TrainingRoutesPage() {
               <label className="text-[10px] font-black uppercase text-muted-foreground">Hazard Description</label>
               <Textarea value={hazardNote} onChange={(e) => setHazardNote(e.target.value)} placeholder="Describe the hazard..." className="min-h-[100px] text-xs font-bold" />
             </div>
-            <p className="text-center font-mono text-[9px] font-bold text-muted-foreground">Target: {hazardToEdit?.lat.toFixed(4)}, {hazardToEdit?.lng.toFixed(4)}</p>
+            <p className="text-center font-mono text-[9px] font-bold text-muted-foreground">Target: {hazardToEdit ? formatWaypointCoordinatesDms(hazardToEdit.lat, hazardToEdit.lng) : 'N/A'}</p>
           </div>
             <DialogFooter>
             <DialogClose asChild><Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>Cancel</Button></DialogClose>

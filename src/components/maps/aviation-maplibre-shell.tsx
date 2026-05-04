@@ -6,6 +6,8 @@ import type { FlightSession } from '@/types/flight-session';
 import type { Hazard, NavlogLeg } from '@/types/booking';
 import { MAPLIBRE_BASE_STYLES, OPENAIP_VECTOR_TILE_URL } from '@/lib/maplibre-map-config';
 import { parseJsonResponse } from '@/lib/safe-json';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
+import { buildWaypointPopupMarkup } from '@/components/maps/waypoint-popup-content';
 import {
   ROUTE_LINE_COLOR,
   ROUTE_LINE_OPACITY,
@@ -411,7 +413,7 @@ const makeAircraftPopupContent = (session: FlightSession, stale: boolean) => {
 const makeWaypointPopupContent = (leg: NavlogLeg, index: number) => {
   const root = document.createElement('div');
   root.className = 'text-xs font-black uppercase space-y-1';
-  root.innerHTML = `<p class="text-primary font-bold">${leg.waypoint}</p><p class="text-[10px] text-muted-foreground">Waypoint ${index + 1}</p>`;
+  root.innerHTML = buildWaypointPopupMarkup(leg, index);
   return root;
 };
 
@@ -426,7 +428,7 @@ const makeHazardPopupContent = (hazard: Hazard) => {
     <p class="text-xs font-bold leading-relaxed">${hazard.note || 'No description provided.'}</p>
     <div class="pt-1 flex items-center justify-between border-t border-muted">
       <span class="text-[8px] text-muted-foreground uppercase font-black">Coordinates</span>
-      <span class="text-[8px] font-mono font-bold text-muted-foreground">${hazard.lat.toFixed(4)}, ${hazard.lng.toFixed(4)}</span>
+      <span class="text-[8px] font-mono font-bold text-muted-foreground">${formatWaypointCoordinatesDms(hazard.lat, hazard.lng)}</span>
     </div>
   `;
   return root;
@@ -440,7 +442,7 @@ const makeLabelPopupContent = (info: LayerInfoState, onAddWaypoint: ((lat: numbe
       <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Layer Information</p>
       <p class="font-black uppercase">${info.title}</p>
       ${info.subtitle ? `<p class="text-[10px] font-black uppercase tracking-widest text-primary">${info.subtitle}</p>` : ''}
-      <p class="text-[10px] text-muted-foreground">${info.lat.toFixed(4)}, ${info.lon.toFixed(4)}</p>
+      <p class="text-[10px] text-muted-foreground">${formatWaypointCoordinatesDms(info.lat, info.lon)}</p>
     </div>
     <div class="space-y-2" data-items></div>
     <div class="flex flex-col gap-2 pt-2 border-t mt-4">

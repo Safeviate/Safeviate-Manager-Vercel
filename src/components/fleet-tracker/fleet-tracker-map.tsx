@@ -16,6 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { X } from 'lucide-react';
+import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
+import { createNumberedWaypointIcon } from '@/components/maps/waypoint-marker-style';
+import { buildWaypointPopupMarkup } from '@/components/maps/waypoint-popup-content';
 
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -984,13 +987,32 @@ export function FleetTrackerMap({
           const breadcrumbPoints = (session.breadcrumb || [])
             .filter((point) => point?.latitude !== undefined && point?.longitude !== undefined)
             .map((point) => [point.latitude, point.longitude] as [number, number]);
-          const navlogRoutePoints = (session.bookingId ? navlogRoutesByBookingId[session.bookingId] || [] : [])
+          const navlogRouteLegs = session.bookingId ? navlogRoutesByBookingId[session.bookingId] || [] : [];
+          const navlogRoutePoints = navlogRouteLegs
             .filter((leg) => leg.latitude !== undefined && leg.longitude !== undefined)
             .map((leg) => [leg.latitude, leg.longitude] as [number, number]);
 
           return (
             <Fragment key={session.id}>
               {showNavlogRoutes && navlogRoutePoints.length > 1 ? <Polyline positions={navlogRoutePoints} pathOptions={getNavlogRouteStyle()} /> : null}
+              {showNavlogRoutes && navlogRouteLegs.length > 0
+                ? navlogRouteLegs.map((leg, index) =>
+                    leg.latitude !== undefined && leg.longitude !== undefined ? (
+                      <Marker
+                        key={`${session.id}-navlog-waypoint-${leg.id}`}
+                        position={[leg.latitude, leg.longitude]}
+                        icon={createNumberedWaypointIcon(index + 1, {
+                          backgroundColor: '#0ea5e9',
+                          shadowColor: 'rgba(14,165,233,0.35)',
+                        })}
+                      >
+                        <Popup>
+                          <div dangerouslySetInnerHTML={{ __html: buildWaypointPopupMarkup(leg, index) }} />
+                        </Popup>
+                      </Marker>
+                    ) : null
+                  )
+                : null}
               {showAircraftTrails && breadcrumbPoints.length > 1 ? <Polyline positions={breadcrumbPoints} pathOptions={getTrailStyle(session, stale)} /> : null}
               <Marker
                 position={[position.latitude, position.longitude]}
@@ -1001,7 +1023,7 @@ export function FleetTrackerMap({
                     <p className="font-black uppercase">{session.aircraftRegistration}</p>
                     <p className="font-medium text-muted-foreground">{session.pilotName}</p>
                     <p>
-                      {position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}
+                      {formatWaypointCoordinatesDms(position.latitude, position.longitude)}
                     </p>
                     <p>Accuracy: {position.accuracy ? `${Math.round(position.accuracy)} m` : 'Unknown'}</p>
                     <p>Altitude: {position.altitude != null ? `${Math.round(position.altitude)} m` : 'Unavailable'}</p>
