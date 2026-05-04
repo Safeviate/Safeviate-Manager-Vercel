@@ -404,6 +404,7 @@ function MapEvents({
     timer: number | null;
     longTriggered: boolean;
   } | null>(null);
+  const ignoreMouseEventsUntilRef = useRef(0);
 
   const clearPress = useCallback(() => {
     const currentPress = pressRef.current;
@@ -449,13 +450,21 @@ function MapEvents({
     }
   }, [map, onShortPress]);
 
+  const suppressSyntheticMouseEvents = useCallback(() => {
+    // Touch interactions on some laptops/tablets emit a follow-up mouse event.
+    // Ignore those synthetic events so a single tap only adds one waypoint.
+    ignoreMouseEventsUntilRef.current = Date.now() + 500;
+  }, []);
+
   // Mouse events via Leaflet's useMapEvents
   useMapEvents({
     mousedown(e) {
+      if (Date.now() < ignoreMouseEventsUntilRef.current) return;
       if ((e.originalEvent as MouseEvent).button !== 0) return;
       startPress(e.latlng);
     },
     mouseup(e) {
+      if (Date.now() < ignoreMouseEventsUntilRef.current) return;
       endPress(e.latlng);
     },
     dragstart: clearPress,
@@ -488,19 +497,25 @@ function MapEvents({
       const press = pressRef.current;
       if (!press) return;
       // Use the original press position for the end (changedTouches may not give a reliable final position)
+      suppressSyntheticMouseEvents();
       endPress(press.latlng);
+    };
+
+    const handleTouchCancel = () => {
+      suppressSyntheticMouseEvents();
+      clearPress();
     };
 
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: true });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    container.addEventListener('touchcancel', clearPress, { passive: true });
+    container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
-      container.removeEventListener('touchcancel', clearPress);
+      container.removeEventListener('touchcancel', handleTouchCancel);
     };
   }, [map, startPress, endPress, clearPress]);
 
