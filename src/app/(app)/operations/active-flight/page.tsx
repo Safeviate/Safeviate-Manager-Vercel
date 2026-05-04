@@ -19,12 +19,14 @@ import { useTheme } from '@/components/theme-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
+import type { TrainingRoute } from '@/types/booking';
 import type { FlightPosition, FlightSession } from '@/types/flight-session';
 import { getOrCreateDeviceBinding, setDeviceLabel } from '@/lib/flight-session';
 import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
 import { getActiveLegState } from '@/lib/active-flight';
 import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { cn } from '@/lib/utils';
+import { parseJsonResponse } from '@/lib/safe-json';
 import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
 import { FlightTelemetryTable } from '@/components/active-flight/flight-telemetry-table';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -45,10 +47,11 @@ interface ActiveTrackingState {
   savedAt: string;
 }
 
-interface ActiveTrackingSelection {
-  aircraftId: string;
-  bookingId?: string;
-}
+  interface ActiveTrackingSelection {
+    aircraftId: string;
+    bookingId?: string;
+    plannerRouteId?: string;
+  }
 
 interface LocationCalibration {
   latitude: number;
@@ -120,24 +123,10 @@ const clearActiveTrackingState = (deviceId: string) => {
   window.localStorage.removeItem(getActiveTrackingStateKey(deviceId));
 };
 
-const readActiveTrackingSelection = (deviceId: string) => {
-  if (typeof window === 'undefined') return null;
-
-  const raw = window.localStorage.getItem(getActiveTrackingSelectionKey(deviceId));
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as ActiveTrackingSelection;
-  } catch {
-    window.localStorage.removeItem(getActiveTrackingSelectionKey(deviceId));
-    return null;
-  }
-};
-
-const saveActiveTrackingSelection = (deviceId: string, selection: ActiveTrackingSelection) => {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(getActiveTrackingSelectionKey(deviceId), JSON.stringify(selection));
-};
+  const saveActiveTrackingSelection = (deviceId: string, selection: ActiveTrackingSelection) => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(getActiveTrackingSelectionKey(deviceId), JSON.stringify(selection));
+  };
 
 const getLocationCalibrationKey = (deviceId: string) => `${ACTIVE_TRACKING_LOCATION_CALIBRATION_PREFIX}${deviceId}`;
 
@@ -181,11 +170,13 @@ export default function ActiveFlightPage() {
   const [selectedAircraftId, setSelectedAircraftId] = useState('');
   const [selectedBookingFilterId, setSelectedBookingFilterId] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState('');
+  const [selectedPlannerRouteId, setSelectedPlannerRouteId] = useState('');
   const [deviceLabelInput, setDeviceLabelInput] = useState('');
   const [savedDeviceLabel, setSavedDeviceLabel] = useState('');
   const [isTrackingActive, setIsTrackingActive] = useState(false);
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [trainingRoutes, setTrainingRoutes] = useState<TrainingRoute[]>([]);
   const [flightSessions, setFlightSessions] = useState<FlightSession[]>([]);
   const [scheduleDataLoaded, setScheduleDataLoaded] = useState(false);
   const [locationCalibration, setLocationCalibration] = useState<LocationCalibration | null>(null);
@@ -197,7 +188,6 @@ export default function ActiveFlightPage() {
   const [mapRecenterSignal, setMapRecenterSignal] = useState(0);
   const [isLayersCardOpen, setIsLayersCardOpen] = useState(false);
   const [isMapZoomCardOpen, setIsMapZoomCardOpen] = useState(false);
-  const selectionHydratedRef = useRef<string | null>(null);
   const resumeHydratedRef = useRef<string | null>(null);
   const lastWriteRef = useRef(0);
   const { position, error: geolocationError, permissionState, isWatching, startWatching, stopWatching } = useGeolocationTrack();
@@ -234,6 +224,26 @@ export default function ActiveFlightPage() {
       }
     };
     void load();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRoutes = async () => {
+      try {
+        const response = await fetch('/api/training-routes', { cache: 'no-store' });
+        const payload = await parseJsonResponse<{ routes?: TrainingRoute[] }>(response);
+        if (cancelled) return;
+        setTrainingRoutes(Array.isArray(payload?.routes) ? payload.routes.filter((route) => route.routeType !== 'other') : []);
+      } catch {
+        if (!cancelled) setTrainingRoutes([]);
+      }
+    };
+
+    void loadRoutes();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const reloadFlightSessions = async () => {
@@ -301,17 +311,20 @@ export default function ActiveFlightPage() {
     [bookings, selectedAircraftId],
   );
   const candidateBookings = useMemo(() => bookings.filter((booking) => !selectedAircraftId || booking.aircraftId === selectedAircraftId).filter((booking) => (booking.navlog?.legs?.length || 0) > 0).sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()), [bookings, selectedAircraftId]);
+  const plannerRouteChoices = useMemo(() => [...trainingRoutes].sort((a, b) => (a.name || '').localeCompare(b.name || '')), [trainingRoutes]);
   const selectedBooking = useMemo(() => candidateBookings.find((booking) => booking.id === selectedBookingId) || null, [candidateBookings, selectedBookingId]);
   const selectedBookingFilter = useMemo(() => bookingChoices.find((booking) => booking.id === selectedBookingFilterId) || null, [bookingChoices, selectedBookingFilterId]);
+  const selectedPlannerRoute = useMemo(() => plannerRouteChoices.find((route) => route.id === selectedPlannerRouteId) || null, [plannerRouteChoices, selectedPlannerRouteId]);
   const selectedAircraftValue = selectedAircraft ? selectedAircraftId : undefined;
   const selectedBookingFilterValue = selectedBookingFilter ? selectedBookingFilterId : undefined;
   const selectedBookingValue = selectedBooking ? selectedBookingId : undefined;
-  const mobileSelectorSummary = selectedAircraft?.tailNumber || selectedBookingFilter?.bookingNumber || selectedBooking?.bookingNumber
-    ? [selectedAircraft?.tailNumber, selectedBookingFilter ? `Booking #${selectedBookingFilter.bookingNumber}` : null, selectedBooking ? `Route #${selectedBooking.bookingNumber}` : null]
+  const selectedPlannerRouteValue = selectedPlannerRoute ? selectedPlannerRouteId : undefined;
+  const mobileSelectorSummary = selectedAircraft?.tailNumber || selectedBookingFilter?.bookingNumber || selectedBooking?.bookingNumber || selectedPlannerRoute?.name
+    ? [selectedAircraft?.tailNumber, selectedBookingFilter ? `Booking #${selectedBookingFilter.bookingNumber}` : null, selectedBooking ? `Route #${selectedBooking.bookingNumber}` : null, selectedPlannerRoute ? `Planner Route ${selectedPlannerRoute.name}` : null]
         .filter(Boolean)
         .join(' • ')
     : 'Flight Setup';
-  const selectedLegs = selectedBooking?.navlog?.legs || [];
+  const selectedLegs = selectedPlannerRoute?.legs?.length ? selectedPlannerRoute.legs : selectedBooking?.navlog?.legs || [];
   const currentDeviceSession = useMemo(
     () => flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId) || null,
     [deviceBinding?.deviceId, flightSessions],
@@ -446,7 +459,11 @@ export default function ActiveFlightPage() {
   const handleAircraftSelectionChange = (aircraftId: string) => {
     setSelectedAircraftId(aircraftId);
     if (!deviceBinding?.deviceId) return;
-    saveActiveTrackingSelection(deviceBinding.deviceId, { aircraftId, bookingId: selectedBookingId || undefined });
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId,
+      bookingId: selectedBookingId || undefined,
+      plannerRouteId: selectedPlannerRouteId || undefined,
+    });
   };
 
   const handleBookingFilterSelectionChange = (bookingId: string) => {
@@ -455,37 +472,46 @@ export default function ActiveFlightPage() {
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraftId,
       bookingId: selectedBookingId || undefined,
+      plannerRouteId: selectedPlannerRouteId || undefined,
     });
   };
 
   const handleBookingSelectionChange = (bookingId: string) => {
     setSelectedBookingId(bookingId);
+    if (bookingId) {
+      setSelectedPlannerRouteId('');
+    }
     if (!deviceBinding?.deviceId) return;
     saveActiveTrackingSelection(deviceBinding.deviceId, {
       aircraftId: selectedAircraftId,
       bookingId: bookingId || undefined,
+      plannerRouteId: bookingId ? undefined : selectedPlannerRouteId || undefined,
     });
   };
 
-  useEffect(() => {
+  const handlePlannerRouteSelectionChange = (routeId: string) => {
+    setSelectedPlannerRouteId(routeId === 'none' ? '' : routeId);
+    if (routeId !== 'none') {
+      setSelectedBookingId('');
+    }
     if (!deviceBinding?.deviceId) return;
-    if (selectionHydratedRef.current === deviceBinding.deviceId) return;
-    selectionHydratedRef.current = deviceBinding.deviceId;
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId: selectedAircraftId,
+      bookingId: routeId === 'none' ? selectedBookingId || undefined : undefined,
+      plannerRouteId: routeId === 'none' ? undefined : routeId,
+    });
+  };
 
-    const savedSelection = readActiveTrackingSelection(deviceBinding.deviceId);
-    if (!savedSelection) return;
-
-    if (savedSelection.aircraftId) {
-      setSelectedAircraftId(savedSelection.aircraftId);
-    }
-
-    if (savedSelection.bookingId) {
-      setSelectedBookingId(savedSelection.bookingId);
-    }
-    if (savedSelection.bookingId) {
-      setSelectedBookingFilterId(savedSelection.bookingId);
-    }
-  }, [deviceBinding?.deviceId]);
+  const handleClearRouteSelection = () => {
+    setSelectedBookingId('');
+    setSelectedPlannerRouteId('');
+    if (!deviceBinding?.deviceId) return;
+    saveActiveTrackingSelection(deviceBinding.deviceId, {
+      aircraftId: selectedAircraftId,
+      plannerRouteId: undefined,
+      bookingId: undefined,
+    });
+  };
 
   useEffect(() => {
     if (!scheduleDataLoaded) return;
@@ -513,19 +539,31 @@ export default function ActiveFlightPage() {
     if (resumeHydratedRef.current === resumeKey) return;
     resumeHydratedRef.current = resumeKey;
 
-    if (resumeSource.aircraftId && resumeSource.aircraftId !== selectedAircraftId) {
-      setSelectedAircraftId(resumeSource.aircraftId);
-    }
-
-    if (resumeSource.bookingId && resumeSource.bookingId !== selectedBookingId) {
-      setSelectedBookingId(resumeSource.bookingId);
-    }
-
     if (!isTrackingActive) {
       setIsTrackingActive(true);
       startWatching();
     }
-  }, [deviceBinding?.deviceId, flightSessions, isTrackingActive, selectedAircraftId, selectedBookingId, startWatching]);
+  }, [deviceBinding?.deviceId, flightSessions, isTrackingActive, startWatching]);
+
+  useEffect(() => {
+    if (!deviceBinding?.deviceId) return;
+    const raw = window.localStorage.getItem(getActiveTrackingSelectionKey(deviceBinding.deviceId));
+    if (!raw) return;
+
+    try {
+      const savedSelection = JSON.parse(raw) as ActiveTrackingSelection;
+      if (savedSelection.bookingId) {
+        setSelectedBookingId(savedSelection.bookingId);
+        setSelectedPlannerRouteId('');
+      }
+      if (savedSelection.plannerRouteId) {
+        setSelectedBookingId('');
+        setSelectedPlannerRouteId(savedSelection.plannerRouteId);
+      }
+    } catch {
+      window.localStorage.removeItem(getActiveTrackingSelectionKey(deviceBinding.deviceId));
+    }
+  }, [deviceBinding?.deviceId]);
 
   const buildBreadcrumb = (existing: FlightPosition[] | undefined, nextPosition: FlightPosition | null) => {
     if (!nextPosition) return existing || [];
@@ -723,7 +761,7 @@ export default function ActiveFlightPage() {
                 </Badge>
               </div>
               <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
-                {selectedBooking
+                {selectedLegs.length > 0
                   ? `Route ${selectedBooking.bookingNumber} • ${selectedLegs.length} legs • ${activeLegState?.toWaypoint || 'No active waypoint'}`
                   : 'Select a booking with a navlog to show route progress'}
               </p>
@@ -795,7 +833,7 @@ export default function ActiveFlightPage() {
                 </>
               ) : (
                 <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/70 p-4 text-slate-300">
-                  Select a booking with a navlog and start tracking to populate route progress.
+                  Select a booking or planner route and start tracking to populate route progress.
                 </div>
               )}
             </CardContent>
@@ -1033,8 +1071,8 @@ export default function ActiveFlightPage() {
                   <div className="space-y-1">
                     <Label htmlFor="active-flight-aircraft-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft Registration</Label>
                     <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
-                      <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
-                        <SelectValue placeholder="Select an aircraft" />
+                        <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
+                          <SelectValue placeholder="No aircraft selected" />
                       </SelectTrigger>
                       <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
                     </Select>
@@ -1042,8 +1080,8 @@ export default function ActiveFlightPage() {
                   <div className="space-y-1">
                     <Label htmlFor="active-flight-booking-filter-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booking</Label>
                     <Select value={selectedBookingFilterValue} onValueChange={handleBookingFilterSelectionChange}>
-                      <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
-                        <SelectValue placeholder="Select a booking" />
+                        <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
+                          <SelectValue placeholder="No booking selected" />
                       </SelectTrigger>
                       <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
                     </Select>
@@ -1051,11 +1089,38 @@ export default function ActiveFlightPage() {
                   <div className="space-y-1">
                     <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
                     <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
-                      <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
-                        <SelectValue placeholder="Optional: select a booking with a navlog" />
+                        <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
+                          <SelectValue placeholder="No route selected" />
                       </SelectTrigger>
                       <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="active-flight-planner-route-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Planner Route</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={selectedPlannerRouteValue} onValueChange={handlePlannerRouteSelectionChange}>
+                      <SelectTrigger id="active-flight-planner-route-select" aria-label="Planner route" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
+                        <SelectValue placeholder="No planner route selected" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No planner route selected</SelectItem>
+                        {plannerRouteChoices.map((route) => (
+                          <SelectItem key={route.id} value={route.id}>
+                            {route.name} ? {(route.legs?.length || 0)} waypoints
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-7 shrink-0 border-slate-300 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
+                        onClick={handleClearRouteSelection}
+                        disabled={!selectedBookingId && !selectedPlannerRouteId}
+                      >
+                        Clear Route
+                      </Button>
+                    </div>
                   </div>
                 </CollapsibleContent>
               </div>
@@ -1065,8 +1130,8 @@ export default function ActiveFlightPage() {
               <div className="min-w-[220px] flex-1 space-y-1">
                 <Label htmlFor="active-flight-aircraft-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Aircraft Registration</Label>
                 <Select value={selectedAircraftValue} onValueChange={handleAircraftSelectionChange}>
-                  <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
-                    <SelectValue placeholder="Select an aircraft" />
+                    <SelectTrigger id="active-flight-aircraft-select" aria-label="Aircraft registration" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
+                      <SelectValue placeholder="No aircraft selected" />
                   </SelectTrigger>
                   <SelectContent>{sortedAircraft.map((aircraft) => <SelectItem key={aircraft.id} value={aircraft.id}>{aircraft.tailNumber}</SelectItem>)}</SelectContent>
                 </Select>
@@ -1075,7 +1140,7 @@ export default function ActiveFlightPage() {
                 <Label htmlFor="active-flight-booking-filter-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Booking</Label>
                 <Select value={selectedBookingFilterValue} onValueChange={handleBookingFilterSelectionChange}>
                   <SelectTrigger id="active-flight-booking-filter-select" aria-label="Booking" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
-                    <SelectValue placeholder="Select a booking" />
+                    <SelectValue placeholder="No booking selected" />
                   </SelectTrigger>
                   <SelectContent>{bookingChoices.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date}</SelectItem>)}</SelectContent>
                 </Select>
@@ -1084,10 +1149,37 @@ export default function ActiveFlightPage() {
                 <Label htmlFor="active-flight-booking-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Navlog Route</Label>
                 <Select value={selectedBookingValue} onValueChange={handleBookingSelectionChange}>
                   <SelectTrigger id="active-flight-booking-select" aria-label="Navlog route" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
-                    <SelectValue placeholder="Optional: select a booking with a navlog" />
+                    <SelectValue placeholder="No route selected" />
                   </SelectTrigger>
                   <SelectContent>{candidateBookings.map((booking) => <SelectItem key={booking.id} value={booking.id}>#{booking.bookingNumber} ? {booking.date} ? {(booking.navlog?.legs?.length || 0)} legs</SelectItem>)}</SelectContent>
                 </Select>
+              </div>
+              <div className="min-w-[240px] flex-1 space-y-1">
+                <Label htmlFor="active-flight-planner-route-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Planner Route</Label>
+                <div className="flex items-center gap-2">
+                  <Select value={selectedPlannerRouteValue} onValueChange={handlePlannerRouteSelectionChange}>
+                    <SelectTrigger id="active-flight-planner-route-select" aria-label="Planner route" className="h-8 font-black uppercase tracking-[0.08em] text-[10px]">
+                      <SelectValue placeholder="No planner route selected" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No planner route selected</SelectItem>
+                      {plannerRouteChoices.map((route) => (
+                        <SelectItem key={route.id} value={route.id}>
+                          {route.name} ? {(route.legs?.length || 0)} waypoints
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 shrink-0 border-slate-300 bg-white px-3 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
+                    onClick={handleClearRouteSelection}
+                    disabled={!selectedBookingId && !selectedPlannerRouteId}
+                  >
+                    Clear Route
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1136,6 +1228,11 @@ export default function ActiveFlightPage() {
                 ))}
               </div>
             )}
+          </div>
+          <div className="border-t border-slate-200/80 px-2 py-1.5 text-center sm:px-3 sm:py-2">
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+              Aircraft is required to start tracking. Booking and route selection are optional.
+            </p>
           </div>
         </div>
         <div className="border-b border-slate-200/80 bg-white">

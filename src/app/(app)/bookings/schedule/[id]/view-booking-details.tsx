@@ -192,7 +192,8 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         navlog: !!workflowCompletion.navlog,
         checks: !!workflowCompletion.checks,
     };
-    const allWorkflowComplete = workflowReady.flightDetails && workflowReady.planning && workflowReady.weatherPlanningNavlogRequired && workflowReady.massBalance && workflowReady.navlog && workflowReady.checks;
+    const requiresPlanningAndNavlog = !!workflowCompletion.weatherPlanningNavlogRequired;
+    const allWorkflowComplete = workflowReady.flightDetails && workflowReady.massBalance && workflowReady.checks && (!requiresPlanningAndNavlog || (workflowReady.planning && workflowReady.navlog));
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
     const [departureLegId, setDepartureLegId] = useState<string | null>(booking.navlog?.legs?.[0]?.id || null);

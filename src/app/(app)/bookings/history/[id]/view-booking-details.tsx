@@ -287,24 +287,32 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     }, [personnel, booking.studentId]);
     const isAssignedInstructor = !!userProfile && booking.instructorId === userProfile.id;
     const canManuallyApprove = isAssignedInstructor || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.role?.toLowerCase() === 'dev';
+    const requiresPlanningAndNavlog = !!workflowCompletion.weatherPlanningNavlogRequired;
     const preFlightPhotos = ((booking.preFlightData as (typeof booking.preFlightData & { photos?: ChecklistPhoto[] }) | undefined)?.photos || []) as ChecklistPhoto[];
     const postFlightPhotos = (booking.postFlightData?.photos || []) as ChecklistPhoto[];
     const checkSections = useMemo(() => ([
         { key: 'massAndBalance' as const, label: 'Mass & balance reviewed', ok: !!booking.massAndBalance?.isWithinLimits, detail: booking.massAndBalance?.isWithinLimits ? 'Within limits' : 'Needs review' },
-        { key: 'navlog' as const, label: 'Navlog reviewed', ok: !!booking.navlog?.legs?.length, detail: booking.navlog?.legs?.length ? `${booking.navlog.legs.length} legs planned` : 'No navlog found' },
+        {
+            key: 'navlog' as const,
+            label: 'Navlog reviewed',
+            ok: !requiresPlanningAndNavlog || !!booking.navlog?.legs?.length,
+            detail: !requiresPlanningAndNavlog
+                ? 'Not required for this booking'
+                : booking.navlog?.legs?.length
+                    ? `${booking.navlog.legs.length} legs planned`
+                    : 'No navlog found',
+        },
         { key: 'preFlight' as const, label: 'Pre-flight checks completed', ok: !!booking.preFlightData?.documentsChecked || !!booking.preFlight, detail: booking.preFlightData?.documentsChecked ? 'Documents checked' : 'Pre-flight not confirmed' },
         { key: 'photos' as const, label: 'Photos attached', ok: (((booking.preFlightData as { photos?: ChecklistPhoto[] } | undefined)?.photos?.length || 0) + (booking.postFlightData?.photos?.length || 0)) > 0, detail: `${(((booking.preFlightData as { photos?: ChecklistPhoto[] } | undefined)?.photos?.length || 0) + (booking.postFlightData?.photos?.length || 0))} photo(s)` },
         { key: 'fuelUplift' as const, label: 'Fuel uplift recorded', ok: (booking.preFlightData?.fuelUpliftGallons || 0) > 0 || (booking.postFlightData?.fuelUpliftGallons || 0) > 0, detail: 'Gallons and litres mirrored' },
         { key: 'postFlight' as const, label: 'Post-flight checks recorded', ok: !!booking.postFlightData?.hobbs || !!booking.postFlight, detail: (booking.postFlightData?.hobbs || 0) > 0 ? 'Hobbs recorded' : 'Post-flight pending' },
-    ]), [booking.massAndBalance?.isWithinLimits, booking.navlog?.legs?.length, booking.postFlightData?.fuelUpliftGallons, booking.postFlightData?.hobbs, booking.preFlight, booking.preFlightData?.documentsChecked, booking.preFlightData?.fuelUpliftGallons, booking.preFlightData, booking.postFlightData]);
+    ]), [booking.massAndBalance?.isWithinLimits, booking.navlog?.legs?.length, booking.postFlightData?.fuelUpliftGallons, booking.postFlightData?.hobbs, booking.preFlight, booking.preFlightData?.documentsChecked, booking.preFlightData?.fuelUpliftGallons, booking.preFlightData, booking.postFlightData, requiresPlanningAndNavlog]);
     const approvedSectionCount = checkSections.filter((section) => checkApprovals[section.key]?.approved).length;
     const approvalPrerequisitesComplete =
         !!workflowCompletion.flightDetails &&
-        !!workflowCompletion.planning &&
-        !!workflowCompletion.weatherPlanningNavlogRequired &&
         !!workflowCompletion.massBalance &&
-        !!workflowCompletion.navlog &&
-        !!workflowCompletion.checks;
+        !!workflowCompletion.checks &&
+        (!requiresPlanningAndNavlog || (!!workflowCompletion.planning && !!workflowCompletion.navlog));
     const [graphConfig, setGraphConfig] = useState(DEFAULT_GRAPH_CONFIG);
     const [basicEmpty, setBasicEmpty] = useState(DEFAULT_BASIC_EMPTY);
     const [stations, setStations] = useState<BookingStationState[]>(DEFAULT_STATIONS);
