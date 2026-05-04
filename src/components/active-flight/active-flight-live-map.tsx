@@ -1292,6 +1292,12 @@ export function ActiveFlightLiveMap({
     }
   }, [routeDownloadState, routePoints.length]);
 
+  useEffect(() => {
+    if (routePoints.length < 2) return;
+    if (!showRouteLine) setShowRouteLine(true);
+    if (!showWaypointMarkers) setShowWaypointMarkers(true);
+  }, [routePoints.length, showRouteLine, showWaypointMarkers]);
+
   const followOwnship = followOwnshipProp ?? internalFollowOwnship;
   const displayPosition = useMemo<FlightPosition | null>(() => {
     if (!position && !locationCalibration) return null;

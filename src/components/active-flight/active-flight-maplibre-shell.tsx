@@ -1204,6 +1204,9 @@ export function ActiveFlightMapLibreShell({
     routeSource?.setData(routeGeoJson as any);
     routeSourceRef.current = routeSource || null;
 
+    if (map.getLayer('route-line-casing')) {
+      map.setLayoutProperty('route-line-casing', 'visibility', toLayerVisibility(showRouteLine));
+    }
     if (map.getLayer('route-line')) {
       map.setLayoutProperty('route-line', 'visibility', toLayerVisibility(showRouteLine));
     }
