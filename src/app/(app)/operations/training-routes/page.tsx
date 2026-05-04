@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
@@ -329,8 +329,11 @@ export default function TrainingRoutesPage() {
                       <section className="space-y-4">
                         <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Planned Legs</h3>
                         <div className="space-y-2">
-                          {activeRoute.legs.map((leg, i) => {
-                        const displayTitle = leg.waypoint || 'PNT';
+                          {activeRoute.legs.slice(1).map((leg, i) => {
+                            const fromLeg = activeRoute.legs[i];
+                            const fromWaypoint = fromLeg?.waypoint || `WP ${i + 1}`;
+                            const toWaypoint = leg.waypoint || `WP ${i + 2}`;
+                            const displayTitle = `${fromWaypoint} to ${toWaypoint}`;
                             const detailLines = [leg.frequencies, leg.layerInfo].filter(Boolean);
 
                             return (
@@ -343,7 +346,7 @@ export default function TrainingRoutesPage() {
                                         onChange={(e) => {
                                           const rawValue = e.target.value.trim();
                                           const next = [...activeRoute.legs];
-                                          next[i].waypoint = rawValue.replace(/-\d+$/, '') || 'PNT';
+                                          next[i + 1].waypoint = rawValue.replace(/-\d+$/, '') || 'PNT';
                                           setActiveRoute({ ...activeRoute, legs: next });
                                         }}
                                         className="h-6 w-full max-w-[16rem] border-none p-0 text-[11px] font-black uppercase text-slate-900 shadow-none focus-visible:ring-0"
@@ -372,7 +375,7 @@ export default function TrainingRoutesPage() {
                                       </div>
                                       <div className="flex flex-col">
                                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                        <span className="text-[10px] font-black text-slate-900">{leg.magneticHeading?.toFixed(0) || '0'}°</span>
+                                        <span className="text-[10px] font-black text-slate-900">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}Â°</span>
                                       </div>
                                     </div>
                                   </div>
@@ -396,7 +399,7 @@ export default function TrainingRoutesPage() {
                               </div>
                             );
                           })}
-                          {activeRoute.legs.length === 0 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><Navigation className="mx-auto mb-2 h-6 w-6 opacity-50 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Click map to add waypoints</p></div>}
+                          {activeRoute.legs.length < 2 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><Navigation className="mx-auto mb-2 h-6 w-6 opacity-50 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Add another waypoint to show legs</p></div>}
                         </div>
                       </section>
                       <Separator />
@@ -455,3 +458,4 @@ export default function TrainingRoutesPage() {
     </div>
   );
 }
+

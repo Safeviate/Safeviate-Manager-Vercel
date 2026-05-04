@@ -217,7 +217,12 @@ export default function FlightPlannerPage() {
                           <div className="min-w-0 flex-1 space-y-2">
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0 space-y-1">
-                                <p className="truncate text-sm font-black uppercase">{leg.waypoint}</p>
+                                <p className="truncate text-sm font-black uppercase">
+                                  {index === 0
+                                    ? `${legs[index]?.waypoint || 'WP 1'} to ${legs[index + 1]?.waypoint || `WP ${index + 2}`}`
+                                    : `${legs[index - 1]?.waypoint || `WP ${index}`} to ${leg.waypoint || `WP ${index + 1}`}`
+                                  }
+                                </p>
                                 <p className="text-[9px] font-mono font-bold text-muted-foreground">
                                   {leg.latitude?.toFixed(4)}, {leg.longitude?.toFixed(4)}
                                 </p>
@@ -271,7 +276,7 @@ export default function FlightPlannerPage() {
                               </div>
                               <div className="rounded-lg bg-primary/10 px-2 py-1.5">
                                 <span className="text-primary">MH</span>
-                                <span className="ml-1 text-primary">{leg.magneticHeading?.toFixed(0) || '-'}°</span>
+                                <span className="ml-1 text-primary">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0) || '-'}°</span>
                               </div>
                               <div className="rounded-lg bg-muted/20 px-2 py-1.5">
                                 <span className="text-muted-foreground">Dist</span>
