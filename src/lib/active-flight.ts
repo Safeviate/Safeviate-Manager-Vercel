@@ -2,7 +2,7 @@ import { getBearing, getDistance } from '@/lib/e6b';
 import type { NavlogLeg } from '@/types/booking';
 import type { ActiveLegState, FlightPosition } from '@/types/flight-session';
 
-const ARRIVAL_THRESHOLD_NM = 1;
+const ARRIVAL_THRESHOLD_NM = 0.5;
 const ON_COURSE_THRESHOLD_NM = 1.5;
 
 const toRadians = (degrees: number) => degrees * (Math.PI / 180);

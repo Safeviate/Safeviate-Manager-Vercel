@@ -28,9 +28,9 @@ import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordin
 const getRouteTypeLabel = (routeType?: TrainingRoute['routeType']) =>
   routeType === 'other' ? 'Other Route' : 'Training Route';
 
-const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
+const RoutePlannerMapLibreShell = dynamic(() => import('@/components/flight-planner/route-planner-maplibre-shell').then((module) => module.RoutePlannerMapLibreShell), {
   ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse bg-slate-900 flex items-center justify-center text-white font-black uppercase tracking-widest text-[10px]">Loading Aeronautical Engine...</div>
+  loading: () => <div className="h-full w-full animate-pulse bg-slate-900 flex items-center justify-center text-white font-black uppercase tracking-widest text-[10px]">Loading MapLibre Engine...</div>
 });
 
 const createEmptyRoute = (): TrainingRoute => ({
@@ -248,20 +248,19 @@ export default function TrainingRoutesPage() {
         <CardContent className="flex-1 overflow-hidden p-0">
           <div className={cn('grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_350px] lg:grid-rows-none lg:h-full', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>
               <div className={cn('relative order-1 z-20 flex h-full min-h-0 flex-col overflow-hidden bg-slate-900', isModern && 'bg-white')}>
-                <AeronauticalMap
+                <RoutePlannerMapLibreShell
                   legs={activeRoute?.legs || []}
                   hazards={activeRoute?.hazards || []}
+                  isEditing={isEditing}
                   onAddWaypoint={handleAddWaypoint}
                   onMoveWaypoint={handleMoveWaypoint}
                   onAddHazard={handleAddHazardRequest}
-                  isEditing={isEditing}
                   isZoomPanelOpen={isMapZoomPanelOpen}
-                  onZoomPanelOpenChange={setIsMapZoomPanelOpen}
                   isLayersPanelOpen={isMapLayersPanelOpen}
+                  onZoomPanelOpenChange={setIsMapZoomPanelOpen}
                   onLayersPanelOpenChange={setIsMapLayersPanelOpen}
                   rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />}
                 />
-              {!isEditing && activeRoute && (<div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2"><Button onClick={() => setIsEditing(true)} className="h-10 rounded-full border bg-white/95 px-6 text-[10px] font-black uppercase text-black shadow-2xl hover:bg-white">Edit Route Engine</Button></div>)}
             </div>
 
             <div className={cn('relative order-2 z-10 flex h-full min-h-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
