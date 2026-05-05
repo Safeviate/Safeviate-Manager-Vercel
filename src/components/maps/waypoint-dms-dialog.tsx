@@ -13,6 +13,7 @@ type WaypointDmsDialogProps = {
   onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
   triggerLabel?: string;
   triggerClassName?: string;
+  triggerIconOnly?: boolean;
   defaultIdentifier?: string;
 };
 
@@ -74,6 +75,7 @@ export function WaypointDmsDialog({
   onAddWaypoint,
   triggerLabel = 'Add DMS Waypoint',
   triggerClassName,
+  triggerIconOnly = false,
   defaultIdentifier = 'PNT',
 }: WaypointDmsDialogProps) {
   const { toast } = useToast();
@@ -134,9 +136,11 @@ export function WaypointDmsDialog({
           size="sm"
           variant="outline"
           className={triggerClassName}
+          aria-label={triggerIconOnly ? triggerLabel : undefined}
+          title={triggerIconOnly ? triggerLabel : undefined}
         >
-          <Plus className="mr-2 h-4 w-4" />
-          {triggerLabel}
+          <Plus className={triggerIconOnly ? 'h-4 w-4' : 'mr-2 h-4 w-4'} />
+          {triggerIconOnly ? <span className="sr-only">{triggerLabel}</span> : triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">

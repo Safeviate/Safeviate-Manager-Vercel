@@ -151,6 +151,9 @@ type AviationMapLibreShellProps = {
   showAircraftNames?: boolean;
   showAircraftTrails?: boolean;
   showNavlogRoutes?: boolean;
+  showRouteLine?: boolean;
+  showWaypointMarkers?: boolean;
+  showHazards?: boolean;
   onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
   onMapShortPress?: (lat: number, lon: number) => void;
   onMapLongPress?: (lat: number, lon: number) => void;
@@ -546,6 +549,9 @@ export function AviationMapLibreShell({
   showAircraftNames = true,
   showAircraftTrails = true,
   showNavlogRoutes = true,
+  showRouteLine = true,
+  showWaypointMarkers = true,
+  showHazards = true,
   onMoveWaypoint,
   onMapShortPress,
   onMapLongPress,
@@ -1005,19 +1011,21 @@ export function AviationMapLibreShell({
         } as any);
       }
 
-      map.addSource('route', { type: 'geojson', data: routeGeoJson as any });
-      map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        paint: {
-          'line-color': ROUTE_LINE_COLOR,
-          'line-width': ROUTE_LINE_WIDTH,
-          'line-opacity': ROUTE_LINE_OPACITY,
-          'line-dasharray': [10, 10],
-        },
-        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(true) },
-      });
+      if (showRouteLine) {
+        map.addSource('route', { type: 'geojson', data: routeGeoJson as any });
+        map.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: 'route',
+          paint: {
+            'line-color': ROUTE_LINE_COLOR,
+            'line-width': ROUTE_LINE_WIDTH,
+            'line-opacity': ROUTE_LINE_OPACITY,
+            'line-dasharray': [10, 10],
+          },
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(true) },
+        });
+      }
 
       const markerIds: string[] = [];
       const addMarker = (id: string, marker: maplibregl.Marker) => {
@@ -1082,48 +1090,52 @@ export function AviationMapLibreShell({
       }
 
       if (mode === 'route-planner') {
-        for (const [index, leg] of legs.entries()) {
-          if (leg.latitude === undefined || leg.longitude === undefined) continue;
-          const element = document.createElement('div');
-          element.style.width = '14px';
-          element.style.height = '14px';
-          element.style.borderRadius = '9999px';
-          element.style.background = '#ef4444';
-          element.style.border = '2px solid #fff';
-          element.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.35)';
+        if (showWaypointMarkers) {
+          for (const [index, leg] of legs.entries()) {
+            if (leg.latitude === undefined || leg.longitude === undefined) continue;
+            const element = document.createElement('div');
+            element.style.width = '14px';
+            element.style.height = '14px';
+            element.style.borderRadius = '9999px';
+            element.style.background = '#ef4444';
+            element.style.border = '2px solid #fff';
+            element.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.35)';
 
-          const marker = new maplibregl.Marker({ element, draggable: isEditing, anchor: 'center' });
-          marker.setLngLat([leg.longitude, leg.latitude]);
-          marker.setPopup(new maplibregl.Popup({ offset: 16 }).setDOMContent(makeWaypointPopupContent(leg, index)));
+            const marker = new maplibregl.Marker({ element, draggable: isEditing, anchor: 'center' });
+            marker.setLngLat([leg.longitude, leg.latitude]);
+            marker.setPopup(new maplibregl.Popup({ offset: 16 }).setDOMContent(makeWaypointPopupContent(leg, index)));
 
-          marker.on('dragend', () => {
-            const next = marker.getLngLat();
-            onMoveWaypointRef.current?.(leg.id, next.lat, next.lng);
-          });
+            marker.on('dragend', () => {
+              const next = marker.getLngLat();
+              onMoveWaypointRef.current?.(leg.id, next.lat, next.lng);
+            });
 
-          addMarker(`waypoint-${leg.id}`, marker);
+            addMarker(`waypoint-${leg.id}`, marker);
+          }
         }
 
-        for (const hazard of hazards) {
-          const element = document.createElement('div');
-          element.style.width = '24px';
-          element.style.height = '24px';
-          element.style.display = 'flex';
-          element.style.alignItems = 'center';
-          element.style.justifyContent = 'center';
-          element.style.borderRadius = '9999px';
-          element.style.background = '#ef4444';
-          element.style.border = '2px solid #fff';
-          element.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.35)';
-          element.style.color = '#fff';
-          element.style.fontSize = '14px';
-          element.style.fontWeight = '900';
-          element.textContent = '!';
+        if (showHazards) {
+          for (const hazard of hazards) {
+            const element = document.createElement('div');
+            element.style.width = '24px';
+            element.style.height = '24px';
+            element.style.display = 'flex';
+            element.style.alignItems = 'center';
+            element.style.justifyContent = 'center';
+            element.style.borderRadius = '9999px';
+            element.style.background = '#ef4444';
+            element.style.border = '2px solid #fff';
+            element.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.35)';
+            element.style.color = '#fff';
+            element.style.fontSize = '14px';
+            element.style.fontWeight = '900';
+            element.textContent = '!';
 
-          const marker = new maplibregl.Marker({ element, anchor: 'center' });
-          marker.setLngLat([hazard.lng, hazard.lat]);
-          marker.setPopup(new maplibregl.Popup({ offset: 16 }).setDOMContent(makeHazardPopupContent(hazard)));
-          marker.addTo(map);
+            const marker = new maplibregl.Marker({ element, anchor: 'center' });
+            marker.setLngLat([hazard.lng, hazard.lat]);
+            marker.setPopup(new maplibregl.Popup({ offset: 16 }).setDOMContent(makeHazardPopupContent(hazard)));
+            marker.addTo(map);
+          }
         }
       }
 

@@ -28,6 +28,7 @@ type FlightPosition = {
 type ActiveFlightMapLibreShellProps = {
   className?: string;
   center: Point;
+  baseStyle?: 'light' | 'satellite';
   position: FlightPosition;
   routePoints: Point[];
   trackHistory: Point[];
@@ -329,6 +330,7 @@ const bringAerialLayersToFront = (map: MapLibreMap, layerIds: string[]) => {
 export function ActiveFlightMapLibreShell({
   className,
   center,
+  baseStyle = 'satellite',
   position,
   routePoints,
   trackHistory,
@@ -524,7 +526,7 @@ export function ActiveFlightMapLibreShell({
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: MAPLIBRE_BASE_STYLES.light,
+      style: MAPLIBRE_BASE_STYLES[baseStyle],
       center: [center[1], center[0]],
       zoom: 8,
       minZoom,

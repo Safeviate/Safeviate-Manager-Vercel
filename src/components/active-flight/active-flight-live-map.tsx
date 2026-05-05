@@ -1005,6 +1005,7 @@ const AVAILABLE_ZOOM_LEVELS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
 type ActiveFlightMapLayerSettings = {
   showLabels: boolean;
   showMasterChart: boolean;
+  baseStyle: 'light' | 'satellite';
   showAirports: boolean;
   showNavaids: boolean;
   showReportingPoints: boolean;
@@ -1026,6 +1027,7 @@ type ActiveFlightMapLayerSettings = {
 const DEFAULT_ACTIVE_FLIGHT_MAP_LAYER_SETTINGS: ActiveFlightMapLayerSettings = {
   showLabels: true,
   showMasterChart: true,
+  baseStyle: 'satellite',
   showAirports: true,
   showNavaids: true,
   showReportingPoints: false,
@@ -1203,6 +1205,7 @@ export function ActiveFlightLiveMap({
   const [showTrackLine, setShowTrackLine] = useState(() => readStoredActiveFlightMapLayerSettings().showTrackLine);
   const [showLabels, setShowLabels] = useState(() => readStoredActiveFlightMapLayerSettings().showLabels);
   const [showMasterChart, setShowMasterChart] = useState(() => readStoredActiveFlightMapLayerSettings().showMasterChart);
+  const [baseStyle, setBaseStyle] = useState(() => readStoredActiveFlightMapLayerSettings().baseStyle);
   const [showAirports, setShowAirports] = useState(() => readStoredActiveFlightMapLayerSettings().showAirports);
   const [showNavaids, setShowNavaids] = useState(() => readStoredActiveFlightMapLayerSettings().showNavaids);
   const [showReportingPoints, setShowReportingPoints] = useState(() => readStoredActiveFlightMapLayerSettings().showReportingPoints);
@@ -1239,6 +1242,7 @@ export function ActiveFlightLiveMap({
     const settings: ActiveFlightMapLayerSettings = {
       showLabels,
       showMasterChart,
+      baseStyle,
       showAirports,
       showNavaids,
       showReportingPoints,
@@ -1261,6 +1265,7 @@ export function ActiveFlightLiveMap({
   }, [
     showLabels,
     showMasterChart,
+    baseStyle,
     showAirports,
     showNavaids,
     showReportingPoints,
@@ -1829,6 +1834,7 @@ export function ActiveFlightLiveMap({
               showTrackLine={showTrackLine}
               showLabels={showLabels}
               showMasterChart={showMasterChart}
+              baseStyle={baseStyle}
               showAirports={showAirports}
               showNavaids={showNavaids}
               showReportingPoints={showReportingPoints}
@@ -2111,8 +2117,8 @@ export function ActiveFlightLiveMap({
         ) : null}
 
       {isLayersCardOpen ? (
-        <div className="pointer-events-auto absolute left-1/2 top-2 z-[1200] flex max-h-[calc(100vh-1rem)] w-[min(340px,calc(100%-0.75rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur">
-          <div className="border-b border-slate-100 px-2 py-1.5 sm:px-3 sm:py-3">
+          <div className="pointer-events-auto fixed left-1/2 top-2 z-[1300] flex h-[min(40dvh,calc(100dvh-18rem))] w-[min(300px,calc(100%-0.75rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur sm:h-[min(44dvh,calc(100dvh-16rem))] sm:w-[min(320px,calc(100%-1rem))]">
+          <div className="border-b border-slate-100 px-2 py-0.5 sm:px-3 sm:py-1.5">
             <div className="flex items-start justify-between gap-2">
               <button
                 type="button"
@@ -2128,8 +2134,42 @@ export function ActiveFlightLiveMap({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-2 py-2 sm:px-3 sm:py-3">
-            <div className="mb-2 grid grid-cols-3 gap-1">
+            <ScrollArea className="min-h-0 flex-1 overscroll-contain">
+              <div className="px-2 py-1 sm:px-3 sm:py-2">
+            <div className="mb-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Base View</p>
+                <span className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  {baseStyle === 'satellite' ? 'Satellite' : 'Light'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {[
+                  { key: 'light', label: 'Light' },
+                  { key: 'satellite', label: 'Satellite' },
+                ].map((style) => {
+                  const active = baseStyle === style.key;
+                  return (
+                    <Button
+                      key={style.key}
+                      type="button"
+                      variant="outline"
+                      aria-pressed={active}
+                      className={`h-5 px-2 text-[6px] font-black uppercase ${
+                        active
+                          ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                      onClick={() => setBaseStyle(style.key as 'light' | 'satellite')}
+                    >
+                      {style.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mb-1.5 grid grid-cols-2 gap-1">
               {[
                 { key: 'layers', label: 'Layers' },
                 { key: 'labels', label: 'Labels' },
@@ -2139,7 +2179,7 @@ export function ActiveFlightLiveMap({
                   type="button"
                   variant="outline"
                   aria-pressed={layerPanelTab === tab.key}
-                  className={`h-7 px-2 text-[8px] font-black uppercase ${
+                  className={`h-5 px-2 text-[6px] font-black uppercase ${
                     layerPanelTab === tab.key
                       ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
                       : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -2152,7 +2192,7 @@ export function ActiveFlightLiveMap({
             </div>
 
             {layerPanelTab === 'layers' ? (
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {[
                   ['Labels', showLabels, setShowLabels],
                   ['Master Chart', showMasterChart, setShowMasterChart],
@@ -2178,7 +2218,7 @@ export function ActiveFlightLiveMap({
                     type="button"
                     variant="outline"
                     aria-pressed={checked as boolean}
-                    className={`h-7 w-full justify-start gap-1.5 px-2 text-[8px] font-black uppercase sm:h-9 sm:px-3 sm:text-[10px] ${
+                    className={`h-5 w-full justify-start gap-1 px-2 text-[6px] font-black uppercase sm:h-7 sm:px-3 sm:text-[8px] ${
                       checked
                         ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -2186,18 +2226,18 @@ export function ActiveFlightLiveMap({
                     onClick={() => (setter as (value: boolean) => void)(!(checked as boolean))}
                   >
                     <span
-                      className={`h-2.5 w-2.5 rounded-full border-2 ${
+                      className={`h-2 w-2 rounded-full border-2 ${
                         checked ? 'border-white bg-white' : 'border-slate-300 bg-transparent'
                       }`}
                     />
-                    <span className="text-[8px] font-semibold sm:text-[10px]">{label as string}</span>
+                    <span className="text-[6px] font-semibold sm:text-[8px]">{label as string}</span>
                   </Button>
                 ))}
               </div>
             ) : null}
 
             {layerPanelTab === 'labels' ? (
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {[
                   ['Airport Labels', showLabels, setShowLabels],
                   ['Navaid Labels', showNavaids, setShowNavaids],
@@ -2217,7 +2257,7 @@ export function ActiveFlightLiveMap({
                     type="button"
                     variant="outline"
                     aria-pressed={checked as boolean}
-                    className={`h-7 w-full justify-start gap-1.5 px-2 text-[8px] font-black uppercase sm:h-9 sm:px-3 sm:text-[10px] ${
+                    className={`h-5 w-full justify-start gap-1 px-2 text-[6px] font-black uppercase sm:h-7 sm:px-3 sm:text-[8px] ${
                       checked
                         ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -2225,17 +2265,17 @@ export function ActiveFlightLiveMap({
                     onClick={() => (setter as (value: boolean) => void)(!(checked as boolean))}
                   >
                     <span
-                      className={`h-2.5 w-2.5 rounded-full border-2 ${
+                      className={`h-2 w-2 rounded-full border-2 ${
                         checked ? 'border-white bg-white' : 'border-slate-300 bg-transparent'
                       }`}
                     />
-                    <span className="text-[8px] font-semibold sm:text-[10px]">{label as string}</span>
+                    <span className="text-[6px] font-semibold sm:text-[8px]">{label as string}</span>
                   </Button>
                 ))}
               </div>
             ) : null}
-
-          </div>
+            </div>
+          </ScrollArea>
         </div>
       ) : null}
 

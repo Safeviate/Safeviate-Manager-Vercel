@@ -33,6 +33,7 @@ import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordin
 import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 import { isBookingEligibleForTracking } from '@/lib/booking-tracking';
+import { BookingPlannedLegsPanel } from '@/components/bookings/booking-planned-legs-panel';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -691,77 +692,25 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden relative">
-                            <div className="flex-1 min-h-0 w-full relative z-0">
+                        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_350px] lg:grid-rows-none lg:h-full">
+                            <div className="relative order-1 z-20 flex h-full min-h-0 flex-col overflow-hidden bg-slate-900">
                                 <AeronauticalMap 
                                     legs={plannedLegs} 
                                     onAddWaypoint={handleAddWaypoint}
-                                    rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />}
+                                    rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" triggerIconOnly />}
                                 />
-                                
-                                {/* Absolute positioned leg summary cards - higher Z index */}
-                                <div className="absolute top-4 right-4 z-[1000] w-[300px] hidden lg:block max-h-[calc(100%-2rem)] flex flex-col pointer-events-none">
-                                    <Card className="shadow-2xl border bg-background/95 backdrop-blur flex flex-col min-h-0 max-h-full pointer-events-auto">
-                                        <CardHeader className="p-4 border-b shrink-0">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <CardTitle className="text-xs font-black uppercase tracking-widest">Route Summary</CardTitle>
-                                                    <Badge variant="secondary" className="text-[9px] font-black">{plannedLegs.length} WP</Badge>
-                                                </div>
-                                        </CardHeader>
-                                        <ScrollArea className="flex-1">
-                                            <div className="p-2 space-y-2">
-                                                {plannedLegs.map((leg, i) => (
-                                                    <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="space-y-1">
-                                                                <span className="font-black text-[11px] uppercase truncate block">
-                                                                    {i === 0
-                                                                        ? `${plannedLegs[i]?.waypoint || 'WP 1'} to ${plannedLegs[i + 1]?.waypoint || `WP ${i + 2}`}`
-                                                                        : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
-                                                                    }
-                                                                </span>
-                                                                <span className="font-mono text-[9px] text-muted-foreground block">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
-                                                            </div>
-                                                            {leg.frequencies && (
-                                                                <p className="mt-1 text-[9px] font-semibold text-emerald-700">
-                                                                    {leg.frequencies}
-                                                                </p>
-                                                            )}
-                                                            {leg.layerInfo && (
-                                                                <p className="mt-1 text-[9px] font-semibold text-primary">
-                                                                    {leg.layerInfo}
-                                                                </p>
-                                                            )}
-                                                    <div className="flex gap-3 mt-1">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                        <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>
-                                                                </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                    <span className="text-[10px] font-black">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}{"\u00B0"}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            onClick={() => setPlannedLegs(plannedLegs.filter(l => l.id !== leg.id))}
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                                {plannedLegs.length === 0 && (
-                                                    <div className="py-12 text-center">
-                                                        <p className="text-[10px] font-black uppercase text-muted-foreground italic opacity-40">Click the map to add waypoints</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </ScrollArea>
-                                    </Card>
-                                </div>
+                            </div>
+
+                            <div className="relative order-2 z-10 flex h-full min-h-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
+                                <ScrollArea className="h-full flex-1 overscroll-contain">
+                                    <div className="space-y-8 p-6 pb-12">
+                                        <BookingPlannedLegsPanel
+                                            legs={plannedLegs}
+                                            onRemoveLeg={(legId) => setPlannedLegs((current) => current.filter((leg) => leg.id !== legId))}
+                                            emptyMessage="Click the map to add waypoints"
+                                        />
+                                    </div>
+                                </ScrollArea>
                             </div>
                         </div>
                     </TabsContent>

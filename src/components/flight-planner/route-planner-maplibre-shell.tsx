@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, X } from 'lucide-react';
+import { Layers2, Map as MapIcon, Search, X } from 'lucide-react';
 
 import { MAPLIBRE_BASE_STYLES } from '@/lib/maplibre-map-config';
 import { parseJsonResponse } from '@/lib/safe-json';
@@ -441,6 +441,10 @@ export function RoutePlannerMapLibreShell({
   const [showHangGlidingState, setShowHangGlidingState] = useState(true);
   const [showObstaclesState, setShowObstaclesState] = useState(true);
   const isInteractiveEditMode = isEditing && Boolean(onAddWaypoint);
+  const isInteractiveEditModeRef = useRef(isInteractiveEditMode);
+  const onAddWaypointRef = useRef(onAddWaypoint);
+  const onMoveWaypointRef = useRef(onMoveWaypoint);
+  const onAddHazardRef = useRef(onAddHazard);
   const visiblePointFeaturesRef = useRef<OpenAipFeature[]>([]);
   const loadSeqRef = useRef(0);
   const lastLoadKeyRef = useRef('');
@@ -477,6 +481,26 @@ export function RoutePlannerMapLibreShell({
   const routeGeoJson = useMemo(() => makeLineFeatureCollection(routePoints), [routePoints]);
   const hazardGeoJson = useMemo(() => makeHazardFeatureCollection(hazards), [hazards]);
   const mapCenter = center ?? routePoints[0] ?? ([-25.9, 27.9] as Point);
+
+  useEffect(() => {
+    isInteractiveEditModeRef.current = isInteractiveEditMode;
+    const map = mapRef.current;
+    if (map?.getCanvas()) {
+      map.getCanvas().style.cursor = isInteractiveEditModeRef.current ? 'crosshair' : '';
+    }
+  }, [isInteractiveEditMode]);
+
+  useEffect(() => {
+    onAddWaypointRef.current = onAddWaypoint;
+  }, [onAddWaypoint]);
+
+  useEffect(() => {
+    onMoveWaypointRef.current = onMoveWaypoint;
+  }, [onMoveWaypoint]);
+
+  useEffect(() => {
+    onAddHazardRef.current = onAddHazard;
+  }, [onAddHazard]);
 
   const buildLayerInfo = useCallback((lat: number, lon: number): LayerInfoState => {
     const items: LayerInfoItem[] = [];
@@ -901,7 +925,8 @@ export function RoutePlannerMapLibreShell({
     });
 
     const handleMapClick = (event: maplibregl.MapMouseEvent) => {
-      if (!isInteractiveEditMode || !onAddWaypoint) return;
+      const currentAddWaypoint = onAddWaypointRef.current;
+      if (!isInteractiveEditModeRef.current || !currentAddWaypoint) return;
       const lat = event.lngLat.lat;
       const lon = event.lngLat.lng;
       const candidates = visiblePointFeaturesRef.current.filter((item) => item.geometry?.coordinates);
@@ -922,23 +947,24 @@ export function RoutePlannerMapLibreShell({
 
       if (nearest && nearest.sourceLayer === 'airports' && nearestDistance <= AIRPORT_CLICK_SNAP_THRESHOLD_NM) {
         const identifier = getWaypointIdentifier(nearest);
-        onAddWaypoint(lat, lon, identifier, formatWaypointFrequencies(nearest.frequencies), buildWaypointContext(nearest));
+        currentAddWaypoint(lat, lon, identifier, formatWaypointFrequencies(nearest.frequencies), buildWaypointContext(nearest));
         return;
       }
 
       if (nearest && nearest.sourceLayer !== 'airports' && nearestDistance <= CLICK_SNAP_THRESHOLD_NM) {
         const identifier = getWaypointIdentifier(nearest);
-        onAddWaypoint(lat, lon, identifier, formatWaypointFrequencies(nearest.frequencies), buildWaypointContext(nearest));
+        currentAddWaypoint(lat, lon, identifier, formatWaypointFrequencies(nearest.frequencies), buildWaypointContext(nearest));
         return;
       }
 
-      onAddWaypoint(lat, lon, 'PNT', undefined, 'Map Position');
+      currentAddWaypoint(lat, lon, 'PNT', undefined, 'Map Position');
     };
 
     const handleMapContextMenu = (event: maplibregl.MapMouseEvent) => {
       event.preventDefault();
-      if (isInteractiveEditMode && onAddHazard) {
-        onAddHazard(event.lngLat.lat, event.lngLat.lng);
+      const currentAddHazard = onAddHazardRef.current;
+      if (isInteractiveEditModeRef.current && currentAddHazard) {
+        currentAddHazard(event.lngLat.lat, event.lngLat.lng);
         return;
       }
 
@@ -973,7 +999,7 @@ export function RoutePlannerMapLibreShell({
       mapRef.current = null;
       setIsMapReady(false);
     };
-  }, [buildLayerInfo, hazardGeoJson, isEditing, isInteractiveEditMode, mapCenter, maxZoom, minZoom, onAddHazard, onAddWaypoint, onCenterChange, onZoomChange, routeGeoJson, routePoints]);
+  }, [buildLayerInfo, maxZoom, minZoom, onCenterChange, onZoomChange]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1168,7 +1194,8 @@ export function RoutePlannerMapLibreShell({
       if (leg.latitude == null || leg.longitude == null) continue;
 
       const markerElement = createNumberedWaypointElement(index + 1);
-      if (isInteractiveEditMode && onMoveWaypoint) {
+      const currentMoveWaypoint = onMoveWaypointRef.current;
+      if (isInteractiveEditModeRef.current && currentMoveWaypoint) {
         markerElement.style.cursor = 'grab';
         markerElement.style.touchAction = 'none';
         markerElement.style.userSelect = 'none';
@@ -1176,13 +1203,13 @@ export function RoutePlannerMapLibreShell({
 
       const marker = new maplibregl.Marker({
         element: markerElement,
-        draggable: isInteractiveEditMode && Boolean(onMoveWaypoint),
+        draggable: isInteractiveEditModeRef.current && Boolean(currentMoveWaypoint),
         anchor: 'center',
       })
         .setLngLat([leg.longitude, leg.latitude])
         .addTo(map);
 
-      if (isInteractiveEditMode && onMoveWaypoint) {
+      if (isInteractiveEditModeRef.current && currentMoveWaypoint) {
         const disableMapGestures = () => {
           markerElement.style.cursor = 'grabbing';
           map.dragPan.disable();
@@ -1198,7 +1225,7 @@ export function RoutePlannerMapLibreShell({
         marker.on('dragend', restoreMapGestures);
         marker.on('dragend', () => {
           const next = marker.getLngLat();
-          onMoveWaypoint(leg.id, next.lat, next.lng);
+          currentMoveWaypoint(leg.id, next.lat, next.lng);
         });
       }
 
@@ -1650,6 +1677,33 @@ export function RoutePlannerMapLibreShell({
           </div>
         </div>
       ) : null}
+
+      <div className="pointer-events-none absolute right-4 top-4 z-[1000] flex items-start gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onZoomPanelOpenChange?.(!isZoomPanelOpen)}
+          className="pointer-events-auto h-10 w-10 rounded-full border-slate-200 bg-white/95 p-0 text-[10px] font-black uppercase tracking-[0.12em] shadow-xl backdrop-blur hover:bg-slate-50"
+          aria-label="Map Zoom"
+          title="Map Zoom"
+        >
+          <MapIcon className="h-4 w-4" />
+          <span className="sr-only">Map Zoom</span>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onLayersPanelOpenChange?.(!isLayersPanelOpen)}
+          className="pointer-events-auto h-10 w-10 rounded-full border-slate-200 bg-white/95 p-0 text-[10px] font-black uppercase tracking-[0.12em] shadow-xl backdrop-blur hover:bg-slate-50"
+          aria-label="Map Layers"
+          title="Map Layers"
+        >
+          <Layers2 className="h-4 w-4" />
+          <span className="sr-only">Map Layers</span>
+        </Button>
+      </div>
     </div>
   );
 }

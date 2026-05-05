@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Plus, Trash2, MapIcon, Navigation, AlertTriangle, Save, Search, PlaneTakeoff, Pencil } from 'lucide-react';
 import { CARD_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
@@ -96,56 +96,62 @@ export default function TrainingRoutesPage() {
     if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Failed to save route.');
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = useCallback(() => {
     const newRoute = createEmptyRoute();
     setActiveRoute(newRoute);
     setIsEditing(true);
-  };
+  }, []);
 
-  const handleAddWaypoint = (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => {
-    if (!isEditing || !activeRoute) return;
-    const newLeg = createNavlogLegFromCoordinates(
-      activeRoute.legs,
-      lat,
-      lon,
-      identifier || `WP ${activeRoute.legs.length + 1}`,
-      frequencies,
-      layerInfo,
-    );
-    setActiveRoute({ ...activeRoute, legs: [...activeRoute.legs, newLeg] });
-  };
+  const handleAddWaypoint = useCallback((lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => {
+    if (!isEditing) return;
+    setActiveRoute((current) => {
+      if (!current) return current;
+      const newLeg = createNavlogLegFromCoordinates(
+        current.legs,
+        lat,
+        lon,
+        identifier || `WP ${current.legs.length + 1}`,
+        frequencies,
+        layerInfo,
+      );
+      return { ...current, legs: [...current.legs, newLeg] };
+    });
+  }, [isEditing]);
 
-  const handleMoveWaypoint = (legId: string, lat: number, lon: number) => {
-    if (!isEditing || !activeRoute) return;
+  const handleMoveWaypoint = useCallback((legId: string, lat: number, lon: number) => {
+    if (!isEditing) return;
+    setActiveRoute((current) => {
+      if (!current) return current;
 
-    const movedLegs = activeRoute.legs.map((leg) =>
-      leg.id === legId ? { ...leg, latitude: lat, longitude: lon } : leg
-    );
-
-    const recalculatedLegs = movedLegs.map((leg, index) => {
-      const rebuiltLeg = createNavlogLegFromCoordinates(
-        movedLegs.slice(0, index),
-        leg.latitude ?? 0,
-        leg.longitude ?? 0,
-        leg.waypoint?.replace(/-\d+$/, '') || 'PNT',
-        leg.frequencies,
-        leg.layerInfo,
+      const movedLegs = current.legs.map((leg) =>
+        leg.id === legId ? { ...leg, latitude: lat, longitude: lon } : leg
       );
 
-      return {
-        ...leg,
-        ...rebuiltLeg,
-        id: leg.id,
-      };
+      const recalculatedLegs = movedLegs.map((leg, index) => {
+        const rebuiltLeg = createNavlogLegFromCoordinates(
+          movedLegs.slice(0, index),
+          leg.latitude ?? 0,
+          leg.longitude ?? 0,
+          leg.waypoint?.replace(/-\d+$/, '') || 'PNT',
+          leg.frequencies,
+          leg.layerInfo,
+        );
+
+        return {
+          ...leg,
+          ...rebuiltLeg,
+          id: leg.id,
+        };
+      });
+
+      return { ...current, legs: recalculatedLegs };
     });
+  }, [isEditing]);
 
-    setActiveRoute({ ...activeRoute, legs: recalculatedLegs });
-  };
-
-  const handleAddHazardRequest = (lat: number, lng: number) => {
+  const handleAddHazardRequest = useCallback((lat: number, lng: number) => {
     setHazardToEdit({ lat, lng });
     setHazardNote('');
-  };
+  }, []);
 
   const confirmAddHazard = () => {
     if (!hazardToEdit || !activeRoute) return;
@@ -223,20 +229,6 @@ export default function TrainingRoutesPage() {
         <CardHeader className={cn(CARD_HEADER_BAND_CLASS, isModern && 'bg-transparent')}>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
-              variant="outline"
-              onClick={() => setIsMapZoomPanelOpen(true)}
-              className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
-            >
-              Map Zoom
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setIsMapLayersPanelOpen(true)}
-              className={cn(routePlannerSecondaryButtonClass, isModern && 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
-            >
-              Map Layers
-            </Button>
-            <Button
               onClick={handleCreateNew}
               className={cn(routePlannerPrimaryButtonClass, isModern && 'border-slate-200 bg-slate-800 text-white hover:bg-slate-700')}
             >
@@ -259,7 +251,7 @@ export default function TrainingRoutesPage() {
                   isLayersPanelOpen={isMapLayersPanelOpen}
                   onZoomPanelOpenChange={setIsMapZoomPanelOpen}
                   onLayersPanelOpenChange={setIsMapLayersPanelOpen}
-                  rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />}
+                  rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" triggerIconOnly />}
                 />
             </div>
 

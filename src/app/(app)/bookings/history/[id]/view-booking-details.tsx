@@ -10,7 +10,7 @@ import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingW
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, ListFilter, ChevronRight, MapPinned, Activity, CheckCircle2, Route, ArrowLeft, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, Activity, CheckCircle2, ArrowLeft, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordin
 import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
+import { BookingPlannedLegsPanel } from '@/components/bookings/booking-planned-legs-panel';
 
 // Dynamic import for Leaflet to avoid SSR issues
 const AeronauticalMap = dynamic(
@@ -265,7 +266,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
     const [approvingSection, setApprovingSection] = useState<CheckApprovalKey | null>(null);
-    const [showRouteSummary, setShowRouteSummary] = useState(!isMobile);
     const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
     const [personnel, setPersonnel] = useState<BookingPerson[]>([]);
     const [loadingAc, setLoadingAc] = useState(true);
@@ -956,14 +956,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                             <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
-                                        <DropdownMenuItem
-                                            onClick={() => setShowRouteSummary(!showRouteSummary)}
-                                            className="text-[10px] font-bold uppercase"
-                                        >
-                                            <ListFilter className="mr-2 h-3.5 w-3.5" />
-                                            {showRouteSummary ? 'Hide Route' : 'Show Route'}
-                                        </DropdownMenuItem>
+                                        <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
                                         <DropdownMenuItem
                                             onClick={() => setPlannedLegs([])}
                                             disabled={plannedLegs.length === 0}
@@ -984,13 +977,6 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </DropdownMenu>
                             ) : (
                                 <div className="flex items-center gap-2">
-                                    <Button 
-                                        variant="outline"
-                                        onClick={() => setShowRouteSummary(!showRouteSummary)}
-                                        className={cn(BOOKING_PLANNING_SECONDARY_BUTTON_CLASS, showRouteSummary && "bg-muted")}
-                                    >
-                                        <ListFilter className="mr-1 h-3 w-3" /> {showRouteSummary ? 'Hide Route' : 'Show Route'}
-                                    </Button>
                                     <Button 
                                         variant="outline"
                                         onClick={() => setPlannedLegs([])}
@@ -1208,95 +1194,25 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden relative">
-                            <div className="flex-1 min-h-0 w-full relative z-0">
+                        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_350px] lg:grid-rows-none lg:h-full">
+                            <div className="relative order-1 z-20 flex h-full min-h-0 flex-col overflow-hidden bg-slate-900">
                                 <AeronauticalMap
-                                  legs={plannedLegs}
-                                  onAddWaypoint={handleAddWaypoint}
-                                  rightAccessory={
-                                    <div className="flex items-center gap-2">
-                                      <WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" />
-                                      <button
-                                        type="button"
-                                        className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-xl backdrop-blur hover:bg-slate-50"
-                                        onClick={() => setShowRouteSummary((current) => !current)}
-                                        aria-label={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
-                                        title={showRouteSummary ? 'Hide route summary' : 'Show route summary'}
-                                      >
-                                        <Route className="h-4 w-4" />
-                                      </button>
-                                    </div>
-                                  }
+                                    legs={plannedLegs}
+                                    onAddWaypoint={handleAddWaypoint}
+                                    rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" triggerIconOnly />}
                                 />
-                                
-                                {/* Route Summary Cards - Absolute positioned over the map */}
-                                {showRouteSummary && (
-                                    <div className="absolute top-4 right-4 z-[1000] w-[300px] bottom-4 flex flex-col pointer-events-none">
-                                        <Card className="shadow-2xl border bg-background/95 backdrop-blur flex flex-col min-h-0 h-fit max-h-full pointer-events-auto overflow-hidden">
-                                            <CardHeader className="p-4 border-b shrink-0 flex flex-row items-center justify-between space-y-0">
-                                                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                                                    <MapPinned className="h-3.5 w-3.5 text-emerald-600" /> Route Summary
-                                                </CardTitle>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowRouteSummary(false)}>
-                                                    <ChevronRight className="h-4 w-4" />
-                                                </Button>
-                                            </CardHeader>
-                                            <ScrollArea className="flex-1 overflow-y-auto">
-                                                <div className="p-2 space-y-2">
-                                                    {plannedLegs.map((leg, i) => (
-                                                        <div key={leg.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/10 group transition-colors hover:bg-muted/20">
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="space-y-1">
-                                                                    <span className="font-black text-[11px] uppercase truncate block">
-                                                                        {i === 0
-                                                                            ? `${plannedLegs[i]?.waypoint || 'WP 1'} to ${plannedLegs[i + 1]?.waypoint || `WP ${i + 2}`}`
-                                                                            : `${plannedLegs[i - 1]?.waypoint || `WP ${i}`} to ${leg.waypoint || `WP ${i + 1}`}`
-                                                                        }
-                                                                    </span>
-                                                                    <span className="font-mono text-[9px] text-muted-foreground block">{formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}</span>
-                                                                </div>
-                                                                {leg.frequencies && (
-                                                                    <p className="mt-1 text-[9px] font-semibold text-emerald-700">
-                                                                        {leg.frequencies}
-                                                                    </p>
-                                                                )}
-                                                                {leg.layerInfo && (
-                                                                    <p className="text-[9px] font-semibold text-primary">
-                                                                        {leg.layerInfo}
-                                                                    </p>
-                                                                )}
-                                                    <div className="flex gap-3 mt-1">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                                                        <span className="text-[10px] font-black">{leg.distance?.toFixed(1)} NM</span>
-                                                                    </div>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                                                        <span className="text-[10px] font-black">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}{"\u00B0"}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                onClick={() => setPlannedLegs(plannedLegs.filter(l => l.id !== leg.id))}
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </div>
-                                                    ))}
-                                                    {plannedLegs.length === 0 && (
-                                                        <div className="py-12 text-center">
-                                                            <p className="text-[10px] font-black uppercase text-muted-foreground italic opacity-40">Click the map to add waypoints</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </ScrollArea>
-                                        </Card>
-                                    </div>
-                                )}
+                            </div>
 
+                            <div className="relative order-2 z-10 flex h-full min-h-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
+                                <ScrollArea className="h-full flex-1 overscroll-contain">
+                                    <div className="space-y-8 p-6 pb-12">
+                                        <BookingPlannedLegsPanel
+                                            legs={plannedLegs}
+                                            onRemoveLeg={(legId) => setPlannedLegs((current) => current.filter((leg) => leg.id !== legId))}
+                                            emptyMessage="Click the map to add waypoints"
+                                        />
+                                    </div>
+                                </ScrollArea>
                             </div>
                         </div>
                     </TabsContent>
