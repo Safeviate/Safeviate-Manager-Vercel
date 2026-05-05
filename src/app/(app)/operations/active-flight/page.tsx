@@ -1134,45 +1134,53 @@ export default function ActiveFlightPage() {
                     <Label htmlFor="active-flight-planner-route-select" className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Planner Route</Label>
                     <div className="flex items-center gap-2">
                       <Select value={selectedPlannerRouteValue} onValueChange={handlePlannerRouteSelectionChange}>
-                      <SelectTrigger id="active-flight-planner-route-select" aria-label="Planner route" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
-                        <SelectValue placeholder="No planner route selected" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No planner route selected</SelectItem>
-                        {plannerRouteChoices.map((route) => (
-                          <SelectItem key={route.id} value={route.id}>
-                            {route.name} ? {(route.legs?.length || 0)} waypoints
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                        <SelectTrigger id="active-flight-planner-route-select" aria-label="Planner route" className="h-7 font-black uppercase tracking-[0.08em] text-[10px]">
+                          <SelectValue placeholder="No planner route selected" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No planner route selected</SelectItem>
+                          {plannerRouteChoices.map((route) => (
+                            <SelectItem key={route.id} value={route.id}>
+                              {route.name} ? {(route.legs?.length || 0)} waypoints
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-7 shrink-0 border-slate-300 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
-                        onClick={() => forceRouteLoad('booking')}
-                        disabled={!selectedBookingId}
-                      >
-                        Load Navlog
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-7 shrink-0 border-slate-300 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
-                        onClick={() => forceRouteLoad('route')}
-                        disabled={!selectedPlannerRouteId}
-                      >
-                        Load Route
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-7 shrink-0 border-slate-300 bg-white px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 hover:bg-slate-50"
-                        onClick={handleClearRouteSelection}
-                        disabled={!selectedBookingId && !selectedPlannerRouteId && !loadedBookingId && !loadedPlannerRouteId}
-                      >
-                        Clear Route
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-7 shrink-0 border-input bg-background px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] shadow-sm hover:bg-accent/40"
+                          >
+                            <span>Route Actions</span>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-[12rem]">
+                          <DropdownMenuItem
+                            disabled={!selectedBookingId}
+                            className="text-[10px] font-bold uppercase"
+                            onClick={() => forceRouteLoad('booking')}
+                          >
+                            Load Navlog
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!selectedPlannerRouteId}
+                            className="text-[10px] font-bold uppercase"
+                            onClick={() => forceRouteLoad('route')}
+                          >
+                            Load Route
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!selectedBookingId && !selectedPlannerRouteId && !loadedBookingId && !loadedPlannerRouteId}
+                            className="text-[10px] font-bold uppercase"
+                            onClick={handleClearRouteSelection}
+                          >
+                            Clear Route
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CollapsibleContent>
