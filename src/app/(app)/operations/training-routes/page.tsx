@@ -22,8 +22,8 @@ import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/li
 import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
-import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
 import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
+import { BookingPlannedLegsPanel } from '@/components/bookings/booking-planned-legs-panel';
 
 const getRouteTypeLabel = (routeType?: TrainingRoute['routeType']) =>
   routeType === 'other' ? 'Other Route' : 'Training Route';
@@ -135,6 +135,7 @@ export default function TrainingRoutesPage() {
           leg.waypoint?.replace(/-\d+$/, '') || 'PNT',
           leg.frequencies,
           leg.layerInfo,
+          leg.notes,
         );
 
         return {
@@ -145,6 +146,17 @@ export default function TrainingRoutesPage() {
       });
 
       return { ...current, legs: recalculatedLegs };
+    });
+  }, [isEditing]);
+
+  const handleWaypointNotesChange = useCallback((legId: string, nextNotes: string) => {
+    if (!isEditing) return;
+    setActiveRoute((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        legs: current.legs.map((leg) => (leg.id === legId ? { ...leg, notes: nextNotes } : leg)),
+      };
     });
   }, [isEditing]);
 
@@ -251,8 +263,7 @@ export default function TrainingRoutesPage() {
                   isLayersPanelOpen={isMapLayersPanelOpen}
                   onZoomPanelOpenChange={setIsMapZoomPanelOpen}
                   onLayersPanelOpenChange={setIsMapLayersPanelOpen}
-                  rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" triggerIconOnly />}
-                />
+                  />
             </div>
 
             <div className={cn('relative order-2 z-10 flex h-full min-h-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS, isModern && 'border-slate-200/80 bg-white')}>
@@ -321,88 +332,22 @@ export default function TrainingRoutesPage() {
                     </div>
                     <div className="space-y-8">
                       <section className="space-y-4">
-                        <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"><div className="h-2 w-2 rounded-full bg-emerald-500" /> Planned Legs</h3>
-                        <div className="space-y-2">
-                          {activeRoute.legs.slice(1).map((leg, i) => {
-                            const fromLeg = activeRoute.legs[i];
-                            const fromWaypoint = fromLeg?.waypoint || `WP ${i + 1}`;
-                            const toWaypoint = leg.waypoint || `WP ${i + 2}`;
-                            const detailLines = [leg.frequencies, leg.layerInfo].filter(Boolean);
-
-                            return (
-                              <div key={leg.id} className={cn('group rounded-xl border bg-background p-3 transition-colors hover:bg-muted/20', isModern && 'border-slate-200/90 bg-slate-50/70')}>
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0 flex-1">
-                                    {isEditing ? (
-                                      <div className="space-y-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                                          From {fromWaypoint}
-                                        </p>
-                                        <Input
-                                          value={leg.waypoint}
-                                          onChange={(e) => {
-                                            const next = [...activeRoute.legs];
-                                            next[i + 1] = { ...next[i + 1], waypoint: e.target.value };
-                                            setActiveRoute({ ...activeRoute, legs: next });
-                                          }}
-                                          className="h-6 w-full max-w-[16rem] border-none p-0 text-[11px] font-black uppercase text-slate-900 shadow-none focus-visible:ring-0"
-                                          placeholder={`WP ${i + 2}`}
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="space-y-0.5">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                                          From {fromWaypoint}
-                                        </p>
-                                        <p className="break-words text-[11px] font-black uppercase leading-tight text-slate-900">
-                                          To {toWaypoint}
-                                        </p>
-                                      </div>
-                                    )}
-
-                                    <p className="mt-1 font-mono text-[8px] text-muted-foreground">
-                                      {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}
-                                    </p>
-
-                                    {detailLines.map((line, index) => (
-                                      <p
-                                        key={`${leg.id}-detail-${index}`}
-                                        className={cn(
-                                          'mt-1 text-[9px] font-semibold leading-tight',
-                                          index === 0 ? 'text-slate-700' : 'text-slate-700'
-                                        )}
-                                      >
-                                        {line}
-                                      </p>
-                                    ))}
-
-                                    <div className="mt-2 flex gap-5">
-                                      <div className="flex flex-col">
-                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
-                                        <span className="text-[10px] font-black text-slate-900">{leg.distance?.toFixed(1) || '0.0'} NM</span>
-                                      </div>
-                                      <div className="flex flex-col">
-                                        <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
-                                        <span className="text-[10px] font-black text-slate-900">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}{"\u00B0"}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {isEditing ? (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="shrink-0 h-7 w-7 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
-                                      onClick={() => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== leg.id) })}
-                                    >
-                                      <Trash2 size={12} />
-                                    </Button>
-                                  ) : null}
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {activeRoute.legs.length < 2 && <div className="rounded-xl border border-dashed bg-muted/5 py-8 text-center"><Navigation className="mx-auto mb-2 h-6 w-6 opacity-50 text-muted-foreground" /><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Add another waypoint to show legs</p></div>}
-                        </div>
+                        <BookingPlannedLegsPanel
+                          legs={activeRoute.legs}
+                          onRemoveLeg={(legId) => setActiveRoute({ ...activeRoute, legs: activeRoute.legs.filter((item) => item.id !== legId) })}
+                          emptyMessage="Add another waypoint to show legs"
+                          isEditing={isEditing}
+                          onWaypointChange={(legId, nextWaypoint) => {
+                            setActiveRoute((current) => {
+                              if (!current) return current;
+                              return {
+                                ...current,
+                                legs: current.legs.map((leg) => (leg.id === legId ? { ...leg, waypoint: nextWaypoint } : leg)),
+                              };
+                            });
+                          }}
+                          onWaypointNotesChange={handleWaypointNotesChange}
+                        />
                       </section>
                       <Separator />
                       <section className="space-y-4">

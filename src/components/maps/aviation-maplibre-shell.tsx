@@ -8,6 +8,7 @@ import { MAPLIBRE_BASE_STYLES, OPENAIP_VECTOR_TILE_URL } from '@/lib/maplibre-ma
 import { parseJsonResponse } from '@/lib/safe-json';
 import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 import { buildWaypointPopupMarkup } from '@/components/maps/waypoint-popup-content';
+import { createNumberedWaypointElement } from '@/components/maps/waypoint-marker-style';
 import {
   ROUTE_LINE_COLOR,
   ROUTE_LINE_OPACITY,
@@ -1021,7 +1022,6 @@ export function AviationMapLibreShell({
             'line-color': ROUTE_LINE_COLOR,
             'line-width': ROUTE_LINE_WIDTH,
             'line-opacity': ROUTE_LINE_OPACITY,
-            'line-dasharray': [10, 10],
           },
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(true) },
         });
@@ -1085,56 +1085,6 @@ export function AviationMapLibreShell({
               },
               layout: { 'line-cap': 'round', 'line-join': 'round', visibility: toLayerVisibility(true) },
             } as any);
-          }
-        }
-      }
-
-      if (mode === 'route-planner') {
-        if (showWaypointMarkers) {
-          for (const [index, leg] of legs.entries()) {
-            if (leg.latitude === undefined || leg.longitude === undefined) continue;
-            const element = document.createElement('div');
-            element.style.width = '14px';
-            element.style.height = '14px';
-            element.style.borderRadius = '9999px';
-            element.style.background = '#ef4444';
-            element.style.border = '2px solid #fff';
-            element.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.35)';
-
-            const marker = new maplibregl.Marker({ element, draggable: isEditing, anchor: 'center' });
-            marker.setLngLat([leg.longitude, leg.latitude]);
-            marker.setPopup(new maplibregl.Popup({ offset: 16 }).setDOMContent(makeWaypointPopupContent(leg, index)));
-
-            marker.on('dragend', () => {
-              const next = marker.getLngLat();
-              onMoveWaypointRef.current?.(leg.id, next.lat, next.lng);
-            });
-
-            addMarker(`waypoint-${leg.id}`, marker);
-          }
-        }
-
-        if (showHazards) {
-          for (const hazard of hazards) {
-            const element = document.createElement('div');
-            element.style.width = '24px';
-            element.style.height = '24px';
-            element.style.display = 'flex';
-            element.style.alignItems = 'center';
-            element.style.justifyContent = 'center';
-            element.style.borderRadius = '9999px';
-            element.style.background = '#ef4444';
-            element.style.border = '2px solid #fff';
-            element.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.35)';
-            element.style.color = '#fff';
-            element.style.fontSize = '14px';
-            element.style.fontWeight = '900';
-            element.textContent = '!';
-
-            const marker = new maplibregl.Marker({ element, anchor: 'center' });
-            marker.setLngLat([hazard.lng, hazard.lat]);
-            marker.setPopup(new maplibregl.Popup({ offset: 16 }).setDOMContent(makeHazardPopupContent(hazard)));
-            marker.addTo(map);
           }
         }
       }
@@ -1449,18 +1399,23 @@ export function AviationMapLibreShell({
     if (mode === 'route-planner') {
       for (const [index, leg] of legs.entries()) {
         if (leg.latitude === undefined || leg.longitude === undefined) continue;
-        const element = document.createElement('div');
-        element.style.width = '14px';
-        element.style.height = '14px';
-        element.style.borderRadius = '9999px';
-        element.style.background = '#ef4444';
-        element.style.border = '2px solid #fff';
-        element.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.35)';
+        const element = createNumberedWaypointElement(index + 1);
         element.setAttribute('data-leg-marker', leg.id);
+        element.style.cursor = isEditing ? 'grab' : 'pointer';
+        element.style.touchAction = 'none';
+        element.style.userSelect = 'none';
         const marker = new maplibregl.Marker({ element, draggable: isEditing, anchor: 'center' });
         marker.setLngLat([leg.longitude, leg.latitude]);
         marker.setPopup(new maplibregl.Popup({ offset: 16 }).setDOMContent(makeWaypointPopupContent(leg, index)));
+        marker.on('dragstart', () => {
+          element.style.cursor = 'grabbing';
+          map.dragPan.disable();
+          map.touchZoomRotate.disable();
+        });
         marker.on('dragend', () => {
+          element.style.cursor = 'grab';
+          map.dragPan.enable();
+          map.touchZoomRotate.enable();
           const next = marker.getLngLat();
           onMoveWaypointRef.current?.(leg.id, next.lat, next.lng);
         });

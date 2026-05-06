@@ -30,7 +30,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
-import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 import { isBookingEligibleForTracking } from '@/lib/booking-tracking';
 import { BookingPlannedLegsPanel } from '@/components/bookings/booking-planned-legs-panel';
@@ -522,9 +521,13 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
-        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
+    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string, notes?: string) => {
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo, notes)]);
     };
+
+    const handleWaypointNotesChange = useCallback((legId: string, nextNotes: string) => {
+        setPlannedLegs((current) => current.map((leg) => (leg.id === legId ? { ...leg, notes: nextNotes } : leg)));
+    }, []);
 
     const handleSetDeparture = (leg: NavlogLeg) => {
         setDepartureLegId(leg.id);
@@ -692,22 +695,22 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_350px] lg:grid-rows-none lg:h-full">
+                        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_311px] lg:grid-rows-none lg:h-full">
                             <div className="relative order-1 z-20 flex h-full min-h-0 flex-col overflow-hidden bg-slate-900">
                                 <AeronauticalMap 
                                     legs={plannedLegs} 
                                     onAddWaypoint={handleAddWaypoint}
-                                    rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" triggerIconOnly />}
-                                />
+                            />
                             </div>
 
-                            <div className="relative order-2 z-10 flex h-full min-h-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
+                            <div className="relative order-2 z-10 flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
                                 <ScrollArea className="h-full flex-1 overscroll-contain">
-                                    <div className="space-y-8 p-6 pb-12">
+                                    <div className="mx-auto min-w-0 max-w-[311px] space-y-6 overflow-x-hidden px-4 pt-2 pb-12 lg:px-3">
                                         <BookingPlannedLegsPanel
                                             legs={plannedLegs}
                                             onRemoveLeg={(legId) => setPlannedLegs((current) => current.filter((leg) => leg.id !== legId))}
                                             emptyMessage="Click the map to add waypoints"
+                                            onWaypointNotesChange={handleWaypointNotesChange}
                                         />
                                     </div>
                                 </ScrollArea>

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Loader2, Navigation, PlaneTakeoff, Radio } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,8 +19,10 @@ import { useTheme } from '@/components/theme-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Aircraft } from '@/types/aircraft';
 import type { Booking } from '@/types/booking';
+import type { NavlogLeg } from '@/types/booking';
 import type { TrainingRoute } from '@/types/booking';
 import type { FlightPosition, FlightSession } from '@/types/flight-session';
+import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { getOrCreateDeviceBinding, setDeviceLabel } from '@/lib/flight-session';
 import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
 import { getActiveLegState } from '@/lib/active-flight';
@@ -329,10 +331,15 @@ export default function ActiveFlightPage() {
         .join(' • ')
     : 'Flight Setup';
   const selectedLegs = selectedPlannerRoute?.legs?.length ? selectedPlannerRoute.legs : selectedBooking?.navlog?.legs || [];
+  const [editableLegs, setEditableLegs] = useState<NavlogLeg[] | null>(null);
   const currentDeviceSession = useMemo(
     () => flightSessions.find((session) => session.deviceId === deviceBinding?.deviceId) || null,
     [deviceBinding?.deviceId, flightSessions],
   );
+  useEffect(() => {
+    setEditableLegs(null);
+  }, [loadedBookingId, loadedPlannerRouteId]);
+  const displayLegs = editableLegs ?? selectedLegs;
   const displayPosition = useMemo<FlightPosition | null>(() => {
     if (!position && !locationCalibration && !currentDeviceSession?.lastPosition) return null;
 
@@ -363,7 +370,34 @@ export default function ActiveFlightPage() {
     };
   }, [currentDeviceSession?.lastPosition, locationCalibration, position]);
   const effectivePosition = displayPosition;
-  const activeLegState = useMemo(() => getActiveLegState(selectedLegs, effectivePosition), [effectivePosition, selectedLegs]);
+  const activeLegState = useMemo(() => getActiveLegState(displayLegs, effectivePosition), [displayLegs, effectivePosition]);
+  const handleMoveWaypoint = useCallback((legId: string, lat: number, lon: number) => {
+    setEditableLegs((current) => {
+      const sourceLegs = current ?? selectedLegs;
+      if (!sourceLegs.length) return current;
+
+      const movedLegs = sourceLegs.map((leg) => (leg.id === legId ? { ...leg, latitude: lat, longitude: lon } : leg));
+      const recalculatedLegs = movedLegs.map((leg, index) => {
+        const rebuiltLeg = createNavlogLegFromCoordinates(
+          movedLegs.slice(0, index),
+          leg.latitude ?? 0,
+          leg.longitude ?? 0,
+          leg.waypoint?.replace(/-\d+$/, '') || 'PNT',
+          leg.frequencies,
+          leg.layerInfo,
+          leg.notes,
+        );
+
+        return {
+          ...leg,
+          ...rebuiltLeg,
+          id: leg.id,
+        };
+      });
+
+      return recalculatedLegs;
+    });
+  }, [selectedLegs]);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
     speed: activeLegState?.groundSpeedKt ?? effectivePosition?.speedKt ?? null,
@@ -796,8 +830,8 @@ export default function ActiveFlightPage() {
                 </Badge>
               </div>
               <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
-                {selectedLegs.length > 0
-                  ? `Route ${selectedBooking.bookingNumber} • ${selectedLegs.length} legs • ${activeLegState?.toWaypoint || 'No active waypoint'}`
+                {displayLegs.length > 0
+                  ? `Route ${selectedBooking.bookingNumber} • ${displayLegs.length} legs • ${activeLegState?.toWaypoint || 'No active waypoint'}`
                   : 'Select a booking with a navlog to show route progress'}
               </p>
             </div>
@@ -825,11 +859,12 @@ export default function ActiveFlightPage() {
         <div className="min-h-0 overflow-hidden rounded-2xl border border-slate-800 bg-black shadow-[0_22px_50px_rgba(15,23,42,0.35)] md:rounded-2xl">
           <ActiveFlightLiveMap
             booking={selectedBooking}
-            legs={selectedLegs}
+            legs={displayLegs}
             position={effectivePosition}
             aircraftRegistration={selectedAircraft?.tailNumber}
             activeLegIndex={activeLegState?.activeLegIndex}
             activeLegState={activeLegState}
+            onMoveWaypoint={handleMoveWaypoint}
           />
         </div>
 
@@ -922,11 +957,12 @@ export default function ActiveFlightPage() {
       <div className="relative h-full min-h-0 overflow-hidden bg-black">
         <ActiveFlightLiveMap
           booking={selectedBooking}
-          legs={selectedLegs}
+          legs={displayLegs}
           position={effectivePosition}
           aircraftRegistration={selectedAircraft?.tailNumber}
           activeLegIndex={activeLegState?.activeLegIndex}
           activeLegState={activeLegState}
+          onMoveWaypoint={handleMoveWaypoint}
           fullscreen
         />
       </div>
@@ -1345,7 +1381,7 @@ export default function ActiveFlightPage() {
               </DialogHeader>
               <FullScreenFlightLayout
                 booking={selectedBooking}
-                legs={selectedLegs}
+                legs={displayLegs}
                 position={effectivePosition}
                 aircraftRegistration={selectedAircraft?.tailNumber}
                 activeLegIndex={activeLegState?.activeLegIndex}
@@ -1366,7 +1402,7 @@ export default function ActiveFlightPage() {
             {!isFullscreenMapOpen ? (
               <ActiveFlightLiveMap
                 booking={selectedBooking}
-                legs={selectedLegs}
+                legs={displayLegs}
                 position={effectivePosition}
                 aircraftRegistration={selectedAircraft?.tailNumber}
                 activeLegIndex={activeLegState?.activeLegIndex}
@@ -1379,6 +1415,7 @@ export default function ActiveFlightPage() {
                 isMapZoomCardOpen={isMapZoomCardOpen}
                 onLayersCardOpenChange={setIsLayersCardOpen}
                 onMapZoomCardOpenChange={setIsMapZoomCardOpen}
+                onMoveWaypoint={handleMoveWaypoint}
               />
             ) : (
                 <div className={cn('flex items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>

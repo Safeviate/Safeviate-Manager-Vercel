@@ -32,7 +32,8 @@ export function createNavlogLegFromCoordinates(
   lon: number,
   identifier = 'WP',
   frequencies?: string,
-  layerInfo?: string
+  layerInfo?: string,
+  notes?: string
 ): NavlogLeg {
   const lastLeg = existingLegs[existingLegs.length - 1];
   let distance = 0;
@@ -69,6 +70,7 @@ export function createNavlogLegFromCoordinates(
     altitude: 3500,
     frequencies,
     layerInfo,
+    notes,
     ete,
     tripFuel,
   };

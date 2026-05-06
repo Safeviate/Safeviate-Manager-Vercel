@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,6 +15,14 @@ type WaypointDmsDialogProps = {
   triggerClassName?: string;
   triggerIconOnly?: boolean;
   defaultIdentifier?: string;
+};
+
+type WaypointDmsFormProps = {
+  onAddWaypoint: (lat: number, lon: number, identifier?: string, frequencies?: string, layerInfo?: string) => void;
+  defaultIdentifier?: string;
+  submitLabel?: string;
+  onCancel?: () => void;
+  showCancel?: boolean;
 };
 
 function buildDecimalFromParts(
@@ -71,42 +79,49 @@ function HemisphereToggle({
   );
 }
 
-export function WaypointDmsDialog({
+type WaypointDmsFormState = {
+  identifier: string;
+  latDegrees: string;
+  latMinutes: string;
+  latSeconds: string;
+  latHemisphere: Hemisphere;
+  lonDegrees: string;
+  lonMinutes: string;
+  lonSeconds: string;
+  lonHemisphere: Hemisphere;
+};
+
+function createInitialDmsState(defaultIdentifier: string): WaypointDmsFormState {
+  return {
+    identifier: defaultIdentifier,
+    latDegrees: '',
+    latMinutes: '',
+    latSeconds: '',
+    latHemisphere: 'S',
+    lonDegrees: '',
+    lonMinutes: '',
+    lonSeconds: '',
+    lonHemisphere: 'E',
+  };
+}
+
+export function WaypointDmsForm({
   onAddWaypoint,
-  triggerLabel = 'Add DMS Waypoint',
-  triggerClassName,
-  triggerIconOnly = false,
   defaultIdentifier = 'PNT',
-}: WaypointDmsDialogProps) {
+  submitLabel = 'Add Waypoint',
+  onCancel,
+  showCancel = true,
+}: WaypointDmsFormProps) {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
-  const [identifier, setIdentifier] = useState(defaultIdentifier);
-
-  const [latDegrees, setLatDegrees] = useState('');
-  const [latMinutes, setLatMinutes] = useState('');
-  const [latSeconds, setLatSeconds] = useState('');
-  const [latHemisphere, setLatHemisphere] = useState<Hemisphere>('S');
-
-  const [lonDegrees, setLonDegrees] = useState('');
-  const [lonMinutes, setLonMinutes] = useState('');
-  const [lonSeconds, setLonSeconds] = useState('');
-  const [lonHemisphere, setLonHemisphere] = useState<Hemisphere>('E');
+  const [state, setState] = useState<WaypointDmsFormState>(() => createInitialDmsState(defaultIdentifier));
 
   const reset = () => {
-    setIdentifier(defaultIdentifier);
-    setLatDegrees('');
-    setLatMinutes('');
-    setLatSeconds('');
-    setLatHemisphere('S');
-    setLonDegrees('');
-    setLonMinutes('');
-    setLonSeconds('');
-    setLonHemisphere('E');
+    setState(createInitialDmsState(defaultIdentifier));
   };
 
   const handleSubmit = () => {
-    const latitude = buildDecimalFromParts(latDegrees, latMinutes, latSeconds, latHemisphere, 'lat');
-    const longitude = buildDecimalFromParts(lonDegrees, lonMinutes, lonSeconds, lonHemisphere, 'lon');
+    const latitude = buildDecimalFromParts(state.latDegrees, state.latMinutes, state.latSeconds, state.latHemisphere, 'lat');
+    const longitude = buildDecimalFromParts(state.lonDegrees, state.lonMinutes, state.lonSeconds, state.lonHemisphere, 'lon');
 
     if (latitude == null || longitude == null) {
       toast({
@@ -117,17 +132,83 @@ export function WaypointDmsDialog({
       return;
     }
 
-    onAddWaypoint(latitude, longitude, identifier.trim() || defaultIdentifier);
-    setOpen(false);
+    onAddWaypoint(latitude, longitude, state.identifier.trim() || defaultIdentifier);
     reset();
   };
+
+  const updateState = (patch: Partial<WaypointDmsFormState>) => setState((current) => ({ ...current, ...patch }));
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Waypoint Label</label>
+        <Input
+          value={state.identifier}
+          onChange={(event) => updateState({ identifier: event.target.value })}
+          placeholder="PNT"
+          className="h-9 text-sm font-bold uppercase"
+        />
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Latitude</label>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)_minmax(0,1fr)_auto] gap-2">
+            <Input value={state.latDegrees} onChange={(event) => updateState({ latDegrees: event.target.value })} placeholder="25" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
+            <Input value={state.latMinutes} onChange={(event) => updateState({ latMinutes: event.target.value })} placeholder="45" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
+            <Input value={state.latSeconds} onChange={(event) => updateState({ latSeconds: event.target.value })} placeholder="42.49" inputMode="decimal" className="h-9 text-sm font-mono font-bold" />
+            <HemisphereToggle axis="lat" value={state.latHemisphere} onChange={(value) => updateState({ latHemisphere: value })} />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Longitude</label>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)_minmax(0,1fr)_auto] gap-2">
+            <Input value={state.lonDegrees} onChange={(event) => updateState({ lonDegrees: event.target.value })} placeholder="028" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
+            <Input value={state.lonMinutes} onChange={(event) => updateState({ lonMinutes: event.target.value })} placeholder="48" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
+            <Input value={state.lonSeconds} onChange={(event) => updateState({ lonSeconds: event.target.value })} placeholder="30.86" inputMode="decimal" className="h-9 text-sm font-mono font-bold" />
+            <HemisphereToggle axis="lon" value={state.lonHemisphere} onChange={(value) => updateState({ lonHemisphere: value })} />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-3">
+        {showCancel && onCancel ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              onCancel();
+              reset();
+            }}
+          >
+            Cancel
+          </Button>
+        ) : null}
+        <Button type="button" onClick={handleSubmit}>
+          {submitLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function WaypointDmsDialog({
+  onAddWaypoint,
+  triggerLabel = 'Add DMS Waypoint',
+  triggerClassName,
+  triggerIconOnly = false,
+  defaultIdentifier = 'PNT',
+}: WaypointDmsDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [formNonce, setFormNonce] = useState(0);
 
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
-        if (!nextOpen) reset();
+        if (!nextOpen) setFormNonce((current) => current + 1);
       }}
     >
       <DialogTrigger asChild>
@@ -150,56 +231,16 @@ export function WaypointDmsDialog({
             Enter latitude and longitude as separate aviation DMS parts. Hemisphere is selected manually.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Waypoint Label</label>
-            <Input
-              value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
-              placeholder="PNT"
-              className="h-9 text-sm font-bold uppercase"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Latitude</label>
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)_minmax(0,1fr)_auto] gap-2">
-                <Input value={latDegrees} onChange={(event) => setLatDegrees(event.target.value)} placeholder="25" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
-                <Input value={latMinutes} onChange={(event) => setLatMinutes(event.target.value)} placeholder="45" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
-                <Input value={latSeconds} onChange={(event) => setLatSeconds(event.target.value)} placeholder="42.49" inputMode="decimal" className="h-9 text-sm font-mono font-bold" />
-                <HemisphereToggle axis="lat" value={latHemisphere} onChange={setLatHemisphere} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Longitude</label>
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)_minmax(0,1fr)_auto] gap-2">
-                <Input value={lonDegrees} onChange={(event) => setLonDegrees(event.target.value)} placeholder="028" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
-                <Input value={lonMinutes} onChange={(event) => setLonMinutes(event.target.value)} placeholder="48" inputMode="numeric" className="h-9 text-sm font-mono font-bold" />
-                <Input value={lonSeconds} onChange={(event) => setLonSeconds(event.target.value)} placeholder="30.86" inputMode="decimal" className="h-9 text-sm font-mono font-bold" />
-                <HemisphereToggle axis="lon" value={lonHemisphere} onChange={setLonHemisphere} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setOpen(false);
-              reset();
-            }}
-          >
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSubmit}>
-            Add Waypoint
-          </Button>
-        </DialogFooter>
+        <WaypointDmsForm
+          key={formNonce}
+          onAddWaypoint={onAddWaypoint}
+          defaultIdentifier={defaultIdentifier}
+          submitLabel="Add Waypoint"
+          onCancel={() => {
+            setOpen(false);
+            setFormNonce((current) => current + 1);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

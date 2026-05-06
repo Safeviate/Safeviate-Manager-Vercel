@@ -10,7 +10,7 @@ import type { Booking, BookingCheckApprovals, BookingWorkflowApprovals, BookingW
 import type { Aircraft } from '@/types/aircraft';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isPointInPolygon } from '@/lib/utils';
-import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, Activity, CheckCircle2, ArrowLeft, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Save, AlertTriangle, Loader2, RotateCcw, Trash2, FileText, Settings2, Scale, Map as NavIcon, Wind, Eye, Radio, Droplet, Thermometer, Clock, Activity, CheckCircle2, ArrowLeft, ChevronDown, MoreHorizontal, Move } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,6 @@ import { HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/com
 import { v4 as uuidv4 } from 'uuid';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
-import { WaypointDmsDialog } from '@/components/maps/waypoint-dms-dialog';
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
 import { MasterMassBalanceGraph, type MassBalanceGraphPoint, type MassBalanceGraphTemplate } from '@/components/master-mass-balance-graph';
 import { BookingPlannedLegsPanel } from '@/components/bookings/booking-planned-legs-panel';
@@ -400,6 +399,7 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
 
     // Planning state
     const [plannedLegs, setPlannedLegs] = useState<NavlogLeg[]>(booking.navlog?.legs || []);
+    const [isWaypointMoveMode, setIsWaypointMoveMode] = useState(false);
     const [depIcao, setDepIcao] = useState(booking.navlog?.departureIcao || '');
     const [arrIcao, setArrIcao] = useState(booking.navlog?.arrivalIcao || '');
     const [depLat, setDepLat] = useState(booking.navlog?.departureLatitude?.toString() || '');
@@ -829,9 +829,38 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
         }
     };
 
-    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string) => {
-        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo)]);
+    const handleAddWaypoint = (lat: number, lon: number, identifier: string = 'WP', frequencies?: string, layerInfo?: string, notes?: string) => {
+        setPlannedLegs(current => [...current, createNavlogLegFromCoordinates(current, lat, lon, identifier, frequencies, layerInfo, notes)]);
     };
+
+    const handleWaypointNotesChange = useCallback((legId: string, nextNotes: string) => {
+        setPlannedLegs((current) => current.map((leg) => (leg.id === legId ? { ...leg, notes: nextNotes } : leg)));
+    }, []);
+
+    const handleMoveWaypoint = useCallback((legId: string, lat: number, lon: number) => {
+        setPlannedLegs((current) => {
+            if (!current.length) return current;
+
+            const movedLegs = current.map((leg) => (leg.id === legId ? { ...leg, latitude: lat, longitude: lon } : leg));
+            return movedLegs.map((leg, index) => {
+                const rebuiltLeg = createNavlogLegFromCoordinates(
+                    movedLegs.slice(0, index),
+                    leg.latitude ?? 0,
+                    leg.longitude ?? 0,
+                    leg.waypoint?.replace(/-\d+$/, '') || 'WP',
+                    leg.frequencies,
+                    leg.layerInfo,
+                    leg.notes,
+                );
+
+                return {
+                    ...leg,
+                    ...rebuiltLeg,
+                    id: leg.id,
+                };
+            });
+        });
+    }, []);
 
     const handleCommitRoute = async () => {
         setIsSaving(true);
@@ -880,6 +909,12 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
             setIsSaving(false);
         }
     };
+
+    useEffect(() => {
+        if (activeTab !== 'planning') {
+            setIsWaypointMoveMode(false);
+        }
+    }, [activeTab]);
 
     const lookupAirport = async (icao: string, type: 'dep' | 'arr') => {
         if (!icao) return;
@@ -958,6 +993,14 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                     </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
                                         <DropdownMenuItem
+                                            onClick={() => setIsWaypointMoveMode((current) => !current)}
+                                            disabled={plannedLegs.length === 0}
+                                            className="text-[10px] font-bold uppercase"
+                                        >
+                                            <Move className="mr-2 h-3.5 w-3.5" />
+                                            {isWaypointMoveMode ? 'Done' : 'Move Waypoints'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
                                             onClick={() => setPlannedLegs([])}
                                             disabled={plannedLegs.length === 0}
                                             className="text-[10px] font-bold uppercase"
@@ -977,6 +1020,17 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                                 </DropdownMenu>
                             ) : (
                                 <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsWaypointMoveMode((current) => !current)}
+                                        className={cn(
+                                            BOOKING_PLANNING_SECONDARY_BUTTON_CLASS,
+                                            isWaypointMoveMode ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : ''
+                                        )}
+                                        disabled={plannedLegs.length === 0}
+                                    >
+                                        <Move className="mr-1 h-3 w-3" /> {isWaypointMoveMode ? 'Done' : 'Move Waypoints'}
+                                    </Button>
                                     <Button 
                                         variant="outline"
                                         onClick={() => setPlannedLegs([])}
@@ -1194,22 +1248,24 @@ export function ViewBookingDetails({ booking }: ViewBookingDetailsProps) {
                     </TabsContent>
 
                     <TabsContent value="planning" className="m-0 flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden overflow-hidden">
-                        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_350px] lg:grid-rows-none lg:h-full">
+                        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[42svh_minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_311px] lg:grid-rows-none lg:h-full">
                             <div className="relative order-1 z-20 flex h-full min-h-0 flex-col overflow-hidden bg-slate-900">
                                 <AeronauticalMap
                                     legs={plannedLegs}
                                     onAddWaypoint={handleAddWaypoint}
-                                    rightAccessory={<WaypointDmsDialog onAddWaypoint={handleAddWaypoint} triggerLabel="DMS WP" triggerIconOnly />}
-                                />
+                                    onMoveWaypoint={handleMoveWaypoint}
+                                    isEditing={isWaypointMoveMode}
+                            />
                             </div>
 
-                            <div className="relative order-2 z-10 flex h-full min-h-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
+                            <div className="relative order-2 z-10 flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-t bg-background lg:border-l lg:border-t-0">
                                 <ScrollArea className="h-full flex-1 overscroll-contain">
-                                    <div className="space-y-8 p-6 pb-12">
+                                    <div className="mx-auto min-w-0 max-w-[311px] space-y-6 overflow-x-hidden px-4 pt-2 pb-12 lg:px-3">
                                         <BookingPlannedLegsPanel
                                             legs={plannedLegs}
                                             onRemoveLeg={(legId) => setPlannedLegs((current) => current.filter((leg) => leg.id !== legId))}
                                             emptyMessage="Click the map to add waypoints"
+                                            onWaypointNotesChange={handleWaypointNotesChange}
                                         />
                                     </div>
                                 </ScrollArea>

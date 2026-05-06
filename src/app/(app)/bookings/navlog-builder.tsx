@@ -3,13 +3,15 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Booking, NavlogLeg } from '@/types/booking';
+import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, Navigation, Wind, Gauge, Fuel, Settings2 } from 'lucide-react';
+import { ChevronDown, Trash2, Navigation, Wind, Gauge, Fuel, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { recalculateNavlogLegs, calculateRouteTotals, DEFAULT_FLIGHT_PARAMS } from '@/lib/flight-planner';
 import type { FlightParams } from '@/lib/flight-planner';
 import type { TrainingRoute } from '@/types/booking';
@@ -61,6 +63,7 @@ function InlineInput({
 export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightChange }: NavlogBuilderProps) {
     const { toast } = useToast();
     const legs = booking.navlog?.legs || [];
+    const [expandedLegId, setExpandedLegId] = useState<string | null>(null);
 
     // Global flight parameters (initialize from saved navlog or defaults)
     const [params, setParams] = useState<FlightParams>({
@@ -349,7 +352,148 @@ export function NavlogBuilder({ booking, tenantId, fuelWeightLbs, onFuelWeightCh
             </div>
 
             {/* ── NavLog Table ── */}
-            <div className="w-full overflow-x-auto flex-1">
+            {/* ── NavLog Cards (mobile) ── */}
+            <div className="flex-1 overflow-hidden md:hidden">
+                <ScrollArea className="h-full">
+                    <div className="space-y-3 p-4 pb-6">
+                        {calculatedLegs.map((leg, index) => {
+                            const isFirstLeg = index === 0 && (leg.distance === undefined || leg.distance === 0);
+                            const fuelRem = params.fuelOnBoard - calculatedLegs.slice(0, index + 1).reduce((s, l) => s + (l.tripFuel || 0), 0);
+                            const lowFuel = fuelRem < (params.fuelBurnPerHour * 0.75);
+                            const isExpanded = expandedLegId === leg.id;
+
+                            return (
+                                <Card key={leg.id} className="overflow-hidden rounded-xl border bg-background shadow-none">
+                                    <div className="flex items-start justify-between gap-3 px-3 py-2.5">
+                                        <button
+                                            type="button"
+                                            className="min-w-0 flex-1 text-left"
+                                            onClick={() => setExpandedLegId((current) => (current === leg.id ? null : leg.id))}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">{index + 1}</span>
+                                                <span className="font-black text-xs uppercase text-foreground">{leg.waypoint}</span>
+                                            </div>
+                                            <p className="mt-1 break-words font-mono text-[8px] leading-tight text-muted-foreground">
+                                                {formatWaypointCoordinatesDms(leg.latitude, leg.longitude)}
+                                            </p>
+                                            {leg.frequencies ? (
+                                                <p className="mt-1 break-words text-[8px] font-semibold text-emerald-700">{leg.frequencies}</p>
+                                            ) : null}
+                                        </button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleRemoveLeg(leg.id)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+
+                                    <div className="border-t border-slate-200 px-3 py-1.5">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className="h-7 w-full justify-between px-2 text-[9px] font-black uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-100"
+                                            onClick={() => setExpandedLegId((current) => (current === leg.id ? null : leg.id))}
+                                        >
+                                            <span>{isExpanded ? 'Hide leg details' : 'Show leg details'}</span>
+                                            <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />
+                                        </Button>
+
+                                        {isExpanded ? (
+                                            <div className="space-y-3 pt-2">
+                                                <div className="space-y-1">
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">Altitude</p>
+                                                    <InlineInput
+                                                        value={leg.altitude}
+                                                        onChange={(v) => handleUpdateLeg(leg.id, { altitude: v })}
+                                                        placeholder="FL"
+                                                        width="w-16"
+                                                    />
+                                                </div>
+
+                                                {showPerLegWind ? (
+                                                    <div className="space-y-1">
+                                                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">Wind / Speed</p>
+                                                        <div className="flex items-center gap-0.5">
+                                                            <InlineInput
+                                                                value={legs[index]?.windDirection}
+                                                                onChange={(v) => handleUpdateLeg(leg.id, { windDirection: v })}
+                                                                placeholder={`${params.windDirection}`}
+                                                                width="w-10"
+                                                            />
+                                                            <span className="text-[8px] text-muted-foreground">/</span>
+                                                            <InlineInput
+                                                                value={legs[index]?.windSpeed}
+                                                                onChange={(v) => handleUpdateLeg(leg.id, { windSpeed: v })}
+                                                                placeholder={`${params.windSpeed}`}
+                                                                width="w-10"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {[
+                                                        ['TC', isFirstLeg ? '-' : `${(leg.trueCourse ?? 0).toFixed(0)}°`],
+                                                        ['WCA', isFirstLeg ? '-' : `${(leg.wca ?? 0) >= 0 ? '+' : ''}${(leg.wca ?? 0).toFixed(0)}°`],
+                                                        ['TH', isFirstLeg ? '-' : `${(leg.trueHeading ?? 0).toFixed(0)}°`],
+                                                        ['VAR', `${(leg.variation ?? 0) >= 0 ? `${(leg.variation ?? 0).toFixed(0)}°E` : `${Math.abs(leg.variation ?? 0).toFixed(0)}°W`}`],
+                                                        ['MH', isFirstLeg ? '-' : `${(leg.magneticHeading ?? 0).toFixed(0)}°`],
+                                                        ['DIST', isFirstLeg ? '-' : `${(leg.distance ?? 0).toFixed(1)} NM`],
+                                                        ['GS', isFirstLeg ? '-' : `${(leg.groundSpeed ?? 0).toFixed(0)}`],
+                                                        ['ETE', isFirstLeg ? '-' : formatMinutes(leg.ete ?? 0)],
+                                                        ['CUM', isFirstLeg ? '-' : formatMinutes(leg.cumulativeEte ?? 0)],
+                                                        ['FUEL', isFirstLeg ? '-' : (leg.tripFuel ?? 0).toFixed(1)],
+                                                        ['REM', fuelRem.toFixed(1)],
+                                                    ].map(([label, value]) => (
+                                                        <div key={`${leg.id}-${label}`} className="rounded-lg border bg-muted/20 px-2 py-1.5">
+                                                            <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+                                                            <p className={cn('mt-0.5 text-[10px] font-black', label === 'REM' && lowFuel ? 'text-destructive' : 'text-slate-900')}>
+                                                                {value}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </Card>
+                            );
+                        })}
+
+                        <Card className="rounded-xl border bg-muted/20 shadow-none">
+                            <div className="grid grid-cols-2 gap-2 p-3">
+                                <div className="rounded-lg border bg-background px-2 py-1.5">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">Distance</p>
+                                    <p className="mt-0.5 text-[10px] font-black">{totals.distance.toFixed(1)} NM</p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-2 py-1.5">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">Avg GS</p>
+                                    <p className="mt-0.5 text-[10px] font-black text-muted-foreground">{totals.groundSpeed > 0 ? `${totals.groundSpeed.toFixed(0)}` : '-'}</p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-2 py-1.5">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">ETE</p>
+                                    <p className="mt-0.5 text-[10px] font-black">{formatMinutes(totals.ete)}</p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-2 py-1.5">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">Fuel</p>
+                                    <p className="mt-0.5 text-[10px] font-black">{totals.fuel.toFixed(1)}</p>
+                                </div>
+                                <div className="rounded-lg border bg-background px-2 py-1.5 col-span-2">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground">Reserve</p>
+                                    <p className={cn('mt-0.5 text-[10px] font-black', totals.fuelRemaining < 0 ? 'text-destructive' : 'text-emerald-600')}>
+                                        {totals.fuelRemaining.toFixed(1)}
+                                    </p>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                </ScrollArea>
+            </div>
+            <div className="hidden w-full overflow-x-auto flex-1 md:block">
                 <Table className="min-w-[1400px]">
                     <TableHeader className="bg-muted/30 sticky top-0 z-10">
                         <TableRow className="whitespace-nowrap">

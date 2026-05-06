@@ -6,12 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Layers2, Map as MapIcon, Search, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Layers2, Map as MapIcon, Plus, Search, X } from 'lucide-react';
 
 import { MAPLIBRE_BASE_STYLES } from '@/lib/maplibre-map-config';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { formatWaypointCoordinatesDms } from '@/components/maps/waypoint-coordinate-utils';
 import { useDebounce } from '@/hooks/use-debounce';
+import { WaypointDmsForm } from '@/components/maps/waypoint-dms-dialog';
+import { cn } from '@/lib/utils';
 import type { Hazard, NavlogLeg } from '@/types/booking';
 import {
   ROUTE_LINE_COLOR,
@@ -465,6 +468,8 @@ export function RoutePlannerMapLibreShell({
   }));
   const [layerInfo, setLayerInfo] = useState<LayerInfoState | null>(null);
   const [layerInfoScreenPos, setLayerInfoScreenPos] = useState<Point | null>(null);
+  const [isWaypointToolOpen, setIsWaypointToolOpen] = useState(false);
+  const [waypointToolTab, setWaypointToolTab] = useState<'search' | 'dms'>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<OpenAipFeature[]>([]);
   const [selectedSearchResult, setSelectedSearchResult] = useState<OpenAipFeature | null>(null);
@@ -1160,6 +1165,14 @@ export function RoutePlannerMapLibreShell({
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
+    if (isWaypointToolOpen) return;
+    setWaypointToolTab('search');
+    setSearchQuery('');
+    setSearchResults([]);
+    setSelectedSearchResult(null);
+  }, [isWaypointToolOpen]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map || !layerInfo) {
       setLayerInfoScreenPos(null);
@@ -1234,49 +1247,122 @@ export function RoutePlannerMapLibreShell({
   }, [isEditing, isMapReady, legs, onMoveWaypoint, showWaypointMarkersState]);
 
   return (
-    <div ref={containerRef} className={className ?? 'absolute inset-0 h-full w-full'}>
-      <div className="pointer-events-auto absolute left-1/2 top-4 z-[1000] w-[min(22rem,calc(100vw-1.5rem))] -translate-x-1/2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search Airport, Navaid, or Point..."
-            className="h-10 border-slate-200 bg-white/95 pl-9 pr-9 text-[10px] font-black uppercase shadow-lg backdrop-blur"
-          />
-          {searchQuery ? (
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-              onClick={() => {
-                setSearchQuery('');
-                setSearchResults([]);
-              }}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          ) : null}
-        </div>
+    <div ref={containerRef} className={className ?? 'absolute inset-0 h-full w-full overflow-hidden'}>
+      <div className="pointer-events-auto absolute left-1/2 top-4 z-[1000] -translate-x-1/2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setIsWaypointToolOpen((current) => !current)}
+          className="h-10 w-10 rounded-full border-slate-200 bg-white/95 p-0 text-[10px] font-black uppercase tracking-[0.12em] shadow-xl backdrop-blur hover:bg-slate-50"
+          aria-label="Add Waypoint"
+          title="Add Waypoint"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="sr-only">Add Waypoint</span>
+        </Button>
 
-        {searchResults.length > 0 ? (
-          <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
-            <ScrollArea className="max-h-56">
-              <div className="divide-y divide-slate-100">
-                {searchResults.map((item) => (
-                  <button
-                    key={item._id}
-                    type="button"
-                    className="block w-full px-3 py-2 text-left hover:bg-slate-50"
-                    onClick={() => handleSelectSearchResult(item)}
-                  >
-                    <p className="break-words text-[10px] font-black uppercase tracking-[0.16em] text-slate-900">
-                      {item.name} {item.icaoCode || item.identifier ? `(${item.icaoCode || item.identifier})` : ''}
-                    </p>
-                    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{getLayerLabel(item.sourceLayer)}</p>
-                  </button>
-                ))}
+        {isWaypointToolOpen ? (
+          <div
+            className={cn(
+              'mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur',
+              waypointToolTab === 'search'
+                ? 'w-[min(18rem,calc(100vw-1.5rem))]'
+                : 'w-[min(22rem,calc(100vw-1rem))]'
+            )}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Add Waypoint</p>
+                <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Search OpenAIP or enter DMS coordinates
+                </p>
               </div>
-            </ScrollArea>
+              <button
+                type="button"
+                aria-label="Close add waypoint tool"
+                className="shrink-0 rounded-full border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-50"
+                onClick={() => setIsWaypointToolOpen(false)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="px-3 py-2">
+              <Tabs value={waypointToolTab} onValueChange={(value) => setWaypointToolTab(value as 'search' | 'dms')}>
+                <TabsList className="grid h-8 grid-cols-2 bg-slate-100 p-1">
+                  <TabsTrigger
+                    value="search"
+                    className="h-6 rounded-md text-[9px] font-black uppercase tracking-[0.12em]"
+                  >
+                    Search
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="dms"
+                    className="h-6 rounded-md text-[9px] font-black uppercase tracking-[0.12em]"
+                  >
+                    DMS
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="search" className="mt-3 space-y-2">
+                  <div className="relative mx-auto w-[210px] max-w-full">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Search..."
+                      className="h-8 border-slate-200 bg-white/95 pl-8 pr-8 text-[10px] font-black uppercase shadow-sm backdrop-blur"
+                    />
+                    {searchQuery ? (
+                      <button
+                        type="button"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSearchResults([]);
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {searchResults.length > 0 ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur">
+                      <ScrollArea className="h-[210px] max-h-[210px]">
+                        <div className="divide-y divide-slate-100">
+                          {searchResults.map((item) => (
+                            <button
+                              key={item._id}
+                              type="button"
+                              className="block w-full px-3 py-2 text-left hover:bg-slate-50"
+                              onClick={() => handleSelectSearchResult(item)}
+                            >
+                              <p className="break-words text-[10px] font-black uppercase tracking-[0.16em] text-slate-900">
+                                {item.name} {item.icaoCode || item.identifier ? `(${item.icaoCode || item.identifier})` : ''}
+                              </p>
+                              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                                {getLayerLabel(item.sourceLayer)}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  ) : null}
+                </TabsContent>
+
+                <TabsContent value="dms" className="mt-3">
+                  <WaypointDmsForm
+                    onAddWaypoint={onAddWaypoint ?? (() => undefined)}
+                    onCancel={() => setIsWaypointToolOpen(false)}
+                    showCancel
+                    submitLabel="Add Waypoint"
+                  />
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         ) : null}
       </div>
@@ -1476,205 +1562,209 @@ export function RoutePlannerMapLibreShell({
       ) : null}
 
       {isLayersPanelOpen ? (
-        <div className="pointer-events-auto absolute right-3 top-14 z-[1000] w-[300px] max-w-[calc(100%-1.5rem)] rounded-xl border border-slate-200 bg-white/95 p-3 text-[10px] shadow-xl backdrop-blur">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Layers</p>
-              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
-                Route, waypoints, hazards, airspaces, and obstacles
-              </p>
+        <div className="pointer-events-auto absolute right-2 top-2 z-[1000] flex h-[calc(36svh-0.75rem)] w-[min(300px,calc(100%-0.75rem))] max-w-[calc(100%-0.75rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/95 text-[10px] shadow-xl backdrop-blur sm:h-auto sm:max-h-[calc(100dvh-8rem)]">
+          <div className="shrink-0 border-b border-slate-100 px-2.5 py-1.5">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Map Layers</p>
+                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
+                  Route, waypoints, hazards, airspaces, and obstacles
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-50"
+                onClick={() => onLayersPanelOpenChange?.(false)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <button
-              type="button"
-              className="rounded-full border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-50"
-              onClick={() => onLayersPanelOpenChange?.(false)}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showRouteLineState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showRouteLineState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowRouteLineState((current) => !current)}
-            >
-              Route
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showWaypointMarkersState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showWaypointMarkersState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowWaypointMarkersState((current) => !current)}
-            >
-              Waypoints
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showHazardsState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showHazardsState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowHazardsState((current) => !current)}
-            >
-              Hazards
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showAirspacesState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showAirspacesState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowAirspacesState((current) => !current)}
-            >
-              CTR
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showMilitaryState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showMilitaryState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowMilitaryState((current) => !current)}
-            >
-              Military
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showTrainingState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showTrainingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowTrainingState((current) => !current)}
-            >
-              Training
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showGlidingState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showGlidingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowGlidingState((current) => !current)}
-            >
-              Gliding
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showHangGlidingState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showHangGlidingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowHangGlidingState((current) => !current)}
-            >
-              Hang
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showClassEState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showClassEState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowClassEState((current) => !current)}
-            >
-              Class E
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showClassFState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showClassFState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowClassFState((current) => !current)}
-            >
-              Class F
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showClassGState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showClassGState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowClassGState((current) => !current)}
-            >
-              Class G
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showObstaclesState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showObstaclesState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowObstaclesState((current) => !current)}
-            >
-              Obstacles
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showAirportsState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showAirportsState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowAirportsState((current) => !current)}
-            >
-              Airports
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showNavaidsState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showNavaidsState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowNavaidsState((current) => !current)}
-            >
-              Navaids
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-pressed={showReportingState}
-              className={[
-                'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
-                showReportingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              onClick={() => setShowReportingState((current) => !current)}
-            >
-              Reporting
-            </Button>
-          </div>
+          <ScrollArea className="min-h-0 flex-1 overscroll-contain">
+            <div className="space-y-2 p-2 pb-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showRouteLineState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showRouteLineState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowRouteLineState((current) => !current)}
+              >
+                Route
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showWaypointMarkersState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showWaypointMarkersState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowWaypointMarkersState((current) => !current)}
+              >
+                Waypoints
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showHazardsState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showHazardsState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowHazardsState((current) => !current)}
+              >
+                Hazards
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showAirspacesState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showAirspacesState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowAirspacesState((current) => !current)}
+              >
+                CTR
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showMilitaryState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showMilitaryState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowMilitaryState((current) => !current)}
+              >
+                Military
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showTrainingState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showTrainingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowTrainingState((current) => !current)}
+              >
+                Training
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showGlidingState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showGlidingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowGlidingState((current) => !current)}
+              >
+                Gliding
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showHangGlidingState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showHangGlidingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowHangGlidingState((current) => !current)}
+              >
+                Hang
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showClassEState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showClassEState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowClassEState((current) => !current)}
+              >
+                Class E
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showClassFState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showClassFState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowClassFState((current) => !current)}
+              >
+                Class F
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showClassGState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showClassGState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowClassGState((current) => !current)}
+              >
+                Class G
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showObstaclesState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showObstaclesState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowObstaclesState((current) => !current)}
+              >
+                Obstacles
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showAirportsState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showAirportsState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowAirportsState((current) => !current)}
+              >
+                Airports
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showNavaidsState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showNavaidsState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowNavaidsState((current) => !current)}
+              >
+                Navaids
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={showReportingState}
+                className={[
+                  'justify-start rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em]',
+                  showReportingState ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                ].join(' ')}
+                onClick={() => setShowReportingState((current) => !current)}
+              >
+                Reporting
+              </Button>
+            </div>
+          </ScrollArea>
         </div>
       ) : null}
 

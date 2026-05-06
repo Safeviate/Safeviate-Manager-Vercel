@@ -73,6 +73,8 @@ type ActiveFlightMapLibreShellProps = {
   showOnlyActiveAirspace: boolean;
   onZoomChange?: (zoom: number) => void;
   onCenterChange?: (center: Point) => void;
+  onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
+  isWaypointMoveMode?: boolean;
 };
 
 const normalizeHeading = (value: number | null | undefined) => {
@@ -366,6 +368,8 @@ export function ActiveFlightMapLibreShell({
   showOnlyActiveAirspace,
   onZoomChange,
   onCenterChange,
+  onMoveWaypoint,
+  isWaypointMoveMode = false,
 }: ActiveFlightMapLibreShellProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -379,6 +383,7 @@ export function ActiveFlightMapLibreShell({
   const lastLoadedPayloadRef = useRef('');
   const onZoomChangeRef = useRef(onZoomChange);
   const onCenterChangeRef = useRef(onCenterChange);
+  const onMoveWaypointRef = useRef(onMoveWaypoint);
 
   const [loadedAirportFeatures, setLoadedAirportFeatures] = useState(airportFeatures);
   const [loadedNavaidFeatures, setLoadedNavaidFeatures] = useState(navaidFeatures);
@@ -502,6 +507,53 @@ export function ActiveFlightMapLibreShell({
   useEffect(() => {
     onCenterChangeRef.current = onCenterChange;
   }, [onCenterChange]);
+  useEffect(() => {
+    onMoveWaypointRef.current = onMoveWaypoint;
+  }, [onMoveWaypoint]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (isWaypointMoveMode) {
+      map.dragPan.disable();
+      map.scrollZoom.disable();
+      map.boxZoom.disable();
+      map.doubleClickZoom.disable();
+      map.touchZoomRotate.disable();
+      map.keyboard.disable();
+      return;
+    }
+
+    map.dragPan.enable();
+    map.scrollZoom.enable();
+    map.boxZoom.enable();
+    map.doubleClickZoom.enable();
+    map.touchZoomRotate.enable();
+    map.keyboard.enable();
+  }, [isWaypointMoveMode]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (isWaypointMoveMode) {
+      map.dragPan.disable();
+      map.scrollZoom.disable();
+      map.boxZoom.disable();
+      map.doubleClickZoom.disable();
+      map.touchZoomRotate.disable();
+      map.keyboard.disable();
+      return;
+    }
+
+    map.dragPan.enable();
+    map.scrollZoom.enable();
+    map.boxZoom.enable();
+    map.doubleClickZoom.enable();
+    map.touchZoomRotate.enable();
+    map.keyboard.enable();
+  }, [isWaypointMoveMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1242,17 +1294,48 @@ export function ActiveFlightMapLibreShell({
     for (const [legIndex, leg] of waypointLegs.entries()) {
       const isActiveToWaypoint = activeLegIndex != null && legIndex === activeLegIndex;
       const isNextWaypoint = activeLegIndex != null && legIndex === activeLegIndex + 1;
+      const currentMoveWaypoint = onMoveWaypointRef.current;
+      const canMoveWaypoint = Boolean(currentMoveWaypoint && isWaypointMoveMode);
+      const markerElement = createNumberedWaypointElement(legIndex + 1, {
+        backgroundColor: isActiveToWaypoint ? '#0ea5e9' : isNextWaypoint ? '#f59e0b' : '#ef4444',
+        shadowColor: isActiveToWaypoint
+          ? 'rgba(14,165,233,0.35)'
+          : isNextWaypoint
+            ? 'rgba(245,158,11,0.30)'
+            : 'rgba(239,68,68,0.35)',
+      });
+      markerElement.style.cursor = canMoveWaypoint ? 'grab' : 'default';
+      markerElement.style.touchAction = 'none';
+      markerElement.style.userSelect = 'none';
+
       const marker = new maplibregl.Marker({
-        element: createNumberedWaypointElement(legIndex + 1, {
-          backgroundColor: isActiveToWaypoint ? '#0ea5e9' : isNextWaypoint ? '#f59e0b' : '#ef4444',
-          shadowColor: isActiveToWaypoint
-            ? 'rgba(14,165,233,0.35)'
-            : isNextWaypoint
-              ? 'rgba(245,158,11,0.30)'
-              : 'rgba(239,68,68,0.35)',
-        }),
+        element: markerElement,
+        draggable: canMoveWaypoint,
         anchor: 'center',
-      })
+      });
+
+      if (canMoveWaypoint) {
+        const disableMapGestures = () => {
+          markerElement.style.cursor = 'grabbing';
+          map.dragPan.disable();
+          map.touchZoomRotate.disable();
+        };
+        const restoreMapGestures = () => {
+          markerElement.style.cursor = 'grab';
+          map.dragPan.enable();
+          map.touchZoomRotate.enable();
+        };
+
+        marker.on('dragstart', disableMapGestures);
+        marker.on('dragend', restoreMapGestures);
+      }
+
+      marker.on('dragend', () => {
+        const nextPosition = marker.getLngLat();
+        currentMoveWaypoint?.(leg.id, nextPosition.lat, nextPosition.lng);
+      });
+
+      marker
         .setPopup(
           new maplibregl.Popup({
             offset: 14,
