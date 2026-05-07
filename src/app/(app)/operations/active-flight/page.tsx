@@ -398,6 +398,14 @@ export default function ActiveFlightPage() {
       return recalculatedLegs;
     });
   }, [selectedLegs]);
+  const handleWaypointNotesChange = useCallback((legId: string, nextNotes: string) => {
+    setEditableLegs((current) => {
+      const sourceLegs = current ?? selectedLegs;
+      if (!sourceLegs.length) return current;
+
+      return sourceLegs.map((leg) => (leg.id === legId ? { ...leg, notes: nextNotes } : leg));
+    });
+  }, [selectedLegs]);
   const pilotName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Pilot';
   const liveTelemetry = {
     speed: activeLegState?.groundSpeedKt ?? effectivePosition?.speedKt ?? null,
@@ -865,6 +873,7 @@ export default function ActiveFlightPage() {
             activeLegIndex={activeLegState?.activeLegIndex}
             activeLegState={activeLegState}
             onMoveWaypoint={handleMoveWaypoint}
+            onWaypointNotesChange={handleWaypointNotesChange}
           />
         </div>
 
@@ -963,6 +972,7 @@ export default function ActiveFlightPage() {
           activeLegIndex={activeLegState?.activeLegIndex}
           activeLegState={activeLegState}
           onMoveWaypoint={handleMoveWaypoint}
+          onWaypointNotesChange={handleWaypointNotesChange}
           fullscreen
         />
       </div>
@@ -1416,6 +1426,7 @@ export default function ActiveFlightPage() {
                 onLayersCardOpenChange={setIsLayersCardOpen}
                 onMapZoomCardOpenChange={setIsMapZoomCardOpen}
                 onMoveWaypoint={handleMoveWaypoint}
+                onWaypointNotesChange={handleWaypointNotesChange}
               />
             ) : (
                 <div className={cn('flex items-center justify-center rounded-2xl border border-dashed bg-muted/10 px-6 py-12 text-center text-sm text-muted-foreground', OPERATIONS_MAP_SURFACE_HEIGHT_CLASS)}>

@@ -843,6 +843,7 @@ function RouteLegDrawer({
   activeLegIndex,
   activeLegState,
   bookingLabel,
+  onWaypointNotesChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -852,6 +853,7 @@ function RouteLegDrawer({
   activeLegIndex?: number;
   activeLegState?: ActiveLegState | null;
   bookingLabel?: string | null;
+  onWaypointNotesChange?: (legId: string, nextNotes: string) => void;
 }) {
   const segmentLegs = legs.filter((leg) => leg.latitude !== undefined && leg.longitude !== undefined).slice(1);
   const segmentCount = segmentLegs.length;
@@ -934,6 +936,7 @@ function RouteLegDrawer({
                 emptyMessage="Load a booking or route to view the planned legs here."
                 activeLegIndex={activeLegIndex ?? undefined}
                 headingLabel="Route / Navlog"
+                onWaypointNotesChange={onWaypointNotesChange}
               />
             </div>
           </ScrollArea>
@@ -1066,6 +1069,7 @@ export function ActiveFlightLiveMap({
   activeLegIndex,
   activeLegState,
   onMoveWaypoint,
+  onWaypointNotesChange,
   fullscreen = false,
   showControls = true,
   followOwnship: followOwnshipProp,
@@ -1086,6 +1090,7 @@ export function ActiveFlightLiveMap({
   activeLegIndex?: number;
   activeLegState?: ActiveLegState | null;
   onMoveWaypoint?: (legId: string, lat: number, lon: number) => void;
+  onWaypointNotesChange?: (legId: string, nextNotes: string) => void;
   fullscreen?: boolean;
   showControls?: boolean;
   followOwnship?: boolean;
@@ -1817,6 +1822,7 @@ export function ActiveFlightLiveMap({
               activeLegIndex={activeLegIndex}
               activeLegState={activeLegState}
               bookingLabel={booking?.bookingNumber || aircraftRegistration || null}
+              onWaypointNotesChange={onWaypointNotesChange}
             />
           </div>
         </div>
