@@ -33,17 +33,17 @@ const splitDetailText = (text: string | null | undefined) =>
     .filter(Boolean);
 
 export const getWaypointDetailLines = (leg: WaypointDetailSource) =>
-  [leg?.frequencies, leg?.layerInfo, leg?.notes]
+  [leg?.frequencies, leg?.layerInfo]
     .flatMap((line) => splitDetailText(line))
     .filter((line): line is string => Boolean(line && line.trim()));
 
 export const getWaypointDetailEntries = (leg: WaypointDetailSource): WaypointDetailEntry[] =>
-  [leg?.frequencies, leg?.layerInfo, leg?.notes]
+  [leg?.frequencies, leg?.layerInfo]
     .flatMap((line) => splitDetailText(line).map((text) => ({ text, tone: classifyDetailText(text) })))
     .filter((entry) => Boolean(entry.text));
 
 export const getWaypointDetailGroups = (leg: WaypointDetailSource): WaypointDetailGroup[] =>
-  [leg?.frequencies, leg?.layerInfo, leg?.notes]
+  [leg?.frequencies, leg?.layerInfo]
     .map((line) => splitDetailText(line).map((text) => ({ text, tone: classifyDetailText(text) })))
     .filter((entries) => entries.length > 0)
     .map((entries) => {

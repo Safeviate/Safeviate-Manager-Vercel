@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,8 +36,44 @@ export function BookingPlannedLegsPanel({
   activeLegIndex,
 }: BookingPlannedLegsPanelProps) {
   const [expandedLegId, setExpandedLegId] = useState<string | null>(null);
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const previousLegCountRef = useRef(legs.length);
   const firstLeg = legs[0];
   const showPendingWaypointCard = legs.length === 1 && Boolean(firstLeg);
+
+  useEffect(() => {
+    const previousLegCount = previousLegCountRef.current;
+    previousLegCountRef.current = legs.length;
+
+    setNoteDrafts((current) => {
+      const next = { ...current };
+      for (const leg of legs) {
+        if (!(leg.id in next)) {
+          next[leg.id] = leg.notes ?? '';
+        }
+      }
+      return next;
+    });
+
+    setExpandedLegId((current) => {
+      if (current && legs.some((leg) => leg.id === current)) {
+        return current;
+      }
+
+      if (previousLegCount === 1 && legs.length > 1) {
+        return legs[1]?.id ?? null;
+      }
+
+      return null;
+    });
+  }, [legs]);
+
+  const handleSaveNotes = useCallback((legId: string) => {
+    if (!onWaypointNotesChange) return;
+    const nextNotes = (noteDrafts[legId] ?? '').trim();
+    setNoteDrafts((current) => ({ ...current, [legId]: nextNotes }));
+    onWaypointNotesChange(legId, nextNotes);
+  }, [noteDrafts, onWaypointNotesChange]);
 
   return (
     <section className="min-w-0 space-y-2 overflow-hidden">
@@ -108,15 +144,34 @@ export function BookingPlannedLegsPanel({
                       </p>
                     )}
                   </div>
-                  {isEditing && onWaypointNotesChange ? (
-                    <div className="mt-2 space-y-1">
-                      <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">Notes</p>
-                      <Textarea
-                        value={firstLeg.notes ?? ''}
-                        onChange={(event) => onWaypointNotesChange(firstLeg.id, event.target.value)}
-                        placeholder="Add waypoint notes..."
-                        className="min-h-[54px] resize-none border-slate-200 bg-white/90 px-2 py-1.5 text-[10px] font-semibold leading-tight text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-400"
-                      />
+                  {(onWaypointNotesChange || firstLeg.notes) ? (
+                    <div className="mt-2 border-t border-slate-200 pt-2">
+                      <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">NOTES</p>
+                      {firstLeg.notes?.trim() ? (
+                        <p className="mt-1 whitespace-pre-wrap break-words text-[10px] font-semibold leading-tight text-slate-700">
+                          {firstLeg.notes.trim()}
+                        </p>
+                      ) : null}
+                      {onWaypointNotesChange ? (
+                        <div className="mt-2 space-y-2">
+                          <Textarea
+                            value={noteDrafts[firstLeg.id] ?? firstLeg.notes ?? ''}
+                            onChange={(event) => setNoteDrafts((current) => ({ ...current, [firstLeg.id]: event.target.value }))}
+                            placeholder="Add waypoint notes..."
+                            className="min-h-[54px] resize-none border-slate-200 bg-white/90 px-2 py-1.5 text-[10px] font-semibold leading-tight text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-400"
+                          />
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-7 rounded-md border-slate-200 px-2.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-600 hover:bg-slate-50"
+                              onClick={() => handleSaveNotes(firstLeg.id)}
+                            >
+                              Save Note
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -129,6 +184,8 @@ export function BookingPlannedLegsPanel({
           const fromLeg = legs[i];
           const fromWaypoint = fromLeg?.waypoint || `WP ${i + 1}`;
           const toWaypoint = leg.waypoint || `WP ${i + 2}`;
+          const fromNotes = fromLeg?.notes?.trim();
+          const toNotes = leg.notes?.trim();
           const distanceLabel = `${(leg.distance ?? 0).toFixed(1)} NM`;
           const trackLabel = `${(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}°`;
           const fromToneClass = getWaypointDetailToneClass(getWaypointDetailTone(fromLeg));
@@ -260,19 +317,58 @@ export function BookingPlannedLegsPanel({
                       </div>
                     ) : null}
 
-                    {isEditing && onWaypointNotesChange ? (
-                      <div className="mt-2 space-y-1">
-                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">Notes</p>
-                        <Textarea
-                          value={leg.notes ?? ''}
-                          onChange={(event) => onWaypointNotesChange(leg.id, event.target.value)}
-                          placeholder="Add waypoint notes..."
-                          className="min-h-[54px] resize-none border-slate-200 bg-white/90 px-2 py-1.5 text-[10px] font-semibold leading-tight text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-400"
-                        />
+                    {(fromNotes || toNotes) ? (
+                      <div className="mt-2 border-t border-slate-200 pt-2">
+                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">NOTES</p>
+                        {fromNotes ? (
+                          <div className="space-y-0.5">
+                            <p className={cn('text-[8px] font-black uppercase tracking-[0.12em]', fromToneClass.label)}>
+                              From {fromWaypoint}
+                            </p>
+                            <p className="whitespace-pre-wrap break-words text-[10px] font-semibold leading-tight text-slate-700">
+                              {fromNotes}
+                            </p>
+                          </div>
+                        ) : null}
+                        {toNotes ? (
+                          <div className="mt-2 space-y-0.5">
+                            <p className={cn('text-[8px] font-black uppercase tracking-[0.12em]', toToneClass.label)}>
+                              To {toWaypoint}
+                            </p>
+                            <p className="whitespace-pre-wrap break-words text-[10px] font-semibold leading-tight text-slate-700">
+                              {toNotes}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 
-                    <div className="mt-2 flex gap-5">
+                    {isExpanded && onWaypointNotesChange ? (
+                      <div className="mt-2 border-t border-slate-200 pt-2">
+                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">NOTES</p>
+                        <div className="mt-1 space-y-2">
+                            <Textarea
+                              value={noteDrafts[leg.id] ?? leg.notes ?? ''}
+                              onChange={(event) => setNoteDrafts((current) => ({ ...current, [leg.id]: event.target.value }))}
+                              placeholder="Add waypoint notes..."
+                              className="min-h-[54px] resize-none border-slate-200 bg-white/90 px-2 py-1.5 text-[10px] font-semibold leading-tight text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-slate-400"
+                            />
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-7 rounded-md border-slate-200 px-2.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-600 hover:bg-slate-50"
+                                onClick={() => handleSaveNotes(leg.id)}
+                              >
+                                Save Note
+                              </Button>
+                            </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-2 border-t border-slate-200 pt-2">
+                      <div className="flex gap-5">
                       <div className="flex flex-col">
                         <span className="text-[8px] font-bold uppercase text-muted-foreground">Dist</span>
                         <span className="text-[10px] font-black">{leg.distance?.toFixed(1) || '0.0'} NM</span>
@@ -280,6 +376,7 @@ export function BookingPlannedLegsPanel({
                       <div className="flex flex-col">
                         <span className="text-[8px] font-bold uppercase text-muted-foreground">HDG</span>
                         <span className="text-[10px] font-black">{(((leg.magneticHeading ?? 0) + 180) % 360).toFixed(0)}{"\u00B0"}</span>
+                      </div>
                       </div>
                     </div>
                   </div>

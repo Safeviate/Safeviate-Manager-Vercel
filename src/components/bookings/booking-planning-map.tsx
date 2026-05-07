@@ -202,7 +202,7 @@ const getSearchZoom = (sourceLayer: OpenAipFeature['sourceLayer']) => {
   return 13;
 };
 
-const AIRPORT_CLICK_SNAP_THRESHOLD_NM = 1;
+const AIRPORT_CLICK_SNAP_THRESHOLD_NM = 2;
 const CLICK_SNAP_THRESHOLD_NM = 20;
 
 const toRadians = (value: number) => (value * Math.PI) / 180;
@@ -299,36 +299,53 @@ export function BookingPlanningMap({
     []
   );
 
+  const resolveNearestWaypointFeature = useCallback(async (lat: number, lon: number) => {
+    const activeResources: Array<OpenAipFeature['sourceLayer']> = ['airports', 'navaids', 'reporting-points'];
+
+    const collectNearest = (features: OpenAipFeature[], sourceLayer: OpenAipFeature['sourceLayer'], maxDistanceNm: number, limit = 1) => {
+      return features
+        .filter((feature) => feature.sourceLayer === sourceLayer && feature.geometry?.coordinates)
+        .map((feature) => {
+          const [featureLon, featureLat] = feature.geometry!.coordinates!;
+          return { feature, distance: distanceNm(lat, lon, featureLat, featureLon) };
+        })
+        .filter((entry) => entry.distance <= maxDistanceNm)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, limit);
+    };
+
+    const fromViewport = visiblePointFeatures.length > 0 ? visiblePointFeatures : [];
+    const viewportMatches = [] as Array<{ feature: OpenAipFeature; distance: number }>;
+    if (activeResources.includes('airports')) viewportMatches.push(...collectNearest(fromViewport, 'airports', AIRPORT_CLICK_SNAP_THRESHOLD_NM, 1));
+    if (activeResources.includes('navaids')) viewportMatches.push(...collectNearest(fromViewport, 'navaids', CLICK_SNAP_THRESHOLD_NM, 2));
+    if (activeResources.includes('reporting-points')) viewportMatches.push(...collectNearest(fromViewport, 'reporting-points', CLICK_SNAP_THRESHOLD_NM, 2));
+
+    const viewportNearest = viewportMatches.sort((a, b) => a.distance - b.distance)[0]?.feature;
+    if (viewportNearest) return viewportNearest;
+
+    const bboxPadding = 0.05;
+    const bbox = `${(lon - bboxPadding).toFixed(6)},${(lat - bboxPadding).toFixed(6)},${(lon + bboxPadding).toFixed(6)},${(lat + bboxPadding).toFixed(6)}`;
+
+    const nearbyPayloads = await Promise.all(
+      activeResources.map(async (resource) => {
+        const payload = await fetchOpenAipJson<{ items?: unknown[] }>(`/api/openaip?resource=${resource}&bbox=${bbox}`);
+        const items = (payload?.items ?? []).map((item: any) => ({ ...item, sourceLayer: resource })) as OpenAipFeature[];
+        return items;
+      })
+    );
+
+    const nearbyFeatures = nearbyPayloads.flat();
+    const nearbyMatches = [] as Array<{ feature: OpenAipFeature; distance: number }>;
+    if (activeResources.includes('airports')) nearbyMatches.push(...collectNearest(nearbyFeatures, 'airports', AIRPORT_CLICK_SNAP_THRESHOLD_NM, 1));
+    if (activeResources.includes('navaids')) nearbyMatches.push(...collectNearest(nearbyFeatures, 'navaids', CLICK_SNAP_THRESHOLD_NM, 2));
+    if (activeResources.includes('reporting-points')) nearbyMatches.push(...collectNearest(nearbyFeatures, 'reporting-points', CLICK_SNAP_THRESHOLD_NM, 2));
+
+    return nearbyMatches.sort((a, b) => a.distance - b.distance)[0]?.feature ?? null;
+  }, [visiblePointFeatures]);
+
   const handleMapShortPress = useCallback(
-    (lat: number, lon: number) => {
-      const activeResources: Array<OpenAipFeature['sourceLayer']> = ['airports', 'navaids', 'reporting-points'];
-
-      const collectNearest = (sourceLayer: OpenAipFeature['sourceLayer'], maxDistanceNm: number, limit = 1) => {
-        const nearby = visiblePointFeatures
-          .filter((feature) => feature.sourceLayer === sourceLayer && feature.geometry?.coordinates)
-          .map((feature) => {
-            const [featureLon, featureLat] = feature.geometry!.coordinates!;
-            return { feature, distance: distanceNm(lat, lon, featureLat, featureLon) };
-          })
-          .filter((entry) => entry.distance <= maxDistanceNm)
-          .sort((a, b) => a.distance - b.distance)
-          .slice(0, limit);
-
-        return nearby;
-      };
-
-      const items = [] as Array<{ feature: OpenAipFeature; distance: number }>;
-      if (activeResources.includes('airports')) {
-        items.push(...collectNearest('airports', AIRPORT_CLICK_SNAP_THRESHOLD_NM, 1));
-      }
-      if (activeResources.includes('navaids')) {
-        items.push(...collectNearest('navaids', CLICK_SNAP_THRESHOLD_NM, 2));
-      }
-      if (activeResources.includes('reporting-points')) {
-        items.push(...collectNearest('reporting-points', CLICK_SNAP_THRESHOLD_NM, 2));
-      }
-
-      const nearest = items.sort((a, b) => a.distance - b.distance)[0]?.feature;
+    async (lat: number, lon: number) => {
+      const nearest = await resolveNearestWaypointFeature(lat, lon);
       if (nearest) {
         const identifier = getWaypointIdentifier(nearest);
         onAddWaypoint(
@@ -343,7 +360,7 @@ export function BookingPlanningMap({
 
       onAddWaypoint(lat, lon, 'PNT', undefined, 'Map Position');
     },
-    [onAddWaypoint, visiblePointFeatures]
+    [onAddWaypoint, resolveNearestWaypointFeature]
   );
 
   useEffect(() => {
