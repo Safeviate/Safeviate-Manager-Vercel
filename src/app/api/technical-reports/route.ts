@@ -10,6 +10,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
     const incoming = body?.report ?? {};
     const context = await resolveQuickReportContext({
+      request,
       publicTenantId: typeof incoming?.tenantId === 'string' ? incoming.tenantId : null,
     });
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -39,16 +40,16 @@ export async function POST(request: Request) {
     );
     invalidateTenantScopedCaches(context.tenantId);
 
-    return NextResponse.json({ report: data }, { status: 201 });
+    return NextResponse.json({ report: { ...data, tenantId: context.tenantId } }, { status: 201 });
   } catch (error) {
     console.error('[technical-reports] write failed:', error);
     return NextResponse.json({ error: 'Failed to submit technical report.' }, { status: 500 });
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await resolveQuickReportContext({ publicTenantId: null });
+    const context = await resolveQuickReportContext({ request, publicTenantId: null });
     if (!context) return NextResponse.json({ reports: [] }, { status: 200 });
 
     await ensureTechnicalReportsSchema();
@@ -58,7 +59,15 @@ export async function GET() {
       context.tenantId,
     );
 
-    return NextResponse.json({ reports: rows.map((row) => row.data) }, { status: 200 });
+    return NextResponse.json(
+      {
+        reports: rows.map((row) => ({
+          ...(row.data as Record<string, unknown>),
+          tenantId: context.tenantId,
+        })),
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('[technical-reports] read failed:', error);
     return NextResponse.json({ reports: [] }, { status: 200 });
@@ -70,6 +79,7 @@ export async function PUT(request: Request) {
     const body = await request.json().catch(() => null);
     const incoming = body?.report ?? {};
     const context = await resolveQuickReportContext({
+      request,
       publicTenantId: typeof incoming?.tenantId === 'string' ? incoming.tenantId : null,
     });
     if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -100,7 +110,7 @@ export async function PUT(request: Request) {
     );
     invalidateTenantScopedCaches(context.tenantId);
 
-    return NextResponse.json({ report: data }, { status: 200 });
+    return NextResponse.json({ report: { ...data, tenantId: context.tenantId } }, { status: 200 });
   } catch (error) {
     console.error('[technical-reports] update failed:', error);
     return NextResponse.json({ error: 'Failed to update technical report.' }, { status: 500 });

@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { type LucideIcon, ShieldAlert, FileWarning, CheckCircle2 } from 'lucide-react';
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { isMasterTenantEmail, resolveTenantOverride } from '@/lib/server/tenant-access';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MainPageHeader } from '@/components/page-header';
@@ -21,11 +22,18 @@ type QrTarget = {
 
 export default async function QuickReportQrCodesPage() {
   const session = await getServerSession(authOptions);
-  const tenantId = session?.user?.tenantId?.trim();
+  const baseTenantId = session?.user?.tenantId?.trim();
 
-  if (!session?.user || !tenantId) {
+  if (!session?.user || !baseTenantId) {
     redirect('/login');
   }
+
+  const headerList = await headers();
+  const cookieHeader = headerList.get('cookie') || '';
+  const email = session.user.email?.trim().toLowerCase() || '';
+  const tenantId = isMasterTenantEmail(email)
+    ? await resolveTenantOverride(new Request('https://safeviate.local', { headers: { cookie: cookieHeader } }), email, baseTenantId)
+    : baseTenantId;
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
@@ -36,7 +44,6 @@ export default async function QuickReportQrCodesPage() {
     notFound();
   }
 
-  const headerList = await headers();
   const host = headerList.get('x-forwarded-host') || headerList.get('host') || '';
   const proto = headerList.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
   const baseUrl = host ? `${proto}://${host}` : '';

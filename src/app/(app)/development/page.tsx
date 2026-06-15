@@ -141,6 +141,7 @@ const APP_LINK_TREE = [
   '|  |- /admin/department',
   '|- Development',
   '|  |- /development',
+  '|  |- /development/ui-lab',
   '|  |- /development/simulation-lab',
   '|  |  |- Reads/Writes: /api/development/simulation-lab',
 ].join('\n');

@@ -171,16 +171,21 @@ const SidebarItems = () => {
           );
           const apiRoles = (Array.isArray(payload?.roles) ? payload.roles : []) as Role[];
 
+          const dynamicRoleItems: SubMenuItem[] = apiRoles
+            .filter((role) => role?.id && role?.name)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((role: Role) => ({
+              href: `/users/role/${encodeURIComponent(role.id)}`,
+              label: role.name,
+              permissionId: 'users-view',
+            }));
+
           const dynamicItems: SubMenuItem[] = [
-            ...USERS_STATIC_SUB_ITEMS,
-            ...apiRoles
-              .filter((role) => role?.id && role?.name)
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((role: Role) => ({
-                href: `/users/role/${encodeURIComponent(role.id)}`,
-                label: role.name,
-                permissionId: 'users-view',
-              })),
+            {
+              ...USERS_STATIC_SUB_ITEMS[0],
+              subItems: dynamicRoleItems,
+            },
+            USERS_STATIC_SUB_ITEMS[1],
           ];
 
           if (!cancelled) setRoleBasedUserSubItems(dynamicItems);

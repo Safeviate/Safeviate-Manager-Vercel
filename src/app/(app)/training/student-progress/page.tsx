@@ -56,6 +56,9 @@ type SummaryPayload = {
   studentMilestones?: StudentMilestoneSettings | null;
 };
 
+const isStudentProfile = (person: Pick<PilotProfile, 'userType' | 'role'>) =>
+  person.userType === 'Student' || person.role.trim().toLowerCase() === 'student';
+
 const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
   { milestone: 10, warningHours: 7 },
   { milestone: 20, warningHours: 17 },
@@ -287,7 +290,7 @@ export default function StudentProgressPage() {
         const response = await fetch('/api/dashboard-summary', { cache: 'no-store' });
         const payload = (await response.json().catch(() => ({}))) as SummaryPayload;
         if (!cancelled) {
-          setStudents(Array.isArray(payload?.students) ? payload.students : []);
+          setStudents(Array.isArray(payload?.students) ? payload.students.filter(isStudentProfile) : []);
           setSummary(payload || {});
         }
       } catch (e) {
@@ -329,6 +332,7 @@ export default function StudentProgressPage() {
   const studentRows = useMemo<StudentProgressRow[]>(() => {
     const bookings = Array.isArray(summary.bookings) ? summary.bookings : [];
     const reports = Array.isArray(summary.studentProgressReports) ? summary.studentProgressReports : [];
+    const studentProfiles = students.filter(isStudentProfile);
     const periodStart = getPeriodStart(activePeriod);
     const now = new Date();
     const periodDays = getPeriodDays(activePeriod);
@@ -340,7 +344,7 @@ export default function StudentProgressPage() {
         })
       : bookings;
 
-    return (students || []).map((student) => {
+    return studentProfiles.map((student) => {
       const studentBookings = bookings.filter((booking) => booking.studentId === student.id);
       const periodStudentBookings = periodBookings.filter((booking) => booking.studentId === student.id);
       const studentReports = reports.filter((report) => report.studentId === student.id);
@@ -540,7 +544,7 @@ export default function StudentProgressPage() {
               {studentRows.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                   {studentRows.map((student) => {
-                    const studentProfile = (students || []).find((entry) => entry.id === student.id);
+                    const studentProfile = students.find((entry) => entry.id === student.id);
                     const reports = Array.isArray(summary.studentProgressReports)
                       ? summary.studentProgressReports.filter((report) => report.studentId === student.id)
                       : [];

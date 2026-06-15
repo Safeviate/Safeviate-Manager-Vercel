@@ -63,6 +63,11 @@ export async function resolveQuickReportContext(options: {
   request?: Request | null;
   publicTenantId?: string | null;
 }) {
+  const publicContext = await resolvePublicQuickReportContext(options.publicTenantId ?? null);
+  if (publicContext) {
+    return publicContext;
+  }
+
   if (options.request) {
     const authenticatedContext = await resolveAuthenticatedQuickReportContext(options.request);
     if (authenticatedContext) {
@@ -70,5 +75,5 @@ export async function resolveQuickReportContext(options: {
     }
   }
 
-  return resolvePublicQuickReportContext(options.publicTenantId ?? null);
+  return null;
 }

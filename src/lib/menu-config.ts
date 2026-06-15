@@ -461,6 +461,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'development-view',
       },
       {
+        href: '/development/ui-lab',
+        label: 'UI Lab',
+        description: 'Experiment with Safeviate card layouts, control rows, and page shells.',
+        permissionId: 'development-view',
+      },
+      {
         href: '/development/table-builder',
         label: 'Table Builder',
         description: 'Create and manipulate table structures.',
