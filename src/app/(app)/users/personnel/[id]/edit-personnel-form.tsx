@@ -340,7 +340,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                       checked={!!formData?.canBePIC}
                       onCheckedChange={(val) => handleInputChange('canBePIC', val)}
                       />
-                      <Label htmlFor="booking-pic" className="cursor-pointer text-xs">Assignable as PIC</Label>
+                      <Label htmlFor="booking-pic" className="cursor-pointer text-xs">Hire and Fly</Label>
                     </div>
 
                     {formData?.userType === 'Student' && (

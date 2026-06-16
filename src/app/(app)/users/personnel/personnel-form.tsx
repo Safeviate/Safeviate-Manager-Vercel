@@ -277,7 +277,7 @@ export function PersonnelForm({
             </div>
             <div className="flex min-w-[110px] items-center gap-2">
               <Switch id="assign-pic" checked={canBePIC} onCheckedChange={setCanBePIC} />
-              <Label htmlFor="assign-pic" className="max-w-[90px] text-xs font-normal leading-4 cursor-pointer">Assignable as PIC</Label>
+              <Label htmlFor="assign-pic" className="max-w-[90px] text-xs font-normal leading-4 cursor-pointer">Hire and Fly</Label>
             </div>
           </div>
         </div>
