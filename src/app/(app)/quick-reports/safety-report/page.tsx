@@ -48,6 +48,7 @@ export default function QuickSafetyReportPage() {
   const { tenantId: scopedTenantId } = useUserProfile();
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [photoAttachments, setPhotoAttachments] = useState<QuickReportPhotoAttachment[]>([]);
   const publicTenantId = typeof params?.tenantId === 'string' ? params.tenantId.trim() : '';
   const isPublicPortal = pathname.startsWith('/report/');
@@ -149,7 +150,7 @@ export default function QuickSafetyReportPage() {
       });
 
       dispatchSafeviateEvent(SAFEVIATE_QUICK_SAFETY_REPORTS_UPDATED);
-      router.push(returnHref);
+      setIsSubmitted(true);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -204,6 +205,45 @@ export default function QuickSafetyReportPage() {
 
     event.target.value = '';
   };
+
+  if (isSubmitted) {
+    return (
+      <div className="mx-auto flex h-full w-full max-w-3xl items-center justify-center p-4">
+        <Card className="w-full overflow-hidden border shadow-none">
+          <CardHeader className="border-b bg-muted/5 text-center">
+            <CardTitle className="text-2xl font-black uppercase tracking-tight">Thank you for your report</CardTitle>
+            <CardDescription className="mt-2 text-sm">
+              Your quick safety report has been submitted successfully and routed into the follow-up workflow.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
+            <ShieldAlert className="h-12 w-12 text-primary" />
+            <p className="max-w-lg text-sm text-muted-foreground">
+              You can now close this window. If your browser blocks it, use the button below and we’ll return you to the report portal.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.close();
+                    window.setTimeout(() => {
+                      router.push(returnHref);
+                    }, 100);
+                  }
+                }}
+              >
+                Close Window
+              </Button>
+              <Button type="button" variant="outline" onClick={() => router.push(returnHref)}>
+                Return to Portal
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex h-full w-full max-w-4xl flex-col gap-6 p-4">
