@@ -227,16 +227,10 @@ export default function QuickSafetyReportPage() {
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     window.close();
-                    window.setTimeout(() => {
-                      router.push(returnHref);
-                    }, 100);
                   }
                 }}
               >
                 Close Window
-              </Button>
-              <Button type="button" variant="outline" onClick={() => router.push(returnHref)}>
-                Return to Portal
               </Button>
             </div>
           </CardContent>
