@@ -61,13 +61,24 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
+      - name: Assemble standalone deploy package
+        run: |
+          rm -rf deploy
+          mkdir -p deploy/.next
+          cp -R .next/standalone/. deploy/
+          cp -R .next/static deploy/.next/static
+          if [ -d public ]; then
+            cp -R public deploy/public
+          fi
+
       - name: Deploy to Azure Web App (attempt 1)
         id: deploy_attempt_1
         uses: azure/webapps-deploy@v3
         continue-on-error: true
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: .
+          package: ./deploy
+          startup-command: 'node server.js'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 
       - name: Wait before retry 2
@@ -81,7 +92,8 @@ jobs:
         continue-on-error: true
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: .
+          package: ./deploy
+          startup-command: 'node server.js'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 
       - name: Wait before retry 3
@@ -95,7 +107,8 @@ jobs:
         continue-on-error: true
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: .
+          package: ./deploy
+          startup-command: 'node server.js'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 
       - name: Fail if Azure deployment still failed
