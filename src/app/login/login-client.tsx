@@ -495,6 +495,17 @@ export default function LoginClient() {
         ) : null}
       </header>
 
+      <div className="relative z-10 mx-auto -mt-1 flex max-w-[1180px] justify-center px-5 pb-2 md:px-8">
+        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-1.5 text-[11px] font-semibold text-cyan-100/95 backdrop-blur-xl sm:text-xs">
+          <img
+            src="/images/safaflag.webp"
+            alt="South African flag"
+            className="h-3.5 w-5 rounded-[2px] object-cover shadow-sm"
+          />
+          <span>Proudly South African</span>
+        </div>
+      </div>
+
       <section className="relative z-10 mx-auto grid max-w-[1180px] items-center gap-6 px-5 pb-8 pt-6 md:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:pt-8">
         <motion.div
           initial={{ opacity: 0, x: -24 }}
