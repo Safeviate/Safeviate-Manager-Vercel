@@ -35,7 +35,8 @@ import { cn } from '@/lib/utils';
 import { broadcastBookingUpdate } from '@/lib/booking-updates';
 import { getBlockingBookingForTracking, isBookingEligibleForTracking } from '@/lib/booking-tracking';
 import { getAircraftHourSnapshot } from '@/lib/aircraft-hours';
-import { getAircraftInspectionStatus, isAircraftInspectionBlocked } from '@/lib/aircraft-inspection';
+import type { DocumentExpirySettingsLike } from '@/lib/document-expiry';
+import { getAircraftBookingBlockState, getAircraftInspectionStatus } from '@/lib/aircraft-inspection';
 import { DEFAULT_TRAINING_EXERCISE_TEMPLATE_KEY, getTrainingExerciseTemplate, getTrainingExerciseTemplateOptions, resolveTrainingExerciseTemplates } from '@/lib/training-exercise-templates';
 
 const parseLocalDate = (value?: string | null) => {
@@ -149,6 +150,13 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
         const inspection = config?.['inspection-warning-settings'];
         return inspection && typeof inspection === 'object'
             ? (inspection as AircraftInspectionWarningSettings)
+            : null;
+    }, [tenant]);
+    const documentExpirySettings = useMemo(() => {
+        const config = tenant as Record<string, unknown> | null | undefined;
+        const expiry = config?.['document-expiry-settings'];
+        return expiry && typeof expiry === 'object'
+            ? (expiry as DocumentExpirySettingsLike)
             : null;
     }, [tenant]);
     const inspectionStatus = useMemo(
@@ -338,11 +346,17 @@ export function BookingForm({ isOpen, setIsOpen, aircraft, startTime, tenantId, 
             }
         }
 
-        if (!existingBooking && data.type !== 'Maintenance' && isAircraftInspectionBlocked(aircraft, inspectionSettings)) {
+        const bookingBlockState = !existingBooking && data.type !== 'Maintenance'
+            ? getAircraftBookingBlockState(aircraft, inspectionSettings, documentExpirySettings)
+            : { isBlocked: false, reason: null };
+
+        if (bookingBlockState.isBlocked) {
             toast({
                 variant: 'destructive',
-                title: 'Aircraft Service Blocked',
-                description: `${aircraft.tailNumber} cannot be booked until an authorised person updates the aircraft hours.`,
+                title: bookingBlockState.reason === 'document' ? 'Aircraft Documents Expired' : 'Aircraft Service Blocked',
+                description: bookingBlockState.reason === 'document'
+                    ? `${aircraft.tailNumber} cannot be booked until the expired aircraft documents are updated.`
+                    : `${aircraft.tailNumber} cannot be booked until an authorised person updates the aircraft hours.`,
             });
             setIsSubmitting(false);
             return;

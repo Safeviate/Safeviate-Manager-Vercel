@@ -1,5 +1,5 @@
 import { authOptions } from '@/auth';
-import { isAircraftInspectionBlocked } from '@/lib/aircraft-inspection';
+import { getAircraftBookingBlockState } from '@/lib/aircraft-inspection';
 import { prisma } from '@/lib/prisma';
 import { normalizeAircraftRecord } from '@/lib/server/aircraft-normalize';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
@@ -125,11 +125,25 @@ export async function POST(request: Request) {
       const inspectionSettings = (
         (configRow?.data as Record<string, unknown> | null | undefined)?.['inspection-warning-settings']
       ) as AircraftInspectionWarningSettings | undefined;
+      const documentExpirySettings = (
+        (configRow?.data as Record<string, unknown> | null | undefined)?.['document-expiry-settings']
+      ) as Record<string, unknown> | undefined;
 
-      if (aircraft && isAircraftInspectionBlocked(aircraft, inspectionSettings || null)) {
+      const bookingBlockState = aircraft
+        ? getAircraftBookingBlockState(
+            aircraft,
+            inspectionSettings || null,
+            (documentExpirySettings as Parameters<typeof getAircraftBookingBlockState>[2]) || null
+          )
+        : { isBlocked: false, reason: null };
+
+      if (bookingBlockState.isBlocked) {
         return NextResponse.json(
           {
-            error: 'Aircraft service hours must be updated before new bookings can be created.',
+            error:
+              bookingBlockState.reason === 'document'
+                ? 'Aircraft documents have expired and must be updated before new bookings can be created.'
+                : 'Aircraft service hours must be updated before new bookings can be created.',
           },
           { status: 409 }
         );

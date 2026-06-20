@@ -9,7 +9,8 @@ import type { AircraftInspectionWarningSettings } from '@/types/inspection';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { format, startOfDay, getHours, getMinutes, differenceInMinutes, isSameDay, setHours, setMinutes, isBefore, addDays, subDays, startOfToday, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { getAircraftInspectionStatus, isAircraftInspectionBlocked } from '@/lib/aircraft-inspection';
+import { getAircraftBookingBlockState, getAircraftInspectionStatus } from '@/lib/aircraft-inspection';
+import type { DocumentExpirySettingsLike } from '@/lib/document-expiry';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -478,6 +479,7 @@ export default function SchedulePage() {
   const [vehicleUsageRecords, setVehicleUsageRecords] = useState<VehicleUsageLite[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [inspectionSettings, setInspectionSettings] = useState<AircraftInspectionWarningSettings | null>(null);
+  const [documentExpirySettings, setDocumentExpirySettings] = useState<DocumentExpirySettingsLike | null>(null);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [instructors, setInstructors] = useState<PilotProfile[]>([]);
   const [students, setStudents] = useState<PilotProfile[]>([]);
@@ -537,9 +539,15 @@ export default function SchedulePage() {
             ? (tenantConfigPayload.config as Record<string, unknown>)
             : {};
           const inspectionConfig = config['inspection-warning-settings'];
+          const documentExpiryConfig = config['document-expiry-settings'];
           setInspectionSettings(
             inspectionConfig && typeof inspectionConfig === 'object'
               ? (inspectionConfig as AircraftInspectionWarningSettings)
+              : null
+          );
+          setDocumentExpirySettings(
+            documentExpiryConfig && typeof documentExpiryConfig === 'object'
+              ? (documentExpiryConfig as DocumentExpirySettingsLike)
               : null
           );
         }
@@ -688,11 +696,16 @@ export default function SchedulePage() {
       return;
     }
 
-    if (isAircraftInspectionBlocked(ac, inspectionSettings)) {
+    const bookingBlockState = getAircraftBookingBlockState(ac, inspectionSettings, documentExpirySettings);
+
+    if (bookingBlockState.isBlocked) {
       toast({
         variant: 'destructive',
-        title: 'Aircraft Service Blocked',
-        description: `${ac.tailNumber} cannot be booked until an authorised person updates the aircraft hours.`,
+        title: bookingBlockState.reason === 'document' ? 'Aircraft Documents Expired' : 'Aircraft Service Blocked',
+        description:
+          bookingBlockState.reason === 'document'
+            ? `${ac.tailNumber} cannot be booked until the expired aircraft documents are updated.`
+            : `${ac.tailNumber} cannot be booked until an authorised person updates the aircraft hours.`,
       });
       return;
     }

@@ -1,6 +1,6 @@
 import type { Aircraft } from '@/types/aircraft';
 import type { AircraftInspectionWarningSettings } from '@/types/inspection';
-import { getInspectionWarningStyle } from '@/lib/document-expiry';
+import { getDocumentExpiryColor, getInspectionWarningStyle, type DocumentExpirySettingsLike } from '@/lib/document-expiry';
 
 type WarningStyle = ReturnType<typeof getInspectionWarningStyle>;
 
@@ -10,6 +10,11 @@ export type AircraftInspectionStatus = {
   fiftyStyle: WarningStyle;
   hundredStyle: WarningStyle;
   isBlocked: boolean;
+};
+
+export type AircraftBookingBlockState = {
+  isBlocked: boolean;
+  reason: 'inspection' | 'document' | null;
 };
 
 const parseColorChannels = (color: string) => {
@@ -74,3 +79,26 @@ export const isAircraftInspectionBlocked = (
   aircraft: Aircraft,
   settings?: AircraftInspectionWarningSettings | null
 ) => getAircraftInspectionStatus(aircraft, settings).isBlocked;
+
+export const hasExpiredAircraftDocuments = (
+  aircraft: Aircraft,
+  settings?: DocumentExpirySettingsLike | null
+) =>
+  Array.isArray(aircraft.documents) &&
+  aircraft.documents.some((document) => getDocumentExpiryColor(document.expirationDate, settings) === (settings?.expiredColor || '#ef4444'));
+
+export const getAircraftBookingBlockState = (
+  aircraft: Aircraft,
+  inspectionSettings?: AircraftInspectionWarningSettings | null,
+  documentExpirySettings?: DocumentExpirySettingsLike | null
+): AircraftBookingBlockState => {
+  if (isAircraftInspectionBlocked(aircraft, inspectionSettings)) {
+    return { isBlocked: true, reason: 'inspection' };
+  }
+
+  if (hasExpiredAircraftDocuments(aircraft, documentExpirySettings)) {
+    return { isBlocked: true, reason: 'document' };
+  }
+
+  return { isBlocked: false, reason: null };
+};
