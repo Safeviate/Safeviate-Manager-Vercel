@@ -56,8 +56,9 @@ type SummaryPayload = {
   studentMilestones?: StudentMilestoneSettings | null;
 };
 
-const isStudentProfile = (person: Pick<PilotProfile, 'userType' | 'role'>) =>
-  person.userType === 'Student' || person.role.trim().toLowerCase() === 'student';
+const isStudentProfile = (
+  person: Pick<PilotProfile, 'userType' | 'role' | 'canBeStudent' | 'canBePIC'>
+) => person.canBeStudent || person.canBePIC || person.userType === 'Student' || person.role.trim().toLowerCase() === 'student';
 
 const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
   { milestone: 10, warningHours: 7 },
