@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { Signature, Save, ShieldCheck, Trash2 } from 'lucide-react';
+import { Signature, Save, ShieldCheck, Trash2, SearchCheck, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
@@ -313,6 +313,47 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
 
   return (
     <>
+      <section>
+        <div className="flex items-center gap-2 mb-6">
+            <div className="p-1.5 rounded-md bg-primary/10 text-primary"><SearchCheck className="h-4 w-4" /></div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Root Cause Review</h3>
+        </div>
+        <div className="space-y-4">
+          {report.rootCauseAnalyses && report.rootCauseAnalyses.length > 0 ? (
+            report.rootCauseAnalyses.map((cause, index) => (
+              <div key={cause.id} className="p-4 border rounded-xl bg-muted/5 space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    Root Cause {index + 1}
+                  </p>
+                  <Badge variant="outline" className="h-6 px-2 text-[10px] font-black uppercase tracking-[0.14em]">
+                    {cause.category}
+                  </Badge>
+                </div>
+                <p className="text-sm font-bold text-foreground">{cause.title}</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{cause.analysis}</p>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed bg-muted/5 px-4 py-6 text-sm text-muted-foreground">
+              No root cause analyses have been captured for this report yet.
+            </div>
+          )}
+
+          {report.investigationNotes ? (
+            <div className="rounded-xl border bg-background px-4 py-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Investigation Conclusion</p>
+              </div>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{report.investigationNotes}</p>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <Separator className="bg-slate-200/60" />
+
       <section>
         <div className="flex items-center gap-2 mb-6">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><ShieldCheck className="h-4 w-4" /></div>

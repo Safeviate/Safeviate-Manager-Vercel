@@ -7,6 +7,7 @@ export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancel
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type CorrectiveActionRiskView = 'Initial' | 'Residual';
 export type ReportDiaryEntryType = 'comment' | 'task_assignment' | 'task_update' | 'finding' | 'decision' | 'status_change';
+export type ReportRootCauseCategory = 'Human Factors' | 'Process' | 'Equipment' | 'Environment' | 'Training' | 'Communication' | 'Other';
 
 export interface InvestigationTaskUpdate {
     id: string;
@@ -22,6 +23,13 @@ export interface InvestigationPhotoAttachment {
     name: string;
     url: string;
     uploadDate: string; // ISO String
+}
+
+export interface ReportRootCauseAnalysis {
+    id: string;
+    category: ReportRootCauseCategory;
+    title: string;
+    analysis: string;
 }
 
 export interface InvestigationMember {
@@ -133,6 +141,7 @@ export interface SafetyReport {
     initialHazards?: ReportHazard[];
     investigationTasks?: InvestigationTask[];
     investigationEvidencePhotos?: InvestigationPhotoAttachment[];
+    rootCauseAnalyses?: ReportRootCauseAnalysis[];
     investigationNotes?: string;
     discussion?: ReportDiscussionItem[];
     // CAP Fields

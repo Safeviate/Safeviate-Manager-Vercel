@@ -23,9 +23,16 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import type { InvestigationPhotoAttachment, InvestigationTask, InvestigationTaskUpdate, ReportDiscussionItem, SafetyReport } from '@/types/safety-report';
+import type {
+  InvestigationPhotoAttachment,
+  InvestigationTask,
+  InvestigationTaskUpdate,
+  ReportDiscussionItem,
+  ReportRootCauseCategory,
+  SafetyReport,
+} from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera, SearchCheck } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -70,8 +77,26 @@ const investigationTaskSchema = z.object({
   updates: z.array(investigationTaskUpdateSchema).optional(),
 });
 
+const rootCauseCategoryOptions = [
+  'Human Factors',
+  'Process',
+  'Equipment',
+  'Environment',
+  'Training',
+  'Communication',
+  'Other',
+] as const satisfies readonly ReportRootCauseCategory[];
+
+const rootCauseAnalysisSchema = z.object({
+  id: z.string(),
+  category: z.enum(rootCauseCategoryOptions),
+  title: z.string().min(1, 'Root cause title is required.'),
+  analysis: z.string().min(1, 'Root cause analysis is required.'),
+});
+
 const investigationSchema = z.object({
   investigationTeam: z.array(investigationMemberSchema),
+  rootCauseAnalyses: z.array(rootCauseAnalysisSchema),
   investigationNotes: z.string().optional(),
   investigationTasks: z.array(investigationTaskSchema),
 });
@@ -111,6 +136,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     resolver: zodResolver(investigationSchema),
     defaultValues: {
       investigationTeam: report.investigationTeam || [],
+      rootCauseAnalyses: report.rootCauseAnalyses || [],
       investigationNotes: report.investigationNotes || '',
       investigationTasks:
         report.investigationTasks?.map((task) => ({
@@ -129,9 +155,15 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     control: form.control,
     name: 'investigationTasks',
   });
+  const { fields: rootCauseFields, append: appendRootCause, remove: removeRootCause } = useFieldArray({
+    control: form.control,
+    name: 'rootCauseAnalyses',
+  });
 
-  const buildDataToSave = (values: FormValues) => ({
-    ...values,
+  const buildDataToSave = (values: FormValues): Pick<SafetyReport, 'investigationTeam' | 'investigationTasks' | 'investigationNotes' | 'rootCauseAnalyses'> => ({
+    investigationTeam: values.investigationTeam,
+    rootCauseAnalyses: values.rootCauseAnalyses,
+    investigationNotes: values.investigationNotes,
     investigationTasks: values.investigationTasks.map((task) => ({
       ...task,
       dueDate: toNoonUtcIso(task.dueDate),
@@ -350,11 +382,14 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                     form={form}
                     teamFields={teamFields}
                     taskFields={taskFields}
+                    rootCauseFields={rootCauseFields}
                     personnel={personnel}
                     removeTeamMember={removeTeamMember}
                     removeTask={removeTask}
+                    removeRootCause={removeRootCause}
                     appendTeamMember={appendTeamMember}
                     appendTask={appendTask}
+                    appendRootCause={appendRootCause}
                     handleUserSelection={handleUserSelection}
                     addTaskUpdate={addTaskUpdate}
                     report={report}
@@ -369,11 +404,14 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                       form={form}
                       teamFields={teamFields}
                       taskFields={taskFields}
+                      rootCauseFields={rootCauseFields}
                       personnel={personnel}
                       removeTeamMember={removeTeamMember}
                       removeTask={removeTask}
+                      removeRootCause={removeRootCause}
                       appendTeamMember={appendTeamMember}
                       appendTask={appendTask}
+                      appendRootCause={appendRootCause}
                       handleUserSelection={handleUserSelection}
                       addTaskUpdate={addTaskUpdate}
                       report={report}
@@ -402,11 +440,14 @@ function InvestigationFields({
   form,
   teamFields,
   taskFields,
+  rootCauseFields,
   personnel,
   removeTeamMember,
   removeTask,
+  removeRootCause,
   appendTeamMember,
   appendTask,
+  appendRootCause,
   handleUserSelection,
   addTaskUpdate,
   report,
@@ -416,11 +457,14 @@ function InvestigationFields({
   form: UseFormReturn<FormValues>;
   teamFields: Array<{ id: string }>;
   taskFields: Array<{ id: string }>;
+  rootCauseFields: Array<{ id: string }>;
   personnel: Personnel[];
   removeTeamMember: (index: number) => void;
   removeTask: (index: number) => void;
+  removeRootCause: (index: number) => void;
   appendTeamMember: (value: FormValues['investigationTeam'][number]) => void;
   appendTask: (value: FormValues['investigationTasks'][number]) => void;
+  appendRootCause: (value: FormValues['rootCauseAnalyses'][number]) => void;
   handleUserSelection: (index: number, userId: string) => void;
   addTaskUpdate: (taskIndex: number, message: string) => Promise<boolean>;
   report: SafetyReport;
@@ -601,15 +645,124 @@ function InvestigationFields({
       <LocalSeparator />
 
       <section>
+        <div className="flex justify-between items-center mb-4">
+          <SectionHeader title="Root Cause Analyses" icon={SearchCheck} />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => appendRootCause({ id: uuidv4(), category: 'Process', title: '', analysis: '' })}
+            className="h-7 px-3 text-[10px] font-black uppercase border-slate-300 no-print"
+          >
+            <PlusCircle className="mr-1 h-3 w-3" /> Add Root Cause
+          </Button>
+        </div>
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Capture each underlying cause separately so the team can distinguish operational, human, equipment, and process contributors.
+          </p>
+          {rootCauseFields.length > 0 ? (
+            rootCauseFields.map((field, index) => (
+              <div key={field.id} className="rounded-xl border bg-muted/10 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                      Root Cause {index + 1}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Define the cause and document why it contributed to the event.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeRootCause(index)}
+                    className="h-8 w-8 text-destructive no-print hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+                  <FormField
+                    control={form.control}
+                    name={`rootCauseAnalyses.${index}.category`}
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-3">
+                        <Label>Category</Label>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-9 text-xs bg-background font-bold border-slate-300">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {rootCauseCategoryOptions.map((option) => (
+                              <SelectItem key={option} value={option} className="text-xs">
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`rootCauseAnalyses.${index}.title`}
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-9">
+                        <Label>Root Cause Title</Label>
+                        <FormControl>
+                          <Input
+                            placeholder="Short label for the cause"
+                            {...field}
+                            className="h-9 text-xs bg-background font-bold border-slate-300"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name={`rootCauseAnalyses.${index}.analysis`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label>Analysis</Label>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Explain why this was a root cause, what evidence supports it, and how it influenced the event."
+                          className="min-h-28 text-sm bg-background border-slate-300"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+              No root cause analyses added yet.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <LocalSeparator />
+
+      <section>
         <FormField
           control={form.control}
           name="investigationNotes"
           render={({ field }) => (
             <FormItem>
-              <SectionHeader title="Investigation Summary & Root Cause" icon={AlertTriangle} />
+              <SectionHeader title="Investigation Summary" icon={AlertTriangle} />
               <FormControl>
                 <Textarea
-                  placeholder="Summarize the final investigation findings..."
+                  placeholder="Summarize the final investigation findings, conclusions, and overall outcome..."
                   className="min-h-48 text-sm font-medium p-4 bg-muted/10 border-slate-200"
                   {...field}
                 />
