@@ -606,8 +606,6 @@ export default function SafetyReportsPage() {
   const handleClassifyQuickReport = async (report: QuickSafetyReport) => {
     setClassifyingQuickReportId(report.id);
     try {
-      const newSafetyReportId = crypto.randomUUID();
-      const newSafetyReportNumber = `SR-${String(Date.now()).slice(-6)}`;
       const eventClassification =
         report.recommendedClassification && report.recommendedClassification !== 'General Concern'
           ? report.recommendedClassification
@@ -621,8 +619,6 @@ export default function SafetyReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           report: {
-            id: newSafetyReportId,
-            reportNumber: newSafetyReportNumber,
             reportType: report.reportType,
             status: 'Open',
             submittedBy: report.submittedByEmail || report.submittedById || 'quick-safety-report',
@@ -646,6 +642,12 @@ export default function SafetyReportsPage() {
       if (!safetyResponse.ok) {
         throw new Error(safetyPayload?.error || 'Failed to create the formal safety report.');
       }
+      const createdSafetyReport = safetyPayload.report as SafetyReport | undefined;
+      const newSafetyReportId = createdSafetyReport?.id;
+      const newSafetyReportNumber = createdSafetyReport?.reportNumber;
+      if (!newSafetyReportId || !newSafetyReportNumber) {
+        throw new Error('Formal safety report was created without an id or report number.');
+      }
 
       const quickResponse = await fetch('/api/quick-safety-reports', {
         method: 'PUT',
@@ -665,7 +667,7 @@ export default function SafetyReportsPage() {
         throw new Error(quickPayload?.error || 'Failed to link the quick safety report.');
       }
 
-      setAllReports((current) => [safetyPayload.report as SafetyReport, ...current]);
+      setAllReports((current) => [createdSafetyReport, ...current]);
       setQuickSafetyReports((current) =>
         current.map((entry) =>
           entry.id === report.id

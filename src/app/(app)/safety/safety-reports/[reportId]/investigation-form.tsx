@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type {
+  InvestigationInterview,
   InvestigationPhotoAttachment,
   InvestigationTask,
   InvestigationTaskUpdate,
@@ -32,7 +33,7 @@ import type {
   SafetyReport,
 } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera, SearchCheck } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera, SearchCheck, ClipboardList } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -77,6 +78,17 @@ const investigationTaskSchema = z.object({
   updates: z.array(investigationTaskUpdateSchema).optional(),
 });
 
+const investigationInterviewSchema = z.object({
+  id: z.string(),
+  personName: z.string().min(1, 'Interview subject is required.'),
+  involvement: z.string().min(1, 'Role or involvement is required.'),
+  interviewerName: z.string().min(1, 'Interviewer is required.'),
+  interviewDate: z.date(),
+  status: z.enum(['Pending', 'In Progress', 'Completed']),
+  notes: z.string().min(1, 'Interview notes are required.'),
+  followUpRequired: z.string().optional(),
+});
+
 const rootCauseCategoryOptions = [
   'Human Factors',
   'Process',
@@ -96,6 +108,7 @@ const rootCauseAnalysisSchema = z.object({
 
 const investigationSchema = z.object({
   investigationTeam: z.array(investigationMemberSchema),
+  investigationInterviews: z.array(investigationInterviewSchema),
   rootCauseAnalyses: z.array(rootCauseAnalysisSchema),
   investigationNotes: z.string().optional(),
   investigationTasks: z.array(investigationTaskSchema),
@@ -136,6 +149,12 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     resolver: zodResolver(investigationSchema),
     defaultValues: {
       investigationTeam: report.investigationTeam || [],
+      investigationInterviews:
+        report.investigationInterviews?.map((interview) => ({
+          ...interview,
+          interviewDate: parseLocalDate(interview.interviewDate),
+          followUpRequired: interview.followUpRequired || '',
+        })) || [],
       rootCauseAnalyses: report.rootCauseAnalyses || [],
       investigationNotes: report.investigationNotes || '',
       investigationTasks:
@@ -155,13 +174,22 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     control: form.control,
     name: 'investigationTasks',
   });
+  const { fields: interviewFields, append: appendInterview, remove: removeInterview } = useFieldArray({
+    control: form.control,
+    name: 'investigationInterviews',
+  });
   const { fields: rootCauseFields, append: appendRootCause, remove: removeRootCause } = useFieldArray({
     control: form.control,
     name: 'rootCauseAnalyses',
   });
 
-  const buildDataToSave = (values: FormValues): Pick<SafetyReport, 'investigationTeam' | 'investigationTasks' | 'investigationNotes' | 'rootCauseAnalyses'> => ({
+  const buildDataToSave = (values: FormValues): Pick<SafetyReport, 'investigationTeam' | 'investigationInterviews' | 'investigationTasks' | 'investigationNotes' | 'rootCauseAnalyses'> => ({
     investigationTeam: values.investigationTeam,
+    investigationInterviews: values.investigationInterviews.map((interview) => ({
+      ...interview,
+      interviewDate: toNoonUtcIso(interview.interviewDate),
+      followUpRequired: interview.followUpRequired?.trim() || null,
+    })),
     rootCauseAnalyses: values.rootCauseAnalyses,
     investigationNotes: values.investigationNotes,
     investigationTasks: values.investigationTasks.map((task) => ({
@@ -381,13 +409,16 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                   <InvestigationFields
                     form={form}
                     teamFields={teamFields}
+                    interviewFields={interviewFields}
                     taskFields={taskFields}
                     rootCauseFields={rootCauseFields}
                     personnel={personnel}
                     removeTeamMember={removeTeamMember}
+                    removeInterview={removeInterview}
                     removeTask={removeTask}
                     removeRootCause={removeRootCause}
                     appendTeamMember={appendTeamMember}
+                    appendInterview={appendInterview}
                     appendTask={appendTask}
                     appendRootCause={appendRootCause}
                     handleUserSelection={handleUserSelection}
@@ -403,13 +434,16 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                     <InvestigationFields
                       form={form}
                       teamFields={teamFields}
+                      interviewFields={interviewFields}
                       taskFields={taskFields}
                       rootCauseFields={rootCauseFields}
                       personnel={personnel}
                       removeTeamMember={removeTeamMember}
+                      removeInterview={removeInterview}
                       removeTask={removeTask}
                       removeRootCause={removeRootCause}
                       appendTeamMember={appendTeamMember}
+                      appendInterview={appendInterview}
                       appendTask={appendTask}
                       appendRootCause={appendRootCause}
                       handleUserSelection={handleUserSelection}
@@ -439,13 +473,16 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
 function InvestigationFields({
   form,
   teamFields,
+  interviewFields,
   taskFields,
   rootCauseFields,
   personnel,
   removeTeamMember,
+  removeInterview,
   removeTask,
   removeRootCause,
   appendTeamMember,
+  appendInterview,
   appendTask,
   appendRootCause,
   handleUserSelection,
@@ -456,13 +493,16 @@ function InvestigationFields({
 }: {
   form: UseFormReturn<FormValues>;
   teamFields: Array<{ id: string }>;
+  interviewFields: Array<{ id: string }>;
   taskFields: Array<{ id: string }>;
   rootCauseFields: Array<{ id: string }>;
   personnel: Personnel[];
   removeTeamMember: (index: number) => void;
+  removeInterview: (index: number) => void;
   removeTask: (index: number) => void;
   removeRootCause: (index: number) => void;
   appendTeamMember: (value: FormValues['investigationTeam'][number]) => void;
+  appendInterview: (value: FormValues['investigationInterviews'][number]) => void;
   appendTask: (value: FormValues['investigationTasks'][number]) => void;
   appendRootCause: (value: FormValues['rootCauseAnalyses'][number]) => void;
   handleUserSelection: (index: number, userId: string) => void;
@@ -546,6 +586,46 @@ function InvestigationFields({
               </Button>
             </div>
           ))}
+        </div>
+      </section>
+
+      <LocalSeparator />
+
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <SectionHeader title="Witness & Involved Person Interviews" icon={ClipboardList} />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => appendInterview({
+              id: uuidv4(),
+              personName: '',
+              involvement: '',
+              interviewerName: '',
+              interviewDate: new Date(),
+              status: 'Pending',
+              notes: '',
+              followUpRequired: '',
+            })}
+            className="h-7 px-3 text-[10px] font-black uppercase border-slate-300 no-print"
+          >
+            <PlusCircle className="mr-1 h-3 w-3" /> Add Interview
+          </Button>
+        </div>
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Capture witness statements, involved-person interviews, and any follow-up notes needed to support the investigation.
+          </p>
+          {interviewFields.length > 0 ? (
+            interviewFields.map((field, index) => (
+              <InterviewCard key={field.id} form={form} index={index} removeInterview={removeInterview} />
+            ))
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+              No witness or involved person interviews added yet.
+            </div>
+          )}
         </div>
       </section>
 
@@ -993,6 +1073,172 @@ function TaskCard({
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function InterviewCard({
+  form,
+  index,
+  removeInterview,
+}: {
+  form: UseFormReturn<FormValues>;
+  index: number;
+  removeInterview: (index: number) => void;
+}) {
+  return (
+    <div className="rounded-xl border bg-muted/10 p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+            Interview {index + 1}
+          </p>
+          <p className="text-xs text-muted-foreground">Record the person interviewed, their involvement, and the key statement details.</p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => removeInterview(index)}
+          className="h-8 w-8 text-destructive no-print hover:bg-destructive/10"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+        <FormField
+          control={form.control}
+          name={`investigationInterviews.${index}.personName`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-4">
+              <Label>Interview Subject</Label>
+              <FormControl>
+                <Input placeholder="Name of witness or person involved" {...field} className="h-9 text-xs bg-background font-bold border-slate-300" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`investigationInterviews.${index}.involvement`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-4">
+              <Label>Role / Involvement</Label>
+              <FormControl>
+                <Input placeholder="Pilot, witness, maintainer, supervisor..." {...field} className="h-9 text-xs bg-background font-bold border-slate-300" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`investigationInterviews.${index}.interviewerName`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-4">
+              <Label>Interviewer</Label>
+              <FormControl>
+                <Input placeholder="Who conducted the interview" {...field} className="h-9 text-xs bg-background font-bold border-slate-300" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+        <FormField
+          control={form.control}
+          name={`investigationInterviews.${index}.interviewDate`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-4 flex flex-col">
+              <Label>Interview Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'h-9 pl-3 text-left font-bold bg-background text-xs border-slate-300',
+                        !field.value && 'text-muted-foreground'
+                      )}
+                    >
+                      {field.value ? format(field.value, 'dd MMM yyyy') : <span>Date</span>}
+                      <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CustomCalendar selectedDate={field.value} onDateSelect={field.onChange} />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`investigationInterviews.${index}.status`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-4">
+              <Label>Status</Label>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger className="h-9 text-xs bg-background font-bold border-slate-300">
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {['Pending', 'In Progress', 'Completed'].map((status) => (
+                    <SelectItem key={status} value={status} className="text-xs">
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name={`investigationInterviews.${index}.notes`}
+        render={({ field }) => (
+          <FormItem>
+            <Label>Interview Notes / Statement</Label>
+            <FormControl>
+              <Textarea
+                placeholder="Capture the witness statement, interview summary, or key points raised during the discussion..."
+                className="min-h-28 text-sm bg-background border-slate-300"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name={`investigationInterviews.${index}.followUpRequired`}
+        render={({ field }) => (
+          <FormItem>
+            <Label>Follow-up Required</Label>
+            <FormControl>
+              <Textarea
+                placeholder="Optional follow-up actions, clarification points, or further questions to ask..."
+                className="min-h-20 text-sm bg-background border-slate-300"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

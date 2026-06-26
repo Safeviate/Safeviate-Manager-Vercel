@@ -247,41 +247,39 @@ export function ReportForum({ report, tenantId, onReportSaved }: ReportForumProp
         </ScrollArea>
       </div>
 
-      <div className="shrink-0 border-t p-6 bg-background flex flex-col gap-4">
-        <div className="flex gap-3 items-start">
-          <div className="flex-1 space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest whitespace-nowrap">Entry Type:</span>
-                <Select value={entryType} onValueChange={(value) => setEntryType(value as NonNullable<ReportDiscussionItem['entryType']>)}>
-                  <SelectTrigger className="h-8 w-[180px] text-[10px] font-black uppercase bg-background border-slate-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="comment" className="text-[10px] font-black uppercase">Comment</SelectItem>
-                    <SelectItem value="finding" className="text-[10px] font-black uppercase">Finding</SelectItem>
-                    <SelectItem value="decision" className="text-[10px] font-black uppercase">Decision</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Textarea
-              placeholder={
-                entryType === 'finding'
-                  ? 'Record an investigation finding...'
-                  : entryType === 'decision'
-                    ? 'Record a management decision...'
-                    : 'Write a comment or case note...'
-              }
-              value={newMessage}
-              onChange={(event) => setNewMessage(event.target.value)}
-              className="min-h-[80px] bg-muted/5 border-slate-300 font-medium text-sm focus-visible:ring-primary"
-            />
+      <div className="shrink-0 border-t p-6 bg-background flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest whitespace-nowrap">Entry Type:</span>
+            <Select value={entryType} onValueChange={(value) => setEntryType(value as NonNullable<ReportDiscussionItem['entryType']>)}>
+              <SelectTrigger className="h-8 w-[180px] text-[10px] font-black uppercase bg-background border-slate-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="comment" className="text-[10px] font-black uppercase">Comment</SelectItem>
+                <SelectItem value="finding" className="text-[10px] font-black uppercase">Finding</SelectItem>
+                <SelectItem value="decision" className="text-[10px] font-black uppercase">Decision</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </div>
+        <div className="flex items-stretch gap-3">
+          <Textarea
+            placeholder={
+              entryType === 'finding'
+                ? 'Record an investigation finding...'
+                : entryType === 'decision'
+                  ? 'Record a management decision...'
+                  : 'Write a comment or case note...'
+            }
+            value={newMessage}
+            onChange={(event) => setNewMessage(event.target.value)}
+            className="min-h-[92px] flex-1 bg-muted/5 border-slate-300 font-medium text-sm focus-visible:ring-primary"
+          />
           <Button
             disabled={!newMessage.trim() || isSubmitting}
             onClick={handleSendMessage}
-            className="h-20 w-20 rounded-xl bg-emerald-700 hover:bg-emerald-800 shadow-md flex flex-col gap-1 shrink-0"
+            className="min-h-[92px] w-20 rounded-xl bg-emerald-700 hover:bg-emerald-800 shadow-md flex flex-col gap-1 shrink-0 self-stretch"
           >
             <Send className="h-5 w-5" />
             <span className="text-[10px] font-black uppercase">Post</span>

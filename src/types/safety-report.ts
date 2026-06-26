@@ -8,6 +8,7 @@ export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type CorrectiveActionRiskView = 'Initial' | 'Residual';
 export type ReportDiaryEntryType = 'comment' | 'task_assignment' | 'task_update' | 'finding' | 'decision' | 'status_change';
 export type ReportRootCauseCategory = 'Human Factors' | 'Process' | 'Equipment' | 'Environment' | 'Training' | 'Communication' | 'Other';
+export type InvestigationInterviewStatus = 'Pending' | 'In Progress' | 'Completed';
 
 export interface InvestigationTaskUpdate {
     id: string;
@@ -30,6 +31,17 @@ export interface ReportRootCauseAnalysis {
     category: ReportRootCauseCategory;
     title: string;
     analysis: string;
+}
+
+export interface InvestigationInterview {
+    id: string;
+    personName: string;
+    involvement: string;
+    interviewerName: string;
+    interviewDate: string; // ISO String
+    status: InvestigationInterviewStatus;
+    notes: string;
+    followUpRequired?: string | null;
 }
 
 export interface InvestigationMember {
@@ -139,6 +151,7 @@ export interface SafetyReport {
     // Investigation Fields
     investigationTeam?: InvestigationMember[];
     initialHazards?: ReportHazard[];
+    investigationInterviews?: InvestigationInterview[];
     investigationTasks?: InvestigationTask[];
     investigationEvidencePhotos?: InvestigationPhotoAttachment[];
     rootCauseAnalyses?: ReportRootCauseAnalysis[];

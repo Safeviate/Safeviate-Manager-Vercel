@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
 import { ensureSafetyReportsSchema } from '@/lib/server/bootstrap-db';
 import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
+import { allocateNextSafetyReportNumber } from '@/lib/server/safety-report-sequence';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
@@ -64,18 +65,22 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const incoming = body?.report ?? {};
-    const id = incoming.id || randomUUID();
+    const data = await prisma.$transaction(async (tx) => {
+      const id = incoming.id || randomUUID();
+      const reportNumber = incoming.reportNumber || (await allocateNextSafetyReportNumber(tx, tenantId!)).reportNumber;
+      const nextData = { ...incoming, id, reportNumber };
 
-    const data = { ...incoming, id };
+      await tx.$executeRawUnsafe(
+        `INSERT INTO safety_reports (id, tenant_id, data, created_at, updated_at)
+         VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        id,
+        tenantId,
+        JSON.stringify(nextData)
+      );
 
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO safety_reports (id, tenant_id, data, created_at, updated_at)
-       VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-      id,
-      tenantId,
-      JSON.stringify(data)
-    );
+      return nextData;
+    });
 
     await recordSimulationRouteMetric({
       tenantId,

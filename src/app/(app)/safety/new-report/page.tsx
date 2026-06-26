@@ -11,16 +11,6 @@ import { useEffect, useState as useReactState } from 'react';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { dispatchSafeviateEvent, SAFEVIATE_SAFETY_REPORTS_UPDATED } from '@/lib/client-events';
 
-const getReportTypePrefix = (type: NewSafetyReportValues['reportType']): string => {
-    switch (type) {
-        case 'Flight Operations': return 'FLT';
-        case 'Aircraft Defect': return 'ADR';
-        case 'Ground Operations': return 'GRD';
-        case 'General Safety Concern': return 'GEN';
-        default: return 'REP';
-    }
-}
-
 export default function NewSafetyReportPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -64,7 +54,6 @@ export default function NewSafetyReportPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             report: {
-              reportNumber: `${getReportTypePrefix(values.reportType)}-${String(Date.now()).slice(-4)}`,
               reportType: values.reportType,
               status: 'Open',
               submittedBy: values.isAnonymous ? 'anonymous' : (reporterEmail || userProfile?.id || 'signed-in-user'),

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { Signature, Save, ShieldCheck, Trash2, SearchCheck, AlertTriangle } from 'lucide-react';
+import { Signature, Save, ShieldCheck, Trash2, SearchCheck, AlertTriangle, Users } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
@@ -313,6 +313,62 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
 
   return (
     <>
+      <section>
+        <div className="flex items-center gap-2 mb-6">
+            <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Users className="h-4 w-4" /></div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Interview Review</h3>
+        </div>
+        <div className="space-y-4">
+          {report.investigationInterviews && report.investigationInterviews.length > 0 ? (
+            report.investigationInterviews.map((interview, index) => (
+              <div key={interview.id} className="p-4 border rounded-xl bg-muted/5 space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    Interview {index + 1}
+                  </p>
+                  <Badge variant="outline" className="h-6 px-2 text-[10px] font-black uppercase tracking-[0.14em]">
+                    {interview.status}
+                  </Badge>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                    {format(new Date(interview.interviewDate), 'dd MMM yyyy')}
+                  </span>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Interview Subject</p>
+                    <p className="text-sm font-bold text-foreground">{interview.personName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Role / Involvement</p>
+                    <p className="text-sm font-medium text-foreground">{interview.involvement}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Interviewer</p>
+                    <p className="text-sm font-medium text-foreground">{interview.interviewerName}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Interview Notes</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{interview.notes}</p>
+                </div>
+                {interview.followUpRequired ? (
+                  <div className="space-y-2 rounded-lg border bg-background px-3 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Follow-up Required</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{interview.followUpRequired}</p>
+                  </div>
+                ) : null}
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed bg-muted/5 px-4 py-6 text-sm text-muted-foreground">
+              No interviews have been captured for this report yet.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <Separator className="bg-slate-200/60" />
+
       <section>
         <div className="flex items-center gap-2 mb-6">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><SearchCheck className="h-4 w-4" /></div>
