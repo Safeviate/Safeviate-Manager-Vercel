@@ -14,7 +14,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Map as MapIcon, Lock } from 'lucide-react';
-import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
@@ -350,26 +349,6 @@ export default function WeatherPage() {
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
-  }
-
-  if (
-    !shouldBypassIndustryRestrictions(tenant?.id) &&
-    !isHrefEnabledForIndustry('/operations/weather', tenant?.industry) &&
-    !(tenant?.enabledMenus?.includes('/operations/weather') ?? false)
-  ) {
-    return (
-      <Card className="mx-auto w-full max-w-3xl border shadow-none">
-        <CardHeader>
-          <CardTitle className="text-2xl font-black uppercase tracking-tight">Weather Unavailable</CardTitle>
-          <CardDescription>Aviation weather tools are only available for aviation tenants.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline" className="font-black uppercase">
-            <Link href="/operations">Back to Operations</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
   }
 
   return (

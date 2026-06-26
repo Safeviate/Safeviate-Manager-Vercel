@@ -7,7 +7,7 @@ export default function AircraftLayout({ children }: { children: ReactNode }) {
   return (
     <IndustryRouteGuard
       sectionLabel="Aircraft"
-      description="Aircraft management is only available for aviation tenants."
+      description="Aircraft management is not currently available."
       backHref="/assets"
     >
       {children}

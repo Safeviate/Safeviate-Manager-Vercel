@@ -33,6 +33,14 @@ export default function AttendancePage() {
   const [now, setNow] = useState(Date.now());
 
   const loadData = async () => {
+    if (!tenantId) {
+      setAttendance([]);
+      setPersonnel([]);
+      setSelectedPersonnelId('');
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const [attendanceResponse, usersResponse] = await Promise.all([
@@ -72,7 +80,7 @@ export default function AttendancePage() {
       window.removeEventListener('safeviate-attendance-updated', loadData);
       window.clearInterval(timer);
     };
-  }, []);
+  }, [tenantId, userProfile]);
 
   const activeSessions = useMemo(() => attendance.filter((row) => row.status === 'clocked_in' && !row.clockOut), [attendance]);
   const calcBreakMinutes = (record: AttendanceRecordData) => (record.breaks || []).reduce((sum, breakItem) => {

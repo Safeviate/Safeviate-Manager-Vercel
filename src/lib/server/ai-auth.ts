@@ -1,6 +1,8 @@
 import { authOptions } from '@/auth';
 import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { ensureRolesSchema } from '@/lib/server/bootstrap-db';
+import { resolveTenantOverride } from '@/lib/server/tenant-access';
+import { normalizePermissionIds } from '@/lib/permission-model';
 import { getServerSession } from 'next-auth';
 
 type DbUserProfile = {
@@ -25,7 +27,7 @@ export const aiFlowPermissions: Record<string, FlowPermissionRule> = {
 
 const SUPER_USERS = ['deanebolton@gmail.com', 'barry@safeviate.com'];
 
-export async function authenticateAiRequest() {
+export async function authenticateAiRequest(request?: Request) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
 
@@ -34,11 +36,13 @@ export async function authenticateAiRequest() {
   }
 
   if (SUPER_USERS.includes(email)) {
+    const tenantId = request ? await resolveTenantOverride(request, email, 'safeviate') : 'safeviate';
     return {
       ok: true as const,
-      tenantId: 'safeviate',
+      tenantId,
       userProfile: { id: session?.user?.id || email, role: 'developer', permissions: ['*'] },
       effectivePermissions: new Set(['*']),
+      deniedPermissions: new Set<string>(),
     };
   }
 
@@ -66,15 +70,57 @@ export async function authenticateAiRequest() {
     return { ok: false as const, status: 403, error: 'No profile is linked to this account.' };
   }
 
-  const roleRows = await prisma.role.findMany({ where: { tenantId: currentUser.tenantId } });
-  const roleRow = roleRows.find((role) => role.id === currentUser.role) || roleRows[0] || null;
-  const inheritedPermissions = Array.isArray(roleRow?.permissions) ? (roleRow.permissions as string[]) : [];
+  const selectedTenantId = request
+    ? await resolveTenantOverride(request, email, currentUser.tenantId)
+    : currentUser.tenantId;
+
+  const personnelProfile = await prisma.personnel.findFirst({
+    where: {
+      tenantId: selectedTenantId,
+      email,
+    },
+    select: {
+      role: true,
+      permissions: true,
+    },
+  });
+
+  const selectedRoleId = personnelProfile?.role?.trim() || currentUser.role;
+  const roleRows = await prisma.role.findMany({ where: { tenantId: selectedTenantId } });
+  const roleRow =
+    roleRows.find((role) => role.id === selectedRoleId || role.name === selectedRoleId) ||
+    roleRows.find((role) => role.id === currentUser.role || role.name === currentUser.role) ||
+    roleRows[0] ||
+    null;
+  const inheritedPermissions = normalizePermissionIds(
+    Array.isArray(roleRow?.permissions) ? (roleRow.permissions as string[]) : []
+  );
+  const overridePermissions = normalizePermissionIds(
+    Array.isArray(personnelProfile?.permissions) ? (personnelProfile.permissions as string[]) : []
+  );
+  const deniedPermissions = new Set(
+    overridePermissions.filter((permission) => permission.startsWith('!')).map((permission) => permission.slice(1))
+  );
+  const effectivePermissions = new Set<string>();
+
+  inheritedPermissions.forEach((permission) => {
+    if (!deniedPermissions.has(permission)) {
+      effectivePermissions.add(permission);
+    }
+  });
+
+  overridePermissions
+    .filter((permission) => !permission.startsWith('!'))
+    .forEach((permission) => {
+      effectivePermissions.add(permission);
+    });
 
   return {
     ok: true as const,
-    tenantId: currentUser.tenantId,
-    userProfile: { id: currentUser.id, role: currentUser.role, permissions: inheritedPermissions } satisfies DbUserProfile,
-    effectivePermissions: new Set(inheritedPermissions),
+    tenantId: selectedTenantId,
+    userProfile: { id: currentUser.id, role: selectedRoleId, permissions: Array.from(effectivePermissions) } satisfies DbUserProfile,
+    effectivePermissions,
+    deniedPermissions,
   };
 }
 

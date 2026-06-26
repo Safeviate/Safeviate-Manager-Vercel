@@ -4,6 +4,7 @@ import { sendWelcomeEmail } from '@/lib/server/mail';
 import { createPasswordSetupInvite } from '@/lib/server/password-setup';
 import { prisma } from '@/lib/prisma';
 import { enforceRateLimit } from '@/lib/server/request-security';
+import { hasHierarchicalPermission } from '@/lib/permission-model';
 
 export async function POST(request: Request) {
   try {
@@ -22,12 +23,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const authResult = await authenticateAiRequest();
+    const authResult = await authenticateAiRequest(request);
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    if (!authResult.effectivePermissions.has('users-edit') && authResult.userProfile.role?.toLowerCase() !== 'developer') {
+    if (!hasHierarchicalPermission(authResult.effectivePermissions, 'users-edit', authResult.deniedPermissions) && authResult.userProfile.role?.toLowerCase() !== 'developer') {
       return NextResponse.json({ error: 'Unauthorized to trigger password reset.' }, { status: 403 });
     }
 
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const inviteTenantId = String(tenantId || authResult.tenantId || 'safeviate');
+    if (authResult.userProfile.role?.toLowerCase() !== 'developer' && inviteTenantId.trim() !== authResult.tenantId) {
+      return NextResponse.json({ error: 'You can only reset passwords for users in your current tenant.' }, { status: 403 });
+    }
     const existingUser = userId
       ? await prisma.user.findFirst({ where: { id: String(userId), tenantId: inviteTenantId } })
       : await prisma.user.findFirst({ where: { email: normalizedEmail, tenantId: inviteTenantId } });
@@ -51,6 +55,7 @@ export async function POST(request: Request) {
     }
 
     const finalTenantId = String(existingUser.tenantId || inviteTenantId);
+
     const invite = await createPasswordSetupInvite(request, {
       tenantId: finalTenantId,
       email: normalizedEmail,
@@ -78,7 +83,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       message: 'Password reset email dispatched.',
-      diagnostics: { ...(result.diagnostics || {}), inviteLink: invite.setupLink },
+      diagnostics: {
+        ...(result.diagnostics || {}),
+        inviteLink: invite.setupLink,
+        reusedExistingInvite: invite.reusedExistingInvite,
+        inviteId: invite.inviteId,
+      },
     });
   } catch (error: any) {
     if (error?.message === 'This email address is already assigned to a different tenant.') {

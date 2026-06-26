@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, Shield, LayoutGrid } from 'lucide-react';
-import { isHrefEnabledForIndustry } from '@/lib/industry-access';
 import { menuConfig, type MenuItem, type SubMenuItem } from '@/lib/menu-config';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,9 +52,8 @@ const flattenAccessRows = (item: MenuItem | SubMenuItem, depth = 0): AccessRow[]
   return rows;
 };
 
-const buildAccessGroups = (items: MenuItem[], industry?: string): AccessGroup[] => {
+const buildAccessGroups = (items: MenuItem[]): AccessGroup[] => {
   return items
-    .filter((item) => isHrefEnabledForIndustry(item.href, industry))
     .map((item) => ({
       href: item.href,
       label: item.label,
@@ -98,10 +96,10 @@ export default function AccessOverviewPage() {
 
   const isLoading = isLoadingTenant || isLoadingRoles;
 
-  const menuGroups = useMemo(() => buildAccessGroups(menuConfig, tenant?.industry), [tenant?.industry]);
+  const menuGroups = useMemo(() => buildAccessGroups(menuConfig), []);
 
   const isModuleEnabled = (href: string) =>
-    isHrefEnabledForIndustry(href, tenant?.industry) && (!tenant?.enabledMenus || tenant.enabledMenus.includes(href));
+    !tenant?.enabledMenus || tenant.enabledMenus.includes(href);
 
   if (!isLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;

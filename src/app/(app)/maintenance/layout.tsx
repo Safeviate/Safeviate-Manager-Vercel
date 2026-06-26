@@ -7,7 +7,7 @@ export default function MaintenanceLayout({ children }: { children: ReactNode })
   return (
     <IndustryRouteGuard
       sectionLabel="Maintenance"
-      description="Maintenance workflows are only available for aviation tenants."
+      description="Maintenance workflows are not currently available."
       backHref="/dashboard"
     >
       {children}

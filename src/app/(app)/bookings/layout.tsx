@@ -7,7 +7,7 @@ export default function BookingsLayout({ children }: { children: ReactNode }) {
   return (
     <IndustryRouteGuard
       sectionLabel="Bookings"
-      description="Booking workflows are not available for the current aviation sector."
+      description="Booking workflows are not currently available."
       backHref="/dashboard"
     >
       {children}

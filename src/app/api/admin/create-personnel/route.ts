@@ -6,15 +6,16 @@ import { Prisma } from '@/generated/prisma/client';
 import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 import { createPasswordSetupInvite } from '@/lib/server/password-setup';
 import { sendWelcomeEmail } from '@/lib/server/mail';
+import { hasHierarchicalPermission } from '@/lib/permission-model';
 
 export async function POST(request: Request) {
   try {
-    const authResult = await authenticateAiRequest();
+    const authResult = await authenticateAiRequest(request);
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    if (!authResult.effectivePermissions.has('users-create') && authResult.userProfile.role?.toLowerCase() !== 'developer') {
+    if (!hasHierarchicalPermission(authResult.effectivePermissions, 'users-create', authResult.deniedPermissions) && authResult.userProfile.role?.toLowerCase() !== 'developer') {
       return NextResponse.json({ error: 'Unauthorized to create users.' }, { status: 403 });
     }
 
@@ -38,6 +39,10 @@ export async function POST(request: Request) {
 
     if (!tenantId || !email || !firstName || !lastName || !role) {
       return NextResponse.json({ error: 'Missing required user information.' }, { status: 400 });
+    }
+
+    if (authResult.userProfile.role?.toLowerCase() !== 'developer' && String(tenantId).trim() !== authResult.tenantId) {
+      return NextResponse.json({ error: 'You can only create users in your current tenant.' }, { status: 403 });
     }
 
     if (!(await isDatabaseAvailable())) {
@@ -143,15 +148,6 @@ export async function POST(request: Request) {
       },
     });
 
-    await prisma.passwordSetupInvite.updateMany({
-      where: {
-        tenantId,
-        email: normalizedEmail,
-        usedAt: null,
-      },
-      data: { usedAt: new Date() },
-    });
-
     const invite = await createPasswordSetupInvite(request, {
       tenantId,
       email: normalizedEmail,
@@ -159,6 +155,7 @@ export async function POST(request: Request) {
       userId: resolvedUserId,
     });
 
+    const inviteLink = invite.setupLink;
     const emailResult = await sendWelcomeEmail({
       email: normalizedEmail,
       name: `${firstName} ${lastName}`,
@@ -181,8 +178,15 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       uid: resolvedUserId,
-      message: 'User created and welcome email sent.',
-      diagnostics: { ...(emailResult.diagnostics || {}), inviteLink: invite.setupLink },
+      message: invite.reusedExistingInvite
+        ? 'User created. An active password setup email already existed for this user, so the same link was resent.'
+        : 'User created and welcome email sent.',
+      diagnostics: {
+        ...(emailResult.diagnostics || {}),
+        inviteLink,
+        reusedExistingInvite: invite.reusedExistingInvite,
+        inviteId: invite.inviteId,
+      },
     });
   } catch (error: any) {
     if (error?.message === 'This email address is already assigned to a different tenant.') {

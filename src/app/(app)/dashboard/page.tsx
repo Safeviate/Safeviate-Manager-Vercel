@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import { AlertTriangle, BadgeAlert, ChevronDown, ClipboardCheck, MoreHorizontal, ShieldAlert, Star, TrendingDown, TriangleAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTheme } from '@/components/theme-provider';
-import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -42,11 +41,10 @@ import type { Risk as SafetyRisk } from '@/types/risk';
 import type { SafetyReport } from '@/types/safety-report';
 import type { QuickSafetyReport, TechnicalQuickReport } from '@/types/quick-reports';
 import type { InstructorHourWarningSettings, MilestoneWarning, StudentMilestoneSettings, StudentProgressReport } from '@/types/training';
-import type { IndustryType } from '@/types/quality';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
-type DashboardIndustry = 'ATO' | 'AOC' | 'AMO' | 'OHS';
 type IndustryTab = { value: string; label: string };
 type SummaryPayload = {
   aircrafts?: Aircraft[];
@@ -267,7 +265,7 @@ const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
   { milestone: 30, warningHours: 27 },
   { milestone: 40, warningHours: 37 },
 ];
-const ATC_TABS: IndustryTab[] = [
+const DASHBOARD_TABS: IndustryTab[] = [
   { value: 'fleet', label: 'Fleet' },
   { value: 'overview', label: 'Overview' },
   { value: 'instructors', label: 'Instructors' },
@@ -276,55 +274,9 @@ const ATC_TABS: IndustryTab[] = [
   { value: 'quality', label: 'Quality' },
 ];
 
-const INDUSTRY_TABS: Record<DashboardIndustry, IndustryTab[]> = {
-  ATO: ATC_TABS,
-  AOC: [
-    { value: 'overview', label: 'Overview' },
-    { value: 'dispatch', label: 'Dispatch' },
-    { value: 'fleet', label: 'Fleet' },
-    { value: 'safety', label: 'Safety' },
-    { value: 'finance', label: 'Finance' },
-  ],
-  AMO: [
-    { value: 'overview', label: 'Overview' },
-    { value: 'workpacks', label: 'Workpacks' },
-    { value: 'defects', label: 'Defects' },
-    { value: 'compliance', label: 'Compliance' },
-    { value: 'assets', label: 'Assets' },
-  ],
-  OHS: [
-    { value: 'overview', label: 'Overview' },
-    { value: 'incidents', label: 'Incidents' },
-    { value: 'hazards', label: 'Hazards' },
-    { value: 'actions', label: 'Actions' },
-    { value: 'compliance', label: 'Compliance' },
-  ],
-};
-
-const INDUSTRY_TITLES: Record<DashboardIndustry, string> = {
-  ATO: 'ATO Dashboard',
-  AOC: 'Charter Operations Dashboard',
-  AMO: 'Maintenance Dashboard',
-  OHS: 'Safety Dashboard',
-};
-
-const INDUSTRY_DESCRIPTIONS: Record<DashboardIndustry, string> = {
-  ATO: 'Fleet, instructor load, safety, and quality first. The remaining sections will be built one at a time.',
-  AOC: 'The operations dashboard shell will be built section by section.',
-  AMO: 'The maintenance dashboard shell will be built section by section.',
-  OHS: 'The safety dashboard shell will be built section by section.',
-};
-
 const EMPTY_NOTE = 'This section is intentionally empty for now. We will add content in the next build stage.';
 const DEFAULT_FLEET_TARGET_HOURS = 20;
 const FLEET_PERIOD_OPTIONS: FleetPeriod[] = ['week', 'month', 'all'];
-
-const resolveIndustryKey = (industry?: IndustryType | string | null): DashboardIndustry => {
-  if (industry === 'Aviation: Charter / Ops (AOC)') return 'AOC';
-  if (industry === 'Aviation: Maintenance (AMO)') return 'AMO';
-  if (industry === 'General: Occupational Health & Safety (OHS)') return 'OHS';
-  return 'ATO';
-};
 
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -767,11 +719,10 @@ const buildTrendBuckets = (period: FleetPeriod) => {
 
 export default function DashboardPage() {
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/dashboard' });
+  const { tenantId } = useUserProfile();
   const { uiMode } = useTheme();
-  const { tenant } = useTenantConfig();
   const { scopedOrganizationId } = useOrganizationScope({ viewAllPermissionId: 'quality-audits-view-all' });
   const isMobile = useIsMobile();
-  const [activeIndustry, setActiveIndustry] = useState<DashboardIndustry>('ATO');
   const [activeTab, setActiveTab] = useState('fleet');
   const [summary, setSummary] = useState<SummaryPayload>({});
   const [quickSafetyReports, setQuickSafetyReports] = useState<QuickSafetyReport[]>([]);
@@ -783,21 +734,25 @@ export default function DashboardPage() {
   const [isTargetLoading, setIsTargetLoading] = useState(true);
 
   const isModern = uiMode === 'modern';
-  const tenantIndustry = useMemo(() => resolveIndustryKey(tenant?.industry), [tenant?.industry]);
-  const tabs = INDUSTRY_TABS[activeIndustry];
+  const tabs = DASHBOARD_TABS;
 
   useEffect(() => {
-    setActiveIndustry(tenantIndustry);
-  }, [tenantIndustry]);
-
-  useEffect(() => {
-    setActiveTab(activeIndustry === 'ATO' ? 'fleet' : tabs[0]?.value ?? 'overview');
-  }, [activeIndustry, tabs]);
+    setActiveTab(tabs[0]?.value ?? 'fleet');
+  }, [tabs]);
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
+      if (!tenantId) {
+        if (!cancelled) {
+          setSummary({});
+          setQuickSafetyReports([]);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       setIsLoading(true);
       try {
         const [summaryResponse, quickSafetyResponse] = await Promise.all([
@@ -843,7 +798,7 @@ export default function DashboardPage() {
       window.removeEventListener('safeviate-safety-reports-updated', handleQuickSafetyReportUpdate);
       window.removeEventListener('storage', handleStorage);
     };
-  }, []);
+  }, [tenantId]);
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
@@ -853,6 +808,14 @@ export default function DashboardPage() {
     let cancelled = false;
 
     const loadFleetTarget = async () => {
+      if (!tenantId) {
+        if (!cancelled) {
+          setFleetTargetHours(DEFAULT_FLEET_TARGET_HOURS);
+          setIsTargetLoading(false);
+        }
+        return;
+      }
+
       setIsTargetLoading(true);
       try {
         const response = await fetch('/api/tenant-config', { cache: 'no-store' });
@@ -874,39 +837,12 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tenantId]);
 
-  const instructorWarningBands = useMemo<InstructorWarningBand[]>(() => {
-    const config = tenant as Record<string, unknown> | null;
-    const rawWarnings = config?.['instructor-hour-warnings'];
-
-    if (!rawWarnings || typeof rawWarnings !== 'object') {
-      return DEFAULT_INSTRUCTOR_WARNING_BANDS;
-    }
-
-    const warnings = Array.isArray((rawWarnings as { warnings?: unknown }).warnings)
-      ? ((rawWarnings as { warnings: unknown[] }).warnings)
-      : [];
-
-    const normalized = warnings.reduce<InstructorWarningBand[]>((acc, warning) => {
-      if (!warning || typeof warning !== 'object') return acc;
-      const candidate = warning as Record<string, unknown>;
-      const hours = typeof candidate.hours === 'number' ? candidate.hours : Number(candidate.hours);
-      const warningHours = typeof candidate.warningHours === 'number' ? candidate.warningHours : Number(candidate.warningHours);
-      if (!Number.isFinite(hours) || !Number.isFinite(warningHours) || hours <= 0 || warningHours < 0 || warningHours >= hours) {
-        return acc;
-      }
-      acc.push({
-        hours,
-        warningHours,
-        color: typeof candidate.color === 'string' ? candidate.color : undefined,
-        foregroundColor: typeof candidate.foregroundColor === 'string' ? candidate.foregroundColor : undefined,
-      });
-      return acc;
-    }, []).sort((a, b) => a.hours - b.hours);
-
-    return normalized.length > 0 ? normalized : DEFAULT_INSTRUCTOR_WARNING_BANDS;
-  }, [tenant]);
+  const instructorWarningBands = useMemo<InstructorWarningBand[]>(
+    () => DEFAULT_INSTRUCTOR_WARNING_BANDS,
+    [],
+  );
 
   const instructorMetrics = useMemo<InstructorMetrics>(() => {
     const instructors: Array<{ id: string; firstName?: string; lastName?: string }> = Array.isArray(summary.instructors)
@@ -1353,15 +1289,13 @@ export default function DashboardPage() {
 
   const activeTabLabel = tabs.find((tab) => tab.value === activeTab)?.label || tabs[0]?.label || 'Overview';
   const activeDashboardPeriod =
-    activeIndustry === 'ATO'
-      ? activeTab === 'fleet'
-        ? fleetPeriod
-        : activeTab === 'instructors'
-          ? instructorPeriod
-          : activeTab === 'students'
-            ? studentPeriod
-            : null
-      : null;
+    activeTab === 'fleet'
+      ? fleetPeriod
+      : activeTab === 'instructors'
+        ? instructorPeriod
+        : activeTab === 'students'
+          ? studentPeriod
+          : null;
   const activeDashboardPeriodLabel =
     activeDashboardPeriod === 'week' ? '7 Days' : activeDashboardPeriod === 'month' ? '30 Days' : activeDashboardPeriod === 'all' ? 'All Time' : null;
   const activeDashboardPeriodLongLabel =
@@ -1429,7 +1363,6 @@ export default function DashboardPage() {
                 variant="outline"
                 className="border-amber-300 bg-white text-[10px] font-black uppercase text-amber-950 hover:bg-amber-100"
                 onClick={() => {
-                  setActiveIndustry('ATO');
                   setActiveTab('safety');
                 }}
               >
@@ -1442,7 +1375,7 @@ export default function DashboardPage() {
       <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-0 flex-1 flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
         <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80', isModern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85')}>
           <div className={CARD_HEADER_SCOPE_ZONE_CLASS}>
-            <CardTitle className="text-sm font-black uppercase tracking-tight">{INDUSTRY_TITLES[activeIndustry]}</CardTitle>
+            <CardTitle className="text-sm font-black uppercase tracking-tight">Company Dashboard</CardTitle>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-[0.18em] text-foreground/70">
               <span>Active: {activeTabLabel}</span>
               {activeDashboardPeriodLongLabel ? <span>Period: {activeDashboardPeriodLongLabel}</span> : null}
@@ -1451,7 +1384,7 @@ export default function DashboardPage() {
         </CardHeader>
 
         <CardContent className="min-h-0 flex-1 p-0">
-          <Tabs key={activeIndustry} value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full min-h-0 flex-col">
             <div className={cn(CARD_HEADER_BAND_CLASS, 'bg-transparent')}>
               {isMobile ? (
                 <div className="flex w-full flex-col gap-2">
@@ -1562,8 +1495,7 @@ export default function DashboardPage() {
 
             <ScrollArea className="h-full flex-1">
               <div className="p-5 pb-10 md:p-6 md:pb-10">
-                {activeIndustry === 'ATO' ? (
-                  <>
+                <>
                     <TabsContent value="fleet" className="m-0 space-y-5">
                       <div className="grid items-start gap-5 xl:grid-cols-2">
                         <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex flex-col self-start', isModern && 'border-slate-200/80 bg-white/95')}>
@@ -1681,25 +1613,6 @@ export default function DashboardPage() {
                       </TabsContent>
                     ))}
                   </>
-                ) : (
-                  tabs.map((tab) => (
-                    <TabsContent key={tab.value} value={tab.value} className="m-0">
-                      {tab.value === 'overview' ? (
-                        <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} summary={summary} />
-                      ) : tab.value === 'instructors' ? (
-                        <InstructorLoadCard modern={isModern} metrics={instructorMetrics} />
-                      ) : tab.value === 'students' ? (
-                        <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
-                      ) : tab.value === 'safety' ? (
-                        <SafetyOverviewCard modern={isModern} summary={summary} />
-                      ) : tab.value === 'quality' ? (
-                        <QualityOverviewCard modern={isModern} summary={summary} organizationScopeId={scopedOrganizationId} />
-                      ) : (
-                        <StageCard tabLabel={tab.label} modern={isModern} />
-                      )}
-                    </TabsContent>
-                  ))
-                )}
               </div>
             </ScrollArea>
           </Tabs>
@@ -1773,7 +1686,7 @@ function StageCard({ tabLabel, modern }: { tabLabel: string; modern: boolean }) 
           <div className="max-w-xl rounded-md border border-dashed border-card-border/70 bg-muted/5 px-6 py-10 text-center">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-foreground/80">{tabLabel} scaffold ready</p>
           <p className="mt-3 text-sm text-muted-foreground">
-            We will build this section separately so the dashboard stays clean and focused by industry.
+            We will build this section separately so the dashboard stays clean and focused.
           </p>
         </div>
       </CardContent>

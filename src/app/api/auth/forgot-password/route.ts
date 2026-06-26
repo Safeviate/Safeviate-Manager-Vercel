@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createPasswordSetupInvite } from '@/lib/server/password-setup';
+import {
+  createPasswordSetupInvite,
+  findRecentActivePasswordSetupInvite,
+} from '@/lib/server/password-setup';
 import { sendWelcomeEmail } from '@/lib/server/mail';
 import { enforceRateLimit } from '@/lib/server/request-security';
 
@@ -41,13 +44,18 @@ export async function POST(request: Request) {
         });
       }
 
-      await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          passwordHash: null,
-          updatedAt: new Date(),
-        },
+      const recentInvite = await findRecentActivePasswordSetupInvite({
+        tenantId: existingUser.tenantId,
+        email: existingUser.email,
+        userId: existingUser.id,
       });
+
+      if (recentInvite) {
+        return NextResponse.json({
+          ok: true,
+          message: 'If an account exists for that email, a password reset link has been sent.',
+        });
+      }
 
       const invite = await createPasswordSetupInvite(request, {
         tenantId: existingUser.tenantId,
@@ -72,6 +80,14 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
+
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          passwordHash: null,
+          updatedAt: new Date(),
+        },
+      });
 
       if (!result.diagnostics?.hasApiKey) {
         return NextResponse.json({

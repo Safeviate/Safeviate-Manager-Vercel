@@ -34,6 +34,16 @@ export default function StudentsPage() {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      if (!tenantId) {
+        if (!cancelled) {
+          setStudents([]);
+          setRoles([]);
+          setDepartments([]);
+          setIsLoadingData(false);
+        }
+        return;
+      }
+
       setIsLoadingData(true);
       try {
         const [summaryRes, rolesRes, departmentsRes] = await Promise.all([
@@ -70,7 +80,7 @@ export default function StudentsPage() {
       window.removeEventListener('safeviate-roles-updated', handleUpdate);
       window.removeEventListener('safeviate-departments-updated', handleUpdate);
     };
-  }, []);
+  }, [tenantId]);
 
   const isLoading = isProfileLoading || isLoadingData;
 

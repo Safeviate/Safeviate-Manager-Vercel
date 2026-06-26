@@ -102,10 +102,6 @@ async function getInitialTenantBootstrap(): Promise<TenantBootstrapConfig> {
       },
     }).catch(() => null);
 
-    const tenantConfigWithoutIndustry = config
-      ? Object.fromEntries(Object.entries(config).filter(([key]) => key !== 'industry'))
-      : null;
-
     return {
       theme: config?.theme && typeof config.theme === 'object'
         ? (config.theme as Record<string, unknown>)
@@ -113,7 +109,7 @@ async function getInitialTenantBootstrap(): Promise<TenantBootstrapConfig> {
       tenant: tenantRow
         ? {
             ...tenantRow,
-            ...(tenantConfigWithoutIndustry || {}),
+            ...(config || {}),
           }
         : null,
     };

@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { prisma } from '@/lib/prisma';
+import { hasHierarchicalPermission } from '@/lib/permission-model';
 
 export async function POST(request: Request) {
   try {
-    const authResult = await authenticateAiRequest();
+    const authResult = await authenticateAiRequest(request);
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    if (!authResult.effectivePermissions.has('users-edit') && authResult.userProfile.role?.toLowerCase() !== 'developer') {
+    if (!hasHierarchicalPermission(authResult.effectivePermissions, 'users-edit', authResult.deniedPermissions) && authResult.userProfile.role?.toLowerCase() !== 'developer') {
       return NextResponse.json({ error: 'Unauthorized to update account status.' }, { status: 403 });
     }
 
@@ -18,6 +19,9 @@ export async function POST(request: Request) {
     const email = String(body?.email || '').trim().toLowerCase();
     const suspended = Boolean(body?.suspended);
     const tenantId = String(body?.tenantId || authResult.tenantId || 'safeviate');
+    if (authResult.userProfile.role?.toLowerCase() !== 'developer' && tenantId.trim() !== authResult.tenantId) {
+      return NextResponse.json({ error: 'You can only manage users in your current tenant.' }, { status: 403 });
+    }
     if (!userId && !email) {
       return NextResponse.json({ error: 'User id or email is required.' }, { status: 400 });
     }

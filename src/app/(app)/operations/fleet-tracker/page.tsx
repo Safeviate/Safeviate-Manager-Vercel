@@ -18,7 +18,6 @@ import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import type { Booking, NavlogLeg } from '@/types/booking';
 import type { FlightSession, FlightTrackHistorySummary, FlightTrackPoint } from '@/types/flight-session';
 import { getFlightSessionFreshnessLabel, isFlightSessionStale } from '@/lib/flight-session-status';
-import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { OPERATIONS_MAP_CARD_CLASS } from '@/components/operations/operations-map-layout';
 import { MOBILE_ACTION_MENU_ITEM_CLASS, MOBILE_ACTION_MENU_STATE_ITEM_CLASS, MobileActionDropdown } from '@/components/mobile-action-dropdown';
@@ -296,24 +295,6 @@ export default function FleetTrackerPage() {
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
-  }
-
-  if (
-    !shouldBypassIndustryRestrictions(tenant?.id) &&
-    !isHrefEnabledForIndustry('/operations/fleet-tracker', tenant?.industry) &&
-    !(tenant?.enabledMenus?.includes('/operations/fleet-tracker') ?? false)
-  ) {
-    return (
-      <Card className="mx-auto w-full max-w-3xl border shadow-none">
-        <CardHeader>
-          <CardTitle className="text-2xl font-black uppercase tracking-tight">Fleet Tracker Unavailable</CardTitle>
-          <CardDescription>This live aircraft monitoring surface is only available for aviation tenants.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" className="font-black uppercase">Back to Operations</Button>
-        </CardContent>
-      </Card>
-    );
   }
 
   return (

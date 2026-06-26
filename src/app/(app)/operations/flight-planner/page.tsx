@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 import { calculateRouteTotals, createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { useTheme } from '@/components/theme-provider';
-import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 
 const AeronauticalMap = dynamic(() => import('@/components/flight-planner/aeronautical-map'), {
@@ -52,26 +51,6 @@ export default function FlightPlannerPage() {
           <p className="text-sm font-black uppercase tracking-widest">Loading Flight Planner</p>
         </div>
       </div>
-    );
-  }
-
-  if (
-    !shouldBypassIndustryRestrictions(tenant?.id) &&
-    !isHrefEnabledForIndustry('/operations/flight-planner', tenant?.industry) &&
-    !(tenant?.enabledMenus?.includes('/operations/flight-planner') ?? false)
-  ) {
-    return (
-      <Card className="mx-auto w-full max-w-3xl border shadow-none">
-        <CardHeader>
-          <CardTitle className="text-2xl font-black uppercase tracking-tight">Flight Planner Unavailable</CardTitle>
-          <CardDescription>The route planner is only available for aviation tenants.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline" className="font-black uppercase">
-            <Link href="/operations">Back to Operations</Link>
-          </Button>
-        </CardContent>
-      </Card>
     );
   }
 

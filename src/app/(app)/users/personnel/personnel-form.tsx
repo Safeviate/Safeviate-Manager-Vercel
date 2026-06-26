@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,7 @@ export function PersonnelForm({
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitGuardRef = useRef(false);
 
   // Form state
   const [userType, setUserType] = useState<string>('');
@@ -102,6 +103,10 @@ export function PersonnelForm({
   const shouldLockRole = !existingPersonnel && !!defaultRoleId && !!lockedRole;
 
   const handleAddOrUpdateUser = async () => {
+    if (submitGuardRef.current || isSubmitting) {
+      return;
+    }
+
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !selectedRole) {
       toast({
         variant: 'destructive',
@@ -111,6 +116,7 @@ export function PersonnelForm({
       return;
     }
 
+    submitGuardRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -189,6 +195,7 @@ export function PersonnelForm({
         description: error instanceof Error ? error.message : 'An unknown error occurred.',
       });
     } finally {
+      submitGuardRef.current = false;
       setIsSubmitting(false);
     }
   };

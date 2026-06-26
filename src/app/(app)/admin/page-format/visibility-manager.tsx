@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { isHrefEnabledForIndustry } from '@/lib/industry-access';
 import { menuConfig } from '@/lib/menu-config';
 import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,7 +87,6 @@ export function VisibilityManager() {
           {menuConfig.map((menu) => {
             const subHrefs = menu.subItems?.map(s => s.href) || [];
             const isEnabled = enabledHrefs.has(menu.href);
-            const isIndustryDefault = isHrefEnabledForIndustry(menu.href, tenant?.industry);
             
             return (
               <Card key={menu.href} className="overflow-hidden border shadow-none">
@@ -100,11 +98,6 @@ export function VisibilityManager() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!isIndustryDefault && (
-                      <span className="rounded-full border bg-background px-2 py-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                        Optional
-                      </span>
-                    )}
                     <Checkbox 
                       id={`mod-${toIdSuffix(menu.href)}`} 
                       checked={isEnabled}
@@ -124,18 +117,12 @@ export function VisibilityManager() {
                       <div className="space-y-2 pt-2">
                         {menu.subItems.map((sub) => {
                           const isSubEnabled = enabledHrefs.has(sub.href);
-                          const isSubIndustryDefault = isHrefEnabledForIndustry(sub.href, tenant?.industry);
                           return (
                             <div key={sub.href} className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
                               <div className="min-w-0">
                                 <Label htmlFor={`submod-${toIdSuffix(sub.href)}`} className="cursor-pointer text-[11px] font-bold uppercase text-foreground">
                                   {sub.label}
                                 </Label>
-                                {!isSubIndustryDefault && (
-                                  <p className="mt-0.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                                    Optional
-                                  </p>
-                                )}
                               </div>
                               <Checkbox 
                                 id={`submod-${toIdSuffix(sub.href)}`} 

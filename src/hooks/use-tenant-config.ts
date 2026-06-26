@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useUserProfile } from './use-user-profile';
-import type { Tenant, IndustryType } from '@/types/quality';
+import type { Tenant } from '@/types/quality';
 import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
 import { getTenantThemeLocalOverrideKey } from '@/lib/tenant-theme-storage';
-
-const INDUSTRY_OVERRIDE_KEY = 'safeviate:industry-override';
 const FALLBACK_TENANT_ID = 'safeviate';
 const FALLBACK_TENANT_NAME = 'Safeviate';
 const TENANT_CONFIG_CACHE_TTL_MS = 5 * 60_000;
@@ -63,23 +61,6 @@ const mergeTenantConfig = (
   };
 };
 
-const stripIndustryFromConfig = (config: Record<string, unknown> | null) => {
-  if (!config) return null;
-  const { industry: _industry, ...rest } = config;
-  return rest;
-};
-
-const normalizeIndustry = (value: unknown): IndustryType | null => {
-  return value === 'Aviation: Flight Training (ATO)' ||
-    value === 'Aviation: Charter / Ops (AOC)' ||
-    value === 'Aviation: Maintenance (AMO)' ||
-    value === 'General: Occupational Health & Safety (OHS)'
-    ? value
-    : null;
-};
-
-const DEFAULT_SAFEVIATE_INDUSTRY: IndustryType = 'Aviation: Flight Training (ATO)';
-
 const normalizeTenantSummary = (
   tenant: {
     id?: string | null;
@@ -115,20 +96,11 @@ export const useTenantConfig = () => {
   const bootstrapTenant = typeof window !== 'undefined'
     ? (window.__SAFEVIATE_THEME_BOOTSTRAP__?.tenant as Tenant | null | undefined) ?? null
     : null;
-  const readInitialIndustryOverride = () => {
-    if (typeof window === 'undefined') return null;
-    try {
-      return normalizeIndustry(window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY));
-    } catch {
-      return DEFAULT_SAFEVIATE_INDUSTRY;
-    }
-  };
   const { tenantId, tenant: profileTenant, userProfile, isLoading: isProfileLoading } = useUserProfile();
   const localTenantConfigKey = getTenantThemeLocalOverrideKey(tenantId || FALLBACK_TENANT_ID);
   const [tenantData, setTenantData] = useState<Tenant | null>(bootstrapTenant);
   const [isLoading, setIsLoading] = useState(!bootstrapTenant);
   const [error, setError] = useState<Error | null>(null);
-  const [industryOverride, setIndustryOverride] = useState<IndustryType | null>(readInitialIndustryOverride);
   const [localOverride, setLocalOverride] = useState<Record<string, unknown> | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -160,23 +132,18 @@ export const useTenantConfig = () => {
 
     const syncOverride = () => {
       try {
-        const stored = window.localStorage.getItem(INDUSTRY_OVERRIDE_KEY);
-        setIndustryOverride(normalizeIndustry(stored));
         const tenantConfigStored = window.localStorage.getItem(localTenantConfigKey)
           || window.localStorage.getItem('safeviate:tenant-config-local-override');
         setLocalOverride(tenantConfigStored ? safeJsonParse<Record<string, unknown>>(tenantConfigStored) : null);
       } catch {
-        setIndustryOverride(DEFAULT_SAFEVIATE_INDUSTRY);
         setLocalOverride(null);
       }
     };
 
     syncOverride();
-    window.addEventListener('safeviate-industry-switch', syncOverride);
     window.addEventListener('storage', syncOverride);
 
     return () => {
-      window.removeEventListener('safeviate-industry-switch', syncOverride);
       window.removeEventListener('storage', syncOverride);
     };
   }, [localTenantConfigKey]);
@@ -246,8 +213,6 @@ export const useTenantConfig = () => {
             : null,
           scopedLocalOverride
         );
-        const tenantConfigWithoutIndustry = stripIndustryFromConfig(mergedConfig);
-
         if (!cancelled) {
           if (profileTenant) {
             setTenantData((current) => {
@@ -256,7 +221,7 @@ export const useTenantConfig = () => {
                 ? {
                     ...(current || bootstrapTenant || {}),
                     ...normalizedProfileTenant,
-                    ...(tenantConfigWithoutIndustry || {}),
+                    ...(mergedConfig || {}),
                   }
                 : (current || bootstrapTenant || null);
             });
@@ -301,12 +266,11 @@ export const useTenantConfig = () => {
                 : null,
               scopedLocalOverride
             );
-            const nextConfigWithoutIndustry = stripIndustryFromConfig(nextConfig);
-            if (nextConfigWithoutIndustry && Object.keys(nextConfigWithoutIndustry).length > 0) {
+            if (nextConfig && Object.keys(nextConfig).length > 0) {
               setTenantData((current) =>
                 current
-                  ? { ...current, ...nextConfigWithoutIndustry }
-                  : buildLocalTenant(nextConfigWithoutIndustry)
+                  ? { ...current, ...nextConfig }
+                  : buildLocalTenant(nextConfig)
               );
             }
           }
@@ -322,26 +286,8 @@ export const useTenantConfig = () => {
     };
   }, [tenantId, profileTenant, scopedLocalOverride, userProfile?.id, isProfileLoading, resolvedTenantId, bootstrapTenant, configRefreshToken]);
 
-  const isDeveloper =
-    userProfile?.role?.toLowerCase() === 'dev' || userProfile?.role?.toLowerCase() === 'developer' || userProfile?.id === 'DEVELOPER_MODE';
-
-  const modifiedTenant = useMemo(() => {
-    if (!tenantData) return null;
-    if (isDeveloper) {
-      const nextIndustry =
-        tenantData.id === FALLBACK_TENANT_ID
-          ? industryOverride && industryOverride !== 'General: Occupational Health & Safety (OHS)'
-            ? industryOverride
-            : DEFAULT_SAFEVIATE_INDUSTRY
-          : industryOverride || tenantData.industry || DEFAULT_SAFEVIATE_INDUSTRY;
-
-      return { ...tenantData, industry: nextIndustry };
-    }
-    return tenantData;
-  }, [tenantData, isDeveloper, industryOverride]);
-
   return {
-    tenant: modifiedTenant,
+    tenant: tenantData,
     tenantId,
     isLoading,
     error,

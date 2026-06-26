@@ -26,7 +26,6 @@ import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
 import { getOrCreateDeviceBinding, setDeviceLabel } from '@/lib/flight-session';
 import { useGeolocationTrack } from '@/hooks/use-geolocation-track';
 import { getActiveLegState } from '@/lib/active-flight';
-import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { cn } from '@/lib/utils';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { FullScreenFlightLayout } from '@/components/active-flight/full-screen-flight-layout';
@@ -1130,7 +1129,7 @@ export default function ActiveFlightPage() {
     );
   }
 
-  const canAccessActiveFlight = shouldBypassIndustryRestrictions(tenant?.id) || isHrefEnabledForIndustry('/operations/active-flight', tenant?.industry) || (tenant?.enabledMenus?.includes('/operations/active-flight') ?? false);
+  const canAccessActiveFlight = tenant?.enabledMenus?.includes('/operations/active-flight') ?? true;
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;

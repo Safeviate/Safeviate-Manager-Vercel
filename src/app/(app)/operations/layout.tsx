@@ -7,7 +7,7 @@ export default function OperationsLayout({ children }: { children: ReactNode }) 
   return (
     <IndustryRouteGuard
       sectionLabel="Operations"
-      description="This operations workspace is not available for the current aviation sector."
+      description="This operations workspace is not currently available."
       backHref="/dashboard"
     >
       {children}

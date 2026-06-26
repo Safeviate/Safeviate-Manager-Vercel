@@ -21,7 +21,6 @@ import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { useTheme } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 import { createNavlogLegFromCoordinates } from '@/lib/flight-planner';
-import { isHrefEnabledForIndustry, shouldBypassIndustryRestrictions } from '@/lib/industry-access';
 import { OPERATIONS_MAP_CARD_CLASS, OPERATIONS_MAP_SURFACE_HEIGHT_CLASS } from '@/components/operations/operations-map-layout';
 import type { TrainingRoute, NavlogLeg, Hazard } from '@/types/booking';
 import { v4 as uuidv4 } from 'uuid';
@@ -223,26 +222,6 @@ export default function TrainingRoutesPage() {
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
-  }
-
-  if (
-    !shouldBypassIndustryRestrictions(tenant?.id) &&
-    !isHrefEnabledForIndustry('/operations/training-routes', tenant?.industry) &&
-    !(tenant?.enabledMenus?.includes('/operations/training-routes') ?? false)
-  ) {
-    return (
-      <Card className="mx-auto w-full max-w-3xl border shadow-none">
-        <CardContent className="space-y-4 p-6">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black uppercase tracking-tight">Route Planner Unavailable</h1>
-            <p className="text-sm text-muted-foreground">Route planning is only available for aviation tenants.</p>
-          </div>
-          <Button asChild variant="outline" className="font-black uppercase">
-            <Link href="/operations">Back to Operations</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
   }
 
   return (
