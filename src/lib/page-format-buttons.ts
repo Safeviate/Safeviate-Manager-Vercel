@@ -1,8 +1,8 @@
 export const PAGE_FORMAT_PRIMARY_BUTTON_CLASS =
-  'h-10 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]';
+  'h-10 rounded-lg px-6 text-[10px] font-black uppercase tracking-widest shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]';
 
 export const PAGE_FORMAT_SECONDARY_BUTTON_CLASS =
-  'h-10 rounded-xl border-slate-200 bg-white px-6 text-[10px] font-black uppercase tracking-widest text-slate-800 shadow-sm hover:bg-slate-50 transition-transform hover:scale-[1.02] active:scale-[0.98]';
+  'h-10 rounded-lg border-slate-200 bg-white px-6 text-[10px] font-black uppercase tracking-widest text-slate-800 shadow-sm hover:bg-slate-50 transition-transform hover:scale-[1.02] active:scale-[0.98]';
 
 export const PAGE_FORMAT_ICON_BUTTON_CLASS =
   'h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 transition-transform hover:scale-[1.02] active:scale-[0.98]';

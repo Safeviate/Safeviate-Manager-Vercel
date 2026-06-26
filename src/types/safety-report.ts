@@ -6,6 +6,23 @@ export type InvestigationTaskStatus = 'Open' | 'In Progress' | 'Completed';
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type CorrectiveActionRiskView = 'Initial' | 'Residual';
+export type ReportDiaryEntryType = 'comment' | 'task_assignment' | 'task_update' | 'finding' | 'decision' | 'status_change';
+
+export interface InvestigationTaskUpdate {
+    id: string;
+    userId: string;
+    userName: string;
+    message: string;
+    timestamp: string; // ISO String
+    taskStatus?: InvestigationTaskStatus;
+}
+
+export interface InvestigationPhotoAttachment {
+    id: string;
+    name: string;
+    url: string;
+    uploadDate: string; // ISO String
+}
 
 export interface InvestigationMember {
     userId: string;
@@ -45,6 +62,7 @@ export interface InvestigationTask {
     assigneeId: string;
     dueDate: string; // ISO String
     status: InvestigationTaskStatus;
+    updates?: InvestigationTaskUpdate[];
 }
 
 export interface ReportDiscussionItem {
@@ -53,8 +71,12 @@ export interface ReportDiscussionItem {
     userName: string;
     message: string;
     timestamp: string; // ISO String
+    entryType?: ReportDiaryEntryType;
     assignedToId?: string;
     assignedToName?: string;
+    dueDate?: string; // ISO String
+    linkedTaskId?: string;
+    taskStatus?: InvestigationTaskStatus;
 }
 
 export interface CorrectiveAction {
@@ -110,6 +132,7 @@ export interface SafetyReport {
     investigationTeam?: InvestigationMember[];
     initialHazards?: ReportHazard[];
     investigationTasks?: InvestigationTask[];
+    investigationEvidencePhotos?: InvestigationPhotoAttachment[];
     investigationNotes?: string;
     discussion?: ReportDiscussionItem[];
     // CAP Fields

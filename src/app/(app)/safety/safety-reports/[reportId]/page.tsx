@@ -118,9 +118,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   }, [reportId, tenantId]);
 
   const myMentionsCount = useMemo(() => {
-    if (!report?.discussion || !userProfile) return 0;
-    return report.discussion.filter(item => item.assignedToId === userProfile.id).length;
-  }, [report?.discussion, userProfile]);
+    if (!userProfile) return 0;
+    const assignedDiaryItems = (report?.discussion || []).filter((item) => item.assignedToId === userProfile.id).length;
+    const assignedOpenTasks = (report?.investigationTasks || []).filter(
+      (task) => task.assigneeId === userProfile.id && task.status !== 'Completed'
+    ).length;
+    return assignedDiaryItems + assignedOpenTasks;
+  }, [report?.discussion, report?.investigationTasks, userProfile]);
 
   const visibleReportTabs = useMemo(() => {
     const tabs = [
@@ -130,7 +134,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       { value: 'investigation', label: 'Investigation' },
       { value: 'cap', label: 'Corrective Actions Review' },
       { value: 'review', label: 'Final Review' },
-      { value: 'discussion', label: myMentionsCount > 0 ? `Discussion (${myMentionsCount})` : 'Discussion' },
+      { value: 'discussion', label: myMentionsCount > 0 ? `Diary (${myMentionsCount})` : 'Diary' },
     ];
     return tabs.filter((tab) => isTabEnabled(tab.value));
   }, [isTabEnabled, myMentionsCount]);
@@ -213,6 +217,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         tenantId={tenantId}
         personnel={personnel || []}
         isStacked={isStacked}
+        onReportSaved={handleReportSaved}
       />
       <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} isStacked={isStacked} onReportSaved={handleReportSaved} />
       <FinalReview
@@ -234,13 +239,13 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       case 'hazards':
         return <HazardIdentificationForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} />;
       case 'investigation':
-        return <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} />;
+        return <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} />;
       case 'cap':
         return <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} />;
       case 'review':
         return <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} />;
       case 'discussion':
-        return <ReportForum report={report} tenantId={tenantId} />;
+        return <ReportForum report={report} tenantId={tenantId} onReportSaved={handleReportSaved} />;
       default:
         return renderFullReportSections(true);
     }
@@ -317,7 +322,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                   ) : (
                     <TabsList className="bg-transparent h-auto p-0 gap-2 border-b-0 justify-start overflow-x-auto no-scrollbar flex items-center w-full">
                       {visibleReportTabs.map((tab) => (
-                        <TabsTrigger key={tab.value} value={tab.value} className="rounded-full px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">
+                        <TabsTrigger key={tab.value} value={tab.value} className="rounded-md px-6 py-2 border data-[state=active]:bg-button-primary data-[state=active]:text-button-primary-foreground font-bold text-[10px] uppercase transition-all shrink-0">
                           {tab.value === 'discussion' && myMentionsCount > 0 ? (
                             <span className="inline-flex items-center gap-2">
                               {tab.label}
@@ -350,10 +355,10 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                   </TabsContent>
                   <TabsContent value="triage" className="m-0 h-full outline-none overflow-hidden h-full"><TriageForm report={report} tenantId={tenantId} /></TabsContent>
                   <TabsContent value="hazards" className="m-0 h-full outline-none overflow-hidden h-full"><HazardIdentificationForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="investigation" className="m-0 h-full outline-none overflow-hidden h-full"><InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} /></TabsContent>
+                  <TabsContent value="investigation" className="m-0 h-full outline-none overflow-hidden h-full"><InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="cap" className="m-0 h-full outline-none overflow-hidden h-full"><CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="review" className="m-0 h-full outline-none overflow-hidden h-full"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} /></TabsContent>
-                  <TabsContent value="discussion" className="m-0 h-full outline-none overflow-hidden h-full"><ReportForum report={report} tenantId={tenantId} /></TabsContent>
+                  <TabsContent value="discussion" className="m-0 h-full outline-none overflow-hidden h-full"><ReportForum report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
                 </>
               )}
             </div>
