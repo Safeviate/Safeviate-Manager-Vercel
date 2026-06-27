@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { useSession } from 'next-auth/react';
 import type { PilotProfile, Personnel } from '@/app/(app)/users/personnel/page';
 import { parseJsonResponse } from '@/lib/safe-json';
-import { MASTER_TENANT_ID } from '@/lib/tenant-constants';
+import { MASTER_TENANT_EMAILS, MASTER_TENANT_ID } from '@/lib/tenant-constants';
 import type { TabVisibilitySettings } from '@/types/quality';
 import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
 
@@ -146,13 +146,10 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const tenantId = useMemo(() => {
         if (!dbProfile) return null;
         const profileTenantId = dbProfile.tenantId || MASTER_TENANT_ID;
-        
-        // Developer role bypass for tenant switching
-        const isDeveloper =
-            dbProfile.role?.toLowerCase() === 'dev' ||
-            dbProfile.role?.toLowerCase() === 'developer' ||
-            profileTenantId === MASTER_TENANT_ID;
-        const overrideTenantId = isDeveloper ? tenantOverride : null;
+
+        const normalizedEmail = dbProfile.email?.trim().toLowerCase() || '';
+        const canUseTenantOverride = MASTER_TENANT_EMAILS.includes(normalizedEmail);
+        const overrideTenantId = canUseTenantOverride ? tenantOverride : null;
         
         return overrideTenantId || profileTenantId;
     }, [dbProfile, tenantOverride]);

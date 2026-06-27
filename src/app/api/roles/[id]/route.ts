@@ -65,3 +65,31 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   return NextResponse.json({ ok: true, role }, { status: 200 });
 }
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await ensureRolesSchema();
+  const { id } = await params;
+  const tenantId = await getTenantId(request);
+  if (!tenantId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const role = await prisma.role.findFirst({
+    where: { id, tenantId },
+  });
+
+  if (!role) {
+    return NextResponse.json({ error: 'Role not found.' }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    role: {
+      ...role,
+      accessOverrides: Array.isArray(((role as unknown as { accessOverrides?: { hiddenMenus?: unknown } | null }).accessOverrides)?.hiddenMenus)
+        ? {
+            hiddenMenus: ((role as unknown as { accessOverrides?: { hiddenMenus?: string[] } | null }).accessOverrides?.hiddenMenus || []),
+          }
+        : { hiddenMenus: [] as string[] },
+    },
+  });
+}

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -13,8 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
-import { DeleteActionButton, EditActionButton } from '@/components/record-action-buttons';
-import { RoleForm } from './role-form';
+import { DeleteActionButton } from '@/components/record-action-buttons';
 import type { Role } from './page';
 
 interface RoleActionsProps {
@@ -55,13 +56,15 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   return (
     <>
       <div className="flex items-center justify-end gap-2">
-        <RoleForm 
-            tenantId={tenantId} 
-            existingRole={{ ...role }} 
-            trigger={
-                <EditActionButton label="Edit role" />
-            } 
-        />
+        <Button asChild variant="outline" size="icon" className="h-8 w-8 border-slate-300 p-0">
+          <Link href={`/admin/roles/${role.id}`} aria-label="Edit role">
+            <span className="sr-only">Edit role</span>
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </Link>
+        </Button>
         
         {canManage && (
           <DeleteActionButton

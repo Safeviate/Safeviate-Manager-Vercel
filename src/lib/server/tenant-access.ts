@@ -29,8 +29,7 @@ export function readCookie(headerValue: string | null, name: string) {
 
 export async function resolveTenantOverride(request: Request, email?: string | null, fallbackTenantId = MASTER_TENANT_ID) {
   const normalizedEmail = email?.trim().toLowerCase() || '';
-  const isMaster = isMasterTenantEmail(normalizedEmail) || isMasterTenantId(fallbackTenantId);
-  if (!isMaster) {
+  if (!isMasterTenantEmail(normalizedEmail)) {
     return fallbackTenantId;
   }
 

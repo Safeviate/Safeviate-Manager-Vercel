@@ -13,6 +13,9 @@ import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 export type Role = {
   id: string;
@@ -101,7 +104,14 @@ export default function RolesPage() {
       <Card className="flex flex-col flex-1 min-h-0 overflow-hidden shadow-none border">
         <MainPageHeader 
           title="Roles"
-          actions={canManage && <RoleForm tenantId={tenantId || ''} />}
+          actions={canManage && (
+            <Button asChild>
+              <Link href="/admin/roles/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Role
+              </Link>
+            </Button>
+          )}
         />
 
         <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
