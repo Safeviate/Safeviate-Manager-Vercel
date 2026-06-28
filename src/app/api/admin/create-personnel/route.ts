@@ -156,12 +156,19 @@ export async function POST(request: Request) {
     });
 
     const inviteLink = invite.setupLink;
-    const emailResult = await sendWelcomeEmail({
-      email: normalizedEmail,
-      name: `${firstName} ${lastName}`,
-      setupLink: invite.setupLink,
-      variant: 'welcome',
-    });
+    const emailResult = invite.reusedExistingInvite
+      ? {
+          success: true,
+          error: undefined,
+          deliveryMode: 'sent' as const,
+          diagnostics: null,
+        }
+      : await sendWelcomeEmail({
+          email: normalizedEmail,
+          name: `${firstName} ${lastName}`,
+          setupLink: invite.setupLink,
+          variant: 'welcome',
+        });
 
     if (!emailResult.success) {
       return NextResponse.json(
@@ -181,7 +188,7 @@ export async function POST(request: Request) {
       ok: true,
       uid: resolvedUserId,
       message: invite.reusedExistingInvite
-        ? 'User created. An active password setup email already existed for this user, so the same link was resent.'
+        ? 'User created. An active password setup invite already existed for this user, so no duplicate welcome email was sent.'
         : 'User created and welcome email sent.',
       diagnostics: {
         ...(emailResult.diagnostics || {}),
