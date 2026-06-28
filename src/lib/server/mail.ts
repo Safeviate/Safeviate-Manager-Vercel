@@ -13,12 +13,14 @@ interface WelcomeEmailOptions {
 type WelcomeEmailResult = {
   success: boolean;
   error?: string;
+  deliveryMode?: 'sent' | 'manual-link';
   diagnostics?: {
     fromEmail?: string;
     hasApiKey?: boolean;
     provider?: 'resend';
     status?: number;
     statusText?: string;
+    messageId?: string;
   };
 };
 
@@ -53,6 +55,7 @@ export async function sendWelcomeEmail({ email, name, setupLink, variant = 'welc
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
     return {
       success: true,
+      deliveryMode: 'manual-link',
       error: 'RESEND_API_KEY missing',
       diagnostics: { fromEmail, hasApiKey: false, provider: 'resend' },
     };
@@ -63,6 +66,7 @@ export async function sendWelcomeEmail({ email, name, setupLink, variant = 'welc
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
     return {
       success: true,
+      deliveryMode: 'manual-link',
       error: 'Sender email missing (set MAIL_FROM or RESEND_FROM)',
       diagnostics: { hasApiKey: true, provider: 'resend' },
     };
@@ -202,9 +206,19 @@ export async function sendWelcomeEmail({ email, name, setupLink, variant = 'welc
       };
     }
 
+    const payload = (await response.json().catch(() => null)) as { id?: string } | null;
+
     return {
       success: true,
-      diagnostics: { fromEmail, hasApiKey: true, provider: 'resend', status: response.status, statusText: response.statusText },
+      deliveryMode: 'sent',
+      diagnostics: {
+        fromEmail,
+        hasApiKey: true,
+        provider: 'resend',
+        status: response.status,
+        statusText: response.statusText,
+        messageId: payload?.id,
+      },
     };
   } catch (error) {
     console.error(`[MAIL] Error sending welcome email to ${email}:`, error);
@@ -238,6 +252,7 @@ export async function sendMeetingEmail({
     console.warn(`[MAIL] Skipping meeting email to ${email}. RESEND_API_KEY is not configured.`);
     return {
       success: true,
+      deliveryMode: 'manual-link',
       error: 'RESEND_API_KEY missing',
       diagnostics: { fromEmail, hasApiKey: false, provider: 'resend' },
     };
@@ -318,9 +333,19 @@ export async function sendMeetingEmail({
       };
     }
 
+    const payload = (await response.json().catch(() => null)) as { id?: string } | null;
+
     return {
       success: true,
-      diagnostics: { fromEmail, hasApiKey: true, provider: 'resend', status: response.status, statusText: response.statusText },
+      deliveryMode: 'sent',
+      diagnostics: {
+        fromEmail,
+        hasApiKey: true,
+        provider: 'resend',
+        status: response.status,
+        statusText: response.statusText,
+        messageId: payload?.id,
+      },
     };
   } catch (error) {
     console.error(`[MAIL] Error sending meeting email to ${email}:`, error);

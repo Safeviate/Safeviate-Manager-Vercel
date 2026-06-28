@@ -173,6 +173,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const exposeInviteLink = emailResult.deliveryMode === 'manual-link';
+
     invalidatePersonnelDirectoryCaches(tenantId);
 
     return NextResponse.json({
@@ -183,7 +185,7 @@ export async function POST(request: Request) {
         : 'User created and welcome email sent.',
       diagnostics: {
         ...(emailResult.diagnostics || {}),
-        inviteLink,
+        ...(exposeInviteLink ? { inviteLink } : {}),
         reusedExistingInvite: invite.reusedExistingInvite,
         inviteId: invite.inviteId,
       },

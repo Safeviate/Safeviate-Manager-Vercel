@@ -80,12 +80,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const exposeInviteLink = result.deliveryMode === 'manual-link';
+
     return NextResponse.json({
       ok: true,
       message: 'Password reset email dispatched.',
       diagnostics: {
         ...(result.diagnostics || {}),
-        inviteLink: invite.setupLink,
+        ...(exposeInviteLink ? { inviteLink: invite.setupLink } : {}),
         reusedExistingInvite: invite.reusedExistingInvite,
         inviteId: invite.inviteId,
       },
