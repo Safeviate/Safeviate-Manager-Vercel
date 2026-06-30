@@ -26,6 +26,13 @@ export interface InvestigationPhotoAttachment {
     uploadDate: string; // ISO String
 }
 
+export interface InvestigationDocumentAttachment {
+    id: string;
+    name: string;
+    url: string;
+    uploadDate: string; // ISO String
+}
+
 export interface ReportRootCauseAnalysis {
     id: string;
     category: ReportRootCauseCategory;
@@ -154,6 +161,7 @@ export interface SafetyReport {
     investigationInterviews?: InvestigationInterview[];
     investigationTasks?: InvestigationTask[];
     investigationEvidencePhotos?: InvestigationPhotoAttachment[];
+    investigationDocuments?: InvestigationDocumentAttachment[];
     rootCauseAnalyses?: ReportRootCauseAnalysis[];
     investigationNotes?: string;
     discussion?: ReportDiscussionItem[];

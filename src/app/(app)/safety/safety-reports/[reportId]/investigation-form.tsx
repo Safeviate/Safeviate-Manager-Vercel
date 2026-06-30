@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type {
+  InvestigationDocumentAttachment,
   InvestigationInterview,
   InvestigationPhotoAttachment,
   InvestigationTask,
@@ -33,7 +34,7 @@ import type {
   SafetyReport,
 } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera, SearchCheck, ClipboardList } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera, SearchCheck, ClipboardList, FileText } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -375,6 +376,39 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     }
   };
 
+  const saveInvestigationDocuments = async (documents: InvestigationDocumentAttachment[], successTitle: string) => {
+    const nextReport: SafetyReport = {
+      ...report,
+      ...buildDataToSave(form.getValues()),
+      investigationDocuments: documents,
+    };
+
+    try {
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: nextReport }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to save investigation documents.');
+      }
+
+      const payload = await response.json().catch(() => null);
+      onReportSaved?.((payload?.report as SafetyReport | undefined) ?? nextReport);
+      toast({ title: successTitle });
+      return true;
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Document save failed',
+        description: error instanceof Error ? error.message : 'Unable to save investigation documents.',
+      });
+      return false;
+    }
+  };
+
   const addEvidencePhoto = async (photo: { name: string; url: string; uploadDate: string }) => {
     const currentPhotos = report.investigationEvidencePhotos || [];
     const nextPhotos = [
@@ -393,6 +427,26 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     const currentPhotos = report.investigationEvidencePhotos || [];
     const nextPhotos = currentPhotos.filter((photo) => photo.id !== photoId);
     await saveEvidencePhotos(nextPhotos, 'Investigation photo removed');
+  };
+
+  const addInvestigationDocument = async (document: { name: string; url: string; uploadDate: string }) => {
+    const currentDocuments = report.investigationDocuments || [];
+    const nextDocuments = [
+      ...currentDocuments,
+      {
+        id: uuidv4(),
+        name: document.name,
+        url: document.url,
+        uploadDate: document.uploadDate,
+      },
+    ];
+    await saveInvestigationDocuments(nextDocuments, 'Investigation document added');
+  };
+
+  const removeInvestigationDocument = async (documentId: string) => {
+    const currentDocuments = report.investigationDocuments || [];
+    const nextDocuments = currentDocuments.filter((document) => document.id !== documentId);
+    await saveInvestigationDocuments(nextDocuments, 'Investigation document removed');
   };
 
   return (
@@ -426,6 +480,8 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                     report={report}
                     addEvidencePhoto={addEvidencePhoto}
                     removeEvidencePhoto={removeEvidencePhoto}
+                    addInvestigationDocument={addInvestigationDocument}
+                    removeInvestigationDocument={removeInvestigationDocument}
                   />
                 </div>
               ) : (
@@ -451,6 +507,8 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                       report={report}
                       addEvidencePhoto={addEvidencePhoto}
                       removeEvidencePhoto={removeEvidencePhoto}
+                      addInvestigationDocument={addInvestigationDocument}
+                      removeInvestigationDocument={removeInvestigationDocument}
                     />
                   </div>
                 </ScrollArea>
@@ -490,6 +548,8 @@ function InvestigationFields({
   report,
   addEvidencePhoto,
   removeEvidencePhoto,
+  addInvestigationDocument,
+  removeInvestigationDocument,
 }: {
   form: UseFormReturn<FormValues>;
   teamFields: Array<{ id: string }>;
@@ -510,6 +570,8 @@ function InvestigationFields({
   report: SafetyReport;
   addEvidencePhoto: (photo: { name: string; url: string; uploadDate: string }) => Promise<void>;
   removeEvidencePhoto: (photoId: string) => Promise<void>;
+  addInvestigationDocument: (document: { name: string; url: string; uploadDate: string }) => Promise<void>;
+  removeInvestigationDocument: (documentId: string) => Promise<void>;
 }) {
   return (
     <>
@@ -586,6 +648,74 @@ function InvestigationFields({
               </Button>
             </div>
           ))}
+        </div>
+      </section>
+
+      <LocalSeparator />
+
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <SectionHeader title="Investigation Documents" icon={FileText} />
+          <DocumentUploader
+            defaultFileName={`investigation-document-${report.reportNumber}`}
+            restrictedMode="file"
+            trigger={(open) => (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => open('file')}
+                className="h-7 px-3 text-[10px] font-black uppercase border-slate-300 no-print"
+              >
+                <PlusCircle className="mr-1 h-3 w-3" /> Add Document
+              </Button>
+            )}
+            onDocumentUploaded={async (document) => {
+              await addInvestigationDocument({
+                name: document.name,
+                url: document.url,
+                uploadDate: document.uploadDate,
+              });
+            }}
+          />
+        </div>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Upload statements, reports, scanned records, and other supporting files for this investigation.</p>
+          {report.investigationDocuments && report.investigationDocuments.length > 0 ? (
+            <div className="space-y-3">
+              {report.investigationDocuments.map((document) => (
+                <div key={document.id} className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-3">
+                  <div className="min-w-0">
+                    <a
+                      href={document.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate text-sm font-semibold text-foreground underline decoration-slate-300 underline-offset-4"
+                    >
+                      {document.name}
+                    </a>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                      Uploaded {format(new Date(document.uploadDate), 'dd MMM yyyy')}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10"
+                    onClick={() => void removeInvestigationDocument(document.id)}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+              No investigation documents uploaded yet.
+            </div>
+          )}
         </div>
       </section>
 
