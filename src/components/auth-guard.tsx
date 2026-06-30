@@ -25,7 +25,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
       router.push('/login');
     }
 
-    if (!isLoading && (authUser || bootstrapActive) && pathname === '/login') {
+    if (!isLoading && authUser?.mustChangeManualPassword && pathname !== '/change-password') {
+      router.replace('/change-password');
+    }
+
+    if (!isLoading && authUser && !authUser.mustChangeManualPassword && pathname === '/change-password') {
+      router.replace('/dashboard');
+    }
+
+    if (!isLoading && (authUser || bootstrapActive) && pathname === '/login' && !authUser?.mustChangeManualPassword) {
       router.push('/dashboard');
     }
   }, [authUser, bootstrapActive, isLoading, router, pathname]);

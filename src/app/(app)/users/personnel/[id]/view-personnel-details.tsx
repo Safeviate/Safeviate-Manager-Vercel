@@ -8,6 +8,7 @@ import type { Personnel, PilotProfile } from '../personnel-directory-page';
 import type { Role } from '../../../admin/roles/page';
 import type { Department } from '../../../admin/department/page';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { CalendarIcon, Trash2, Upload, Eye, PlusCircle, Contact, PhoneCall, ShieldCheck, ShieldAlert, LayoutGrid, ListFilter, UserCircle, ClipboardCheck, Mail, Loader2, Pencil, KeyRound, UserCheck, UserX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -96,6 +97,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isUpdatingSuspension, setIsUpdatingSuspension] = useState(false);
+  const [isSettingManualPassword, setIsSettingManualPassword] = useState(false);
+  const [manualPassword, setManualPassword] = useState('');
+  const [confirmManualPassword, setConfirmManualPassword] = useState('');
+  const [isManualPasswordDialogOpen, setIsManualPasswordDialogOpen] = useState(false);
   const [resetLink, setResetLink] = useState('');
   
   const { toast } = useToast();
@@ -369,6 +374,65 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
     }
   };
 
+  const handleSetManualPassword = async () => {
+    if (manualPassword.length < 8) {
+      toast({
+        variant: 'destructive',
+        title: 'Password Too Short',
+        description: 'Manual passwords must be at least 8 characters long.',
+      });
+      return;
+    }
+
+    if (manualPassword !== confirmManualPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Passwords Do Not Match',
+        description: 'Please confirm the manual password exactly.',
+      });
+      return;
+    }
+
+    setIsSettingManualPassword(true);
+    try {
+      const response = await fetch('/api/admin/set-manual-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          tenantId,
+          password: manualPassword,
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = payload as { error?: string };
+        throw new Error(error?.error || 'Failed to save manual password');
+      }
+
+      setManualPassword('');
+      setConfirmManualPassword('');
+      setIsManualPasswordDialogOpen(false);
+      window.dispatchEvent(new Event('safeviate-users-updated'));
+      window.dispatchEvent(new Event('safeviate-personnel-updated'));
+      toast({
+        title: 'Manual Password Saved',
+        description: `${user.firstName} ${user.lastName} can now sign in with the password you entered.`,
+      });
+    } catch (error: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Password Update Failed',
+        description: error instanceof Error ? error.message : 'Could not save the manual password.',
+      });
+    } finally {
+      setIsSettingManualPassword(false);
+    }
+  };
+
   const combinedDocuments = useMemo(() => {
     const required = role?.requiredDocuments || [];
     const uploaded = documents || [];
@@ -508,6 +572,16 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                               {isMobile ? "Reset" : "Reset Password"}
                             </Button>
                           ) : null}
+                          <Button
+                            variant="outline"
+                            size={isMobile ? "sm" : "default"}
+                            onClick={() => setIsManualPasswordDialogOpen(true)}
+                            disabled={isSendingEmail || isResettingPassword || isUpdatingSuspension || isSettingManualPassword}
+                            className="gap-2 border-slate-300 text-[10px] font-black uppercase"
+                          >
+                            {isSettingManualPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4 text-primary" />}
+                            {isMobile ? "Manual PW" : "Set Manual Password"}
+                          </Button>
                           <Button 
                             variant={user.suspendedAt ? "outline" : "destructive"} 
                             size={isMobile ? "sm" : "default"}
@@ -796,6 +870,60 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
             <DialogContent className="max-w-4xl max-h-[90vh]">
                 <DialogHeader><DialogTitle className="font-black uppercase tracking-tight">Document Viewer</DialogTitle></DialogHeader>
                 {viewingImageUrl && <div className="relative h-[80vh] w-full mt-4"><Image src={viewingImageUrl} alt="Document" fill className="object-contain" /></div>}
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isManualPasswordDialogOpen} onOpenChange={setIsManualPasswordDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="font-black uppercase tracking-tight">Set Manual Password</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Save a password directly for {user.firstName} {user.lastName}. This will replace any pending setup invite for this account.
+                    </p>
+                    <div className="space-y-2">
+                        <Label htmlFor="existing-user-manual-password">Password</Label>
+                        <Input
+                            id="existing-user-manual-password"
+                            type="password"
+                            value={manualPassword}
+                            onChange={(event) => setManualPassword(event.target.value)}
+                            placeholder="Minimum 8 characters"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="existing-user-manual-password-confirm">Confirm Password</Label>
+                        <Input
+                            id="existing-user-manual-password-confirm"
+                            type="password"
+                            value={confirmManualPassword}
+                            onChange={(event) => setConfirmManualPassword(event.target.value)}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setIsManualPasswordDialogOpen(false);
+                                setManualPassword('');
+                                setConfirmManualPassword('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleSetManualPassword}
+                            disabled={isSettingManualPassword}
+                            className="gap-2"
+                        >
+                            {isSettingManualPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                            Save Password
+                        </Button>
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     </div>

@@ -364,6 +364,13 @@ export default function LoginClient() {
         title: 'Login Successful',
         description: 'Welcome back to Safeviate.',
       });
+      const manualPasswordStatus = await fetch('/api/auth/manual-password-status', {
+        cache: 'no-store',
+      }).then((response) => response.json().catch(() => null)).catch(() => null);
+      if (manualPasswordStatus?.mustChangeManualPassword) {
+        window.location.assign('/change-password');
+        return;
+      }
       const nextUrl = (() => {
         if (!result.url) {
           return '/dashboard';

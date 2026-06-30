@@ -128,7 +128,7 @@ function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
   const SCALE_KEY = 'safeviate-scale';
   const serverTheme = ${serializedServerTheme};
   const serverTenant = ${serializedServerTenant};
-  const authRoutes = ['/login', '/forgot-password', '/setup-password', '/beta-nda'];
+  const authRoutes = ['/login', '/forgot-password', '/setup-password', '/change-password', '/beta-nda'];
 
   const defaults = {
     main: {

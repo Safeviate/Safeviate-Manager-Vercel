@@ -150,6 +150,19 @@ export const authOptions: NextAuthOptions = {
           console.info('[AUTH] Database password compare result:', ok, { looksHashed });
 
           if (ok) {
+            const personnelProfile = await prisma.personnel.findFirst({
+              where: {
+                tenantId: dbUser.tenantId,
+                email: dbUser.email.trim().toLowerCase(),
+              },
+              select: { accessOverrides: true },
+            }).catch(() => null);
+            const accessOverrides =
+              personnelProfile?.accessOverrides && typeof personnelProfile.accessOverrides === 'object'
+                ? (personnelProfile.accessOverrides as Record<string, unknown>)
+                : null;
+            const mustChangeManualPassword = accessOverrides?.mustChangeManualPassword === true;
+
             if (!looksHashed) {
               const upgradedHash = await hash(password, 12);
               await prisma.user.update({
@@ -164,6 +177,7 @@ export const authOptions: NextAuthOptions = {
               email: dbUser.email,
               name: `${dbUser.firstName} ${dbUser.lastName}`.trim(),
               role: dbUser.role,
+              mustChangeManualPassword,
             };
           }
         }
@@ -188,6 +202,7 @@ export const authOptions: NextAuthOptions = {
         token.name = user.name || token.name;
         token.tenantId = user.tenantId;
         token.role = user.role;
+        token.mustChangeManualPassword = user.mustChangeManualPassword;
       }
       return token;
     },
@@ -198,6 +213,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = (token.name as string | undefined) || undefined;
         session.user.tenantId = (token.tenantId as string | undefined) || undefined;
         session.user.role = (token.role as string | undefined) || undefined;
+        session.user.mustChangeManualPassword = Boolean(token.mustChangeManualPassword);
       }
       return session;
     },

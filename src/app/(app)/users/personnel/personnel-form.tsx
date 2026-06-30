@@ -59,6 +59,9 @@ export function PersonnelForm({
   const [canBePIC, setCanBePIC] = useState(false);
   const [isIncerfaContact, setIsIncerfaContact] = useState(false);
   const [isAlerfaContact, setIsAlerfaContact] = useState(false);
+  const [useManualPassword, setUseManualPassword] = useState(false);
+  const [manualPassword, setManualPassword] = useState('');
+  const [confirmManualPassword, setConfirmManualPassword] = useState('');
 
   useEffect(() => {
     if (existingPersonnel) {
@@ -116,6 +119,26 @@ export function PersonnelForm({
       return;
     }
 
+    if (!existingPersonnel && useManualPassword) {
+      if (manualPassword.length < 8) {
+        toast({
+          variant: 'destructive',
+          title: 'Password Too Short',
+          description: 'Manual passwords must be at least 8 characters long.',
+        });
+        return;
+      }
+
+      if (manualPassword !== confirmManualPassword) {
+        toast({
+          variant: 'destructive',
+          title: 'Passwords Do Not Match',
+          description: 'Please confirm the manual password exactly.',
+        });
+        return;
+      }
+    }
+
     submitGuardRef.current = true;
     setIsSubmitting(true);
 
@@ -166,6 +189,7 @@ export function PersonnelForm({
             organizationId: organizationId === 'internal' ? null : (organizationId || null),
             isErpIncerfaContact: !!isIncerfaContact,
             isErpAlerfaContact: !!isAlerfaContact,
+            manualPassword: useManualPassword ? manualPassword : null,
           })
         });
 
@@ -179,7 +203,9 @@ export function PersonnelForm({
 
         toast({
           title: 'User Created',
-          description: 'The account has been created and the welcome email was sent.',
+          description: useManualPassword
+            ? 'The account has been created with the manual password you entered.'
+            : 'The account has been created and the welcome email was sent.',
         });
       }
       
@@ -288,6 +314,57 @@ export function PersonnelForm({
             </div>
           </div>
         </div>
+      {!existingPersonnel ? (
+        <>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right">Access</Label>
+            <div className="col-span-3 space-y-3 rounded-md border bg-muted/20 px-3 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Set password manually</p>
+                  <p className="text-xs text-muted-foreground">
+                    Turn this on to create the account with a password now instead of sending a welcome email.
+                  </p>
+                </div>
+                <Switch
+                  id="manual-password"
+                  checked={useManualPassword}
+                  onCheckedChange={(checked) => {
+                    setUseManualPassword(checked);
+                    if (!checked) {
+                      setManualPassword('');
+                      setConfirmManualPassword('');
+                    }
+                  }}
+                />
+              </div>
+              {useManualPassword ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="manualPassword">Password</Label>
+                    <Input
+                      id="manualPassword"
+                      type="password"
+                      value={manualPassword}
+                      onChange={(e) => setManualPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmManualPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmManualPassword"
+                      type="password"
+                      value={confirmManualPassword}
+                      onChange={(e) => setConfirmManualPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </>
+      ) : null}
       <div className="flex justify-end gap-2 mt-4">
         <Button onClick={handleAddOrUpdateUser} disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -305,7 +382,7 @@ export function PersonnelForm({
           <DialogHeader>
             <DialogTitle>{existingPersonnel ? 'Edit User Profile' : 'Create User'}</DialogTitle>
             <DialogDescription>
-              {existingPersonnel ? 'Update system permissions and metadata.' : 'Create the tenant account and send the welcome email so the user can set their own password.'}
+              {existingPersonnel ? 'Update system permissions and metadata.' : 'Create the tenant account and either send the welcome email or set a password manually.'}
             </DialogDescription>
           </DialogHeader>
           {formFields}

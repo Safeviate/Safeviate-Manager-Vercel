@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hash } from 'bcryptjs';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { ensurePersonnelSchema } from '@/lib/server/bootstrap-db';
 import { isDatabaseAvailable, prisma } from '@/lib/prisma';
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
         userType, role, department, userNumber,
         organizationId, isErpIncerfaContact, isErpAlerfaContact,
         canBeInstructor, canBeStudent, canBePIC,
+        manualPassword,
       } = body;
     const normalizedUserType = userType || 'Personnel';
     const resolvedCanBeInstructor = typeof canBeInstructor === 'boolean'
@@ -39,6 +41,12 @@ export async function POST(request: Request) {
 
     if (!tenantId || !email || !firstName || !lastName || !role) {
       return NextResponse.json({ error: 'Missing required user information.' }, { status: 400 });
+    }
+
+    const normalizedManualPassword = typeof manualPassword === 'string' ? manualPassword : '';
+    const shouldSetManualPassword = normalizedManualPassword.length > 0;
+    if (shouldSetManualPassword && normalizedManualPassword.length < 8) {
+      return NextResponse.json({ error: 'Manual passwords must be at least 8 characters long.' }, { status: 400 });
     }
 
     if (authResult.userProfile.role?.toLowerCase() !== 'developer' && String(tenantId).trim() !== authResult.tenantId) {
@@ -74,12 +82,13 @@ export async function POST(request: Request) {
     }
 
     const resolvedUserId = existingUser?.id || generatedUserId;
+    const passwordHash = shouldSetManualPassword ? await hash(normalizedManualPassword, 12) : null;
 
     if (existingUser) {
       await prisma.user.update({
         where: { id: existingUser.id },
         data: {
-          passwordHash: null,
+          passwordHash,
           firstName,
           lastName,
           role,
@@ -93,7 +102,7 @@ export async function POST(request: Request) {
           id: resolvedUserId,
           tenantId,
           email: normalizedEmail,
-          passwordHash: null,
+          passwordHash,
           firstName,
           lastName,
           role,
@@ -116,7 +125,7 @@ export async function POST(request: Request) {
         primaryInstructorId: null,
         instructorAssignmentHistory: [],
         permissions: [],
-        accessOverrides: Prisma.JsonNull,
+        accessOverrides: shouldSetManualPassword ? { mustChangeManualPassword: true } : Prisma.JsonNull,
         userType: normalizedUserType,
         canBeInstructor: resolvedCanBeInstructor,
         canBeStudent: resolvedCanBeStudent,
@@ -138,7 +147,7 @@ export async function POST(request: Request) {
         primaryInstructorId: null,
         instructorAssignmentHistory: [],
         permissions: [],
-        accessOverrides: Prisma.JsonNull,
+        accessOverrides: shouldSetManualPassword ? { mustChangeManualPassword: true } : Prisma.JsonNull,
         userType: normalizedUserType,
         canBeInstructor: resolvedCanBeInstructor,
         canBeStudent: resolvedCanBeStudent,
@@ -147,6 +156,31 @@ export async function POST(request: Request) {
         isErpAlerfaContact: !!isErpAlerfaContact,
       },
     });
+
+    invalidatePersonnelDirectoryCaches(tenantId);
+
+    if (shouldSetManualPassword) {
+      await prisma.passwordSetupInvite.updateMany({
+        where: {
+          tenantId,
+          usedAt: null,
+          OR: [
+            { email: normalizedEmail },
+            { userId: resolvedUserId },
+          ],
+        },
+        data: { usedAt: new Date() },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        uid: resolvedUserId,
+        message: 'User created with a manual password.',
+        diagnostics: {
+          manualPasswordSet: true,
+        },
+      });
+    }
 
     const invite = await createPasswordSetupInvite(request, {
       tenantId,
@@ -181,8 +215,6 @@ export async function POST(request: Request) {
     }
 
     const exposeInviteLink = emailResult.deliveryMode === 'manual-link';
-
-    invalidatePersonnelDirectoryCaches(tenantId);
 
     return NextResponse.json({
       ok: true,
