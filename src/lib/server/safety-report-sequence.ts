@@ -34,7 +34,7 @@ const getSafetyReportSequenceSettings = (data: unknown): SafetyReportSequenceSet
 
 const extractTrailingSequenceNumber = (reportNumber: unknown) => {
   if (typeof reportNumber !== 'string') return 0;
-  const match = reportNumber.match(/(\d+)$/);
+  const match = reportNumber.trim().match(/^SR-(\d+)$/i);
   if (!match) return 0;
   const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : 0;

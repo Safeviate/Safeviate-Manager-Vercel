@@ -85,11 +85,15 @@ export async function POST(request: Request) {
             : {};
 
         delete currentOverrides.mustChangeManualPassword;
+        const nextAccessOverrides =
+          Object.keys(currentOverrides).length > 0
+            ? (currentOverrides as Prisma.InputJsonValue)
+            : Prisma.JsonNull;
 
         await tx.personnel.update({
           where: { id: personnelProfile.id },
           data: {
-            accessOverrides: Object.keys(currentOverrides).length > 0 ? currentOverrides : Prisma.JsonNull,
+            accessOverrides: nextAccessOverrides,
             updatedAt: new Date(),
           },
         });
