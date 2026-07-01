@@ -1,4 +1,4 @@
-﻿---
+---
 name: topbar-first-page-headers
 description: Use when a Safeviate page already has a global top bar title and the in-card header should be removed or reduced to a slim supporting strip for descriptions and actions. Applies when refactoring shared page headers across the app.
 ---

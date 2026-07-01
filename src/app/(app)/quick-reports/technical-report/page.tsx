@@ -118,7 +118,6 @@ export default function QuickTechnicalReportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           report: {
-            reportNumber: `TECH-${String(Date.now()).slice(-6)}`,
             reportType: 'Preliminary Technical Report',
             eventDate: format(values.eventDate, 'yyyy-MM-dd'),
             eventTime: values.eventTime,

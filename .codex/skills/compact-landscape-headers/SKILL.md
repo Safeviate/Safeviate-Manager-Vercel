@@ -1,4 +1,4 @@
-﻿---
+---
 name: compact-landscape-headers
 description: Compact shared headers and page headers for short-height mobile landscape screens across Safeviate pages. Use when the app top bar, section header, or action strip is too tall on phones or tablets in landscape and the fix should apply globally without changing desktop or portrait layouts.
 ---

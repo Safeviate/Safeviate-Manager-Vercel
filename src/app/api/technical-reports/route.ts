@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { ensureTechnicalReportsSchema } from '@/lib/server/bootstrap-db';
+import { allocateNextTechnicalReportNumber } from '@/lib/server/technical-report-sequence';
 import { invalidateTenantScopedCaches } from '@/lib/server/route-cache';
 import { resolveQuickReportContext } from '@/lib/server/quick-report-context';
 import { NextResponse } from 'next/server';
@@ -19,28 +20,38 @@ export async function POST(request: Request) {
     const { tenantId: _tenantId, ...reportInput } = incoming as Record<string, unknown>;
     const id = (reportInput.id as string | undefined) || randomUUID();
 
-    const data = {
-      ...reportInput,
-      id,
-      submittedByEmail: (reportInput.submittedByEmail as string | null | undefined) || context.email,
-      submittedById: (reportInput.submittedById as string | null | undefined) || context.userId,
-      submittedByName: (reportInput.submittedByName as string | undefined) || context.userName,
-      submittedAt: (reportInput.submittedAt as string | undefined) || new Date().toISOString(),
-      status: (reportInput.status as string | undefined) || 'Open',
-      workflowStatus: (reportInput.workflowStatus as string | undefined) || 'Preliminary',
-    };
+    const createdReport = await prisma.$transaction(async (tx) => {
+      const reportNumber =
+        typeof reportInput.reportNumber === 'string' && reportInput.reportNumber.trim().length > 0
+          ? reportInput.reportNumber.trim()
+          : (await allocateNextTechnicalReportNumber(tx, context.tenantId)).reportNumber;
 
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO technical_reports (id, tenant_id, data, created_at, updated_at)
-       VALUES ($1, $2, $3::jsonb, NOW(), NOW())
-       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-      id,
-      context.tenantId,
-      JSON.stringify(data),
-    );
+      const data = {
+        ...reportInput,
+        id,
+        reportNumber,
+        submittedByEmail: (reportInput.submittedByEmail as string | null | undefined) || context.email,
+        submittedById: (reportInput.submittedById as string | null | undefined) || context.userId,
+        submittedByName: (reportInput.submittedByName as string | undefined) || context.userName,
+        submittedAt: (reportInput.submittedAt as string | undefined) || new Date().toISOString(),
+        status: (reportInput.status as string | undefined) || 'Open',
+        workflowStatus: (reportInput.workflowStatus as string | undefined) || 'Preliminary',
+      };
+
+      await tx.$executeRawUnsafe(
+        `INSERT INTO technical_reports (id, tenant_id, data, created_at, updated_at)
+         VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        id,
+        context.tenantId,
+        JSON.stringify(data),
+      );
+
+      return data;
+    });
     invalidateTenantScopedCaches(context.tenantId);
 
-    return NextResponse.json({ report: { ...data, tenantId: context.tenantId } }, { status: 201 });
+    return NextResponse.json({ report: { ...createdReport, tenantId: context.tenantId } }, { status: 201 });
   } catch (error) {
     console.error('[technical-reports] write failed:', error);
     return NextResponse.json({ error: 'Failed to submit technical report.' }, { status: 500 });
