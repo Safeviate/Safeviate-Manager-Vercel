@@ -53,12 +53,20 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     const load = async () => {
       try {
         const response = await fetch('/api/quality-audits', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ audits: [], templates: [], caps: [], personnel: [], organizations: [], aircraft: [], findingLevels: [] }));
-        const foundAudit = (payload.audits as QualityAudit[] | undefined)?.find(a => a.id === auditId);
+        const payload = await response.json().catch(() => ({
+          audits: [],
+          templates: [],
+          caps: [],
+          personnel: [],
+          organizations: [],
+          aircraft: [],
+          findingLevels: [],
+        }));
+        const foundAudit = (payload.audits as QualityAudit[] | undefined)?.find((item) => item.id === auditId);
         if (!cancelled && foundAudit) {
-            setAudit(foundAudit);
-            setTemplate((payload.templates as QualityAuditChecklistTemplate[] | undefined)?.find(t => t.id === foundAudit.templateId) || null);
-            setCaps((payload.caps as CorrectiveActionPlan[] | undefined)?.filter(c => c.auditId === auditId) || []);
+          setAudit(foundAudit);
+          setTemplate((payload.templates as QualityAuditChecklistTemplate[] | undefined)?.find((item) => item.id === foundAudit.templateId) || null);
+          setCaps((payload.caps as CorrectiveActionPlan[] | undefined)?.filter((item) => item.auditId === auditId) || []);
         }
         if (!cancelled) {
           setPersonnel(Array.isArray(payload.personnel) ? payload.personnel : []);
@@ -66,27 +74,27 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
           setAircraft(Array.isArray(payload.aircraft) ? payload.aircraft : []);
           setFindingLevelsSettings(Array.isArray(payload.findingLevels) ? payload.findingLevels : null);
         }
-      } catch (e) {
-        console.error('Failed to load audit details', e);
+      } catch (error) {
+        console.error('Failed to load audit details', error);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     };
+
     void load();
     return () => {
       cancelled = true;
     };
   }, [auditId]);
 
-  // SECURITY: Scoped visibility guard
   useEffect(() => {
     if (!isLoading && audit && userProfile) {
-        const canViewAll = hasPermission('quality-audits-view-all');
-        const userOrgId = userProfile.organizationId;
-        
-        if (!canViewAll && userOrgId && audit.organizationId !== userOrgId) {
-            router.push('/quality/audits');
-        }
+      const canViewAll = hasPermission('quality-audits-view-all');
+      const userOrgId = userProfile.organizationId;
+
+      if (!canViewAll && userOrgId && audit.organizationId !== userOrgId) {
+        router.push('/quality/audits');
+      }
     }
   }, [isLoading, audit, userProfile, hasPermission, router]);
 
@@ -94,6 +102,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     if (!audit || !template) return null;
     return { ...audit, template };
   }, [audit, template]);
+
   const assetLabel = aircraft.find((item) => item.id === audit?.assetId)?.tailNumber || '';
 
   if (isLoading) {
@@ -125,52 +134,105 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
       </div>
     );
   }
-  
-  const scoreColor = audit.complianceScore && audit.complianceScore >= 80 
-    ? "bg-green-500" 
-    : audit.complianceScore && audit.complianceScore >= 60
-    ? "bg-yellow-500"
-    : "bg-red-500";
+
+  const scoreColor =
+    audit.complianceScore && audit.complianceScore >= 80
+      ? 'bg-green-500'
+      : audit.complianceScore && audit.complianceScore >= 60
+        ? 'bg-yellow-500'
+        : 'bg-red-500';
 
   return (
     <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-        <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-2xl font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
-            </div>
-            <CardDescription className="text-sm font-medium">
-              Performed on {format(parseLocalDate(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge> • Asset: <span className="font-semibold text-foreground">{assetLabel || 'No linked asset'}</span>
-            </CardDescription>
-          </div>
-
-          <div className="flex w-full flex-col items-start gap-4 md:w-auto md:items-end">
-            <PrintButton label="Print Audit" className="no-print w-full md:w-auto" />
-            {typeof audit.complianceScore === 'number' && (
-              <div className="text-left md:text-right min-w-[200px]">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Compliance Score</p>
-                <div className="flex items-center gap-3 justify-start md:justify-end">
-                  <span className="text-3xl font-black text-primary">{audit.complianceScore}%</span>
-                  <Progress value={audit.complianceScore} className="w-24 h-2" indicatorClassName={scoreColor} />
-                </div>
+      <div className="no-print flex flex-1 flex-col overflow-hidden">
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
+          <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-2xl font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
               </div>
-            )}
-          </div>
-        </CardHeader>
+              <CardDescription className="text-sm font-medium">
+                Performed on {format(parseLocalDate(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge> • Asset: <span className="font-semibold text-foreground">{assetLabel || 'No linked asset'}</span>
+              </CardDescription>
+            </div>
 
-        <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <AuditChecklist 
-              audit={enrichedAudit} 
+            <div className="flex w-full flex-col items-start gap-4 md:w-auto md:items-end">
+              <PrintButton label="Print Audit" className="no-print w-full md:w-auto" />
+              {typeof audit.complianceScore === 'number' && (
+                <div className="text-left md:text-right min-w-[200px]">
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Compliance Score</p>
+                  <div className="flex items-center gap-3 justify-start md:justify-end">
+                    <span className="text-3xl font-black text-primary">{audit.complianceScore}%</span>
+                    <Progress value={audit.complianceScore} className="w-24 h-2" indicatorClassName={scoreColor} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+
+          <CardContent className="flex-1 p-0 overflow-hidden bg-background">
+            <AuditChecklist
+              audit={enrichedAudit}
               tenantId={tenantId!}
               findingLevels={findingLevelsSettings?.levels || []}
               personnel={personnel || []}
               organizations={organizations || []}
               aircraft={aircraft || []}
-          />
-        </CardContent>
-      </Card>
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="hidden print:block space-y-6">
+        <Card className="border-none shadow-none">
+          <CardHeader className="space-y-5 border-b p-0 pb-5">
+            <div className="flex items-start justify-between gap-6">
+              <div className="space-y-2">
+                <p className="text-[11px] font-black uppercase tracking-[0.28em] text-muted-foreground">Safeviate Audit Record</p>
+                <CardTitle className="text-3xl font-black uppercase tracking-tight">Audit {audit.auditNumber}: {audit.title}</CardTitle>
+                <CardDescription className="text-base">
+                  Completed on {format(parseLocalDate(audit.auditDate), 'PPP')}
+                </CardDescription>
+              </div>
+              {typeof audit.complianceScore === 'number' && (
+                <div className="min-w-[190px] rounded-2xl border bg-muted/10 px-5 py-4 text-right">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Compliance Score</p>
+                  <p className="mt-1 text-4xl font-black text-foreground">{audit.complianceScore}%</p>
+                </div>
+              )}
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border bg-muted/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Status</p>
+                <p className="mt-1 text-sm font-semibold">{audit.status}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Asset</p>
+                <p className="mt-1 text-sm font-semibold">{assetLabel || 'No linked asset'}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Scope</p>
+                <p className="mt-1 text-sm font-semibold whitespace-pre-wrap">{audit.scope || 'Not specified'}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Checklist</p>
+                <p className="mt-1 text-sm font-semibold">{template?.title || 'Audit checklist'}</p>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <AuditChecklist
+          audit={enrichedAudit}
+          tenantId={tenantId!}
+          findingLevels={findingLevelsSettings?.levels || []}
+          personnel={personnel || []}
+          organizations={organizations || []}
+          aircraft={aircraft || []}
+          printMode
+        />
+      </div>
     </div>
   );
 }

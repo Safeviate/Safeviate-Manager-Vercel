@@ -67,6 +67,7 @@ interface AuditChecklistProps {
   personnel: Personnel[];
   organizations: ExternalOrganization[];
   aircraft?: Aircraft[];
+  printMode?: boolean;
 }
 
 const evidenceSchema = z.object({
@@ -88,7 +89,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AuditChecklist({ audit, tenantId, findingLevels, personnel, organizations, aircraft = [] }: AuditChecklistProps) {
+export function AuditChecklist({ audit, tenantId, findingLevels, personnel, organizations, aircraft = [], printMode = false }: AuditChecklistProps) {
     const { toast } = useToast();
     const { userProfile } = useUserProfile();
     const [auditSnapshot, setAuditSnapshot] = useState<QualityAudit>(audit);
@@ -317,6 +318,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, personnel, orga
             })
         },
     });
+    const liveFindings = form.watch('findings');
 
     const onSubmit = async (values: FormValues) => {
         try {
@@ -614,6 +616,167 @@ export function AuditChecklist({ audit, tenantId, findingLevels, personnel, orga
                 </CardContent>
             </Card>
         )
+    }
+
+    const renderPrintChecklistItem = (item: AuditChecklistItem, options?: { hideTitle?: boolean }) => {
+        const finding = liveFindings.find((entry) => entry.checklistItemId === item.id)
+            || auditSnapshot.findings.find((entry) => entry.checklistItemId === item.id)
+            || null;
+        const evidence = finding?.evidence || [];
+        const responsibleLabel = item.responsibleManagerId
+            ? getPersonnelDisplayName(personnel, item.responsibleManagerId)
+            : '';
+        const metadataRows = [
+            item.regulationReference ? { label: 'Regulation reference', value: item.regulationReference } : null,
+            item.companyReference ? { label: 'Manual reference', value: item.companyReference } : null,
+            responsibleLabel ? { label: 'Responsible manager', value: responsibleLabel } : null,
+            item.nextAuditDate ? { label: 'Next audit date', value: formatAuditDate(item.nextAuditDate) } : null,
+        ].filter((row): row is { label: string; value: string } => !!row && !!row.value);
+        const findingLabel = finding?.finding || 'Not assessed';
+        const classificationLabel = finding?.level?.trim() || 'Not classified';
+        const noteLabel = finding?.comment?.trim() || 'No notes recorded.';
+        const hideTitle = options?.hideTitle ?? false;
+
+        return (
+            <div key={item.id} className="rounded-2xl border border-slate-300 bg-white px-5 py-4 print:break-inside-avoid">
+                {!hideTitle ? (
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-3">
+                        <div className="space-y-1">
+                            <h4 className="text-sm font-black uppercase tracking-[0.04em] text-slate-950">{item.text}</h4>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{findingLabel}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Classification</p>
+                            <p className="mt-1 text-xs font-bold uppercase text-slate-950">{classificationLabel}</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-3">
+                        <div className="space-y-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{findingLabel}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Classification</p>
+                            <p className="mt-1 text-xs font-bold uppercase text-slate-950">{classificationLabel}</p>
+                        </div>
+                    </div>
+                )}
+
+                {metadataRows.length > 0 && (
+                    <div className="grid gap-2 border-b border-slate-200 py-3 md:grid-cols-2">
+                        {metadataRows.map((row) => (
+                            <div key={`${item.id}-${row.label}`} className="rounded-xl bg-slate-50 px-3 py-2">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{row.label}</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">{row.value}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="space-y-2 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Notes and observations</p>
+                    <p className="min-h-[72px] whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900">
+                        {noteLabel}
+                    </p>
+                </div>
+
+                <div className="border-t border-slate-200 pt-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Supporting evidence</p>
+                    {evidence.length > 0 ? (
+                        <div className="mt-2 space-y-2">
+                            {evidence.map((entry, index) => (
+                                <div key={`${item.id}-evidence-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <p className="text-sm font-semibold text-slate-950">{entry.description || `Evidence ${index + 1}`}</p>
+                                    <p className="mt-1 break-all text-xs text-slate-600">{entry.url}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="mt-2 text-sm italic text-slate-500">No evidence attached.</p>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    if (printMode) {
+        return (
+            <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border bg-white p-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Audit target</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{targetLabel}</p>
+                    </div>
+                    <div className="rounded-2xl border bg-white p-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Assigned auditor</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{auditorDisplayName}</p>
+                    </div>
+                    <div className="rounded-2xl border bg-white p-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Assigned auditee</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{resolvedAuditeeName || 'Department or external company'}</p>
+                    </div>
+                </div>
+
+                {normalizedSections.map((section) => (
+                    <section key={section.id} className="space-y-4 break-inside-avoid">
+                        <div className="rounded-2xl border border-slate-300 bg-slate-50 px-5 py-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Audit section</p>
+                                    <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-slate-950">{section.title}</h3>
+                                </div>
+                                <div className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600">
+                                    {section.items.length} item{section.items.length === 1 ? '' : 's'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {section.items.map((item) => renderPrintChecklistItem(item, { hideTitle: section.usesTitleAsItem && item.text === section.title }))}
+                        </div>
+                    </section>
+                ))}
+
+                <section className="space-y-4">
+                    <div className="rounded-2xl border border-slate-300 bg-slate-50 px-5 py-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Assigned sign-off</p>
+                        <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-slate-950">Audit acceptance and signatures</h3>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="rounded-2xl border bg-white p-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Auditor</p>
+                            <p className="mt-1 text-sm font-semibold text-slate-950">{auditorDisplayName}</p>
+                            {auditSnapshot.auditorSignoff ? (
+                                <div className="mt-4 space-y-3">
+                                    <p className="text-xs text-slate-600">Signed on {format(new Date(auditSnapshot.auditorSignoff.signedAt), 'PPP p')}</p>
+                                    <div className="flex h-28 items-center justify-center rounded-xl border bg-white p-3">
+                                        <img src={auditSnapshot.auditorSignoff.signatureUrl} alt="Auditor signature" className="max-h-full w-auto max-w-full object-contain" />
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="mt-3 text-sm italic text-slate-500">Auditor signature not yet recorded.</p>
+                            )}
+                        </div>
+
+                        <div className="rounded-2xl border bg-white p-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Auditee</p>
+                            <p className="mt-1 text-sm font-semibold text-slate-950">{resolvedAuditeeName || 'Department or external company'}</p>
+                            {auditSnapshot.auditeeSignoff ? (
+                                <div className="mt-4 space-y-3">
+                                    <p className="text-xs text-slate-600">Signed on {format(new Date(auditSnapshot.auditeeSignoff.signedAt), 'PPP p')}</p>
+                                    <div className="flex h-28 items-center justify-center rounded-xl border bg-white p-3">
+                                        <img src={auditSnapshot.auditeeSignoff.signatureUrl} alt="Auditee signature" className="max-h-full w-auto max-w-full object-contain" />
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="mt-3 text-sm italic text-slate-500">Auditee signature not yet recorded.</p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            </div>
+        );
     }
 
     return (

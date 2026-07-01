@@ -343,6 +343,16 @@
   .no-print {
     display: none !important;
   }
+
+  .app-topbar,
+  [data-sidebar="sidebar"],
+  [data-sidebar="trigger"],
+  [data-sidebar="rail"],
+  .main-page-header,
+  .main-page-header__actions,
+  .app-sidebar-brand-label {
+    display: none !important;
+  }
   
   body {
     -webkit-print-color-adjust: exact;
@@ -375,6 +385,12 @@
     border: none !important;
     box-shadow: none !important;
     position: static !important;
+  }
+
+  body > header,
+  aside,
+  nav {
+    display: none !important;
   }
 
   [data-radix-scroll-area-viewport] {
