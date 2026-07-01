@@ -16,6 +16,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Badge } from '@/components/ui/badge';
 import { BackNavButton } from '@/components/back-nav-button';
+import { PrintButton } from '@/components/print-button';
 import { usePageLayout } from '@/hooks/use-page-layout';
 
 const parseLocalDate = (value: string) => {
@@ -145,15 +146,18 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
             </CardDescription>
           </div>
 
-          {typeof audit.complianceScore === 'number' && (
-            <div className="text-left md:text-right min-w-[200px]">
-              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Compliance Score</p>
-              <div className="flex items-center gap-3 justify-start md:justify-end">
-                <span className="text-3xl font-black text-primary">{audit.complianceScore}%</span>
-                <Progress value={audit.complianceScore} className="w-24 h-2" indicatorClassName={scoreColor} />
+          <div className="flex w-full flex-col items-start gap-4 md:w-auto md:items-end">
+            <PrintButton label="Print Audit" className="no-print w-full md:w-auto" />
+            {typeof audit.complianceScore === 'number' && (
+              <div className="text-left md:text-right min-w-[200px]">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Compliance Score</p>
+                <div className="flex items-center gap-3 justify-start md:justify-end">
+                  <span className="text-3xl font-black text-primary">{audit.complianceScore}%</span>
+                  <Progress value={audit.complianceScore} className="w-24 h-2" indicatorClassName={scoreColor} />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </CardHeader>
 
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
