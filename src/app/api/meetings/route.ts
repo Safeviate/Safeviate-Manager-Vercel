@@ -49,6 +49,24 @@ function toMeetingRecord(row: { data: unknown; updated_at?: string; created_at?:
           id: String((item as Record<string, unknown>).id || randomUUID()),
           title: String((item as Record<string, unknown>).title || 'Agenda item'),
           notes: typeof (item as Record<string, unknown>).notes === 'string' ? String((item as Record<string, unknown>).notes) : undefined,
+          discussionPoints: Array.isArray((item as Record<string, unknown>).discussionPoints)
+            ? ((item as Record<string, unknown>).discussionPoints as unknown[]).map((point) => {
+                if (typeof point === 'string') {
+                  return {
+                    id: randomUUID(),
+                    text: point,
+                    minutes: '',
+                  };
+                }
+                const pointRecord = (point as Record<string, unknown>) || {};
+                return {
+                  id: String(pointRecord.id || randomUUID()),
+                  text: String(pointRecord.text || ''),
+                  minutes: typeof pointRecord.minutes === 'string' ? pointRecord.minutes : '',
+                };
+              }).filter((point) => point.text.trim().length > 0)
+            : [],
+          decision: typeof (item as Record<string, unknown>).decision === 'string' ? String((item as Record<string, unknown>).decision) : undefined,
         }))
       : [],
     agendaNotes: typeof data.agendaNotes === 'string' ? data.agendaNotes : undefined,
@@ -220,9 +238,28 @@ export async function PATCH(request: Request) {
       });
       const timeLabel = `${storedData.startTime} - ${storedData.endTime}`;
       const agendaBody = storedData.agendaItems.length
-        ? storedData.agendaItems.map((item, index) => `${index + 1}. ${item.title}${item.notes ? ` - ${item.notes}` : ''}`).join('\n')
+        ? storedData.agendaItems.map((item, index) => {
+            const discussionPoints = Array.isArray(item.discussionPoints) && item.discussionPoints.length > 0
+              ? `\nDiscussion points:\n${item.discussionPoints.map((point, pointIndex) => `  ${pointIndex + 1}. ${point.text}`).join('\n')}`
+              : '';
+            return `${index + 1}. ${item.title}${item.notes ? ` - ${item.notes}` : ''}${discussionPoints}`;
+          }).join('\n\n')
         : storedData.agendaNotes || 'No agenda items were added.';
-      const minutesBody = storedData.minutes || 'No minutes notes were captured.';
+      const minutesSummary = storedData.minutes?.trim() || 'No meeting summary was captured.';
+      const hasStructuredMinutes = storedData.agendaItems.some((item) => (item.discussionPoints || []).some((point) => point.minutes?.trim()) || item.decision?.trim());
+      const minutesDetail = hasStructuredMinutes
+        ? storedData.agendaItems.map((item, index) => {
+            const minuteBlock = Array.isArray(item.discussionPoints) && item.discussionPoints.length > 0
+              ? item.discussionPoints.map((point, pointIndex) => {
+                  const pointMinutes = point.minutes?.trim() || 'No minutes recorded.';
+                  return `  ${pointIndex + 1}. ${point.text}\n     Minutes: ${pointMinutes}`;
+                }).join('\n')
+              : '  No discussion points recorded.';
+            const decisionBlock = item.decision?.trim() || 'No decision recorded.';
+            return `${index + 1}. ${item.title}\n${minuteBlock}\nDecision: ${decisionBlock}`;
+          }).join('\n\n')
+        : 'No agenda item minutes were captured.';
+      const minutesBody = `Meeting summary:\n${minutesSummary}\n\nAgenda minutes:\n${minutesDetail}`;
       const actionBody = storedData.actionItems.length
         ? storedData.actionItems
             .map((item, index) => `${index + 1}. ${item.description} - ${item.assigneeName || item.assigneeId} - due ${item.dueDate}`)

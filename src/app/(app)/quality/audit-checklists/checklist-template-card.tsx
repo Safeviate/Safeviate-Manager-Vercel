@@ -68,12 +68,12 @@ export function ChecklistTemplateCard({
         {templates.map((template) => (
           <Card key={template.id} className="flex flex-col overflow-hidden border border-card-border shadow-none">
             <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'space-y-2')}>
-              <div className="flex items-start justify-between gap-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-black tracking-tight">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <CardTitle className="flex min-w-0 flex-1 items-start gap-2 text-sm font-black tracking-tight">
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{template.title}</span>
+                  <span className="line-clamp-2 break-words">{template.title}</span>
                 </CardTitle>
-                <div className={cn(CARD_HEADER_ACTION_ZONE_CLASS, 'gap-1')}>
+                <div className={cn(CARD_HEADER_ACTION_ZONE_CLASS, 'shrink-0 self-start sm:self-auto gap-1')}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button

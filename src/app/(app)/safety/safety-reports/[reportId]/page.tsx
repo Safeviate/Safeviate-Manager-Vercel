@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SafetyReport } from '@/types/safety-report';
-import { ArrowLeft, Printer, ShieldAlert, Pencil } from 'lucide-react';
+import { ArrowLeft, Printer, ShieldAlert, Pencil, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
@@ -301,6 +301,12 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                       </Button>
                     }
                   />
+                  <Button asChild variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
+                    <Link href={`/print/safety-reports/${report.id}`}>
+                      <FileText className="h-4 w-4" />
+                      Open Document
+                    </Link>
+                  </Button>
                   <Button onClick={handlePrint} variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
                       <Printer className="h-4 w-4" />
                       Print Report

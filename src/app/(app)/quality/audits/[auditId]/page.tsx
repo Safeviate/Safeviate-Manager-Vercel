@@ -2,10 +2,12 @@
 
 import { use, useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import Link from 'next/link';
 import type { QualityAudit, QualityAuditChecklistTemplate, CorrectiveActionPlan, ExternalOrganization } from '@/types/quality';
 import type { Aircraft } from '@/types/aircraft';
 import { AuditChecklist } from './audit-checklist';
@@ -158,7 +160,15 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
             </div>
 
             <div className="flex w-full flex-col items-start gap-4 md:w-auto md:items-end">
-              <PrintButton label="Print Audit" className="no-print w-full md:w-auto" />
+              <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+                <Button asChild variant="outline" size="sm" className="no-print h-9">
+                  <Link href={`/print/quality-audits/${audit.id}`}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Open Document
+                  </Link>
+                </Button>
+                <PrintButton label="Print Audit" className="no-print w-full md:w-auto" />
+              </div>
               {typeof audit.complianceScore === 'number' && (
                 <div className="text-left md:text-right min-w-[200px]">
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Compliance Score</p>

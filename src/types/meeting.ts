@@ -11,6 +11,12 @@ export type MeetingStatus = 'Scheduled' | 'Completed' | 'Cancelled';
 
 export type MeetingActionStatus = 'Open' | 'In Progress' | 'Completed' | 'Cancelled';
 
+export type MeetingDiscussionPoint = {
+  id: string;
+  text: string;
+  minutes?: string;
+};
+
 export type MeetingActionItem = {
   id: string;
   description: string;
@@ -24,6 +30,8 @@ export type MeetingAgendaItem = {
   id: string;
   title: string;
   notes?: string;
+  discussionPoints?: MeetingDiscussionPoint[];
+  decision?: string;
 };
 
 export type MeetingRecordData = {

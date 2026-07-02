@@ -23,7 +23,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import Link from 'next/link';
-import type { MeetingActionItem, MeetingAgendaItem, MeetingRecordData, MeetingStatus, MeetingType } from '@/types/meeting';
+import type { MeetingActionItem, MeetingAgendaItem, MeetingDiscussionPoint, MeetingRecordData, MeetingStatus, MeetingType } from '@/types/meeting';
 
 type PersonnelLite = {
   id: string;
@@ -69,10 +69,20 @@ const getPersonName = (person?: PersonnelLite) => {
   return `${person.firstName || ''} ${person.lastName || ''}`.trim() || person.email || person.id;
 };
 
+const createDiscussionPoint = (point?: Partial<MeetingDiscussionPoint>): MeetingDiscussionPoint => ({
+  id: point?.id || crypto.randomUUID(),
+  text: point?.text || '',
+  minutes: point?.minutes || '',
+});
+
 const createAgendaItem = (item?: Partial<MeetingAgendaItem>): MeetingAgendaItem => ({
   id: item?.id || crypto.randomUUID(),
   title: item?.title || '',
   notes: item?.notes || '',
+  discussionPoints: Array.isArray(item?.discussionPoints) && item.discussionPoints.length > 0
+    ? item.discussionPoints.map((point) => createDiscussionPoint(point))
+    : [createDiscussionPoint()],
+  decision: item?.decision || '',
 });
 
 const createActionItem = (item?: Partial<MeetingActionItem>): MeetingActionItem => ({
@@ -153,7 +163,7 @@ function MeetingFormDialog({
             {meeting?.id ? 'Edit Meeting' : 'New Meeting'}
           </DialogTitle>
           <DialogDescription>
-            Capture the agenda now, then publish minutes and action items after the meeting finishes.
+            Create the agenda first, then capture minutes directly against each discussion point.
           </DialogDescription>
         </DialogHeader>
 
@@ -296,7 +306,7 @@ function MeetingFormDialog({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest">Notes</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest">Supporting Notes</Label>
                         <Input
                           value={item.notes || ''}
                           onChange={(event) => {
@@ -319,6 +329,106 @@ function MeetingFormDialog({
                         >
                           Remove
                         </Button>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest">Discussion Points and Minutes</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-[10px] font-black uppercase"
+                            onClick={() => {
+                              const next = [...form.agendaItems];
+                              next[index] = {
+                                ...item,
+                                discussionPoints: [...(item.discussionPoints || []), createDiscussionPoint()],
+                              };
+                              updateField('agendaItems', next);
+                            }}
+                          >
+                            <Plus className="mr-1 h-4 w-4" />
+                            Add Point
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          {(item.discussionPoints || []).map((point, pointIndex) => (
+                            <div key={point.id} className="rounded-lg border bg-background p-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Point {pointIndex + 1}</p>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-[10px] font-black uppercase"
+                                  disabled={(item.discussionPoints || []).length === 1}
+                                  onClick={() => {
+                                    const next = [...form.agendaItems];
+                                    next[index] = {
+                                      ...item,
+                                      discussionPoints: (item.discussionPoints || []).filter((_, existingIndex) => existingIndex !== pointIndex),
+                                    };
+                                    updateField('agendaItems', next);
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                              <div className="mt-3 space-y-3">
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest">Discussion Point</Label>
+                                  <Input
+                                    value={point.text}
+                                    onChange={(event) => {
+                                      const next = [...form.agendaItems];
+                                      const nextPoints = [...(item.discussionPoints || [])];
+                                      nextPoints[pointIndex] = { ...point, text: event.target.value };
+                                      next[index] = { ...item, discussionPoints: nextPoints };
+                                      updateField('agendaItems', next);
+                                    }}
+                                    className="h-11 font-bold"
+                                    placeholder="Specific point to be discussed"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest">Minutes</Label>
+                                  <Textarea
+                                    value={point.minutes || ''}
+                                    onChange={(event) => {
+                                      const next = [...form.agendaItems];
+                                      const nextPoints = [...(item.discussionPoints || [])];
+                                      nextPoints[pointIndex] = { ...point, minutes: event.target.value };
+                                      next[index] = { ...item, discussionPoints: nextPoints };
+                                      updateField('agendaItems', next);
+                                    }}
+                                    className="min-h-[88px]"
+                                    placeholder="Record the minutes for this discussion point"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest">Decision / Outcome</Label>
+                          <Input
+                            value={item.decision || ''}
+                            onChange={(event) => {
+                              const next = [...form.agendaItems];
+                              next[index] = { ...item, decision: event.target.value };
+                              updateField('agendaItems', next);
+                            }}
+                            className="h-11 font-bold"
+                            placeholder="Decision taken or outcome reached"
+                          />
+                        </div>
+                        <div className="rounded-lg border bg-background px-3 py-3 text-xs text-muted-foreground">
+                          Capture minutes directly under each discussion point above. Use this field only for the final outcome of the agenda item.
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -345,8 +455,8 @@ function MeetingFormDialog({
                 </Button>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest">Minutes</Label>
-                <Textarea value={form.minutes || ''} onChange={(event) => updateField('minutes', event.target.value)} className="min-h-[120px]" placeholder="Record the meeting minutes here." />
+                <Label className="text-[10px] font-black uppercase tracking-widest">Meeting Summary Minutes</Label>
+                <Textarea value={form.minutes || ''} onChange={(event) => updateField('minutes', event.target.value)} className="min-h-[120px]" placeholder="Executive summary of the full meeting." />
               </div>
               <div className="space-y-3">
                 {form.actionItems.map((item, index) => (
@@ -430,7 +540,6 @@ function MeetingFormDialog({
                           size="sm"
                           className="text-[10px] font-black uppercase"
                           onClick={() => updateField('actionItems', form.actionItems.filter((_, itemIndex) => itemIndex !== index))}
-                          disabled={form.actionItems.length === 1}
                         >
                           Remove
                         </Button>
@@ -684,22 +793,22 @@ export default function MeetingsPage() {
           </Badge>
         </CardHeader>
         <CardContent className="space-y-4 px-4 py-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border bg-background px-3 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Location</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{meeting.location}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border bg-background px-3 py-3 min-w-0">
+              <p className="text-[9px] font-black uppercase leading-tight tracking-[0.12em] text-muted-foreground break-words">Location</p>
+              <p className="mt-1 text-sm font-semibold leading-snug text-foreground break-words">{meeting.location}</p>
             </div>
-            <div className="rounded-lg border bg-background px-3 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Invitees</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{invitees.length} invited</p>
+            <div className="rounded-lg border bg-background px-3 py-3 min-w-0">
+              <p className="text-[9px] font-black uppercase leading-tight tracking-[0.12em] text-muted-foreground break-words">Invitees</p>
+              <p className="mt-1 text-sm font-semibold leading-snug text-foreground break-words">{invitees.length} invited</p>
             </div>
-            <div className="rounded-lg border bg-background px-3 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Agenda</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{meeting.agendaItems.length} items</p>
+            <div className="rounded-lg border bg-background px-3 py-3 min-w-0">
+              <p className="text-[9px] font-black uppercase leading-tight tracking-[0.12em] text-muted-foreground break-words">Agenda</p>
+              <p className="mt-1 text-sm font-semibold leading-snug text-foreground break-words">{meeting.agendaItems.length} items</p>
             </div>
-            <div className="rounded-lg border bg-background px-3 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Open Actions</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{activeActions.length}</p>
+            <div className="rounded-lg border bg-background px-3 py-3 min-w-0">
+              <p className="text-[9px] font-black uppercase leading-tight tracking-[0.12em] text-muted-foreground break-words">Open Actions</p>
+              <p className="mt-1 text-sm font-semibold leading-snug text-foreground break-words">{activeActions.length}</p>
             </div>
           </div>
 
@@ -709,24 +818,6 @@ export default function MeetingsPage() {
               <p className="mt-1 text-sm text-foreground">{meeting.description}</p>
             </div>
           ) : null}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border bg-background px-3 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Agenda Preview</p>
-              <div className="mt-2 space-y-1">
-                {meeting.agendaItems.map((item) => (
-                  <div key={item.id} className="text-sm font-medium text-foreground">
-                    {item.title || 'Untitled item'}
-                    {item.notes ? <span className="ml-1 text-muted-foreground">- {item.notes}</span> : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-lg border bg-background px-3 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Minutes Preview</p>
-              <p className="mt-2 text-sm text-foreground line-clamp-4">{meeting.minutes || 'Minutes not captured yet.'}</p>
-            </div>
-          </div>
 
           {meeting.actionItems.length > 0 ? (
             <div className="rounded-lg border bg-background px-3 py-3">
@@ -932,7 +1023,7 @@ export default function MeetingsPage() {
                 <ResponsiveCardGrid
                   items={visibleMeetings}
                   isLoading={false}
-                  gridClassName="md:grid-cols-2 xl:grid-cols-3"
+                  gridClassName="md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3"
                   className="gap-4"
                   renderItem={(meeting) => renderMeetingCard(meeting)}
                   emptyState={(
