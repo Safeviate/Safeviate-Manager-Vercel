@@ -1797,7 +1797,7 @@ function InstructorOverviewCard({
           </div>
         </div>
 
-        <div className="rounded-md border bg-background">
+        <div className="rounded-md border bg-background min-h-[261px]">
           <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
             <div className="min-w-0">
               <p className="text-sm font-black uppercase tracking-tight">Preliminary Technical Report Notifications</p>
@@ -1812,7 +1812,7 @@ function InstructorOverviewCard({
           <div className="divide-y">
             {technicalNotifications.length > 0 ? (
               technicalNotifications.map((report) => (
-                <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,0.8fr))] md:items-center">
+                <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,0.95fr))] md:items-stretch">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black uppercase tracking-tight">
                       {report.reportNumber} · {report.title || report.summary}
@@ -1821,16 +1821,16 @@ function InstructorOverviewCard({
                       {report.aircraftLabel || 'Aircraft not set'} · {report.location || 'Unknown location'}
                     </p>
                   </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                      <Badge variant={report.status === 'Closed' ? 'default' : 'destructive'} className="mt-2 text-[10px] font-black uppercase">
-                        {report.status}
-                      </Badge>
-                    </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Filed</p>
-                      <p className="mt-1 text-sm font-black">{format(parseLocalDate(report.eventDate) || new Date(report.eventDate), 'dd MMM yyyy')}</p>
-                    </div>
+                  <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                    <Badge variant={report.status === 'Closed' ? 'default' : 'destructive'} className="mt-2 text-[10px] font-black uppercase">
+                      {report.status}
+                    </Badge>
+                  </div>
+                  <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5 min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Filed</p>
+                    <p className="mt-1 text-sm font-black">{format(parseLocalDate(report.eventDate) || new Date(report.eventDate), 'dd MMM yyyy')}</p>
+                  </div>
                 </div>
               ))
             ) : (
@@ -2058,26 +2058,30 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
             <div className="divide-y">
               {reports.length > 0 ? (
                 reports.map((report) => (
-                  <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
+                  <div key={report.id} className="space-y-3 px-3 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black uppercase tracking-tight">{report.title}</p>
                       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                         {report.location} · {report.dateLabel}
                       </p>
                     </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                      <Badge variant="outline" className="mt-2 text-[10px] font-black uppercase">
-                        {report.status}
-                      </Badge>
-                    </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Classification</p>
-                      <p className="mt-1 text-sm font-black">{report.classification}</p>
-                    </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAPs</p>
-                      <p className="mt-1 text-sm font-black">{report.actionCount}</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-md border bg-muted/10 px-3 py-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Status</p>
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-[10px] font-black uppercase">
+                            {report.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="rounded-md border bg-muted/10 px-3 py-2 min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Classification</p>
+                        <p className="mt-1 text-base font-black break-words">{report.classification}</p>
+                      </div>
+                      <div className="rounded-md border bg-muted/10 px-3 py-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">CAPs</p>
+                        <p className="mt-1 text-base font-black">{report.actionCount}</p>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -2118,23 +2122,23 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
               <div className="divide-y">
                 {technicalNotifications.length > 0 ? (
                   technicalNotifications.map((report) => (
-                    <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))] md:items-center">
+                    <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.15fr)_repeat(2,minmax(0,1fr))] md:items-stretch">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black uppercase tracking-tight">{report.aircraftLabel || 'Aircraft not set'}</p>
                         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                           {report.reportNumber} Â· {report.title || report.summary}
                         </p>
                       </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
                         <Badge variant={report.status === 'Closed' ? 'default' : 'destructive'} className="mt-2 text-[10px] font-black uppercase">
                           {report.status}
                         </Badge>
                       </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className="flex h-full min-w-0 flex-col rounded-md border bg-background px-3 py-2.5">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Filed</p>
                         <p className="mt-1 text-sm font-black">{format(parseLocalDate(report.eventDate) || new Date(report.eventDate), 'dd MMM yyyy')}</p>
-                        <Button asChild variant="link" className="mt-1 h-auto px-0 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                        <Button asChild variant="link" className="mt-1 h-auto justify-start px-0 text-left text-[10px] font-black uppercase tracking-[0.14em] text-primary whitespace-normal break-words">
                           <Link href={`/quick-reports/technical-report/${report.id}`}>
                             Open technical report
                           </Link>
@@ -2244,28 +2248,32 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className="divide-y">
               {metrics.auditRows.length > 0 ? (
                 metrics.auditRows.map((audit) => (
-                  <div key={audit.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
+                  <div key={audit.id} className="space-y-3 px-3 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black uppercase tracking-tight">{audit.title}</p>
                       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                         {audit.auditNumber} · {audit.dateLabel}
                       </p>
                     </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                      <Badge variant="outline" className="mt-2 text-[10px] font-black uppercase">
-                        {audit.status}
-                      </Badge>
-                    </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Score</p>
-                      <p className="mt-1 text-sm font-black">
-                        {audit.complianceScore !== null ? `${audit.complianceScore.toFixed(1)}%` : 'N/A'}
-                      </p>
-                    </div>
-                    <div className="rounded-md border bg-background px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Findings</p>
-                      <p className="mt-1 text-sm font-black">{audit.findingCount}</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-md border bg-muted/10 px-3 py-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Status</p>
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-[10px] font-black uppercase">
+                            {audit.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="rounded-md border bg-muted/10 px-3 py-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Compliance</p>
+                        <p className="mt-1 text-base font-black">
+                          {audit.complianceScore !== null ? `${audit.complianceScore.toFixed(1)}%` : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="rounded-md border bg-muted/10 px-3 py-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Findings</p>
+                        <p className="mt-1 text-base font-black">{audit.findingCount}</p>
+                      </div>
                     </div>
                   </div>
                 ))
