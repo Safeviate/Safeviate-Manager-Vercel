@@ -64,6 +64,7 @@ interface AuditChecklistProps {
   audit: EnrichedAudit;
   tenantId: string;
   findingLevels: FindingLevel[]; 
+  caps: CorrectiveActionPlan[];
   personnel: Personnel[];
   organizations: ExternalOrganization[];
   aircraft?: Aircraft[];
@@ -89,7 +90,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AuditChecklist({ audit, tenantId, findingLevels, personnel, organizations, aircraft = [], printMode = false }: AuditChecklistProps) {
+export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel, organizations, aircraft = [], printMode = false }: AuditChecklistProps) {
     const { toast } = useToast();
     const { userProfile } = useUserProfile();
     const [auditSnapshot, setAuditSnapshot] = useState<QualityAudit>(audit);
@@ -319,6 +320,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, personnel, orga
         },
     });
     const liveFindings = form.watch('findings');
+    const capMap = useMemo(() => new Map((caps || []).map((cap) => [cap.findingId, cap])), [caps]);
 
     const onSubmit = async (values: FormValues) => {
         try {
@@ -423,6 +425,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, personnel, orga
         const findingType = form.watch(`findings.${itemIndex}.finding`);
         const effectiveFindingType = findingType;
         const evidence = form.watch(`findings.${itemIndex}.evidence`) || [];
+        const relatedCap = capMap.get(item.id);
         
         const selectedLevelName = form.watch(`findings.${itemIndex}.level`);
         const effectiveLevelName = selectedLevelName;
@@ -613,6 +616,68 @@ export function AuditChecklist({ audit, tenantId, findingLevels, personnel, orga
                             </div>
                         </div>
                     )}
+
+                    {relatedCap ? (
+                        <div className="pt-2 border-t">
+                            <div className="rounded-xl border border-amber-200 bg-amber-50/40 px-4 py-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Corrective Action Plan</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{relatedCap.rootCauseAnalysis?.trim() || 'No corrective action recorded yet.'}</p>
+                                    </div>
+                                    <Badge variant="outline" className="h-6 border-amber-300 bg-white px-2 text-[10px] font-black uppercase tracking-[0.08em] text-amber-800">
+                                        {relatedCap.status}
+                                    </Badge>
+                                </div>
+
+                                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                                    <div className="rounded-lg border bg-white px-3 py-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Responsible Person</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{getPersonnelDisplayName(personnel, relatedCap.responsiblePersonId) || 'Unassigned'}</p>
+                                    </div>
+                                    <div className="rounded-lg border bg-white px-3 py-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Due Date</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{relatedCap.dueDate ? formatAuditDate(relatedCap.dueDate) : 'Not set'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">CAP Responses</p>
+                                    {relatedCap.responses && relatedCap.responses.length > 0 ? (
+                                        <div className="mt-2 space-y-2">
+                                            {relatedCap.responses.map((response) => (
+                                                <div key={response.id} className="rounded-lg border bg-white px-3 py-3">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <p className="text-sm font-semibold text-foreground">{response.createdByName || 'Unknown user'}</p>
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+                                                            {format(new Date(response.createdAt), 'dd MMM yyyy HH:mm')}
+                                                        </p>
+                                                    </div>
+                                                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{response.message || 'Evidence uploaded without a written response.'}</p>
+                                                    {response.evidence && response.evidence.length > 0 ? (
+                                                        <div className="mt-3 space-y-2">
+                                                            {response.evidence.map((document) => (
+                                                                <div key={document.id} className="rounded-md border bg-muted/10 px-3 py-2">
+                                                                    <a href={document.url} target="_blank" rel="noreferrer" className="block text-sm font-semibold text-foreground underline decoration-slate-300 underline-offset-4">
+                                                                        {document.name}
+                                                                    </a>
+                                                                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                                                                        Uploaded {format(new Date(document.uploadDate), 'dd MMM yyyy')}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-2 text-sm italic text-muted-foreground">No CAP responses have been added yet.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
                 </CardContent>
             </Card>
         )
@@ -623,6 +688,7 @@ export function AuditChecklist({ audit, tenantId, findingLevels, personnel, orga
             || auditSnapshot.findings.find((entry) => entry.checklistItemId === item.id)
             || null;
         const evidence = finding?.evidence || [];
+        const relatedCap = capMap.get(item.id);
         const responsibleLabel = item.responsibleManagerId
             ? getPersonnelDisplayName(personnel, item.responsibleManagerId)
             : '';
@@ -695,6 +761,52 @@ export function AuditChecklist({ audit, tenantId, findingLevels, personnel, orga
                         <p className="mt-2 text-sm italic text-slate-500">No evidence attached.</p>
                     )}
                 </div>
+
+                {relatedCap ? (
+                    <div className="border-t border-slate-200 pt-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Corrective action follow-up</p>
+                        <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p className="text-sm font-semibold text-slate-950">{relatedCap.rootCauseAnalysis?.trim() || 'No corrective action recorded yet.'}</p>
+                            <div className="mt-3 grid gap-2 md:grid-cols-2">
+                                <div className="rounded-lg border bg-white px-3 py-2">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Responsible person</p>
+                                    <p className="mt-1 text-sm font-semibold text-slate-900">{getPersonnelDisplayName(personnel, relatedCap.responsiblePersonId) || 'Unassigned'}</p>
+                                </div>
+                                <div className="rounded-lg border bg-white px-3 py-2">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Status</p>
+                                    <p className="mt-1 text-sm font-semibold text-slate-900">{relatedCap.status}</p>
+                                </div>
+                            </div>
+                            {relatedCap.responses && relatedCap.responses.length > 0 ? (
+                                <div className="mt-3 space-y-2">
+                                    {relatedCap.responses.map((response) => (
+                                        <div key={response.id} className="rounded-lg border bg-white px-3 py-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="text-sm font-semibold text-slate-950">{response.createdByName || 'Unknown user'}</p>
+                                                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                                                    {format(new Date(response.createdAt), 'dd MMM yyyy HH:mm')}
+                                                </p>
+                                            </div>
+                                            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{response.message || 'Evidence uploaded without a written response.'}</p>
+                                            {response.evidence && response.evidence.length > 0 ? (
+                                                <div className="mt-3 space-y-2">
+                                                    {response.evidence.map((document) => (
+                                                        <div key={document.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                                                            <p className="text-sm font-semibold text-slate-950">{document.name}</p>
+                                                            <p className="mt-1 break-all text-xs text-slate-600">{document.url}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="mt-3 text-sm italic text-slate-500">No CAP responses have been added yet.</p>
+                            )}
+                        </div>
+                    </div>
+                ) : null}
             </div>
         );
     };

@@ -24,10 +24,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { CalendarIcon } from 'lucide-react';
 import { getPersonnelDisplayName } from '@/lib/personnel-label';
+import { DocumentUploader } from '@/components/document-uploader';
+import { PlusCircle, Trash2 } from 'lucide-react';
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
-import type { CorrectiveActionPlan, QualityAudit, QualityFinding, ExternalOrganization } from '@/types/quality';
+import type { CorrectiveActionPlan, QualityAudit, QualityFinding, ExternalOrganization, CorrectiveActionPlanEvidence, CorrectiveActionPlanResponse } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 const parseLocalDate = (value: string) => {
@@ -82,22 +84,45 @@ interface AuditCapBoardCardProps {
   observation: string;
   findingLevel: string;
   personnel: Personnel[];
+  currentUserId?: string;
+  currentUserName?: string;
+  rolePermissions?: string[];
 }
 
-function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel }: AuditCapBoardCardProps) {
+function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [] }: AuditCapBoardCardProps) {
   const { toast } = useToast();
   const correctiveActionRef = useRef<HTMLTextAreaElement | null>(null);
   const [rootCauseAnalysis, setRootCauseAnalysis] = useState(cap.rootCauseAnalysis || '');
   const [responsiblePersonId, setResponsiblePersonId] = useState(cap.responsiblePersonId || '');
   const [dueDate, setDueDate] = useState(formatCapDueDate(cap.dueDate || audit.auditDate));
+  const [responses, setResponses] = useState<CorrectiveActionPlanResponse[]>(cap.responses || []);
+  const [responseDraft, setResponseDraft] = useState('');
+  const [draftEvidence, setDraftEvidence] = useState<CorrectiveActionPlanEvidence[]>([]);
+  const [editingResponseId, setEditingResponseId] = useState<string | null>(null);
+  const [editingResponseMeta, setEditingResponseMeta] = useState<Pick<CorrectiveActionPlanResponse, 'createdAt' | 'createdById' | 'createdByName'> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDueDateOpen, setIsDueDateOpen] = useState(false);
+  const canManageCapResponses = Boolean(
+    currentUserId
+    && (
+      currentUserId === responsiblePersonId
+      || rolePermissions.includes('*')
+      || rolePermissions.includes('quality')
+      || rolePermissions.includes('quality-tasks-manage')
+      || rolePermissions.includes('quality-caps-manage')
+    )
+  );
 
   useEffect(() => {
     setRootCauseAnalysis(cap.rootCauseAnalysis || '');
     setResponsiblePersonId(cap.responsiblePersonId || '');
     setDueDate(formatCapDueDate(cap.dueDate || audit.auditDate));
-  }, [audit.auditDate, cap.dueDate, cap.id, cap.responsiblePersonId, cap.rootCauseAnalysis]);
+    setResponses(cap.responses || []);
+    setResponseDraft('');
+    setDraftEvidence([]);
+    setEditingResponseId(null);
+    setEditingResponseMeta(null);
+  }, [audit.auditDate, cap.dueDate, cap.id, cap.responsiblePersonId, cap.responses, cap.rootCauseAnalysis]);
 
   useEffect(() => {
     const textarea = correctiveActionRef.current;
@@ -118,6 +143,7 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel }:
             rootCauseAnalysis,
             responsiblePersonId,
             dueDate: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : '',
+            responses,
           },
         }),
       });
@@ -139,6 +165,58 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel }:
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const addResponse = () => {
+    if (!canManageCapResponses) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Allowed',
+        description: 'Only the assigned CAP owner or a quality manager can add responses.',
+      });
+      return;
+    }
+
+    const message = responseDraft.trim();
+    if (!message && draftEvidence.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Response Entered',
+        description: 'Add a response note or attach evidence before adding a CAP reply.',
+      });
+      return;
+    }
+
+    const nextResponse: CorrectiveActionPlanResponse = {
+      id: editingResponseId || crypto.randomUUID(),
+      message,
+      createdAt: editingResponseMeta?.createdAt || new Date().toISOString(),
+      createdById: editingResponseMeta?.createdById || currentUserId,
+      createdByName: editingResponseMeta?.createdByName || currentUserName || 'Unknown user',
+      evidence: draftEvidence,
+    };
+
+    setResponses((current) => [nextResponse, ...current]);
+    setResponseDraft('');
+    setDraftEvidence([]);
+    setEditingResponseId(null);
+    setEditingResponseMeta(null);
+  };
+
+  const beginEditResponse = (response: CorrectiveActionPlanResponse) => {
+    setEditingResponseId(response.id);
+    setEditingResponseMeta({
+      createdAt: response.createdAt,
+      createdById: response.createdById,
+      createdByName: response.createdByName,
+    });
+    setResponseDraft(response.message || '');
+    setDraftEvidence(response.evidence || []);
+    setResponses((current) => current.filter((item) => item.id !== response.id));
+  };
+
+  const removeResponse = (responseId: string) => {
+    setResponses((current) => current.filter((item) => item.id !== responseId));
   };
 
   return (
@@ -225,12 +303,160 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel }:
           Save CAP
         </Button>
       </div>
+
+      <div className="mt-4 rounded-lg border border-card-border bg-background p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee Response</p>
+            <p className="mt-1 text-xs text-muted-foreground">Assignees can log an update and attach evidence before saving the CAP.</p>
+          </div>
+          <DocumentUploader
+            defaultFileName={`cap-evidence-${audit.auditNumber}`}
+            trigger={(open) => (
+              <Button type="button" variant="outline" size="sm" onClick={() => open()} disabled={!canManageCapResponses} className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
+                <PlusCircle className="mr-1 h-3 w-3" />
+                Add Evidence
+              </Button>
+            )}
+            onDocumentUploaded={async (document) => {
+              setDraftEvidence((current) => [
+                ...current,
+                {
+                  id: crypto.randomUUID(),
+                  name: document.name,
+                  url: document.url,
+                  uploadDate: document.uploadDate,
+                },
+              ]);
+            }}
+          />
+        </div>
+
+        <div className="mt-3 space-y-3">
+          <Textarea
+            value={responseDraft}
+            onChange={(event) => setResponseDraft(event.target.value)}
+            placeholder="Add a response update for this corrective action plan..."
+                    className="min-h-11 bg-background"
+            disabled={!canManageCapResponses}
+          />
+
+          {!canManageCapResponses ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">
+              Only the assigned CAP owner or a quality manager can post responses and upload evidence.
+            </div>
+          ) : null}
+
+          {draftEvidence.length > 0 ? (
+            <div className="space-y-2">
+              {draftEvidence.map((document) => (
+                <div key={document.id} className="flex items-center justify-between gap-3 rounded-md border bg-muted/10 px-3 py-2">
+                  <div className="min-w-0">
+                    <a href={document.url} target="_blank" rel="noreferrer" className="block truncate text-sm font-semibold text-foreground underline decoration-slate-300 underline-offset-4">
+                      {document.name}
+                    </a>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                      Uploaded {format(new Date(document.uploadDate), 'dd MMM yyyy')}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10"
+                    onClick={() => setDraftEvidence((current) => current.filter((item) => item.id !== document.id))}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="flex justify-end">
+            <div className="flex items-center gap-2">
+              {editingResponseId ? (
+                <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingResponseId(null);
+                        setEditingResponseMeta(null);
+                        setResponseDraft('');
+                        setDraftEvidence([]);
+                      }}
+                >
+                  Cancel Edit
+                </Button>
+              ) : null}
+              <Button type="button" variant="outline" size="sm" onClick={addResponse} disabled={!canManageCapResponses}>
+                {editingResponseId ? 'Update Response' : 'Add Response'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Response History</p>
+          <Badge variant="outline" className="h-[22px] rounded-lg border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+            {responses.length} updates
+          </Badge>
+        </div>
+        {responses.length > 0 ? (
+          responses.map((response) => (
+            <div key={response.id} className="rounded-lg border border-card-border bg-background px-3 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-foreground">{response.createdByName || 'Unknown user'}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+                    {format(new Date(response.createdAt), 'dd MMM yyyy HH:mm')}
+                  </p>
+                  {canManageCapResponses ? (
+                    <>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase" onClick={() => beginEditResponse(response)}>
+                        Edit
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={() => removeResponse(response.id)}>
+                        Remove
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{response.message || 'Evidence uploaded without a written response.'}</p>
+              {response.evidence && response.evidence.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {response.evidence.map((document) => (
+                    <a
+                      key={document.id}
+                      href={document.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-md border bg-muted/10 px-3 py-2 text-sm font-semibold text-foreground underline decoration-slate-300 underline-offset-4"
+                    >
+                      {document.name}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))
+        ) : (
+          <div className="rounded-lg border border-dashed border-slate-300 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+            No CAP responses have been added yet.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function TaskTrackerPage() {
-  const { tenantId } = useUserProfile();
+  const { tenantId, userProfile, rolePermissions } = useUserProfile();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-tasks-view' });
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/quality/task-tracker' });
   const isMobile = useIsMobile();
@@ -616,13 +842,16 @@ export default function TaskTrackerPage() {
                     <div className="mt-3 space-y-3">
                       {columnEntries.length > 0 ? (
                         columnEntries.map((entry) => (
-                        <AuditCapBoardCard
-                          key={entry.cap.id}
-                          cap={entry.cap}
-                          audit={entry.audit}
-                          observation={entry.observation}
-                          findingLevel={entry.findingLevel}
-                          personnel={personnel}
+                          <AuditCapBoardCard
+                            key={entry.cap.id}
+                            cap={entry.cap}
+                            audit={entry.audit}
+                            observation={entry.observation}
+                            findingLevel={entry.findingLevel}
+                            personnel={personnel}
+                            currentUserId={userProfile?.id}
+                            currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
+                            rolePermissions={rolePermissions}
                           />
                         ))
                       ) : (

@@ -139,8 +139,25 @@ export interface CorrectiveActionPlan {
     actions?: CorrectiveAction[];
     responsiblePersonId?: string;
     dueDate?: string;
+    responses?: CorrectiveActionPlanResponse[];
     createdAt?: string;
     updatedAt?: string;
+}
+
+export interface CorrectiveActionPlanEvidence {
+    id: string;
+    name: string;
+    url: string;
+    uploadDate: string;
+}
+
+export interface CorrectiveActionPlanResponse {
+    id: string;
+    message: string;
+    createdAt: string;
+    createdById?: string;
+    createdByName?: string;
+    evidence?: CorrectiveActionPlanEvidence[];
 }
 
 export interface QualityRiskPlanSignoff {

@@ -1373,7 +1373,7 @@ export default function DashboardPage() {
         </Card>
       ) : null}
       <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-0 flex-1 flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
-        <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80', isModern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85')}>
+        <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'sticky top-0 z-10 rounded-t-lg bg-background', isModern && 'bg-white')}>
           <div className={CARD_HEADER_SCOPE_ZONE_CLASS}>
             <CardTitle className="text-sm font-black uppercase tracking-tight">Company Dashboard</CardTitle>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-[0.18em] text-foreground/70">
@@ -1675,8 +1675,8 @@ function StageCard({ tabLabel, modern }: { tabLabel: string; modern: boolean }) 
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
       <CardHeader
         className={cn(
-          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
+          modern && 'bg-white'
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">{tabLabel}</CardTitle>
@@ -1713,8 +1713,8 @@ function InstructorOverviewCard({
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
       <CardHeader
         className={cn(
-          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
+          modern && 'bg-white'
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">Instructor Snapshot</CardTitle>
@@ -1852,8 +1852,8 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
       <CardHeader
         className={cn(
-          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
+          modern && 'bg-white'
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">Student Snapshot</CardTitle>
@@ -2022,8 +2022,8 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
       <CardHeader
         className={cn(
-          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
+          modern && 'bg-white'
         )}
       >
         <div className="flex items-center gap-2">
@@ -2210,8 +2210,8 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
       <CardHeader
         className={cn(
-          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
+          modern && 'bg-white'
         )}
       >
         <div className="flex items-center gap-2">
@@ -2410,8 +2410,8 @@ function InstructorLoadCard({ modern, metrics }: { modern: boolean; metrics: Ins
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
       <CardHeader
         className={cn(
-          'sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80',
-          modern && 'bg-white/95 supports-[backdrop-filter]:bg-white/85'
+          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
+          modern && 'bg-white'
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">Instructor Load</CardTitle>
