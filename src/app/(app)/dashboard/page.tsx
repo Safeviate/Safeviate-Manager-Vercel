@@ -2050,6 +2050,76 @@ export default function DashboardPage() {
                         </Card>
                       </div>
 
+                      <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Flight Hours Summary</CardTitle>
+                                <CardDescription className="text-xs">Flown hours for {activeDashboardPeriodLongLabel || 'the selected period'}.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/bookings/history">Open flight history</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-2 p-3">
+                            <StatTile label="Total Flown" value={formatHours(fleetTotals.totalHours)} hint={activeDashboardPeriodLongLabel || 'Selected date range'} tone="info" />
+                            <StatTile label="Average Per Aircraft" value={formatHours(fleetTotals.averageUtilisation)} hint="Across active fleet in period" tone="neutral" />
+                            <StatTile label="Highest Aircraft" value={selectedAircraft ? formatHours(selectedAircraft.loggedHours) : formatHours(0)} hint={selectedAircraft ? (selectedAircraft.aircraft.tailNumber || selectedAircraft.aircraft.abbreviation || `${selectedAircraft.aircraft.make} ${selectedAircraft.aircraft.model}`.trim()) : 'No aircraft logged yet'} tone="positive" />
+                            <StatTile label="Target Hours" value={targetHoursLabel} hint="Current fleet target benchmark" tone="neutral" />
+                          </CardContent>
+                        </Card>
+
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Per Aircraft Flight Hours</CardTitle>
+                                <CardDescription className="text-xs">Hour totals by aircraft for the active period selection.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/assets/aircraft">View fleet</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            <div className="divide-y">
+                              {fleetRows.length > 0 ? (
+                                fleetRows.map((row) => (
+                                  <div key={row.aircraft.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.75fr))] md:items-center">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-black uppercase tracking-tight">
+                                        {row.aircraft.tailNumber || row.aircraft.abbreviation || `${row.aircraft.make} ${row.aircraft.model}`.trim()}
+                                      </p>
+                                      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                        {row.aircraft.make} {row.aircraft.model}
+                                      </p>
+                                    </div>
+                                    <div className="rounded-md border bg-background px-3 py-2.5">
+                                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Flown</p>
+                                      <p className="mt-1 text-sm font-black">{formatHours(row.loggedHours)}</p>
+                                    </div>
+                                    <div className="rounded-md border bg-background px-3 py-2.5">
+                                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Ground</p>
+                                      <p className="mt-1 text-sm font-black">{formatHours(row.hoursOnGround)}</p>
+                                    </div>
+                                    <div className={cn('rounded-md border px-3 py-2.5', row.targetMet ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                                      <p className="text-[10px] font-black uppercase tracking-[0.16em]">{row.targetMet ? 'Target met' : 'Below target'}</p>
+                                      <p className="mt-1 text-sm font-black">{formatHours(row.targetHours)}</p>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                  No aircraft hour data available yet.
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
                       <div className="grid items-start gap-5 xl:grid-cols-2">
                         <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex flex-col self-start', isModern && 'border-slate-200/80 bg-white/95')}>
                           <CardHeader className="border-b bg-muted/5 px-4 py-3">
