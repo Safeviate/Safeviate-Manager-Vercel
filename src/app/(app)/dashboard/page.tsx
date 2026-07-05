@@ -48,7 +48,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 type IndustryTab = { value: string; label: string };
 type SummaryPayload = {
   aircrafts?: Aircraft[];
-  bookings?: Array<Pick<Booking, 'aircraftId' | 'status' | 'instructorId' | 'studentId'> & {
+  bookings?: Array<Pick<Booking, 'aircraftId' | 'status' | 'instructorId' | 'studentId' | 'bookingNumber' | 'type' | 'cancellationReason'> & {
     date?: string;
     preFlightData?: { hobbs?: number; fuelUpliftGallons?: number; fuelUpliftLitres?: number; oilUplift?: number };
     postFlightData?: { hobbs?: number };
@@ -190,6 +190,12 @@ type SafetyMetrics = {
   openRisks: number;
   openCaps: number;
   recentReports: number;
+  scheduledFlights: number;
+  completedFlights: number;
+  cancelledFlights: number;
+  cancellationRate: number;
+  noShowFlights: number;
+  dispatchReliability: number;
   reportRows: Array<{
     id: string;
     title: string;
@@ -211,6 +217,22 @@ type SafetyMetrics = {
     id: string;
     status: string;
     description: string;
+  }>;
+  cancellationReasonRows: Array<{
+    label: string;
+    value: number;
+    fill: string;
+  }>;
+  flightStatusRows: Array<{
+    label: string;
+    value: number;
+    fill: string;
+  }>;
+  disruptionRows: Array<{
+    id: string;
+    title: string;
+    count: number;
+    hint: string;
   }>;
 };
 
@@ -252,6 +274,23 @@ type QualityMetrics = {
   }>;
 };
 
+type BookingOverviewMetrics = {
+  scheduledToday: number;
+  scheduledPeriod: number;
+  completedPeriod: number;
+  cancelledPeriod: number;
+  upcomingNext7Days: number;
+  activePipeline: number;
+  bookedAircraftCount: number;
+  idleAircraftCount: number;
+  cancellationRate: number;
+  bookingsByType: Array<{
+    label: string;
+    value: number;
+    fill: string;
+  }>;
+};
+
 const DASHBOARD_SHELL_CLASS = 'overflow-hidden rounded-lg border border-card-border bg-background shadow-none';
 const DEFAULT_INSTRUCTOR_WARNING_BANDS: InstructorWarningBand[] = [
   { hours: 20, warningHours: 10, color: '#60a5fa', foregroundColor: '#ffffff' },
@@ -266,7 +305,6 @@ const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
   { milestone: 40, warningHours: 37 },
 ];
 const DASHBOARD_TABS: IndustryTab[] = [
-  { value: 'fleet', label: 'Fleet' },
   { value: 'overview', label: 'Overview' },
   { value: 'instructors', label: 'Instructors' },
   { value: 'students', label: 'Students' },
@@ -277,6 +315,7 @@ const DASHBOARD_TABS: IndustryTab[] = [
 const EMPTY_NOTE = 'This section is intentionally empty for now. We will add content in the next build stage.';
 const DEFAULT_FLEET_TARGET_HOURS = 20;
 const FLEET_PERIOD_OPTIONS: FleetPeriod[] = ['week', 'month', 'all'];
+const BOOKING_TYPE_COLORS = ['#2563eb', '#0f766e', '#7c3aed', '#f59e0b', '#ef4444', '#14b8a6'];
 
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -484,10 +523,29 @@ const getCompetencyTone = (signal: CompetencyArea['signal']) => {
   };
 };
 
+const normalizeCancellationReason = (value?: string | null) => {
+  const raw = (value || '').trim();
+  const normalized = raw.toLowerCase();
+
+  if (!normalized) return 'Unspecified';
+  if (normalized.includes('weather')) return 'Weather';
+  if (normalized.includes('maint')) return 'Maintenance';
+  if (normalized.includes('instructor') || normalized.includes('cfi')) return 'Instructor availability';
+  if (normalized.includes('student') || normalized.includes('trainee')) return 'Student request';
+  if (normalized.includes('dispatch') || normalized.includes('ops') || normalized.includes('operation')) return 'Ops / dispatch';
+  if (normalized.includes('no show') || normalized.includes('noshow') || normalized.includes('no-show')) return 'No-show';
+  if (normalized.includes('late')) return 'Late cancellation';
+  if (normalized.includes('aircraft')) return 'Aircraft unavailable';
+  return raw.length > 32 ? `${raw.slice(0, 32)}...` : raw;
+};
+
+const CANCELLATION_REASON_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#0ea5e9', '#6366f1', '#14b8a6'];
+
 const getSafetyMetrics = (summary: SummaryPayload): SafetyMetrics => {
   const reports = (Array.isArray(summary.reports) ? summary.reports : []) as SafetyReport[];
   const risks = (Array.isArray(summary.risks) ? summary.risks : []) as SafetyRisk[];
   const caps = (Array.isArray(summary.caps) ? summary.caps : []) as CorrectiveActionPlan[];
+  const bookings = Array.isArray(summary.bookings) ? summary.bookings : [];
   const now = new Date();
   const recentCutoff = new Date(now);
   recentCutoff.setDate(now.getDate() - 30);
@@ -527,6 +585,69 @@ const getSafetyMetrics = (summary: SummaryPayload): SafetyMetrics => {
       description: `CAP ${cap.id}`,
     }));
 
+  const scheduledFlights = bookings.length;
+  const completedFlights = bookings.filter((booking) => booking.status === 'Completed').length;
+  const cancelledBookings = bookings.filter((booking) => booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason');
+  const cancelledFlights = cancelledBookings.length;
+  const cancellationRate = scheduledFlights > 0 ? parseFloat(((cancelledFlights / scheduledFlights) * 100).toFixed(1)) : 0;
+  const noShowFlights = cancelledBookings.filter((booking) => normalizeCancellationReason(booking.cancellationReason) === 'No-show').length;
+  const dispatchReliability = scheduledFlights > 0 ? parseFloat((((completedFlights) / scheduledFlights) * 100).toFixed(1)) : 0;
+
+  const reasonCounts = new Map<string, number>();
+  for (const booking of cancelledBookings) {
+    const label = normalizeCancellationReason(booking.cancellationReason);
+    reasonCounts.set(label, (reasonCounts.get(label) || 0) + 1);
+  }
+
+  const cancellationReasonRows = [...reasonCounts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, 6)
+    .map(([label, value], index) => ({
+      label,
+      value,
+      fill: CANCELLATION_REASON_COLORS[index % CANCELLATION_REASON_COLORS.length],
+    }));
+
+  const flightStatusRows = [
+    { label: 'Completed', value: completedFlights, fill: '#16a34a' },
+    { label: 'Cancelled', value: cancelledFlights, fill: '#ef4444' },
+    { label: 'Active pipeline', value: Math.max(0, scheduledFlights - completedFlights - cancelledFlights), fill: '#0ea5e9' },
+  ];
+
+  const aircraftMap = new Map<string, number>();
+  const instructorMap = new Map<string, number>();
+  const reasonMap = new Map<string, number>();
+  for (const booking of cancelledBookings) {
+    if (booking.aircraftId) aircraftMap.set(booking.aircraftId, (aircraftMap.get(booking.aircraftId) || 0) + 1);
+    if (booking.instructorId) instructorMap.set(booking.instructorId, (instructorMap.get(booking.instructorId) || 0) + 1);
+    const label = normalizeCancellationReason(booking.cancellationReason);
+    reasonMap.set(label, (reasonMap.get(label) || 0) + 1);
+  }
+
+  const topAircraft = [...aircraftMap.entries()].sort((a, b) => b[1] - a[1])[0];
+  const topInstructor = [...instructorMap.entries()].sort((a, b) => b[1] - a[1])[0];
+  const topReason = [...reasonMap.entries()].sort((a, b) => b[1] - a[1])[0];
+  const disruptionRows = [
+    {
+      id: 'reason',
+      title: topReason?.[0] || 'No dominant cause',
+      count: topReason?.[1] || 0,
+      hint: 'Top cancellation reason',
+    },
+    {
+      id: 'aircraft',
+      title: topAircraft?.[0] || 'No aircraft impacted',
+      count: topAircraft?.[1] || 0,
+      hint: 'Most affected aircraft',
+    },
+    {
+      id: 'instructor',
+      title: topInstructor?.[0] || 'No instructor impacted',
+      count: topInstructor?.[1] || 0,
+      hint: 'Most affected instructor',
+    },
+  ];
+
   return {
     openReports: reports.filter((report) => report.status !== 'Closed').length,
     openRisks: risks.filter((risk) => risk.status === 'Open').length,
@@ -535,9 +656,18 @@ const getSafetyMetrics = (summary: SummaryPayload): SafetyMetrics => {
       const submittedAt = new Date(report.submittedAt);
       return !Number.isNaN(submittedAt.getTime()) && submittedAt >= recentCutoff;
     }).length,
+    scheduledFlights,
+    completedFlights,
+    cancelledFlights,
+    cancellationRate,
+    noShowFlights,
+    dispatchReliability,
     reportRows,
     riskRows,
     capRows,
+    cancellationReasonRows,
+    flightStatusRows,
+    disruptionRows,
   };
 };
 
@@ -1233,6 +1363,145 @@ export default function DashboardPage() {
 
   const targetHoursLabel = isTargetLoading ? 'Loading...' : formatHours(fleetTargetHours);
   const selectedAircraft = fleetRows[0] || null;
+  const bookingOverview = useMemo<BookingOverviewMetrics>(() => {
+    const bookings = Array.isArray(summary.bookings) ? summary.bookings : [];
+    const aircrafts = Array.isArray(summary.aircrafts) ? summary.aircrafts : [];
+    const now = new Date();
+    const periodStart = getPeriodStart(fleetPeriod);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+    const nextWeekEnd = new Date(todayStart);
+    nextWeekEnd.setDate(todayStart.getDate() + 7);
+
+    const periodBookings = periodStart
+      ? bookings.filter((booking) => {
+          if (!booking.date) return false;
+          const bookingDate = new Date(booking.date);
+          return !Number.isNaN(bookingDate.getTime()) && bookingDate >= periodStart && bookingDate <= now;
+        })
+      : bookings;
+
+    const scheduledToday = bookings.filter((booking) => {
+      if (!booking.date) return false;
+      const bookingDate = new Date(booking.date);
+      return !Number.isNaN(bookingDate.getTime()) && bookingDate >= todayStart && bookingDate < tomorrowStart;
+    }).length;
+
+    const upcomingNext7Days = bookings.filter((booking) => {
+      if (!booking.date) return false;
+      const bookingDate = new Date(booking.date);
+      return !Number.isNaN(bookingDate.getTime()) && bookingDate >= tomorrowStart && bookingDate < nextWeekEnd;
+    }).length;
+
+    const completedPeriod = periodBookings.filter((booking) => booking.status === 'Completed').length;
+    const cancelledPeriod = periodBookings.filter((booking) => booking.status === 'Cancelled' || booking.status === 'Cancelled with Reason').length;
+    const activePipeline = Math.max(0, periodBookings.length - completedPeriod - cancelledPeriod);
+    const cancellationRate = periodBookings.length > 0 ? parseFloat(((cancelledPeriod / periodBookings.length) * 100).toFixed(1)) : 0;
+
+    const bookedAircraftIds = new Set(
+      periodBookings
+        .map((booking) => booking.aircraftId)
+        .filter((aircraftId): aircraftId is string => typeof aircraftId === 'string' && aircraftId.length > 0)
+    );
+
+    const typeCounts = new Map<string, number>();
+    for (const booking of periodBookings) {
+      const label = booking.type?.trim() || 'Unspecified';
+      typeCounts.set(label, (typeCounts.get(label) || 0) + 1);
+    }
+
+    const bookingsByType = [...typeCounts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 6)
+      .map(([label, value], index) => ({
+        label,
+        value,
+        fill: BOOKING_TYPE_COLORS[index % BOOKING_TYPE_COLORS.length],
+      }));
+
+    return {
+      scheduledToday,
+      scheduledPeriod: periodBookings.length,
+      completedPeriod,
+      cancelledPeriod,
+      upcomingNext7Days,
+      activePipeline,
+      bookedAircraftCount: bookedAircraftIds.size,
+      idleAircraftCount: Math.max(0, aircrafts.length - bookedAircraftIds.size),
+      cancellationRate,
+      bookingsByType,
+    };
+  }, [fleetPeriod, summary.aircrafts, summary.bookings]);
+
+  const overviewDetailRows = useMemo(() => {
+    const bookings = Array.isArray(summary.bookings) ? summary.bookings : [];
+    const aircrafts = Array.isArray(summary.aircrafts) ? summary.aircrafts : [];
+    const instructors = Array.isArray(summary.instructors) ? summary.instructors : [];
+    const now = new Date();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const nextWeekEnd = new Date(todayStart);
+    nextWeekEnd.setDate(todayStart.getDate() + 7);
+
+    const aircraftMap = new Map(
+      aircrafts.map((aircraft) => [aircraft.id, aircraft.tailNumber || aircraft.abbreviation || `${aircraft.make} ${aircraft.model}`.trim() || aircraft.id])
+    );
+    const instructorMap = new Map(
+      instructors.map((instructor) => [instructor.id, `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.id])
+    );
+
+    const upcomingBookings = bookings
+      .filter((booking) => {
+        if (!booking.date) return false;
+        const bookingDate = parseLocalDate(booking.date);
+        return !Number.isNaN(bookingDate.getTime()) && bookingDate >= todayStart && bookingDate < nextWeekEnd;
+      })
+      .sort((left, right) => parseLocalDate(left.date || '').getTime() - parseLocalDate(right.date || '').getTime())
+      .slice(0, 5)
+      .map((booking) => ({
+        id: booking.bookingNumber || `${booking.aircraftId || 'booking'}-${booking.date || 'date'}`,
+        title: booking.bookingNumber || booking.type || 'Booking',
+        subtitle: `${aircraftMap.get(booking.aircraftId || '') || 'Aircraft not set'} · ${booking.type || 'Type not set'}`,
+        meta: booking.date ? format(parseLocalDate(booking.date), 'dd MMM yyyy') : 'Date not set',
+        status: booking.status || 'Planned',
+      }));
+
+    const aircraftCounts = new Map<string, number>();
+    const instructorCounts = new Map<string, number>();
+    for (const booking of bookings) {
+      if (booking.aircraftId) aircraftCounts.set(booking.aircraftId, (aircraftCounts.get(booking.aircraftId) || 0) + 1);
+      if (booking.instructorId) instructorCounts.set(booking.instructorId, (instructorCounts.get(booking.instructorId) || 0) + 1);
+    }
+
+    const busiestAircraft = [...aircraftCounts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 4)
+      .map(([aircraftId, count]) => ({
+        id: aircraftId,
+        title: aircraftMap.get(aircraftId) || aircraftId,
+        subtitle: 'Most booked aircraft',
+        meta: `${count} bookings`,
+      }));
+
+    const busiestInstructors = [...instructorCounts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 4)
+      .map(([instructorId, count]) => ({
+        id: instructorId,
+        title: instructorMap.get(instructorId) || instructorId,
+        subtitle: 'Most booked instructor',
+        meta: `${count} bookings`,
+      }));
+
+    return {
+      upcomingBookings,
+      busiestAircraft,
+      busiestInstructors,
+    };
+  }, [summary.aircrafts, summary.bookings, summary.instructors]);
+
   const selectedAircraftTrend = useMemo<FleetTrendPoint[]>(() => {
     if (!selectedAircraft) return [];
     const bookings = Array.isArray(summary.bookings) ? summary.bookings : [];
@@ -1289,7 +1558,7 @@ export default function DashboardPage() {
 
   const activeTabLabel = tabs.find((tab) => tab.value === activeTab)?.label || tabs[0]?.label || 'Overview';
   const activeDashboardPeriod =
-    activeTab === 'fleet'
+    activeTab === 'overview'
       ? fleetPeriod
       : activeTab === 'instructors'
         ? instructorPeriod
@@ -1318,6 +1587,7 @@ export default function DashboardPage() {
     [quickSafetyReports]
   );
   const quickReportAttentionCount = openTechnicalReports.length + openQuickSafetyReports.length;
+  const overviewSafetyMetrics = useMemo(() => getSafetyMetrics(summary), [summary]);
   const renderTabLabel = (tab: IndustryTab) => (
     <span className="flex items-center gap-2">
       <span>{tab.label}</span>
@@ -1444,7 +1714,7 @@ export default function DashboardPage() {
                           <DropdownMenuItem
                             key={period}
                             onClick={() => {
-                              if (activeTab === 'fleet') setFleetPeriod(period);
+                              if (activeTab === 'overview') setFleetPeriod(period);
                               if (activeTab === 'instructors') setInstructorPeriod(period);
                               if (activeTab === 'students') setStudentPeriod(period);
                             }}
@@ -1475,7 +1745,7 @@ export default function DashboardPage() {
                           key={period}
                           type="button"
                           onClick={() => {
-                            if (activeTab === 'fleet') setFleetPeriod(period);
+                            if (activeTab === 'overview') setFleetPeriod(period);
                             if (activeTab === 'instructors') setInstructorPeriod(period);
                             if (activeTab === 'students') setStudentPeriod(period);
                           }}
@@ -1496,12 +1766,302 @@ export default function DashboardPage() {
             <ScrollArea className="h-full flex-1">
               <div className="p-5 pb-10 md:p-6 md:pb-10">
                 <>
-                    <TabsContent value="fleet" className="m-0 space-y-5">
+                    <TabsContent value="overview" className="m-0 space-y-5">
+                      <div className="flex items-center justify-between gap-3 rounded-md border border-dashed border-card-border/70 bg-muted/5 px-4 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/75">Operations Board</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Daily activity, upcoming load, disruption pressure, and fleet readiness in one view.
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 text-[10px] font-black uppercase">
+                          {activeDashboardPeriodLongLabel || 'Current period'}
+                        </Badge>
+                      </div>
+
+                      <div className="grid gap-5 xl:grid-cols-[0.98fr_1.02fr]">
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex flex-col self-start', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Operations Overview</CardTitle>
+                                <CardDescription className="text-xs">Bookings, cancellations, and fleet use in one management view.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/bookings/history">Open bookings</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-3">
+                            <div className="grid gap-2 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <StatTile label="Scheduled Today" value={String(bookingOverview.scheduledToday)} hint="Flights booked for today" tone="info" />
+                                <StatTile label="Period Bookings" value={String(bookingOverview.scheduledPeriod)} hint={activeDashboardPeriodLongLabel || 'Selected period'} tone="neutral" />
+                                <StatTile label="Completed" value={String(bookingOverview.completedPeriod)} hint="Flights logged as completed" tone="positive" />
+                                <StatTile label="Cancelled" value={String(bookingOverview.cancelledPeriod)} hint={`${bookingOverview.cancellationRate.toFixed(1)}% cancellation rate`} tone={bookingOverview.cancelledPeriod > 0 ? 'warning' : 'positive'} />
+                              </div>
+                              <div className="space-y-2">
+                                <StatTile label="Next 7 Days" value={String(bookingOverview.upcomingNext7Days)} hint="Upcoming booked flights" tone="info" />
+                                <StatTile label="Active Pipeline" value={String(bookingOverview.activePipeline)} hint="Not completed or cancelled" tone="neutral" />
+                                <StatTile label="Aircraft Booked" value={String(bookingOverview.bookedAircraftCount)} hint="Aircraft used in period" tone="positive" />
+                                <StatTile label="Aircraft Idle" value={String(bookingOverview.idleAircraftCount)} hint="No bookings in period" tone={bookingOverview.idleAircraftCount > 0 ? 'warning' : 'positive'} />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Booking Mix</CardTitle>
+                                <CardDescription className="text-xs">Which booking types are consuming the schedule this period.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/bookings/schedule">Open schedule</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="h-[240px] p-4">
+                            {bookingOverview.bookingsByType.length > 0 ? (
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={bookingOverview.bookingsByType} margin={{ top: 8, right: 10, left: -8, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
+                                  <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+                                  <Tooltip />
+                                  <Bar dataKey="value" radius={10} barSize={34}>
+                                    {bookingOverview.bookingsByType.map((entry) => (
+                                      <Cell key={entry.label} fill={entry.fill} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            ) : (
+                              <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted/5 text-sm text-muted-foreground">
+                                No booking mix data available yet.
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/75">Forward Look</p>
+                          <p className="mt-1 text-xs text-muted-foreground">What is scheduled next and where the current training load sits.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-5 xl:grid-cols-3">
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Upcoming Bookings</CardTitle>
+                                <CardDescription className="text-xs">The next scheduled activity over the coming 7 days.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/bookings/schedule">View all</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            <div className="divide-y">
+                              {overviewDetailRows.upcomingBookings.length > 0 ? (
+                                overviewDetailRows.upcomingBookings.map((row) => (
+                                  <div key={row.id} className="space-y-2 px-3 py-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.title}</p>
+                                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{row.subtitle}</p>
+                                      </div>
+                                      <Badge variant="outline" className="shrink-0 text-[10px] font-black uppercase">
+                                        {row.status}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{row.meta}</p>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                  No upcoming bookings found.
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Most Booked Aircraft</CardTitle>
+                                <CardDescription className="text-xs">Which aircraft are carrying the schedule load.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/assets/aircraft">Open aircraft</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            <div className="divide-y">
+                              {overviewDetailRows.busiestAircraft.length > 0 ? (
+                                overviewDetailRows.busiestAircraft.map((row) => (
+                                  <div key={row.id} className="flex items-center justify-between gap-3 px-3 py-3">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-black uppercase tracking-tight">{row.title}</p>
+                                      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{row.subtitle}</p>
+                                    </div>
+                                    <p className="shrink-0 text-sm font-black">{row.meta}</p>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                  No aircraft booking data yet.
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Most Booked Instructors</CardTitle>
+                                <CardDescription className="text-xs">Where the training load is concentrated.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/users/instructors">Open instructors</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            <div className="divide-y">
+                              {overviewDetailRows.busiestInstructors.length > 0 ? (
+                                overviewDetailRows.busiestInstructors.map((row) => (
+                                  <div key={row.id} className="flex items-center justify-between gap-3 px-3 py-3">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-black uppercase tracking-tight">{row.title}</p>
+                                      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{row.subtitle}</p>
+                                    </div>
+                                    <p className="shrink-0 text-sm font-black">{row.meta}</p>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                  No instructor booking data yet.
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/75">Disruptions And Fleet</p>
+                          <p className="mt-1 text-xs text-muted-foreground">Reasons for schedule loss plus current aircraft readiness and utilisation.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Cancellations by Reason</CardTitle>
+                                <CardDescription className="text-xs">Primary disruption themes affecting bookings in the selected period.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/bookings/history">Open booking history</Link>
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="h-[220px] p-4">
+                            {overviewSafetyMetrics.cancellationReasonRows.length > 0 ? (
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                  data={overviewSafetyMetrics.cancellationReasonRows}
+                                  layout="vertical"
+                                  margin={{ top: 0, right: 10, left: 18, bottom: 0 }}
+                                >
+                                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                  <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+                                  <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} fontSize={11} width={118} />
+                                  <Tooltip />
+                                  <Bar dataKey="value" radius={8} barSize={18}>
+                                    {overviewSafetyMetrics.cancellationReasonRows.map((entry) => (
+                                      <Cell key={entry.label} fill={entry.fill} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            ) : (
+                              <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted/5 text-sm text-muted-foreground">
+                                No cancellations logged yet.
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+                          <CardHeader className="border-b bg-muted/5 px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Operational Disruptions</CardTitle>
+                                <CardDescription className="text-xs">Quick read on the biggest cancellation pressure points.</CardDescription>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase">
+                                  <Link href="/safety/safety-reports">Safety reports</Link>
+                                </Button>
+                                <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase">
+                                  <Link href="/quality/task-tracker">Open CAPs</Link>
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3 p-4">
+                            <div className="rounded-md border bg-muted/10 p-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Disruption quick read</p>
+                              <div className="mt-3 space-y-3">
+                                <SummaryLine label="Cancellation rate" value={`${overviewSafetyMetrics.cancellationRate.toFixed(1)}%`} />
+                                <SummaryLine label="Cancelled flights" value={String(overviewSafetyMetrics.cancelledFlights)} />
+                                <SummaryLine label="No-shows" value={String(overviewSafetyMetrics.noShowFlights)} />
+                                <SummaryLine label="Dispatch reliability" value={`${overviewSafetyMetrics.dispatchReliability.toFixed(1)}%`} />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              {overviewSafetyMetrics.disruptionRows.map((row) => (
+                                <div key={row.id} className="rounded-md border bg-background px-3 py-2.5">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{row.hint}</p>
+                                  <div className="mt-1 flex items-start justify-between gap-3">
+                                    <p className="min-w-0 text-sm font-black break-words">{row.title}</p>
+                                    <Badge variant="outline" className="shrink-0 text-[10px] font-black uppercase">
+                                      {row.count}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
                       <div className="grid items-start gap-5 xl:grid-cols-2">
                         <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex flex-col self-start', isModern && 'border-slate-200/80 bg-white/95')}>
                           <CardHeader className="border-b bg-muted/5 px-4 py-3">
-                            <CardTitle className="text-sm font-black uppercase tracking-tight">Fleet Overview</CardTitle>
-                            <CardDescription className="text-xs">Aircraft readiness, fuel, oil, and utilisation at a glance.</CardDescription>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="text-sm font-black uppercase tracking-tight">Fleet Overview</CardTitle>
+                                <CardDescription className="text-xs">Aircraft readiness, fuel, oil, and utilisation at a glance.</CardDescription>
+                              </div>
+                              <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
+                                <Link href="/assets/aircraft">Manage fleet</Link>
+                              </Button>
+                            </div>
                           </CardHeader>
                           <CardContent className="p-3">
                             <div className="grid gap-2 md:grid-cols-2">
@@ -1595,12 +2155,10 @@ export default function DashboardPage() {
 
                     </TabsContent>
 
-                    {tabs.filter((tab) => tab.value !== 'fleet').map((tab) => (
+                    {tabs.filter((tab) => tab.value !== 'overview').map((tab) => (
                       <TabsContent key={tab.value} value={tab.value} className="m-0">
-                        {tab.value === 'overview' ? (
+                        {tab.value === 'instructors' ? (
                           <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} summary={summary} />
-                        ) : tab.value === 'instructors' ? (
-                          <InstructorLoadCard modern={isModern} metrics={instructorMetrics} />
                         ) : tab.value === 'students' ? (
                           <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
                         ) : tab.value === 'safety' ? (
@@ -1608,7 +2166,7 @@ export default function DashboardPage() {
                         ) : tab.value === 'quality' ? (
                           <QualityOverviewCard modern={isModern} summary={summary} organizationScopeId={scopedOrganizationId} />
                         ) : (
-                          <StageCard tabLabel={tab.label} modern={isModern} />
+                          <InstructorLoadCard modern={isModern} metrics={instructorMetrics} />
                         )}
                       </TabsContent>
                     ))}
@@ -1847,6 +2405,19 @@ function InstructorOverviewCard({
 
 function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; metrics: StudentMetrics; summary: SummaryPayload }) {
   const riskRows = metrics.rows.filter((row) => row.status !== 'safe').slice(0, 4);
+  const inactiveRows = [...metrics.rows]
+    .filter((row) => (row.daysSinceFlight || 0) >= 14)
+    .sort((left, right) => (right.daysSinceFlight || 0) - (left.daysSinceFlight || 0))
+    .slice(0, 5);
+  const milestoneRows = [...metrics.rows]
+    .filter((row) => row.forecastDaysToNextMilestone !== null)
+    .sort((left, right) => (left.forecastDaysToNextMilestone || Number.MAX_SAFE_INTEGER) - (right.forecastDaysToNextMilestone || Number.MAX_SAFE_INTEGER))
+    .slice(0, 5);
+  const studentHealthRows = [
+    { label: 'On track', value: Math.max(0, metrics.activeStudents - metrics.watchCount - metrics.overCount), fill: '#16a34a' },
+    { label: 'Watch', value: metrics.watchCount, fill: '#f59e0b' },
+    { label: 'At risk', value: metrics.overCount, fill: '#ef4444' },
+  ];
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
@@ -2003,6 +2574,130 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
             </div>
           </div>
         </div>
+
+        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="rounded-md border bg-background">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-tight">Student Health Mix</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Overall movement across on-track, watch, and at-risk students.
+                </p>
+              </div>
+            </div>
+            <div className="h-[260px] p-4">
+              {metrics.activeStudents > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={studentHealthRows} margin={{ top: 8, right: 10, left: -8, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
+                    <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" radius={10} barSize={42}>
+                      {studentHealthRows.map((entry) => (
+                        <Cell key={entry.label} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted/5 text-sm text-muted-foreground">
+                  No student activity available yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-md border bg-background">
+              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black uppercase tracking-tight">Inactive Students</p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Students needing re-engagement after two weeks or more without a flight.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-black uppercase">
+                  {inactiveRows.length} shown
+                </Badge>
+              </div>
+              <div className="divide-y">
+                {inactiveRows.length > 0 ? (
+                  inactiveRows.map((row) => (
+                    <div key={row.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{row.recommendedAction}</p>
+                      </div>
+                      <div className="rounded-md border bg-background px-3 py-2.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Since Flight</p>
+                        <p className="mt-1 text-sm font-black">{formatDaysSince(row.daysSinceFlight)}</p>
+                      </div>
+                      <div className="rounded-md border bg-background px-3 py-2.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Pace</p>
+                        <p className="mt-1 text-sm font-black">{formatPace(row.pacePerWeek)}</p>
+                      </div>
+                      <div className={cn('rounded-md border px-3 py-2.5', getStudentStatusStyles(row.status))}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em]">{row.status === 'over' ? 'At risk' : row.status === 'watch' ? 'Watch' : 'Safe'}</p>
+                        <p className="mt-1 text-sm font-black">{row.daysSinceDebrief !== null ? formatDaysSince(row.daysSinceDebrief) : 'No debrief'}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No inactive students right now.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-md border bg-background">
+              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black uppercase tracking-tight">Milestone Readiness</p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Students forecast closest to their next milestone.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-black uppercase">
+                  {milestoneRows.length} shown
+                </Badge>
+              </div>
+              <div className="divide-y">
+                {milestoneRows.length > 0 ? (
+                  milestoneRows.map((row) => (
+                    <div key={row.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,0.78fr))] md:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {row.milestoneHours !== null ? `Next milestone ${row.milestoneHours}h` : 'Milestone not set'}
+                        </p>
+                      </div>
+                      <div className="rounded-md border bg-background px-3 py-2.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Forecast</p>
+                        <p className="mt-1 text-sm font-black">
+                          {row.forecastDaysToNextMilestone !== null ? `${row.forecastDaysToNextMilestone} days` : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="rounded-md border bg-background px-3 py-2.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Recent Hours</p>
+                        <p className="mt-1 text-sm font-black">{formatHours(row.recentFlightHours)}</p>
+                      </div>
+                      <div className={cn('rounded-md border px-3 py-2.5', getStudentStatusStyles(row.status))}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em]">Action</p>
+                        <p className="mt-1 text-sm font-black">{row.recommendedAction}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No milestone forecast data available yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -2040,6 +2735,108 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
           <StatTile label="Open Hazards" value={String(metrics.openRisks)} hint="Risk items requiring attention" />
           <StatTile label="Open CAPs" value={String(metrics.openCaps)} hint="Corrective actions in flight" />
           <StatTile label="Recent Reports" value={String(metrics.recentReports)} hint="Submitted in the last 30 days" />
+          <StatTile label="Cancelled Flights" value={String(metrics.cancelledFlights)} hint={`${metrics.cancellationRate.toFixed(1)}% of scheduled flights`} tone={metrics.cancelledFlights > 0 ? 'warning' : 'positive'} />
+          <StatTile label="Dispatch Reliability" value={`${metrics.dispatchReliability.toFixed(1)}%`} hint={`${metrics.completedFlights} of ${metrics.scheduledFlights} flights completed`} tone={metrics.dispatchReliability >= 85 ? 'positive' : metrics.dispatchReliability >= 70 ? 'warning' : 'danger'} />
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="rounded-md border bg-background">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-tight">Flight Cancellations</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  What is blocking sortie completion this period.
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-black uppercase">
+                {metrics.cancelledFlights} total
+              </Badge>
+            </div>
+            <div className="grid gap-4 p-4 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="h-[220px]">
+                {metrics.cancellationReasonRows.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={metrics.cancellationReasonRows}
+                      layout="vertical"
+                      margin={{ top: 0, right: 10, left: 18, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+                      <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} fontSize={11} width={118} />
+                      <Tooltip />
+                      <Bar dataKey="value" radius={8} barSize={18}>
+                        {metrics.cancellationReasonRows.map((entry) => (
+                          <Cell key={entry.label} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted/5 text-sm text-muted-foreground">
+                    No cancellations logged yet.
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-md border bg-muted/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Reliability read</p>
+                  <div className="mt-3 space-y-3">
+                    <SummaryLine label="Scheduled" value={String(metrics.scheduledFlights)} />
+                    <SummaryLine label="Completed" value={String(metrics.completedFlights)} />
+                    <SummaryLine label="Cancelled" value={String(metrics.cancelledFlights)} />
+                    <SummaryLine label="No-shows" value={String(metrics.noShowFlights)} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {metrics.disruptionRows.map((row) => (
+                    <div key={row.id} className="rounded-md border bg-background px-3 py-2.5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{row.hint}</p>
+                      <div className="mt-1 flex items-start justify-between gap-3">
+                        <p className="min-w-0 text-sm font-black break-words">{row.title}</p>
+                        <Badge variant="outline" className="shrink-0 text-[10px] font-black uppercase">
+                          {row.count}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-md border bg-background">
+            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-tight">Flight Outcome Mix</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Scheduled output across completed, cancelled, and active bookings.
+                </p>
+              </div>
+            </div>
+            <div className="h-[288px] p-4">
+              {metrics.scheduledFlights > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={metrics.flightStatusRows} margin={{ top: 8, right: 10, left: -8, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
+                    <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" radius={10} barSize={42}>
+                      {metrics.flightStatusRows.map((entry) => (
+                        <Cell key={entry.label} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted/5 text-sm text-muted-foreground">
+                  No booking activity available yet.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -2104,6 +2901,8 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                 <SummaryLine label="Open hazards" value={String(metrics.openRisks)} />
                 <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
                 <SummaryLine label="Recent reports" value={String(metrics.recentReports)} />
+                <SummaryLine label="Cancellation rate" value={`${metrics.cancellationRate.toFixed(1)}%`} />
+                <SummaryLine label="No-shows" value={String(metrics.noShowFlights)} />
               </div>
             </div>
 
