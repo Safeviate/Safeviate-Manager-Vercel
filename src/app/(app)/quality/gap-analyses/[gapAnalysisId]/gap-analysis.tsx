@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { QualityAudit, QualityAuditChecklistTemplate, AuditChecklistItem, CorrectiveActionPlan, GapStatus, ComplianceRequirement } from '@/types/quality';
 import type { CorrectiveAction } from '@/types/safety-report';
 import { DocumentUploader } from '../../../users/personnel/[id]/document-uploader';
-import { FileUp, Camera, Trash2, ZoomIn, Edit, Save, ShieldCheck } from 'lucide-react';
+import { FileUp, Camera, Trash2, ZoomIn, Edit, Save, ShieldCheck, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useMemo, useState } from 'react';
@@ -397,7 +397,7 @@ export function GapAnalysisChecklist({ audit, tenantId, caps, personnel, organiz
     });
 
     const handleOpenCapDialog = (findingId: string, findingDescription: string) => {
-        const capForFinding = caps.find(c => c.findingId === findingId);
+        const capForFinding = caps.filter(c => c.findingId === findingId)[0];
         if (capForFinding) {
             if (!canViewCaps) {
                 toast({
@@ -444,6 +444,66 @@ export function GapAnalysisChecklist({ audit, tenantId, caps, personnel, organiz
                 variant: 'destructive',
                 title: 'Error',
                 description: error instanceof Error ? error.message : 'Failed to save gap analysis.',
+            });
+        }
+    };
+
+    const handleCreateAdditionalCap = async (item: AuditChecklistItem, finding: FormValues['findings'][number]) => {
+        if (finding.gapStatus !== 'Open gap' && finding.gapStatus !== 'Partial coverage') {
+            toast({
+                variant: 'destructive',
+                title: 'CAP Not Available',
+                description: 'Additional CAPs can only be created for actionable findings.',
+            });
+            return;
+        }
+
+        const actionDescription = finding.actionPlan?.trim()
+          || finding.gapDescription?.trim()
+          || finding.currentState?.trim()
+          || finding.desiredState?.trim()
+          || 'Gap analysis action';
+        const dueDate = finding.targetDate?.trim() || audit.auditDate;
+        const responsiblePersonId = finding.ownerId?.trim() || audit.auditorId;
+        const actions: CorrectiveAction[] = [
+          {
+            id: crypto.randomUUID(),
+            description: actionDescription,
+            responsiblePersonId,
+            deadline: dueDate,
+            status: 'Open',
+          },
+        ];
+
+        const cap = {
+          id: crypto.randomUUID(),
+          auditId: audit.id,
+          findingId: finding.checklistItemId,
+          rootCauseAnalysis: finding.gapDescription?.trim() || finding.currentState?.trim() || '',
+          status: 'Open' as const,
+          actions,
+          responsiblePersonId,
+        };
+
+        try {
+            const response = await fetch('/api/corrective-action-plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cap }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to create corrective action plan.');
+            }
+            window.dispatchEvent(new Event('safeviate-quality-updated'));
+            toast({
+                title: 'Additional CAP Created',
+                description: `A new CAP was added for ${item.text}.`,
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'CAP Creation Failed',
+                description: error instanceof Error ? error.message : 'Failed to create an additional CAP.',
             });
         }
     };
@@ -562,8 +622,8 @@ export function GapAnalysisChecklist({ audit, tenantId, caps, personnel, organiz
         const gapStatus = form.watch(`findings.${itemIndex}.gapStatus`);
         const effectiveGapStatus = isInheritedFinding && inheritedGapStatus ? inheritedGapStatus : gapStatus;
         const evidence = form.watch(`findings.${itemIndex}.evidence`) || [];
-        const cap = caps.find(c => c.findingId === item.id);
-        const openActionsCount = cap?.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0;
+        const relatedCaps = caps.filter(c => c.findingId === item.id);
+        const openActionsCount = relatedCaps.reduce((sum, cap) => sum + (cap.actions?.filter(a => a.status === 'Open' || a.status === 'In Progress').length || 0), 0);
         const metadataChips = [
             item.nextAuditDate ? { label: 'Next audit date', value: formatAuditDate(item.nextAuditDate) } : null,
         ].filter((chip): chip is { label: string; value: string } => !!chip && !!chip.value);
@@ -798,13 +858,19 @@ export function GapAnalysisChecklist({ audit, tenantId, caps, personnel, organiz
                     </div>
                     {effectiveGapStatus !== 'Covered' && effectiveGapStatus !== 'Not applicable' && !isInheritedFinding && audit.status !== 'Scheduled' && audit.status !== 'In Progress' && (
                         <div className='flex items-center justify-end gap-2 pt-2 border-t'>
-                            {cap ? (
+                            {relatedCaps.length > 0 ? (
                                 <Badge variant={openActionsCount > 0 ? 'destructive' : 'default'} className="text-[9px] h-5 font-black uppercase">
                                     {openActionsCount} Open Actions
                                 </Badge>
                             ) : (
                                 <Badge variant="outline" className="text-[9px] h-5 font-black uppercase border-amber-300 bg-amber-50 text-amber-700">CAP Pending</Badge>
                             )}
+                            {canViewCaps ? (
+                                <Button variant="outline" size="sm" onClick={() => void handleCreateAdditionalCap(item, form.getValues(`findings.${itemIndex}`))} className="h-7 text-[10px] font-black uppercase px-3 gap-1.5 border-slate-300">
+                                    <PlusCircle className="h-3 w-3" />
+                                    Add CAP
+                                </Button>
+                            ) : null}
                             {canViewCaps ? (
                                 <Button variant="outline" size="sm" onClick={() => handleOpenCapDialog(item.id, item.text)} className="h-7 text-[10px] font-black uppercase px-3 gap-1.5 border-slate-300">
                                     <Edit className="h-3 w-3" />

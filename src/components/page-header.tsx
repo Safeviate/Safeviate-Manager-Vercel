@@ -1,17 +1,17 @@
 import type { FC, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import {
-  PAGE_FORMAT_PRIMARY_BUTTON_CLASS,
-  PAGE_FORMAT_SECONDARY_BUTTON_CLASS,
   PAGE_FORMAT_MOBILE_BUTTON_CLASS,
 } from '@/lib/page-format-buttons';
 
-export const HEADER_ACTION_BUTTON_CLASS = PAGE_FORMAT_PRIMARY_BUTTON_CLASS;
+export const HEADER_ACTION_BUTTON_CLASS =
+  "h-7 rounded-md px-3 text-[9px] font-black uppercase tracking-[0.08em] shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]";
 
-export const HEADER_SECONDARY_BUTTON_CLASS = PAGE_FORMAT_SECONDARY_BUTTON_CLASS;
+export const HEADER_SECONDARY_BUTTON_CLASS =
+  "h-7 rounded-md border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-[0.08em] text-slate-800 shadow-sm transition-transform hover:scale-[1.02] hover:bg-slate-50 active:scale-[0.98]";
 
 export const HEADER_MOBILE_ACTION_BUTTON_CLASS =
-  `${PAGE_FORMAT_PRIMARY_BUTTON_CLASS} ${PAGE_FORMAT_MOBILE_BUTTON_CLASS}`;
+  `${HEADER_ACTION_BUTTON_CLASS} ${PAGE_FORMAT_MOBILE_BUTTON_CLASS}`;
 
 export const HEADER_TAB_LIST_CLASS =
   "bg-transparent h-auto p-0 gap-1.5 border-0 rounded-md justify-start flex min-w-max flex-nowrap shadow-none";
@@ -20,13 +20,13 @@ export const HEADER_TAB_TRIGGER_CLASS =
   "h-8 rounded-md px-3 text-[9px] font-medium uppercase tracking-[0.08em] transition-all shadow-none border border-input gap-1.5 shrink-0 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
 export const HEADER_COMPACT_CONTROL_CLASS =
-  "h-8 rounded-md border border-input bg-background px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0";
+  "h-7 rounded-md border border-input bg-background px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0";
 
 export const CARD_HEADER_BAND_CLASS =
-  "border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-2 py-1.5 min-h-11 shrink-0 md:px-4";
+  "border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-2 py-1 min-h-9 shrink-0 md:px-3";
 
 export const CARD_HEADER_TOP_ROW_CLASS =
-  "flex min-h-[52px] items-start justify-between gap-4";
+  "flex min-h-[34px] items-start justify-between gap-3";
 
 export const CARD_HEADER_SCOPE_ZONE_CLASS =
   "min-w-0 flex-1";
@@ -118,7 +118,7 @@ export const MainPageHeader: FC<MainPageHeaderProps> = ({
         </div>
       ) : undefined}
       actions={actions ? (
-        <div className="main-page-header__actions flex w-full flex-wrap items-center gap-1.5 [&_button]:h-8 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-[9px] [&_button]:tracking-[0.08em] [&_a]:h-8 [&_a]:gap-1.5 [&_a]:px-3 [&_a]:text-[9px] [&_a]:tracking-[0.08em]">
+        <div className="main-page-header__actions flex w-full flex-wrap items-center gap-1.5 [&_button]:h-7 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-[9px] [&_button]:tracking-[0.08em] [&_a]:h-7 [&_a]:gap-1.5 [&_a]:px-3 [&_a]:text-[9px] [&_a]:tracking-[0.08em]">
           {actions}
         </div>
       ) : undefined}

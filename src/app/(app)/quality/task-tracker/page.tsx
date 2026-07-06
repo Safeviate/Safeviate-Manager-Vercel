@@ -19,18 +19,21 @@ import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-s
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
-import { CalendarIcon } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { getPersonnelDisplayName } from '@/lib/personnel-label';
 import { DocumentUploader } from '@/components/document-uploader';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, ChevronRight } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
 import type { CorrectiveActionPlan, QualityAudit, QualityFinding, ExternalOrganization, CorrectiveActionPlanEvidence, CorrectiveActionPlanResponse } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import type { CorrectiveAction } from '@/types/safety-report';
 
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -95,6 +98,7 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
   const [rootCauseAnalysis, setRootCauseAnalysis] = useState(cap.rootCauseAnalysis || '');
   const [responsiblePersonId, setResponsiblePersonId] = useState(cap.responsiblePersonId || '');
   const [dueDate, setDueDate] = useState(formatCapDueDate(cap.dueDate || audit.auditDate));
+  const [actions, setActions] = useState<CorrectiveAction[]>(cap.actions || []);
   const [responses, setResponses] = useState<CorrectiveActionPlanResponse[]>(cap.responses || []);
   const [responseDraft, setResponseDraft] = useState('');
   const [draftEvidence, setDraftEvidence] = useState<CorrectiveActionPlanEvidence[]>([]);
@@ -106,6 +110,7 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
     currentUserId
     && (
       currentUserId === responsiblePersonId
+      || actions.some((action) => action.responsiblePersonId === currentUserId)
       || rolePermissions.includes('*')
       || rolePermissions.includes('quality')
       || rolePermissions.includes('quality-tasks-manage')
@@ -117,12 +122,13 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
     setRootCauseAnalysis(cap.rootCauseAnalysis || '');
     setResponsiblePersonId(cap.responsiblePersonId || '');
     setDueDate(formatCapDueDate(cap.dueDate || audit.auditDate));
+    setActions(cap.actions || []);
     setResponses(cap.responses || []);
     setResponseDraft('');
     setDraftEvidence([]);
     setEditingResponseId(null);
     setEditingResponseMeta(null);
-  }, [audit.auditDate, cap.dueDate, cap.id, cap.responsiblePersonId, cap.responses, cap.rootCauseAnalysis]);
+  }, [audit.auditDate, cap.actions, cap.dueDate, cap.id, cap.responsiblePersonId, cap.responses, cap.rootCauseAnalysis]);
 
   useEffect(() => {
     const textarea = correctiveActionRef.current;
@@ -143,6 +149,7 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
             rootCauseAnalysis,
             responsiblePersonId,
             dueDate: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : '',
+            actions,
             responses,
           },
         }),
@@ -217,6 +224,29 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
 
   const removeResponse = (responseId: string) => {
     setResponses((current) => current.filter((item) => item.id !== responseId));
+  };
+
+  const addCapAction = () => {
+    setActions((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        description: '',
+        responsiblePersonId: '',
+        deadline: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : new Date().toISOString(),
+        status: 'Open',
+      },
+    ]);
+  };
+
+  const updateCapAction = <K extends keyof CorrectiveAction>(actionId: string, field: K, value: CorrectiveAction[K]) => {
+    setActions((current) => current.map((action) => (
+      action.id === actionId ? { ...action, [field]: value } : action
+    )));
+  };
+
+  const removeCapAction = (actionId: string) => {
+    setActions((current) => current.filter((action) => action.id !== actionId));
   };
 
   return (
@@ -295,6 +325,110 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
               />
             </PopoverContent>
           </Popover>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-card-border bg-background p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Responsibility Entries</p>
+            <p className="mt-1 text-xs text-muted-foreground">Split one CAP into multiple corrective action responsibilities when several people need to own different actions.</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={addCapAction} className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
+            <PlusCircle className="mr-1 h-3 w-3" />
+            Add Responsibility
+          </Button>
+        </div>
+
+        <div className="mt-3 space-y-3">
+          {actions.length > 0 ? (
+            actions.map((action, index) => (
+              <div key={action.id} className="rounded-lg border border-card-border bg-muted/10 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Entry {index + 1}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10"
+                    onClick={() => removeCapAction(action.id)}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </div>
+
+                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action</p>
+                    <Input
+                      value={action.description}
+                      onChange={(event) => updateCapAction(action.id, 'description', event.target.value)}
+                      placeholder="Describe this responsibility entry..."
+                      className="bg-background"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
+                    <Select value={action.responsiblePersonId || '__unassigned__'} onValueChange={(value) => updateCapAction(action.id, 'responsiblePersonId', value === '__unassigned__' ? '' : value)}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Assign to..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                        {personnel.map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.firstName} {person.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                    <Select value={action.status} onValueChange={(value) => updateCapAction(action.id, 'status', value as CorrectiveAction['status'])}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['Open', 'In Progress', 'Closed', 'Cancelled'].map((status) => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Deadline</p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-between bg-background text-left font-normal lg:min-w-[150px]"
+                        >
+                          <span>{action.deadline ? format(parseLocalDate(formatCapDueDate(action.deadline)), 'dd MMM yy') : 'Pick a date'}</span>
+                          <CalendarIcon className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <CustomCalendar
+                          selectedDate={action.deadline ? parseLocalDate(formatCapDueDate(action.deadline)) : undefined}
+                          onDateSelect={(date) => updateCapAction(action.id, 'deadline', toNoonUtcIso(date))}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-sm text-muted-foreground">
+              No responsibility entries added yet.
+            </div>
+          )}
         </div>
       </div>
 
@@ -765,9 +899,6 @@ export default function TaskTrackerPage() {
       return true;
     });
 
-    const columns: Array<{ label: string; statuses: CorrectiveActionPlan['status'][]; border: string; tone: string }> = [
-      { label: 'Open', statuses: ['Open'], border: 'border-amber-200', tone: 'bg-amber-50 text-amber-900' },
-    ];
     const sortEntries = (entriesToSort: AuditCapEntry[]) => [...entriesToSort].sort((a, b) => {
       const aOwner = getPersonnelDisplayName(personnel, a.cap.responsiblePersonId || '');
       const bOwner = getPersonnelDisplayName(personnel, b.cap.responsiblePersonId || '');
@@ -778,6 +909,13 @@ export default function TaskTrackerPage() {
       }
       return aDue - bDue || aOwner.localeCompare(bOwner);
     });
+
+    const groupedEntries = sortEntries(filteredCapEntries).reduce<Record<string, AuditCapEntry[]>>((acc, entry) => {
+      const key = entry.audit.id;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(entry);
+      return acc;
+    }, {});
 
     return (
       <div className="space-y-4 p-4">
@@ -830,44 +968,117 @@ export default function TaskTrackerPage() {
               </div>
             </div>
           </div>
-          <div className={cn('grid gap-3 p-4', columns.length > 1 ? 'lg:grid-cols-3' : 'grid-cols-1')}>
-            {columns.map((column) => {
-              const columnEntries = sortEntries(filteredCapEntries.filter((entry) => column.statuses.includes(entry.cap.status)));
-              return (
-                <div key={column.label} className={cn('w-full rounded-lg border bg-background/80 p-3', column.border)}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{column.label}</p>
-                  </div>
-                  {!isCapBoardCollapsed ? (
-                    <div className="mt-3 space-y-3">
-                      {columnEntries.length > 0 ? (
-                        columnEntries.map((entry) => (
-                          <AuditCapBoardCard
-                            key={entry.cap.id}
-                            cap={entry.cap}
-                            audit={entry.audit}
-                            observation={entry.observation}
-                            findingLevel={entry.findingLevel}
-                            personnel={personnel}
-                            currentUserId={userProfile?.id}
-                            currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
-                            rolePermissions={rolePermissions}
-                          />
-                        ))
-                      ) : (
-                        <div className="rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          No items
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="mt-3 rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      Board collapsed
-                    </div>
-                  )}
+          <div className="p-4">
+            {!isCapBoardCollapsed ? (
+              Object.keys(groupedEntries).length > 0 ? (
+                <Accordion type="multiple" defaultValue={Object.keys(groupedEntries)} className="space-y-3">
+                  {Object.entries(groupedEntries).map(([auditId, groupEntries]) => {
+                    const audit = groupEntries[0].audit;
+                    const openCount = groupEntries.filter((entry) => entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled').length;
+                    return (
+                      <AccordionItem key={auditId} value={auditId} className="overflow-hidden rounded-lg border border-card-border bg-background">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                          <div className="flex w-full items-center justify-between gap-3 text-left">
+                            <div className="min-w-0">
+                              <p className="text-sm font-black uppercase tracking-tight">Audit #{audit.auditNumber}</p>
+                              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                {groupEntries.length} task{groupEntries.length === 1 ? '' : 's'} · {openCount} open
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 pr-2">
+                              <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                                {audit.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="border-t bg-muted/10 px-3 py-3">
+                          <div className="space-y-2">
+                            {groupEntries.map((entry) => {
+                              const capDueDate = formatCapDueDate(entry.cap.dueDate || entry.audit.auditDate);
+                              const dueDateValue = parseLocalDate(capDueDate).getTime();
+                              const isOverdue = dueDateValue < auditCapWindow && entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled';
+                              const capActions = entry.cap.actions || [];
+                              const openActions = capActions.filter((action) => action.status !== 'Closed' && action.status !== 'Cancelled');
+                              const uniqueOwners = [...new Set(
+                                openActions
+                                  .map((action) => getPersonnelDisplayName(personnel, action.responsiblePersonId || '') || 'Unassigned')
+                                  .filter(Boolean)
+                              )];
+                              const nearestActionDueDate = [...openActions]
+                                .sort((left, right) => parseLocalDate(formatCapDueDate(left.deadline)).getTime() - parseLocalDate(formatCapDueDate(right.deadline)).getTime())[0]?.deadline;
+                              const ownerLabel = openActions.length > 0
+                                ? `${uniqueOwners.length} owner${uniqueOwners.length === 1 ? '' : 's'}`
+                                : (getPersonnelDisplayName(personnel, entry.cap.responsiblePersonId || '') || 'Unassigned');
+                              const dueLabel = nearestActionDueDate
+                                ? format(parseLocalDate(formatCapDueDate(nearestActionDueDate)), 'dd MMM yy')
+                                : format(parseLocalDate(capDueDate), 'dd MMM yy');
+
+                              return (
+                                <div key={entry.cap.id} className="overflow-hidden rounded-lg border border-card-border bg-background">
+                                  <div className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
+                                    <div className="flex min-w-0 items-start gap-3">
+                                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                      <div className="min-w-0 space-y-2">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                                            {entry.cap.status}
+                                          </Badge>
+                                          <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                                            {entry.findingLevel}
+                                          </Badge>
+                                          {isOverdue ? (
+                                            <Badge variant="destructive" className="h-6 px-2 text-[10px] font-black uppercase tracking-[0.08em]">
+                                              Overdue
+                                            </Badge>
+                                          ) : null}
+                                        </div>
+                                        <div className="space-y-1">
+                                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Observation</p>
+                                          <p className="text-sm font-medium text-foreground">{entry.observation}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="grid shrink-0 gap-2 text-right sm:grid-cols-2 sm:text-left">
+                                      <div className="rounded-md border bg-background px-3 py-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action Owners</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{ownerLabel}</p>
+                                        {openActions.length > 0 ? (
+                                          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                            {openActions.length} open action{openActions.length === 1 ? '' : 's'}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                      <div className="rounded-md border bg-background px-3 py-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Next Due</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{dueLabel}</p>
+                                      </div>
+                                      <div className="sm:col-span-2 sm:flex sm:justify-end">
+                                        <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase">
+                                          <Link href={`/quality/task-tracker/${entry.cap.id}`}>Open Task</Link>
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              ) : (
+                <div className="rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  No items
                 </div>
-              );
-            })}
+              )
+            ) : (
+              <div className="rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Board collapsed
+              </div>
+            )}
           </div>
         </div>
       </div>
