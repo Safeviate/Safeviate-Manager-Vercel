@@ -40,6 +40,9 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'quality-audit-schedule-edit': { resource: 'quality-audit-schedule', tier: 'edit' },
   'quality-audit-schedule-manage': { resource: 'quality-audit-schedule', tier: 'manage' },
 
+  'quality-caps-view': { resource: 'quality-caps', tier: 'view' },
+  'quality-caps-manage': { resource: 'quality-caps', tier: 'manage' },
+
   'operations-alerts-view': { resource: 'operations-alerts', tier: 'view' },
   'operations-alerts-create': { resource: 'operations-alerts', tier: 'edit' },
   'operations-alerts-edit': { resource: 'operations-alerts', tier: 'edit' },

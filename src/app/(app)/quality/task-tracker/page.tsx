@@ -81,6 +81,24 @@ const parseCapObservation = (finding?: QualityFinding) =>
 
 const parseCapFindingLevel = (finding?: QualityFinding) => finding?.level?.trim() || 'Unclassified';
 
+const getCapOwnerLabel = (personnel: Personnel[], cap: CorrectiveActionPlan) =>
+  getPersonnelDisplayName(personnel, cap.responsiblePersonId || '') || 'Unassigned';
+
+const getOpenCapActionAssignees = (personnel: Personnel[], cap: CorrectiveActionPlan) => {
+  const openActions = (cap.actions || []).filter((action) => action.status !== 'Closed' && action.status !== 'Cancelled');
+  const names = [...new Set(
+    openActions
+      .map((action) => getPersonnelDisplayName(personnel, action.responsiblePersonId || '') || 'Unassigned')
+      .filter(Boolean)
+  )];
+
+  return {
+    openActions,
+    names,
+    summary: names.length === 0 ? 'No action assignees' : names.join(', '),
+  };
+};
+
 interface AuditCapBoardCardProps {
   cap: CorrectiveActionPlan;
   audit: QualityAudit;
@@ -106,15 +124,16 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
   const [editingResponseMeta, setEditingResponseMeta] = useState<Pick<CorrectiveActionPlanResponse, 'createdAt' | 'createdById' | 'createdByName'> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDueDateOpen, setIsDueDateOpen] = useState(false);
+  const hasQualityManagementPermission =
+    rolePermissions.includes('*')
+    || rolePermissions.includes('admin-view')
+    || rolePermissions.includes('quality-caps-manage');
   const canManageCapResponses = Boolean(
     currentUserId
     && (
       currentUserId === responsiblePersonId
       || actions.some((action) => action.responsiblePersonId === currentUserId)
-      || rolePermissions.includes('*')
-      || rolePermissions.includes('quality')
-      || rolePermissions.includes('quality-tasks-manage')
-      || rolePermissions.includes('quality-caps-manage')
+      || hasQualityManagementPermission
     )
   );
 
@@ -179,7 +198,7 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
       toast({
         variant: 'destructive',
         title: 'Not Allowed',
-        description: 'Only the assigned CAP owner or a quality manager can add responses.',
+        description: 'Only the assigned CAP owner or a user with quality management permissions can add responses.',
       });
       return;
     }
@@ -477,7 +496,7 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
 
           {!canManageCapResponses ? (
             <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">
-              Only the assigned CAP owner or a quality manager can post responses and upload evidence.
+              Only the assigned CAP owner or a user with quality management permissions can post responses and upload evidence.
             </div>
           ) : null}
 
@@ -591,6 +610,7 @@ function AuditCapBoardCard({ cap, audit, observation, findingLevel, personnel, c
 
 export default function TaskTrackerPage() {
   const { tenantId, userProfile, rolePermissions } = useUserProfile();
+  const { toast } = useToast();
   const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'quality-tasks-view' });
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/quality/task-tracker' });
   const isMobile = useIsMobile();
@@ -607,6 +627,10 @@ export default function TaskTrackerPage() {
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isCurrentTenantRecord = (record: { tenantId?: string | null } | null | undefined) => record?.tenantId === tenantId;
+  const canDeleteCaps =
+    rolePermissions.includes('*')
+    || rolePermissions.includes('admin-view')
+    || rolePermissions.includes('quality-caps-manage');
 
   const loadData = useCallback(() => {
     setIsLoading(true);
@@ -998,18 +1022,10 @@ export default function TaskTrackerPage() {
                               const capDueDate = formatCapDueDate(entry.cap.dueDate || entry.audit.auditDate);
                               const dueDateValue = parseLocalDate(capDueDate).getTime();
                               const isOverdue = dueDateValue < auditCapWindow && entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled';
-                              const capActions = entry.cap.actions || [];
-                              const openActions = capActions.filter((action) => action.status !== 'Closed' && action.status !== 'Cancelled');
-                              const uniqueOwners = [...new Set(
-                                openActions
-                                  .map((action) => getPersonnelDisplayName(personnel, action.responsiblePersonId || '') || 'Unassigned')
-                                  .filter(Boolean)
-                              )];
+                              const capOwnerLabel = getCapOwnerLabel(personnel, entry.cap);
+                              const { openActions, names: actionAssignees, summary: actionAssigneeSummary } = getOpenCapActionAssignees(personnel, entry.cap);
                               const nearestActionDueDate = [...openActions]
                                 .sort((left, right) => parseLocalDate(formatCapDueDate(left.deadline)).getTime() - parseLocalDate(formatCapDueDate(right.deadline)).getTime())[0]?.deadline;
-                              const ownerLabel = openActions.length > 0
-                                ? `${uniqueOwners.length} owner${uniqueOwners.length === 1 ? '' : 's'}`
-                                : (getPersonnelDisplayName(personnel, entry.cap.responsiblePersonId || '') || 'Unassigned');
                               const dueLabel = nearestActionDueDate
                                 ? format(parseLocalDate(formatCapDueDate(nearestActionDueDate)), 'dd MMM yy')
                                 : format(parseLocalDate(capDueDate), 'dd MMM yy');
@@ -1039,21 +1055,54 @@ export default function TaskTrackerPage() {
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="grid shrink-0 gap-2 text-right sm:grid-cols-2 sm:text-left">
+                                    <div className="grid shrink-0 gap-2 text-right sm:grid-cols-3 sm:text-left">
                                       <div className="rounded-md border bg-background px-3 py-2">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action Owners</p>
-                                        <p className="mt-1 text-sm font-semibold text-foreground">{ownerLabel}</p>
-                                        {openActions.length > 0 ? (
-                                          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                            {openActions.length} open action{openActions.length === 1 ? '' : 's'}
-                                          </p>
-                                        ) : null}
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAP Owner</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{capOwnerLabel}</p>
+                                      </div>
+                                      <div className="rounded-md border bg-background px-3 py-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action Assignees</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{actionAssigneeSummary}</p>
+                                        <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                          {openActions.length} open action{openActions.length === 1 ? '' : 's'}{actionAssignees.length > 0 ? ` · ${actionAssignees.length} assignee${actionAssignees.length === 1 ? '' : 's'}` : ''}
+                                        </p>
                                       </div>
                                       <div className="rounded-md border bg-background px-3 py-2">
                                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Next Due</p>
                                         <p className="mt-1 text-sm font-semibold text-foreground">{dueLabel}</p>
                                       </div>
-                                      <div className="sm:col-span-2 sm:flex sm:justify-end">
+                                      <div className="sm:col-span-3 sm:flex sm:justify-end sm:gap-2">
+                                        {canDeleteCaps ? (
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            onClick={async () => {
+                                              if (!window.confirm('Delete this corrective action plan? This cannot be undone.')) return;
+                                              try {
+                                                const response = await fetch(`/api/corrective-action-plans?id=${encodeURIComponent(entry.cap.id)}`, { method: 'DELETE' });
+                                                if (!response.ok) {
+                                                  const payload = await response.json().catch(() => null);
+                                                  throw new Error(payload?.error || 'Failed to delete corrective action plan.');
+                                                }
+                                                window.dispatchEvent(new Event('safeviate-quality-updated'));
+                                                toast({
+                                                  title: 'Corrective Action Deleted',
+                                                  description: 'The corrective action plan was removed.',
+                                                });
+                                              } catch (error) {
+                                                toast({
+                                                  variant: 'destructive',
+                                                  title: 'Delete Failed',
+                                                  description: error instanceof Error ? error.message : 'Failed to delete corrective action plan.',
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            Delete
+                                          </Button>
+                                        ) : null}
                                         <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase">
                                           <Link href={`/quality/task-tracker/${entry.cap.id}`}>Open Task</Link>
                                         </Button>

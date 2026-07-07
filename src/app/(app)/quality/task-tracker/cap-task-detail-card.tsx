@@ -77,15 +77,32 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
   const [editingResponseMeta, setEditingResponseMeta] = useState<Pick<CorrectiveActionPlanResponse, 'createdAt' | 'createdById' | 'createdByName'> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDueDateOpen, setIsDueDateOpen] = useState(false);
+  const hasQualityManagementPermission =
+    rolePermissions.includes('*')
+    || rolePermissions.includes('admin-view')
+    || rolePermissions.includes('quality-caps-manage');
+  const primaryAssignmentDescription =
+    rootCauseAnalysis.trim()
+    || cap.rootCauseAnalysis?.trim()
+    || observation.trim()
+    || 'Primary corrective action responsibility';
+  const derivedResponsibilityEntry = !actions.length && (rootCauseAnalysis.trim() || responsiblePersonId || dueDate)
+    ? {
+        id: '__cap-owner__',
+        description: primaryAssignmentDescription,
+        responsiblePersonId: responsiblePersonId || '',
+        deadline: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : '',
+        status: cap.status === 'Cancelled' ? 'Cancelled' : cap.status === 'Closed' ? 'Closed' : 'Open',
+        isDerived: true,
+      }
+    : null;
+  const displayedActions = derivedResponsibilityEntry ? [derivedResponsibilityEntry] : actions;
   const canManageCapResponses = Boolean(
     currentUserId
     && (
       currentUserId === responsiblePersonId
       || actions.some((action) => action.responsiblePersonId === currentUserId)
-      || rolePermissions.includes('*')
-      || rolePermissions.includes('quality')
-      || rolePermissions.includes('quality-tasks-manage')
-      || rolePermissions.includes('quality-caps-manage')
+      || hasQualityManagementPermission
     )
   );
 
@@ -154,7 +171,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
       toast({
         variant: 'destructive',
         title: 'Not Allowed',
-        description: 'Only the assigned CAP owner or a quality manager can add responses.',
+        description: 'Only the assigned CAP owner or a user with quality management permissions can add responses.',
       });
       return;
     }
@@ -222,6 +239,12 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
 
   const removeCapAction = (actionId: string) => {
     setActions((current) => current.filter((action) => action.id !== actionId));
+  };
+
+  const removePrimaryAssignment = () => {
+    setRootCauseAnalysis('');
+    setResponsiblePersonId('');
+    setDueDate('');
   };
 
   return (
@@ -315,26 +338,38 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
           </div>
 
           <div className="mt-3 space-y-3">
-            {actions.length > 0 ? (
-              actions.map((action, index) => (
+            {displayedActions.length > 0 ? (
+              displayedActions.map((action, index) => (
                 <div key={action.id} className="rounded-lg border border-card-border bg-muted/10 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Entry {index + 1}</p>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={() => removeCapAction(action.id)}>
-                      <Trash2 className="mr-1 h-3.5 w-3.5" />
-                      Remove
-                    </Button>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                      {derivedResponsibilityEntry && action.id === derivedResponsibilityEntry.id ? 'Primary Assignment' : `Entry ${index + 1}`}
+                    </p>
+                    {!('isDerived' in action) ? (
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={() => removeCapAction(action.id)}>
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        Remove
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Inherited from CAP owner</span>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={removePrimaryAssignment}>
+                          <Trash2 className="mr-1 h-3.5 w-3.5" />
+                          Remove
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]">
                     <div className="space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action</p>
-                      <Input value={action.description} onChange={(event) => updateCapAction(action.id, 'description', event.target.value)} placeholder="Describe this responsibility entry..." className="bg-background" />
+                      <Input value={action.description} onChange={(event) => updateCapAction(action.id, 'description', event.target.value)} placeholder="Describe this responsibility entry..." className="bg-background" disabled={'isDerived' in action} />
                     </div>
 
                     <div className="space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
-                      <Select value={action.responsiblePersonId || '__unassigned__'} onValueChange={(value) => updateCapAction(action.id, 'responsiblePersonId', value === '__unassigned__' ? '' : value)}>
+                      <Select value={action.responsiblePersonId || '__unassigned__'} onValueChange={(value) => updateCapAction(action.id, 'responsiblePersonId', value === '__unassigned__' ? '' : value)} disabled={'isDerived' in action}>
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Assign to..." />
                         </SelectTrigger>
@@ -351,7 +386,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
 
                     <div className="space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                      <Select value={action.status} onValueChange={(value) => updateCapAction(action.id, 'status', value as CorrectiveAction['status'])}>
+                      <Select value={action.status} onValueChange={(value) => updateCapAction(action.id, 'status', value as CorrectiveAction['status'])} disabled={'isDerived' in action}>
                         <SelectTrigger className="bg-background">
                           <SelectValue />
                         </SelectTrigger>
@@ -367,7 +402,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Deadline</p>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" className="w-full justify-between bg-background text-left font-normal lg:min-w-[150px]">
+                          <Button type="button" variant="outline" className="w-full justify-between bg-background text-left font-normal lg:min-w-[150px]" disabled={'isDerived' in action}>
                             <span>{action.deadline ? format(parseLocalDate(formatCapDueDate(action.deadline)), 'dd MMM yy') : 'Pick a date'}</span>
                             <CalendarIcon className="h-4 w-4 opacity-50" />
                           </Button>
@@ -421,7 +456,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
 
           <div className="mt-3 space-y-3">
             <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add a response update for this corrective action plan..." className="min-h-11 bg-background" disabled={!canManageCapResponses} />
-            {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a quality manager can post responses and upload evidence.</div> : null}
+            {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a user with quality management permissions can post responses and upload evidence.</div> : null}
             {draftEvidence.length > 0 ? (
               <div className="space-y-2">
                 {draftEvidence.map((document) => (

@@ -715,4 +715,18 @@ export async function ensureRolesSchema() {
         OR LOWER(name) LIKE '%administrator%'
       )
   `).catch(() => null);
+
+  await prisma.$executeRawUnsafe(`
+    UPDATE roles
+    SET permissions = permissions || '["quality-caps-manage"]'::jsonb,
+        updated_at = NOW()
+    WHERE NOT (permissions ? 'quality-caps-manage')
+      AND (
+        permissions ? 'quality-audits-manage'
+        OR permissions ? 'admin-settings-manage'
+        OR permissions ? 'admin-permissions-manage'
+        OR LOWER(name) LIKE '%administrator%'
+        OR LOWER(name) LIKE '%quality manager%'
+      )
+  `).catch(() => null);
 }

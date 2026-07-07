@@ -75,3 +75,29 @@ export async function POST(request: Request) {
   return NextResponse.json({ cap: { ...data, tenantId } }, { status: 200 });
 }
 
+export async function DELETE(request: Request) {
+  const startedAt = Date.now();
+  const tenantId = await getTenantId(request);
+  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id')?.trim();
+  if (!id) return NextResponse.json({ error: 'CAP id is required' }, { status: 400 });
+
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM corrective_action_plans WHERE tenant_id = $1 AND id = $2`,
+    tenantId,
+    id
+  );
+
+  await recordSimulationRouteMetric({
+    tenantId,
+    routeKey: 'corrective-action-plans.DELETE',
+    reads: 0,
+    writes: 1,
+    durationMs: Date.now() - startedAt,
+  });
+
+  return NextResponse.json({ success: true }, { status: 200 });
+}
+

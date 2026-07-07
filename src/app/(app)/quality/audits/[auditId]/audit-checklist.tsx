@@ -616,7 +616,20 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
                          <FormField control={form.control} name={`findings.${itemIndex}.comment`} render={({ field }) => (
                              <FormItem>
                                  <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Notes / Observations</FormLabel>
-                                 <FormControl><Textarea placeholder="Details about compliance status..." {...field} disabled={isReadOnly} className="min-h-[140px] text-sm font-medium bg-muted/5 border-slate-200" /></FormControl>
+                                 <FormControl>
+                                   <Textarea
+                                     placeholder="Details about compliance status..."
+                                     {...field}
+                                     rows={1}
+                                     disabled={isReadOnly}
+                                     onInput={(event) => {
+                                       const target = event.currentTarget;
+                                       target.style.height = 'auto';
+                                       target.style.height = `${Math.max(target.scrollHeight, 44)}px`;
+                                     }}
+                                     className="min-h-11 resize-none overflow-hidden text-sm font-medium bg-muted/5 border-slate-200"
+                                   />
+                                 </FormControl>
                              </FormItem>
                          )} />
                     </div>

@@ -40,7 +40,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'quality-audits', name: 'Audits', actions: ['view', 'edit', 'manage'] },
   { id: 'quality-audit-schedule', name: 'Audit Schedule', actions: ['view', 'edit', 'manage'] },
   { id: 'quality-templates', name: 'Quality Templates', actions: ['manage'], hidden: true },
-  { id: 'quality-caps', name: 'Quality CAPs', actions: ['view'], hidden: true },
+  { id: 'quality-caps', name: 'Quality CAPs', actions: ['view', 'manage'], hidden: true },
   { id: 'quality-tasks', name: 'Task Tracker', actions: ['view'] },
   { id: 'quality-matrix', name: 'Coherence Matrix', actions: ['view', 'manage'] },
   { id: 'quality-risk-plan', name: 'Quality Risk Plan', actions: ['view', 'manage'] },

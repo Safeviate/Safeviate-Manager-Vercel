@@ -137,11 +137,11 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assigned Auditor</p>
                                 <p className="mt-1 text-sm font-semibold text-foreground">{audit.auditorName || '-'}</p>
                             </div>
-                            <div className="rounded-lg border bg-background px-3 py-3 sm:col-span-2">
+                            <div className="rounded-lg border bg-background px-3 py-3">
                                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Asset</p>
                                 <p className="mt-1 text-sm font-semibold text-foreground">{audit.assetName || 'Not linked to an asset'}</p>
                             </div>
-                            <div className="rounded-lg border bg-background px-3 py-3 sm:col-span-2">
+                            <div className="rounded-lg border bg-background px-3 py-3">
                                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Score</p>
                                 <p className="mt-1 text-sm font-semibold text-foreground">
                                     {audit.complianceScore !== undefined ? (
