@@ -17,6 +17,55 @@ import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getTenantIdFromSession } from '@/lib/server/session-tenant';
 import { NextResponse } from 'next/server';
 
+const PLACEHOLDER_CAP_ACTION_DESCRIPTION = 'Primary corrective action responsibility';
+
+function getMeaningfulCapActions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((action) => {
+    const description = typeof action?.description === 'string' ? action.description.trim() : '';
+    return Boolean(description && description !== PLACEHOLDER_CAP_ACTION_DESCRIPTION);
+  });
+}
+
+function hasMeaningfulCapResponses(value: unknown) {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+
+  return value.some((response) => {
+    const message = typeof response?.message === 'string' ? response.message.trim() : '';
+    const evidenceCount = Array.isArray(response?.evidence) ? response.evidence.length : 0;
+    return Boolean(message) || evidenceCount > 0;
+  });
+}
+
+function normalizeCapRowData(data: Record<string, unknown>) {
+  const dueDate = typeof data.dueDate === 'string' ? data.dueDate : '';
+  const actions = getMeaningfulCapActions(data.actions).map((action) => ({
+    ...action,
+    description: typeof action.description === 'string' ? action.description.trim() : '',
+    responsiblePersonId: typeof action.responsiblePersonId === 'string' ? action.responsiblePersonId.trim() : '',
+    deadline: typeof action.deadline === 'string' && action.deadline ? action.deadline : dueDate,
+  }));
+
+  return {
+    ...data,
+    rootCauseAnalysis: typeof data.rootCauseAnalysis === 'string' ? data.rootCauseAnalysis.trim() : '',
+    responsiblePersonId: typeof data.responsiblePersonId === 'string' ? data.responsiblePersonId.trim() : '',
+    dueDate,
+    actions,
+  };
+}
+
+function isMeaningfulCapRowData(data: Record<string, unknown>) {
+  return Boolean(typeof data.rootCauseAnalysis === 'string' && data.rootCauseAnalysis.trim())
+    || getMeaningfulCapActions(data.actions).length > 0
+    || hasMeaningfulCapResponses(data.responses);
+}
+
 const PERSONNEL_TYPES = new Set(['Personnel', 'External']);
 const INSTRUCTOR_TYPES = new Set(['Instructor']);
 const STUDENT_TYPES = new Set(['Student']);
@@ -284,6 +333,23 @@ export async function GET(request: Request) {
       ),
     ]));
 
+    const invalidCapIds = capRows
+      .filter((row) => !isMeaningfulCapRowData(row.data as Record<string, unknown>))
+      .map((row) => row.id);
+
+    if (invalidCapIds.length > 0) {
+      await prisma.correctiveActionPlan.deleteMany({
+        where: {
+          tenantId: resolvedTenantId,
+          id: { in: invalidCapIds },
+        },
+      }).catch((error) => {
+        console.error('[dashboard-summary] failed to remove placeholder CAPs:', error);
+      });
+    }
+
+    const validCapRows = capRows.filter((row) => !invalidCapIds.includes(row.id));
+
     const personnelList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null; canBePIC?: boolean | null }> = [];
     const instructorList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null; canBePIC?: boolean | null }> = [];
     const studentList: Array<{ id: string; firstName?: string; lastName?: string; userType?: string; canBeInstructor?: boolean | null; canBeStudent?: boolean | null; canBePIC?: boolean | null }> = [];
@@ -375,8 +441,8 @@ export async function GET(request: Request) {
           ...(row.data as Record<string, unknown>),
           tenantId: resolvedTenantId,
         })),
-        caps: capRows.map((row) => ({
-          ...(row.data as Record<string, unknown>),
+        caps: validCapRows.map((row) => ({
+          ...normalizeCapRowData(row.data as Record<string, unknown>),
           id: row.id,
           tenantId: resolvedTenantId,
           createdAt: row.createdAt.toISOString(),

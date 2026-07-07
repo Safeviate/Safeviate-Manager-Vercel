@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -57,6 +58,16 @@ type AuditCapEntry = {
   findingLevel: string;
 };
 
+type AuditFindingEntry = {
+  id: string;
+  audit: QualityAudit;
+  finding: QualityFinding;
+  findingId: string;
+  observation: string;
+  findingLevel: string;
+  caps: CorrectiveActionPlan[];
+};
+
 const formatCapDueDate = (value?: string) => {
   if (!value) return '';
   return value.length >= 10 ? value.slice(0, 10) : value;
@@ -71,39 +82,7 @@ const parseCapObservation = (finding?: QualityFinding) =>
   || 'No observation recorded.';
 
 const parseCapFindingLevel = (finding?: QualityFinding) => finding?.level?.trim() || 'Unclassified';
-
-const getCapOwnerLabel = (personnel: Personnel[], cap: CorrectiveActionPlan) =>
-  getPersonnelDisplayName(personnel, cap.responsiblePersonId || '') || 'Unassigned';
-
-const getOpenCapActionAssignees = (personnel: Personnel[], cap: CorrectiveActionPlan) => {
-  const explicitOpenActions = (cap.actions || []).filter((action) => action.status !== 'Closed' && action.status !== 'Cancelled');
-  const openActions = explicitOpenActions.length > 0
-    ? explicitOpenActions
-    : (
-      cap.status !== 'Closed'
-      && cap.status !== 'Cancelled'
-      && (cap.responsiblePersonId?.trim() || cap.rootCauseAnalysis?.trim())
-    )
-      ? [{
-          id: '__cap-owner__',
-          description: cap.rootCauseAnalysis || 'Primary corrective action responsibility',
-          responsiblePersonId: cap.responsiblePersonId || '',
-          deadline: cap.dueDate || '',
-          status: cap.status === 'In Progress' ? 'In Progress' : 'Open',
-        }]
-      : [];
-  const names = [...new Set(
-    openActions
-      .map((action) => getPersonnelDisplayName(personnel, action.responsiblePersonId || '') || 'Unassigned')
-      .filter(Boolean)
-  )];
-
-  return {
-    openActions,
-    names,
-    summary: names.length === 0 ? 'No action assignees' : names.join(', '),
-  };
-};
+const buildFindingTaskId = (auditId: string, findingId: string) => `finding::${auditId}::${findingId}`;
 
 export default function TaskTrackerPage() {
   const { tenantId, userProfile, rolePermissions } = useUserProfile();
@@ -112,8 +91,8 @@ export default function TaskTrackerPage() {
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/quality/task-tracker' });
   const isMobile = useIsMobile();
   const [activeOrgTab, setActiveOrgTab] = useState('internal');
-  const [capFocusFilter, setCapFocusFilter] = useState<'All' | 'Open' | 'In Progress' | 'Closed' | 'Overdue' | 'Due Soon' | 'Unassigned'>('All');
-  const [capSortBy, setCapSortBy] = useState<'Due Date' | 'Owner'>('Due Date');
+  const [capFocusFilter, setCapFocusFilter] = useState<'All' | 'Open' | 'Closed' | 'Overdue'>('All');
+  const [capSortBy, setCapSortBy] = useState<'Due Date' | 'Audit'>('Due Date');
   const [isCapBoardCollapsed, setIsCapBoardCollapsed] = useState(false);
 
   const [mocs, setMocs] = useState<ManagementOfChange[]>([]);
@@ -263,6 +242,15 @@ export default function TaskTrackerPage() {
   }, [mocs, safetyReports, caps, audits, personnel, isLoading]);
 
   const auditsMap = useMemo(() => new Map((audits || []).map((audit) => [audit.id, audit])), [audits]);
+  const capsByFindingKey = useMemo(() => {
+    return (caps || []).filter(isCurrentTenantRecord).reduce<Map<string, CorrectiveActionPlan[]>>((accumulator, cap) => {
+      const key = `${cap.auditId}::${cap.findingId}`;
+      const current = accumulator.get(key) || [];
+      current.push(cap);
+      accumulator.set(key, current);
+      return accumulator;
+    }, new Map<string, CorrectiveActionPlan[]>());
+  }, [caps]);
   const auditCapEntries = useMemo<AuditCapEntry[]>(() => {
     if (isLoading) return [];
     return (caps || [])
@@ -280,6 +268,30 @@ export default function TaskTrackerPage() {
       })
       .filter((entry): entry is AuditCapEntry => Boolean(entry));
   }, [auditsMap, caps, isLoading]);
+  const auditFindingEntries = useMemo<AuditFindingEntry[]>(() => {
+    if (isLoading) return [];
+    return (audits || [])
+      .filter(isCurrentTenantRecord)
+      .filter((audit) => (audit as { analysisType?: string } | undefined)?.analysisType !== 'gap-analysis')
+      .flatMap((audit) => (
+        Array.isArray(audit.findings) ? audit.findings : []
+      ).filter((finding) => finding.finding === 'Non Compliant').map((finding) => {
+        const key = `${audit.id}::${finding.checklistItemId}`;
+        const linkedCaps = [...(capsByFindingKey.get(key) || [])].sort((left, right) =>
+          String(right.updatedAt || '').localeCompare(String(left.updatedAt || ''))
+        );
+        return {
+          id: buildFindingTaskId(audit.id, finding.checklistItemId),
+          audit,
+          finding,
+          findingId: finding.checklistItemId,
+          observation: parseCapObservation(finding),
+          findingLevel: parseCapFindingLevel(finding),
+          caps: linkedCaps,
+        };
+      }))
+      .filter((entry) => Boolean(entry.findingId));
+  }, [audits, capsByFindingKey, isLoading]);
 
   const auditCapSnapshot = useMemo(() => {
     const now = new Date();
@@ -394,41 +406,35 @@ export default function TaskTrackerPage() {
     />
   );
 
-  const renderCapBoard = (entries: AuditCapEntry[]) => {
+  const renderCapBoard = (entries: AuditFindingEntry[]) => {
     if (entries.length === 0) return null;
 
     const dueSoonWindow = new Date();
     dueSoonWindow.setDate(dueSoonWindow.getDate() + 7);
     const filteredCapEntries = entries.filter((entry) => {
+      const primaryCap = entry.caps[0];
       if (capFocusFilter === 'All') return true;
-      if (capFocusFilter === 'Open') return entry.cap.status === 'Open';
-      if (capFocusFilter === 'In Progress') return entry.cap.status === 'In Progress';
-      if (capFocusFilter === 'Closed') return entry.cap.status === 'Closed' || entry.cap.status === 'Cancelled';
-      const due = parseLocalDate(formatCapDueDate(entry.cap.dueDate || entry.audit.auditDate)).getTime();
+      if (capFocusFilter === 'Open') return !primaryCap || primaryCap.status === 'Open';
+      if (capFocusFilter === 'Closed') return primaryCap?.status === 'Closed' || primaryCap?.status === 'Cancelled';
+      const due = parseLocalDate(formatCapDueDate(primaryCap?.dueDate || entry.audit.auditDate)).getTime();
       if (capFocusFilter === 'Overdue') {
-        return due < auditCapWindow && entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled';
-      }
-      if (capFocusFilter === 'Due Soon') {
-        return due >= auditCapWindow && due <= dueSoonWindow.getTime() && entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled';
-      }
-      if (capFocusFilter === 'Unassigned') {
-        return !entry.cap.responsiblePersonId?.trim();
+        return due < auditCapWindow && primaryCap?.status !== 'Closed' && primaryCap?.status !== 'Cancelled';
       }
       return true;
     });
 
-    const sortEntries = (entriesToSort: AuditCapEntry[]) => [...entriesToSort].sort((a, b) => {
-      const aOwner = getPersonnelDisplayName(personnel, a.cap.responsiblePersonId || '');
-      const bOwner = getPersonnelDisplayName(personnel, b.cap.responsiblePersonId || '');
-      const aDue = parseLocalDate(formatCapDueDate(a.cap.dueDate || a.audit.auditDate)).getTime();
-      const bDue = parseLocalDate(formatCapDueDate(b.cap.dueDate || b.audit.auditDate)).getTime();
-      if (capSortBy === 'Owner') {
-        return aOwner.localeCompare(bOwner) || aDue - bDue;
+    const sortEntries = (entriesToSort: AuditFindingEntry[]) => [...entriesToSort].sort((a, b) => {
+      const aPrimaryCap = a.caps[0];
+      const bPrimaryCap = b.caps[0];
+      const aDue = parseLocalDate(formatCapDueDate(aPrimaryCap?.dueDate || a.audit.auditDate)).getTime();
+      const bDue = parseLocalDate(formatCapDueDate(bPrimaryCap?.dueDate || b.audit.auditDate)).getTime();
+      if (capSortBy === 'Audit') {
+        return String(a.audit.auditNumber || '').localeCompare(String(b.audit.auditNumber || '')) || aDue - bDue;
       }
-      return aDue - bDue || aOwner.localeCompare(bOwner);
+      return aDue - bDue || String(a.audit.auditNumber || '').localeCompare(String(b.audit.auditNumber || ''));
     });
 
-    const groupedEntries = sortEntries(filteredCapEntries).reduce<Record<string, AuditCapEntry[]>>((acc, entry) => {
+    const groupedEntries = sortEntries(filteredCapEntries).reduce<Record<string, AuditFindingEntry[]>>((acc, entry) => {
       const key = entry.audit.id;
       if (!acc[key]) acc[key] = [];
       acc[key].push(entry);
@@ -442,9 +448,9 @@ export default function TaskTrackerPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Audit Corrective Actions</p>
-                <p className="text-sm font-medium text-muted-foreground">Track CAP ownership and movement through the corrective action lifecycle.</p>
+                <p className="text-sm font-medium text-muted-foreground">Review non-compliant audit observations and open the corrective action page when needed.</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 md:justify-end">
                 <Button
                   type="button"
                   variant="outline"
@@ -454,21 +460,16 @@ export default function TaskTrackerPage() {
                 >
                   {isCapBoardCollapsed ? 'Expand Board' : 'Collapse Board'}
                 </Button>
-                <div className="flex items-center gap-2 rounded-lg border border-card-border bg-muted/20 p-1">
-                  {(['Due Date', 'Owner'] as const).map((sortMode) => (
-                    <Button
-                      key={sortMode}
-                      type="button"
-                      variant={capSortBy === sortMode ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setCapSortBy(sortMode)}
-                      className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]"
-                    >
-                      {sortMode}
-                    </Button>
-                  ))}
-                </div>
-                {(['All', 'Open', 'In Progress', 'Closed', 'Overdue', 'Due Soon', 'Unassigned'] as const).map((filter) => (
+                <Select value={capSortBy} onValueChange={(value: 'Due Date' | 'Audit') => setCapSortBy(value)}>
+                  <SelectTrigger className="h-8 w-[120px] bg-background text-[10px] font-black uppercase tracking-[0.08em]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Due Date">Due Date</SelectItem>
+                    <SelectItem value="Audit">Audit</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(['All', 'Open', 'Closed', 'Overdue'] as const).map((filter) => (
                   <Button
                     key={filter}
                     type="button"
@@ -481,7 +482,7 @@ export default function TaskTrackerPage() {
                   </Button>
                 ))}
                 <Badge variant="outline" className="h-6 border-amber-300 bg-amber-50 px-2 text-[10px] font-black uppercase tracking-[0.08em] text-amber-700">
-                  {filteredCapEntries.length} Tasks
+                  {filteredCapEntries.length} Observations
                 </Badge>
               </div>
             </div>
@@ -492,7 +493,10 @@ export default function TaskTrackerPage() {
                 <Accordion type="multiple" defaultValue={Object.keys(groupedEntries)} className="space-y-3">
                   {Object.entries(groupedEntries).map(([auditId, groupEntries]) => {
                     const audit = groupEntries[0].audit;
-                    const openCount = groupEntries.filter((entry) => entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled').length;
+                    const openCount = groupEntries.filter((entry) => {
+                      const primaryCap = entry.caps[0];
+                      return !primaryCap || (primaryCap.status !== 'Closed' && primaryCap.status !== 'Cancelled');
+                    }).length;
                     const auditScope = audit.scope?.trim() || 'General';
                     const auditTarget = audit.targetName?.trim() || 'Internal Company';
                     const auditAsset = aircraft.find((item) => item.id === audit.assetId)?.tailNumber?.trim()
@@ -505,7 +509,7 @@ export default function TaskTrackerPage() {
                             <div className="min-w-0">
                               <p className="text-sm font-black uppercase tracking-tight">Audit #{audit.auditNumber}</p>
                               <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                {groupEntries.length} task{groupEntries.length === 1 ? '' : 's'} · {openCount} open
+                                {groupEntries.length} observation{groupEntries.length === 1 ? '' : 's'} · {openCount} open
                               </p>
                               <div className="mt-2 flex flex-wrap items-center gap-2">
                                 <div className="rounded-md border border-card-border bg-muted/10 px-2.5 py-1">
@@ -526,41 +530,28 @@ export default function TaskTrackerPage() {
                               <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
                                 {audit.status}
                               </Badge>
+                              </div>
                             </div>
-                          </div>
-                        </AccordionTrigger>
+                          </AccordionTrigger>
                         <AccordionContent className="border-t bg-muted/10 px-3 py-3">
                           <div className="space-y-2">
                             {groupEntries.map((entry) => {
-                              const capDueDate = formatCapDueDate(entry.cap.dueDate || entry.audit.auditDate);
-                              const dueDateValue = parseLocalDate(capDueDate).getTime();
-                              const isOverdue = dueDateValue < auditCapWindow && entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled';
-                              const capOwnerLabel = getCapOwnerLabel(personnel, entry.cap);
-                              const { openActions, names: actionAssignees, summary: actionAssigneeSummary } = getOpenCapActionAssignees(personnel, entry.cap);
-                              const nearestActionDueDate = [...openActions]
-                                .sort((left, right) => parseLocalDate(formatCapDueDate(left.deadline)).getTime() - parseLocalDate(formatCapDueDate(right.deadline)).getTime())[0]?.deadline;
-                              const dueLabel = nearestActionDueDate
-                                ? format(parseLocalDate(formatCapDueDate(nearestActionDueDate)), 'dd MMM yy')
-                                : format(parseLocalDate(capDueDate), 'dd MMM yy');
+                              const primaryCap = entry.caps[0];
+                              const capCount = entry.caps.length;
 
                               return (
-                                <div key={entry.cap.id} className="overflow-hidden rounded-lg border border-card-border bg-background">
+                                <div key={entry.id} className="overflow-hidden rounded-lg border border-card-border bg-background">
                                   <div className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
                                     <div className="flex min-w-0 items-start gap-3">
                                       <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                                       <div className="min-w-0 space-y-2">
                                         <div className="flex flex-wrap items-center gap-2">
                                           <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
-                                            {entry.cap.status}
+                                            {primaryCap?.status || 'Open'}
                                           </Badge>
                                           <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
                                             {entry.findingLevel}
                                           </Badge>
-                                          {isOverdue ? (
-                                            <Badge variant="destructive" className="h-6 px-2 text-[10px] font-black uppercase tracking-[0.08em]">
-                                              Overdue
-                                            </Badge>
-                                          ) : null}
                                         </div>
                                         <div className="space-y-1">
                                           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Observation</p>
@@ -568,25 +559,18 @@ export default function TaskTrackerPage() {
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="grid shrink-0 gap-2 text-right sm:grid-cols-3 sm:text-left">
+                                    <div className="grid shrink-0 gap-2 text-right sm:grid-cols-1 sm:text-left">
                                       <div className="rounded-md border bg-background px-3 py-2">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAP Owner</p>
-                                        <p className="mt-1 text-sm font-semibold text-foreground">{capOwnerLabel}</p>
-                                      </div>
-                                      <div className="rounded-md border bg-background px-3 py-2">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action Assignees</p>
-                                        <p className="mt-1 text-sm font-semibold text-foreground">{actionAssigneeSummary}</p>
-                                        <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                          {openActions.length} open action{openActions.length === 1 ? '' : 's'}{actionAssignees.length > 0 ? ` · ${actionAssignees.length} assignee${actionAssignees.length === 1 ? '' : 's'}` : ''}
-                                        </p>
-                                      </div>
-                                      <div className="rounded-md border bg-background px-3 py-2">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Next Due</p>
-                                        <p className="mt-1 text-sm font-semibold text-foreground">{dueLabel}</p>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAP Amount</p>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">{capCount}</p>
                                       </div>
                                       <div className="sm:col-span-3 sm:flex sm:justify-end sm:gap-2">
                                         <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase">
-                                          <Link href={`/quality/task-tracker/${entry.cap.id}`}>Open Task</Link>
+                                          <Link href={primaryCap?.id
+                                            ? `/quality/task-tracker/${primaryCap.id}`
+                                            : `/quality/task-tracker/new?auditId=${encodeURIComponent(entry.audit.id)}&findingId=${encodeURIComponent(entry.findingId)}`}>
+                                            Open
+                                          </Link>
                                         </Button>
                                       </div>
                                     </div>
@@ -618,7 +602,7 @@ export default function TaskTrackerPage() {
 
   const renderOrgCard = (orgId: string | 'internal') => {
     const filteredTasks = allTasks.filter((task) => (orgId === 'internal' ? !task.organizationId : task.organizationId === orgId));
-    const filteredAuditCaps = auditCapEntries.filter((entry) => (orgId === 'internal' ? !entry.audit.organizationId : entry.audit.organizationId === orgId));
+    const filteredAuditCaps = auditFindingEntries.filter((entry) => (orgId === 'internal' ? !entry.audit.organizationId : entry.audit.organizationId === orgId));
     const remainingTasks = filteredTasks;
     const hasVisibleContent = filteredAuditCaps.length > 0 || remainingTasks.length > 0;
     const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };

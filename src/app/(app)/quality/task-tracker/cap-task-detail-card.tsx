@@ -13,6 +13,7 @@ import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { DocumentUploader } from '@/components/document-uploader';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
+import { CardControlHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS } from '@/components/page-header';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import type { CorrectiveAction } from '@/types/safety-report';
 import type { CorrectiveActionPlan, CorrectiveActionPlanEvidence, CorrectiveActionPlanResponse, QualityAudit, QualityFinding } from '@/types/quality';
@@ -32,6 +33,13 @@ const formatCapDueDate = (value?: string) => {
 
 const toNoonUtcIso = (date: Date) =>
   new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString();
+
+const hasSavedPrimaryCorrectiveAction = (cap: CorrectiveActionPlan) =>
+  Boolean(cap.rootCauseAnalysis?.trim());
+
+const hasSavedAdditionalCorrectiveActions = (cap: CorrectiveActionPlan) =>
+  Array.isArray(cap.actions)
+  && cap.actions.some((action) => Boolean(action.description?.trim() && action.description.trim() !== 'Primary corrective action responsibility'));
 
 export const parseCapObservation = (finding?: QualityFinding) =>
   finding?.comment?.trim()
@@ -54,21 +62,25 @@ interface CapTaskDetailCardProps {
   rolePermissions?: string[];
   hideInlineSave?: boolean;
   hideLeadSummary?: boolean;
+  onDeleteCap?: (() => void) | null;
+  canDeleteCap?: boolean;
+  isDeletingCap?: boolean;
 }
 
 export interface CapTaskDetailCardHandle {
-  save: () => Promise<void>;
+  save: () => Promise<CorrectiveActionPlan | null>;
 }
 
 export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDetailCardProps>(function CapTaskDetailCard(
-  { cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideInlineSave = false, hideLeadSummary = false }: CapTaskDetailCardProps,
+  { cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideInlineSave = false, hideLeadSummary = false, onDeleteCap = null, canDeleteCap = false, isDeletingCap = false }: CapTaskDetailCardProps,
   ref,
 ) {
   const { toast } = useToast();
   const correctiveActionRef = useRef<HTMLTextAreaElement | null>(null);
-  const [rootCauseAnalysis, setRootCauseAnalysis] = useState(cap.rootCauseAnalysis || '');
-  const [responsiblePersonId, setResponsiblePersonId] = useState(cap.responsiblePersonId || '');
-  const [dueDate, setDueDate] = useState(formatCapDueDate(cap.dueDate || audit.auditDate));
+  const hasSavedPrimaryAction = hasSavedPrimaryCorrectiveAction(cap);
+  const [rootCauseAnalysis, setRootCauseAnalysis] = useState(hasSavedPrimaryAction ? (cap.rootCauseAnalysis || '') : '');
+  const [responsiblePersonId, setResponsiblePersonId] = useState(hasSavedPrimaryAction ? (cap.responsiblePersonId || '') : '');
+  const [dueDate, setDueDate] = useState(hasSavedPrimaryAction ? formatCapDueDate(cap.dueDate || audit.auditDate) : '');
   const [actions, setActions] = useState<CorrectiveAction[]>(cap.actions || []);
   const [responses, setResponses] = useState<CorrectiveActionPlanResponse[]>(cap.responses || []);
   const [responseDraft, setResponseDraft] = useState('');
@@ -81,22 +93,6 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
     rolePermissions.includes('*')
     || rolePermissions.includes('admin-view')
     || rolePermissions.includes('quality-caps-manage');
-  const primaryAssignmentDescription =
-    rootCauseAnalysis.trim()
-    || cap.rootCauseAnalysis?.trim()
-    || observation.trim()
-    || 'Primary corrective action responsibility';
-  const derivedResponsibilityEntry = !actions.length && (rootCauseAnalysis.trim() || responsiblePersonId || dueDate)
-    ? {
-        id: '__cap-owner__',
-        description: primaryAssignmentDescription,
-        responsiblePersonId: responsiblePersonId || '',
-        deadline: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : '',
-        status: cap.status === 'Cancelled' ? 'Cancelled' : cap.status === 'Closed' ? 'Closed' : 'Open',
-        isDerived: true,
-      }
-    : null;
-  const displayedActions = derivedResponsibilityEntry ? [derivedResponsibilityEntry] : actions;
   const canManageCapResponses = Boolean(
     currentUserId
     && (
@@ -105,11 +101,16 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
       || hasQualityManagementPermission
     )
   );
+  const primaryAssignee = personnel.find((person) => person.id === responsiblePersonId);
+  const primaryAssigneeLabel = primaryAssignee
+    ? `${primaryAssignee.firstName || ''} ${primaryAssignee.lastName || ''}`.trim() || 'Unassigned'
+    : 'Unassigned';
 
   useEffect(() => {
-    setRootCauseAnalysis(cap.rootCauseAnalysis || '');
-    setResponsiblePersonId(cap.responsiblePersonId || '');
-    setDueDate(formatCapDueDate(cap.dueDate || audit.auditDate));
+    const shouldShowPrimaryAssignment = hasSavedPrimaryCorrectiveAction(cap);
+    setRootCauseAnalysis(shouldShowPrimaryAssignment ? (cap.rootCauseAnalysis || '') : '');
+    setResponsiblePersonId(shouldShowPrimaryAssignment ? (cap.responsiblePersonId || '') : '');
+    setDueDate(shouldShowPrimaryAssignment ? formatCapDueDate(cap.dueDate || audit.auditDate) : '');
     setActions(cap.actions || []);
     setResponses(cap.responses || []);
     setResponseDraft('');
@@ -146,17 +147,21 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error || 'Failed to save corrective action plan.');
       }
+      const payload = await response.json().catch(() => null);
+      const savedCap = payload?.cap as CorrectiveActionPlan | undefined;
       window.dispatchEvent(new Event('safeviate-quality-updated'));
       toast({
         title: 'Corrective Action Plan Saved',
         description: 'The CAP has been updated.',
       });
+      return savedCap || null;
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to save CAP.',
       });
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -241,225 +246,147 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
     setActions((current) => current.filter((action) => action.id !== actionId));
   };
 
-  const removePrimaryAssignment = () => {
-    setRootCauseAnalysis('');
-    setResponsiblePersonId('');
-    setDueDate('');
-  };
-
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-card-border bg-muted/10 p-3 shadow-none">
+      <div className="overflow-hidden rounded-lg border border-card-border bg-background shadow-none">
         {!hideLeadSummary ? (
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-2">
-              <Button asChild variant="outline" size="sm" className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
-                <Link href={`/quality/audits/${audit.id}`}>Audit #{audit.auditNumber}</Link>
-              </Button>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Observation</p>
-                <p className="text-sm font-medium text-foreground">{observation}</p>
+          <CardControlHeader
+            className="flex w-full shrink-0 flex-col bg-[hsl(var(--card-header-band-background))]"
+            isMobile={false}
+            context={(
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Corrective Action Plan</p>
+                <p className="text-[11px] font-medium leading-3.5 text-muted-foreground">Manage this CAP, its additional corrective actions, and assignee responses.</p>
               </div>
-            </div>
-            <div className="flex flex-wrap items-start justify-end gap-2">
-              <Badge variant="outline" className="h-[22px] rounded-lg border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
-                {cap.status}
-              </Badge>
-              <div className="flex h-[22px] items-center justify-between gap-3 rounded-lg border border-card-border bg-white px-2 text-left">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Finding Level</p>
-                <p className="text-[10px] font-semibold leading-none text-foreground">{findingLevel}</p>
+            )}
+            actions={(
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {canDeleteCap && onDeleteCap ? (
+                  <Button type="button" variant="outline" className={HEADER_COMPACT_CONTROL_CLASS} onClick={onDeleteCap} disabled={isDeletingCap}>
+                    {isDeletingCap ? 'Deleting...' : 'Delete CAP'}
+                  </Button>
+                ) : null}
+                <Button type="button" variant="default" className={HEADER_ACTION_BUTTON_CLASS} onClick={saveCap} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save CAP'}
+                </Button>
               </div>
-            </div>
-          </div>
+            )}
+            navigation={(
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button asChild variant="outline" className={HEADER_COMPACT_CONTROL_CLASS}>
+                    <Link href={`/quality/audits/${audit.id}`}>Audit #{audit.auditNumber}</Link>
+                  </Button>
+                  <Badge variant="outline" className="h-7 rounded-md border-card-border bg-background px-2.5 text-[9px] font-black uppercase tracking-[0.08em] text-foreground">
+                    {cap.status}
+                  </Badge>
+                  <div className="flex h-7 items-center gap-1.5 rounded-md border border-card-border bg-background px-2.5">
+                    <span className="text-[9px] font-black uppercase tracking-[0.08em] text-muted-foreground">Assigned To</span>
+                    <Select value={responsiblePersonId || ''} onValueChange={(value) => setResponsiblePersonId(value === '__unassigned__' ? '' : value)}>
+                      <SelectTrigger className="h-6 w-[190px] min-w-[190px] border-0 bg-transparent px-1 py-0 text-[10px] font-semibold shadow-none ring-0 focus:ring-0 focus:ring-offset-0">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                        {personnel.map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.firstName} {person.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex h-7 items-center gap-1.5 rounded-md border border-card-border bg-background px-2.5">
+                    <span className="text-[9px] font-black uppercase tracking-[0.08em] text-muted-foreground">Due</span>
+                    <Popover open={isDueDateOpen} onOpenChange={setIsDueDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="ghost" className="h-6 min-w-[115px] justify-between px-1 py-0 text-[10px] font-semibold shadow-none hover:bg-transparent">
+                          <span>{dueDate ? format(parseLocalDate(dueDate), 'dd MMM yy') : 'Pick a date'}</span>
+                          <CalendarIcon className="h-3.5 w-3.5 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <CustomCalendar
+                          selectedDate={dueDate ? parseLocalDate(dueDate) : undefined}
+                          onDateSelect={(date) => {
+                            setDueDate(format(date, 'yyyy-MM-dd'));
+                            setIsDueDateOpen(false);
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <p className="min-w-0 max-w-full truncate text-[11px] leading-4 text-muted-foreground md:max-w-[420px]">
+                  {observation}
+                </p>
+              </div>
+            )}
+          />
         ) : null}
 
-        <div className={hideLeadSummary ? "grid gap-3 lg:grid-cols-2" : "mt-4 grid gap-3 lg:grid-cols-2"}>
-          <div className="space-y-2 lg:col-span-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action</p>
+        <div className={hideLeadSummary ? "grid gap-3 p-3" : "grid gap-3 p-3"}>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Edit Primary Corrective Action</p>
             <Textarea
               ref={correctiveActionRef}
               value={rootCauseAnalysis}
               onChange={(event) => setRootCauseAnalysis(event.target.value)}
               rows={1}
-              placeholder="Describe the corrective action..."
+              placeholder="Describe the corrective action assigned to this finding..."
               className="min-h-11 resize-none overflow-hidden bg-background"
             />
           </div>
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Responsible Person</p>
-            <Select value={responsiblePersonId || ''} onValueChange={(value) => setResponsiblePersonId(value === '__unassigned__' ? '' : value)}>
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Assign a responsible person..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                {personnel.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.firstName} {person.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Due Date</p>
-            <Popover open={isDueDateOpen} onOpenChange={setIsDueDateOpen}>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="outline" className="w-full justify-between bg-background text-left font-normal">
-                  <span>{dueDate ? format(parseLocalDate(dueDate), 'dd MMM yy') : 'Pick a date'}</span>
-                  <CalendarIcon className="h-4 w-4 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <CustomCalendar
-                  selectedDate={dueDate ? parseLocalDate(dueDate) : undefined}
-                  onDateSelect={(date) => {
-                    setDueDate(format(date, 'yyyy-MM-dd'));
-                    setIsDueDateOpen(false);
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
         </div>
 
-        <div className="mt-4 rounded-lg border border-card-border bg-background p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="mx-3 mb-3 grid gap-3 lg:grid-cols-2">
+          <div className="rounded-lg border border-card-border bg-background p-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Responsibility Entries</p>
-              <p className="mt-1 text-xs text-muted-foreground">Split one CAP into multiple corrective action responsibilities when several people need to own different actions.</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee Feedback</p>
+              <p className="mt-1 text-xs text-muted-foreground">Use this space for progress notes, updates, and close-out feedback from the assignee.</p>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={addCapAction} className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
-              <PlusCircle className="mr-1 h-3 w-3" />
-              Add Responsibility
-            </Button>
-          </div>
 
-          <div className="mt-3 space-y-3">
-            {displayedActions.length > 0 ? (
-              displayedActions.map((action, index) => (
-                <div key={action.id} className="rounded-lg border border-card-border bg-muted/10 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                      {derivedResponsibilityEntry && action.id === derivedResponsibilityEntry.id ? 'Primary Assignment' : `Entry ${index + 1}`}
-                    </p>
-                    {!('isDerived' in action) ? (
-                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={() => removeCapAction(action.id)}>
-                        <Trash2 className="mr-1 h-3.5 w-3.5" />
-                        Remove
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Inherited from CAP owner</span>
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10" onClick={removePrimaryAssignment}>
-                          <Trash2 className="mr-1 h-3.5 w-3.5" />
-                          Remove
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+            <div className="mt-3 space-y-3">
+              <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add feedback for this corrective action plan..." className="min-h-24 bg-background" disabled={!canManageCapResponses} />
+              {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a user with quality management permissions can post feedback and upload evidence.</div> : null}
 
-                  <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]">
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action</p>
-                      <Input value={action.description} onChange={(event) => updateCapAction(action.id, 'description', event.target.value)} placeholder="Describe this responsibility entry..." className="bg-background" disabled={'isDerived' in action} />
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
-                      <Select value={action.responsiblePersonId || '__unassigned__'} onValueChange={(value) => updateCapAction(action.id, 'responsiblePersonId', value === '__unassigned__' ? '' : value)} disabled={'isDerived' in action}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Assign to..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                          {personnel.map((person) => (
-                            <SelectItem key={person.id} value={person.id}>
-                              {person.firstName} {person.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                      <Select value={action.status} onValueChange={(value) => updateCapAction(action.id, 'status', value as CorrectiveAction['status'])} disabled={'isDerived' in action}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {['Open', 'In Progress', 'Closed', 'Cancelled'].map((status) => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Deadline</p>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" className="w-full justify-between bg-background text-left font-normal lg:min-w-[150px]" disabled={'isDerived' in action}>
-                            <span>{action.deadline ? format(parseLocalDate(formatCapDueDate(action.deadline)), 'dd MMM yy') : 'Pick a date'}</span>
-                            <CalendarIcon className="h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <CustomCalendar selectedDate={action.deadline ? parseLocalDate(formatCapDueDate(action.deadline)) : undefined} onDateSelect={(date) => updateCapAction(action.id, 'deadline', toNoonUtcIso(date))} />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
+              <div className="flex justify-end">
+                <div className="flex items-center gap-2">
+                  {editingResponseId ? <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingResponseId(null); setEditingResponseMeta(null); setResponseDraft(''); setDraftEvidence([]); }}>Cancel Edit</Button> : null}
+                  <Button type="button" variant="outline" size="sm" onClick={addResponse} disabled={!canManageCapResponses}>
+                    {editingResponseId ? 'Update Feedback' : 'Add Feedback'}
+                  </Button>
                 </div>
-              ))
-            ) : (
-              <div className="rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-sm text-muted-foreground">
-                No responsibility entries added yet.
               </div>
-            )}
-          </div>
-        </div>
-
-        {!hideInlineSave ? (
-          <div className="mt-4 flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={saveCap} disabled={isSaving}>
-              Save CAP
-            </Button>
-          </div>
-        ) : null}
-
-        <div className="mt-4 rounded-lg border border-card-border bg-background p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee Response</p>
-              <p className="mt-1 text-xs text-muted-foreground">Assignees can log an update and attach evidence before saving the CAP.</p>
             </div>
-            <DocumentUploader
-              defaultFileName={`cap-evidence-${audit.auditNumber}`}
-              trigger={(open) => (
-                <Button type="button" variant="outline" size="sm" onClick={() => open()} disabled={!canManageCapResponses} className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
-                  <PlusCircle className="mr-1 h-3 w-3" />
-                  Add Evidence
-                </Button>
-              )}
-              onDocumentUploaded={async (document) => {
-                setDraftEvidence((current) => [
-                  ...current,
-                  { id: crypto.randomUUID(), name: document.name, url: document.url, uploadDate: document.uploadDate },
-                ]);
-              }}
-            />
           </div>
 
-          <div className="mt-3 space-y-3">
-            <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add a response update for this corrective action plan..." className="min-h-11 bg-background" disabled={!canManageCapResponses} />
-            {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a user with quality management permissions can post responses and upload evidence.</div> : null}
-            {draftEvidence.length > 0 ? (
-              <div className="space-y-2">
-                {draftEvidence.map((document) => (
+          <div className="rounded-lg border border-card-border bg-background p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Evidence Attachments</p>
+                <p className="mt-1 text-xs text-muted-foreground">Upload documents or photos that support the current feedback update.</p>
+              </div>
+              <DocumentUploader
+                defaultFileName={`cap-evidence-${audit.auditNumber}`}
+                trigger={(open) => (
+                  <Button type="button" variant="outline" size="sm" onClick={() => open()} disabled={!canManageCapResponses} className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
+                    <PlusCircle className="mr-1 h-3 w-3" />
+                    Add Evidence
+                  </Button>
+                )}
+                onDocumentUploaded={async (document) => {
+                  setDraftEvidence((current) => [
+                    ...current,
+                    { id: crypto.randomUUID(), name: document.name, url: document.url, uploadDate: document.uploadDate },
+                  ]);
+                }}
+              />
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {draftEvidence.length > 0 ? (
+                draftEvidence.map((document) => (
                   <div key={document.id} className="flex items-center justify-between gap-3 rounded-md border bg-muted/10 px-3 py-2">
                     <div className="min-w-0">
                       <a href={document.url} target="_blank" rel="noreferrer" className="block truncate text-sm font-semibold text-foreground underline decoration-slate-300 underline-offset-4">{document.name}</a>
@@ -470,24 +397,19 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
                       Remove
                     </Button>
                   </div>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="flex justify-end">
-              <div className="flex items-center gap-2">
-                {editingResponseId ? <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingResponseId(null); setEditingResponseMeta(null); setResponseDraft(''); setDraftEvidence([]); }}>Cancel Edit</Button> : null}
-                <Button type="button" variant="outline" size="sm" onClick={addResponse} disabled={!canManageCapResponses}>
-                  {editingResponseId ? 'Update Response' : 'Add Response'}
-                </Button>
-              </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-card-border bg-muted/5 px-3 py-6 text-center text-sm text-muted-foreground">
+                  No draft evidence attached yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mx-3 mb-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Response History</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Feedback History</p>
             <Badge variant="outline" className="h-[22px] rounded-lg border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
               {responses.length} updates
             </Badge>
@@ -519,7 +441,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
             </div>
           )) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-              No CAP responses have been added yet.
+              No feedback has been added yet.
             </div>
           )}
         </div>

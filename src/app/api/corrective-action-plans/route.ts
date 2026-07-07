@@ -7,22 +7,88 @@ import { recordSimulationRouteMetric } from '@/lib/server/simulation-telemetry';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import type { CorrectiveAction } from '@/types/safety-report';
 import type { CorrectiveActionPlan } from '@/types/quality';
+
+const PLACEHOLDER_ACTION_DESCRIPTION = 'Primary corrective action responsibility';
 
 async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
 }
 
+function getMeaningfulCorrectiveActions(cap: CorrectiveActionPlan) {
+  return (Array.isArray(cap.actions) ? cap.actions : []).filter((action) => {
+    const description = action.description?.trim() || '';
+    return Boolean(description && description !== PLACEHOLDER_ACTION_DESCRIPTION);
+  });
+}
+
+function hasMeaningfulResponseHistory(cap: CorrectiveActionPlan) {
+  return (Array.isArray(cap.responses) ? cap.responses : []).some((response) => {
+    const message = response.message?.trim() || '';
+    const evidenceCount = Array.isArray(response.evidence) ? response.evidence.length : 0;
+    return Boolean(message) || evidenceCount > 0;
+  });
+}
+
+function isMeaningfulCap(cap: CorrectiveActionPlan) {
+  return Boolean(cap.rootCauseAnalysis?.trim())
+    || getMeaningfulCorrectiveActions(cap).length > 0
+    || hasMeaningfulResponseHistory(cap);
+}
+
+function normalizeCapPayload(cap: CorrectiveActionPlan): CorrectiveActionPlan {
+  const rootCauseAnalysis = cap.rootCauseAnalysis?.trim() || '';
+  const responsiblePersonId = cap.responsiblePersonId?.trim() || '';
+  const dueDate = typeof cap.dueDate === 'string' ? cap.dueDate : '';
+  const actions = Array.isArray(cap.actions)
+    ? cap.actions.map((action) => ({
+        ...action,
+        description: action.description?.trim() || '',
+        responsiblePersonId: action.responsiblePersonId?.trim() || '',
+        deadline: action.deadline || dueDate,
+      }))
+      .filter((action) => Boolean(action.description && action.description !== PLACEHOLDER_ACTION_DESCRIPTION))
+    : [];
+
+  return {
+    ...cap,
+    rootCauseAnalysis,
+    responsiblePersonId,
+    dueDate,
+    actions,
+  };
+}
+
 async function getAllCaps(tenantId: string) {
-  const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-    `SELECT data FROM corrective_action_plans WHERE tenant_id = $1 ORDER BY created_at DESC`,
+  const rows = await prisma.$queryRawUnsafe<{ id: string; data: unknown }[]>(
+    `SELECT id, data FROM corrective_action_plans WHERE tenant_id = $1 ORDER BY created_at DESC`,
     tenantId
   );
-  return rows.map((row) => ({
-    ...(row.data as Record<string, unknown>),
-    tenantId,
+  const normalizedRows = rows.map((row) => ({
+    id: row.id,
+    cap: normalizeCapPayload({
+      ...(row.data as Record<string, unknown>),
+      id: row.id,
+      tenantId,
+    } as CorrectiveActionPlan),
   }));
+
+  const invalidIds = normalizedRows
+    .filter((row) => !isMeaningfulCap(row.cap))
+    .map((row) => row.id);
+
+  if (invalidIds.length > 0) {
+    await prisma.correctiveActionPlan.deleteMany({
+      where: {
+        tenantId,
+        id: { in: invalidIds },
+      },
+    });
+  }
+
+  return normalizedRows
+    .filter((row) => !invalidIds.includes(row.id))
+    .map((row) => row.cap);
 }
 
 function mergePermissions(rolePermissions: unknown, overridePermissions: unknown) {
@@ -92,41 +158,6 @@ async function resolveCapAccess(request: Request) {
     || hasHierarchicalPermission(grantedPermissions, 'quality-caps-manage', deniedPermissions);
 
   return { tenantId, canManage };
-}
-
-function normalizeCapPayload(cap: CorrectiveActionPlan): CorrectiveActionPlan {
-  const rootCauseAnalysis = cap.rootCauseAnalysis?.trim() || '';
-  const responsiblePersonId = cap.responsiblePersonId?.trim() || '';
-  const dueDate = typeof cap.dueDate === 'string' ? cap.dueDate : '';
-  const actions = Array.isArray(cap.actions)
-    ? cap.actions.map((action) => ({
-        ...action,
-        description: action.description?.trim() || '',
-        responsiblePersonId: action.responsiblePersonId?.trim() || '',
-        deadline: action.deadline || dueDate,
-      }))
-    : [];
-
-  const hasPrimaryAssignment = Boolean(rootCauseAnalysis || responsiblePersonId || dueDate);
-  const normalizedActions: CorrectiveAction[] = actions.length > 0
-    ? actions
-    : hasPrimaryAssignment
-      ? [{
-          id: randomUUID(),
-          description: rootCauseAnalysis || 'Primary corrective action responsibility',
-          responsiblePersonId,
-          deadline: dueDate,
-          status: cap.status === 'Cancelled' ? 'Cancelled' : cap.status === 'Closed' ? 'Closed' : 'Open',
-        }]
-      : [];
-
-  return {
-    ...cap,
-    rootCauseAnalysis,
-    responsiblePersonId,
-    dueDate,
-    actions: normalizedActions,
-  };
 }
 
 export async function GET(request: Request) {
