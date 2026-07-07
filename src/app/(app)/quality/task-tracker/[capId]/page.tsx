@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { use, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,12 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingCap, setIsSavingCap] = useState(false);
+  const [isDeletingCap, setIsDeletingCap] = useState(false);
   const capDetailRef = useRef<CapTaskDetailCardHandle | null>(null);
+  const canDeleteCaps =
+    rolePermissions.includes('*')
+    || rolePermissions.includes('admin-view')
+    || rolePermissions.includes('quality-caps-manage');
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +132,34 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
     }
   };
 
+  const handleDeleteCap = async () => {
+    if (!capEntry || isDeletingCap) return;
+    if (!window.confirm('Delete this CAP only? The audit finding and observation will remain in place. This cannot be undone.')) return;
+
+    try {
+      setIsDeletingCap(true);
+      const response = await fetch(`/api/corrective-action-plans?id=${encodeURIComponent(capEntry.cap.id)}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Failed to delete corrective action plan.');
+      }
+      window.dispatchEvent(new Event('safeviate-quality-updated'));
+      toast({
+        title: 'Corrective Action Deleted',
+        description: 'The corrective action plan was removed.',
+      });
+      window.location.href = '/quality/task-tracker';
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error instanceof Error ? error.message : 'Failed to delete corrective action plan.',
+      });
+    } finally {
+      setIsDeletingCap(false);
+    }
+  };
+
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
   }
@@ -183,6 +216,18 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
                   <PlusCircle className="h-3.5 w-3.5" />
                   Add Another CAP
                 </Button>
+                {canDeleteCaps ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={HEADER_COMPACT_CONTROL_CLASS}
+                    onClick={() => void handleDeleteCap()}
+                    disabled={isDeletingCap}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {isDeletingCap ? 'Deleting...' : 'Delete CAP'}
+                  </Button>
+                ) : null}
                 <Button type="button" variant="default" className={HEADER_ACTION_BUTTON_CLASS} onClick={() => void handleSaveCap()} disabled={isSavingCap}>
                   {isSavingCap ? 'Saving...' : 'Save CAP'}
                 </Button>
