@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { use, useEffect, useMemo, useRef, useState } from 'react';
+import { format } from 'date-fns';
 import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +17,21 @@ import { CapTaskDetailCard, type CapTaskDetailCardHandle, parseCapFindingLevel, 
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { CorrectiveAction } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { getPersonnelDisplayName } from '@/lib/personnel-label';
 import { cn } from '@/lib/utils';
+
+const formatCapDueDate = (value?: string) => {
+  if (!value) return '';
+  return value.length >= 10 ? value.slice(0, 10) : value;
+};
+
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return new Date(value);
+  }
+  return new Date(year, month - 1, day, 12);
+};
 
 export default function CapTaskDetailPage({ params }: { params: Promise<{ capId: string }> }) {
   const resolvedParams = use(params);
@@ -71,6 +86,17 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
       findingLevel: parseCapFindingLevel(finding),
     };
   }, [audits, caps, resolvedParams.capId]);
+
+  const relatedCaps = useMemo(() => {
+    if (!capEntry) return [];
+    return caps
+      .filter((item) => item.auditId === capEntry.cap.auditId && item.findingId === capEntry.cap.findingId)
+      .sort((left, right) => {
+        if (left.id === capEntry.cap.id) return -1;
+        if (right.id === capEntry.cap.id) return 1;
+        return String(right.updatedAt || '').localeCompare(String(left.updatedAt || ''));
+      });
+  }, [capEntry, caps]);
 
   const handleCreateAdditionalCap = async () => {
     if (!capEntry) return;
@@ -255,6 +281,55 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
           />
         </div>
         <CardContent className="bg-muted/5 p-4">
+          <div className="mb-4 rounded-lg border border-card-border bg-background">
+            <div className="border-b border-card-border bg-muted/20 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Finding And Corrective Actions</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{capEntry.observation}</p>
+            </div>
+            <div className="space-y-2 p-3">
+              {relatedCaps.map((relatedCap, index) => {
+                const ownerLabel = getPersonnelDisplayName(personnel, relatedCap.responsiblePersonId || '') || 'Unassigned';
+                const dueDate = formatCapDueDate(relatedCap.dueDate || capEntry.audit.auditDate);
+                const isCurrentCap = relatedCap.id === capEntry.cap.id;
+                return (
+                  <div key={relatedCap.id} className={cn("rounded-lg border px-3 py-3", isCurrentCap ? "border-card-border bg-muted/10" : "border-card-border bg-background")}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action {index + 1}</p>
+                          {isCurrentCap ? (
+                            <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                              Current
+                            </Badge>
+                          ) : null}
+                          <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                            {relatedCap.status}
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-sm font-medium text-foreground">
+                          {relatedCap.rootCauseAnalysis?.trim() || 'No corrective action description recorded yet.'}
+                        </p>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-md border bg-background px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Responsible Person</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{ownerLabel}</p>
+                        </div>
+                        <div className="rounded-md border bg-background px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Due Date</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{dueDate ? format(parseLocalDate(dueDate), 'dd MMM yy') : 'Not set'}</p>
+                        </div>
+                        <div className="rounded-md border bg-background px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Responsibility Entries</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{relatedCap.actions?.length || 0}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
           <CapTaskDetailCard
             ref={capDetailRef}
             cap={capEntry.cap}
