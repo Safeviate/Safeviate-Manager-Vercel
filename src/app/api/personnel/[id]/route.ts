@@ -38,11 +38,28 @@ export async function DELETE(
   }
 
   const deletedPersonnel = await prisma.$transaction(async (tx) => {
+    const linkedUserIds = new Set<string>();
+    if (existingUser?.email && String(existingUser.email).trim().toLowerCase() === normalizedEmail) {
+      linkedUserIds.add(id);
+    }
+    if (normalizedEmail) {
+      const matchingUsers = await tx.user.findMany({
+        where: {
+          email: normalizedEmail,
+        },
+        select: { id: true },
+      });
+      matchingUsers.forEach((user) => {
+        if (user.id?.trim()) linkedUserIds.add(user.id.trim());
+      });
+    }
+
     if (normalizedEmail) {
       await tx.passwordSetupInvite.deleteMany({
         where: {
           OR: [
             { userId: id },
+            ...(linkedUserIds.size > 0 ? [{ userId: { in: Array.from(linkedUserIds) } }] : []),
             { email: normalizedEmail },
           ],
         },
@@ -56,17 +73,41 @@ export async function DELETE(
     } else {
       await tx.passwordSetupInvite.deleteMany({
         where: {
-          userId: id,
+          OR: [
+            { userId: id },
+            ...(linkedUserIds.size > 0 ? [{ userId: { in: Array.from(linkedUserIds) } }] : []),
+          ],
         },
       });
     }
 
     const deleted = await tx.personnel.deleteMany({
-      where: { id },
+      where: normalizedEmail
+        ? {
+            OR: [
+              { id },
+              { email: normalizedEmail },
+            ],
+          }
+        : { id },
     });
 
     await tx.user.deleteMany({
-      where: { id },
+      where: normalizedEmail
+        ? {
+            OR: [
+              { id },
+              { email: normalizedEmail },
+            ],
+          }
+        : linkedUserIds.size > 0
+          ? {
+              OR: [
+                { id },
+                { id: { in: Array.from(linkedUserIds) } },
+              ],
+            }
+          : { id },
     });
 
     return deleted;
