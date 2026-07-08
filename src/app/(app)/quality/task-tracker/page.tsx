@@ -21,7 +21,6 @@ import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { useToast } from '@/hooks/use-toast';
 import { ChevronDown } from 'lucide-react';
 import { getPersonnelDisplayName } from '@/lib/personnel-label';
-import { ChevronRight } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 import type { ManagementOfChange } from '@/types/moc';
@@ -293,32 +292,32 @@ export default function TaskTrackerPage() {
       .filter((entry) => Boolean(entry.findingId));
   }, [audits, capsByFindingKey, isLoading]);
 
-  const auditCapSnapshot = useMemo(() => {
-    const now = new Date();
-    const weekAhead = new Date(now);
-    weekAhead.setDate(now.getDate() + 7);
-
-    const overdue = auditCapEntries.filter((entry) => {
-      const due = parseLocalDate(formatCapDueDate(entry.cap.dueDate || entry.audit.auditDate));
-      return due.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12).getTime()
-        && entry.cap.status !== 'Closed'
-        && entry.cap.status !== 'Cancelled';
-    }).length;
-    const dueSoon = auditCapEntries.filter((entry) => {
-      const due = parseLocalDate(formatCapDueDate(entry.cap.dueDate || entry.audit.auditDate));
-      return due.getTime() >= new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12).getTime()
-        && due.getTime() <= weekAhead.getTime()
-        && entry.cap.status !== 'Closed'
-        && entry.cap.status !== 'Cancelled';
-    }).length;
-    const open = auditCapEntries.filter((entry) => entry.cap.status !== 'Closed' && entry.cap.status !== 'Cancelled').length;
-
-    return { overdue, dueSoon, open };
-  }, [auditCapEntries]);
   const auditCapWindow = useMemo(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12).getTime();
   }, []);
+
+  const getAuditFindingSnapshot = useCallback((entries: AuditFindingEntry[]) => {
+    const weekAhead = new Date();
+    weekAhead.setDate(weekAhead.getDate() + 7);
+
+    const overdue = entries.filter((entry) => {
+      const primaryCap = entry.caps[0];
+      const due = parseLocalDate(formatCapDueDate(primaryCap?.dueDate || entry.audit.auditDate)).getTime();
+      return due < auditCapWindow && primaryCap?.status !== 'Closed' && primaryCap?.status !== 'Cancelled';
+    }).length;
+    const dueSoon = entries.filter((entry) => {
+      const primaryCap = entry.caps[0];
+      const due = parseLocalDate(formatCapDueDate(primaryCap?.dueDate || entry.audit.auditDate)).getTime();
+      return due >= auditCapWindow && due <= weekAhead.getTime() && primaryCap?.status !== 'Closed' && primaryCap?.status !== 'Cancelled';
+    }).length;
+    const open = entries.filter((entry) => {
+      const primaryCap = entry.caps[0];
+      return !primaryCap || (primaryCap.status !== 'Closed' && primaryCap.status !== 'Cancelled');
+    }).length;
+
+    return { open, dueSoon, overdue };
+  }, [auditCapWindow]);
 
   if (!isAccessLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
@@ -542,8 +541,7 @@ export default function TaskTrackerPage() {
                               return (
                                 <div key={entry.id} className="overflow-hidden rounded-lg border border-card-border bg-background">
                                   <div className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
-                                    <div className="flex min-w-0 items-start gap-3">
-                                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <div className="flex min-w-0 items-start">
                                       <div className="min-w-0 space-y-2">
                                         <div className="flex flex-wrap items-center gap-2">
                                           <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
@@ -603,6 +601,7 @@ export default function TaskTrackerPage() {
   const renderOrgCard = (orgId: string | 'internal') => {
     const filteredTasks = allTasks.filter((task) => (orgId === 'internal' ? !task.organizationId : task.organizationId === orgId));
     const filteredAuditCaps = auditFindingEntries.filter((entry) => (orgId === 'internal' ? !entry.audit.organizationId : entry.audit.organizationId === orgId));
+    const snapshot = getAuditFindingSnapshot(filteredAuditCaps);
     const remainingTasks = filteredTasks;
     const hasVisibleContent = filteredAuditCaps.length > 0 || remainingTasks.length > 0;
     const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };
@@ -611,12 +610,28 @@ export default function TaskTrackerPage() {
       <Card className="min-h-[400px] flex h-full flex-1 flex-col overflow-hidden shadow-none border">
         {shouldShowOrganizationTabs && (
           <div className="w-full border-b border-border px-4 py-3" style={headerBandBorderStyle}>
-            <OrganizationTabsRow
-              organizations={organizations || []}
-              activeTab={activeOrgTab}
-              onTabChange={setActiveOrgTab}
-              className="border-0 bg-transparent px-0 py-0 shrink-0"
-            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <OrganizationTabsRow
+                organizations={organizations || []}
+                activeTab={activeOrgTab}
+                onTabChange={setActiveOrgTab}
+                className="border-0 bg-transparent px-0 py-0 shrink-0"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-700">Open</p>
+                  <p className="text-[11px] font-black text-amber-950">{snapshot.open}</p>
+                </div>
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-700">Due Soon</p>
+                  <p className="text-[11px] font-black text-amber-950">{snapshot.dueSoon}</p>
+                </div>
+                <div className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-red-700">Overdue</p>
+                  <p className="text-[11px] font-black text-red-950">{snapshot.overdue}</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
         <CardContent className="flex-1 min-h-0 p-0 bg-muted/5 overflow-hidden">
@@ -670,28 +685,6 @@ export default function TaskTrackerPage() {
       'max-w-[1100px] mx-auto w-full flex flex-col gap-6 px-1 pt-4 pb-6 min-h-0',
       isMobile ? 'min-h-0 overflow-y-auto' : 'h-full overflow-hidden'
     )}>
-      <Card className="border shadow-none overflow-hidden">
-        <CardHeader className="border-b bg-muted/20 px-4 py-3">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Corrective Action Snapshot</p>
-            <p className="text-sm font-medium text-muted-foreground">A project-style view of audit CAP ownership and deadlines.</p>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-3 px-4 py-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">Open CAPs</p>
-            <p className="mt-1 text-2xl font-black text-amber-950">{auditCapSnapshot.open}</p>
-          </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">Due Soon</p>
-            <p className="mt-1 text-2xl font-black text-amber-950">{auditCapSnapshot.dueSoon}</p>
-          </div>
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-700">Overdue</p>
-            <p className="mt-1 text-2xl font-black text-red-950">{auditCapSnapshot.overdue}</p>
-          </div>
-        </CardContent>
-      </Card>
       {!showTabs ? (
         renderOrgCard(scopedOrganizationId)
       ) : (

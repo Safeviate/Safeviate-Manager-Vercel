@@ -16,39 +16,19 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useToast } from '@/hooks/use-toast';
 import { CapTaskDetailCard, parseCapFindingLevel, parseCapObservation } from '../cap-task-detail-card';
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
-import type { CorrectiveAction } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { getPersonnelDisplayName } from '@/lib/personnel-label';
-import { cn } from '@/lib/utils';
 
 const FINDING_ROUTE_PREFIX = 'finding::';
-
-const formatCapDueDate = (value?: string) => {
-  if (!value) return '';
-  return value.length >= 10 ? value.slice(0, 10) : value;
-};
-
-const parseLocalDate = (value: string) => {
-  const [year, month, day] = value.split('-').map(Number);
-  if (!year || !month || !day) {
-    return new Date(value);
-  }
-  return new Date(year, month - 1, day, 12);
-};
-
-const getDisplayedActionsForCap = (cap: CorrectiveActionPlan) => {
-  const explicitActions = Array.isArray(cap.actions) ? cap.actions : [];
-  return explicitActions.filter((action) => {
-    const description = action.description?.trim() || '';
-    return Boolean(description && description !== 'Primary corrective action responsibility');
-  });
-};
 
 const hasSavedCorrectiveAction = (cap: CorrectiveActionPlan) => {
   if (cap.rootCauseAnalysis?.trim()) {
     return true;
   }
-  return getDisplayedActionsForCap(cap).length > 0;
+  return (Array.isArray(cap.responses) ? cap.responses : []).some((response) => {
+    const message = response.message?.trim() || '';
+    const evidenceCount = Array.isArray(response.evidence) ? response.evidence.length : 0;
+    return Boolean(message) || evidenceCount > 0;
+  });
 };
 
 const isFindingRouteId = (value: string) => value.startsWith(FINDING_ROUTE_PREFIX);
@@ -70,7 +50,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
   const [audits, setAudits] = useState<QualityAudit[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeletingCap, setIsDeletingCap] = useState(false);
+  const [deletingCapId, setDeletingCapId] = useState<string | null>(null);
   const [isEditorVisible, setIsEditorVisible] = useState(false);
   const canDeleteCaps =
     rolePermissions.includes('*')
@@ -220,23 +200,36 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
     }
   };
 
-  const handleDeleteCap = async () => {
-    if (!capEntry || isDeletingCap) return;
+  const handleDeleteCap = async (targetCapId: string) => {
+    if (!capEntry || deletingCapId) return;
     if (!window.confirm('Delete this CAP only? The audit finding and observation will remain in place. This cannot be undone.')) return;
 
     try {
-      setIsDeletingCap(true);
-      const response = await fetch(`/api/corrective-action-plans?id=${encodeURIComponent(capEntry.cap.id)}`, { method: 'DELETE' });
+      setDeletingCapId(targetCapId);
+      const response = await fetch(`/api/corrective-action-plans?id=${encodeURIComponent(targetCapId)}`, { method: 'DELETE' });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error || 'Failed to delete corrective action plan.');
       }
       window.dispatchEvent(new Event('safeviate-quality-updated'));
+      const remainingCaps = caps.filter((item) => item.id !== targetCapId);
+      setCaps(remainingCaps);
       toast({
         title: 'Corrective Action Deleted',
         description: 'The corrective action plan was removed.',
       });
-      window.location.href = '/quality/task-tracker';
+      if (targetCapId !== resolvedParams.capId) {
+        return;
+      }
+
+      const siblingCap = remainingCaps.find((item) => item.auditId === capEntry.cap.auditId && item.findingId === capEntry.cap.findingId);
+      if (siblingCap) {
+        window.location.href = `/quality/task-tracker/${siblingCap.id}`;
+        return;
+      }
+
+      const findingRouteId = `${FINDING_ROUTE_PREFIX}${capEntry.cap.auditId}::${capEntry.cap.findingId}`;
+      window.location.href = `/quality/task-tracker/${findingRouteId}`;
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -244,7 +237,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
         description: error instanceof Error ? error.message : 'Failed to delete corrective action plan.',
       });
     } finally {
-      setIsDeletingCap(false);
+      setDeletingCapId(null);
     }
   };
 
@@ -287,9 +280,13 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
             className="flex w-full shrink-0 flex-col bg-[hsl(var(--card-header-band-background))]"
             isMobile={false}
             context={(
-              <div className="flex min-w-0 flex-col gap-0.5">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Corrective Action Task</p>
-                <p className="text-[11px] font-medium leading-3.5 text-muted-foreground">Review the finding, manage its CAPs, and maintain the related corrective actions and responses.</p>
+                <p className="text-[11px] font-medium leading-3.5 text-muted-foreground">Review the finding, open its corrective actions, and maintain each action separately.</p>
+                <div className="rounded-md border border-card-border bg-background px-3 py-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Finding</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{capEntry.observation}</p>
+                </div>
               </div>
             )}
             actions={(
@@ -307,7 +304,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
               </div>
             )}
             navigation={(
-              <div className="flex flex-wrap items-center justify-between gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button asChild variant="outline" className={HEADER_COMPACT_CONTROL_CLASS}>
                     <Link href={`/quality/audits/${capEntry.audit.id}`}>Audit #{capEntry.audit.auditNumber}</Link>
@@ -320,124 +317,44 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
                     <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-foreground">{capEntry.findingLevel}</span>
                   </div>
                 </div>
-                <p className={cn("min-w-0 text-[11px] leading-4 text-muted-foreground", "max-w-full truncate md:max-w-[420px]")}>
-                  {capEntry.observation}
-                </p>
               </div>
             )}
           />
         </div>
         <CardContent className="bg-muted/5 p-4">
-          <div className="mb-4 rounded-lg border border-card-border bg-background">
-            <div className="border-b border-card-border bg-muted/20 px-4 py-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Audit Finding</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{capEntry.observation}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Open the finding, then assign one or more corrective actions with an assignee and completion date.</p>
-                </div>
-                <Button type="button" variant="outline" className={HEADER_COMPACT_CONTROL_CLASS} onClick={() => void handleAddCorrectiveAction()}>
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  Add Corrective Action
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2 p-3">
-              {relatedCaps.map((relatedCap, index) => {
-                const ownerLabel = getPersonnelDisplayName(personnel, relatedCap.responsiblePersonId || '') || 'Unassigned';
-                const dueDate = formatCapDueDate(relatedCap.dueDate || capEntry.audit.auditDate);
-                const isCurrentCap = relatedCap.id === capEntry.cap.id;
-                const displayedActions = getDisplayedActionsForCap(relatedCap);
-                return (
-                  <div key={relatedCap.id} className={cn("rounded-lg border px-3 py-3", isCurrentCap ? "border-card-border bg-muted/10" : "border-card-border bg-background")}>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Saved Assignment {index + 1}</p>
-                          {isCurrentCap ? (
-                            <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
-                              Current
-                            </Badge>
-                          ) : null}
-                          <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
-                            {relatedCap.status}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 text-sm font-medium text-foreground">
-                          {relatedCap.rootCauseAnalysis?.trim() || 'No corrective action description recorded yet.'}
-                        </p>
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        <div className="rounded-md border bg-background px-3 py-2">
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAP Owner</p>
-                          <p className="mt-1 text-sm font-semibold text-foreground">{ownerLabel}</p>
-                        </div>
-                        <div className="rounded-md border bg-background px-3 py-2">
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Due Date</p>
-                          <p className="mt-1 text-sm font-semibold text-foreground">{dueDate ? format(parseLocalDate(dueDate), 'dd MMM yy') : 'Not set'}</p>
-                        </div>
-                        <div className="rounded-md border bg-background px-3 py-2">
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Saved Items</p>
-                          <p className="mt-1 text-sm font-semibold text-foreground">{displayedActions.length}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {displayedActions.length > 0 ? displayedActions.map((action, actionIndex) => {
-                        const assigneeLabel = getPersonnelDisplayName(personnel, action.responsiblePersonId || '') || 'Unassigned';
-                        const actionDueDate = formatCapDueDate(action.deadline || dueDate);
-                        const isPrimaryAction = action.id === '__primary__';
-                        return (
-                          <div key={`${relatedCap.id}:${action.id}`} className="rounded-md border border-card-border bg-background px-3 py-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                                {isPrimaryAction ? 'Saved Primary Action' : `Saved Additional Action ${actionIndex}`}
-                              </p>
-                              <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
-                                {action.status}
-                              </Badge>
-                            </div>
-                            <p className="mt-2 text-sm font-medium text-foreground">
-                              {action.description?.trim() || 'No corrective action description recorded yet.'}
-                            </p>
-                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                              <div className="rounded-md border bg-muted/10 px-3 py-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
-                                <p className="mt-1 text-sm font-semibold text-foreground">{assigneeLabel}</p>
-                              </div>
-                              <div className="rounded-md border bg-muted/10 px-3 py-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Deadline</p>
-                                <p className="mt-1 text-sm font-semibold text-foreground">{actionDueDate ? format(parseLocalDate(actionDueDate), 'dd MMM yy') : 'Not set'}</p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }) : (
-                        <div className="rounded-md border border-dashed border-card-border bg-muted/5 px-3 py-4 text-sm text-muted-foreground">
-                          No corrective actions recorded yet for this CAP.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="space-y-4">
+            {relatedCaps.map((relatedCap) => (
+              <CapTaskDetailCard
+                key={relatedCap.id}
+                cap={relatedCap}
+                audit={capEntry.audit}
+                observation={capEntry.observation}
+                findingLevel={capEntry.findingLevel}
+                personnel={personnel}
+                currentUserId={userProfile?.id}
+                currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
+                rolePermissions={rolePermissions}
+                onDeleteCap={() => void handleDeleteCap(relatedCap.id)}
+                canDeleteCap={canDeleteCaps}
+                isDeletingCap={deletingCapId === relatedCap.id}
+              />
+            ))}
+            {isEditorVisible && (!hasAnySavedCorrectiveActions || isDraftFindingOnly) ? (
+              <CapTaskDetailCard
+                cap={capEntry.cap}
+                audit={capEntry.audit}
+                observation={capEntry.observation}
+                findingLevel={capEntry.findingLevel}
+                personnel={personnel}
+                currentUserId={userProfile?.id}
+                currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
+                rolePermissions={rolePermissions}
+                onDeleteCap={() => void handleDeleteCap(capEntry.cap.id)}
+                canDeleteCap={canDeleteCaps && !isFindingRouteId(capEntry.cap.id)}
+                isDeletingCap={deletingCapId === capEntry.cap.id}
+              />
+            ) : null}
           </div>
-          {isEditorVisible ? (
-            <CapTaskDetailCard
-              cap={capEntry.cap}
-              audit={capEntry.audit}
-              observation={capEntry.observation}
-              findingLevel={capEntry.findingLevel}
-              personnel={personnel}
-              currentUserId={userProfile?.id}
-              currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
-              rolePermissions={rolePermissions}
-              onDeleteCap={() => void handleDeleteCap()}
-              canDeleteCap={canDeleteCaps}
-              isDeletingCap={isDeletingCap}
-            />
-          ) : null}
         </CardContent>
       </Card>
     </div>

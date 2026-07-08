@@ -5,7 +5,6 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -15,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { CardControlHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS } from '@/components/page-header';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import type { CorrectiveAction } from '@/types/safety-report';
 import type { CorrectiveActionPlan, CorrectiveActionPlanEvidence, CorrectiveActionPlanResponse, QualityAudit, QualityFinding } from '@/types/quality';
 
 const parseLocalDate = (value: string) => {
@@ -37,10 +35,6 @@ const toNoonUtcIso = (date: Date) =>
 const hasSavedPrimaryCorrectiveAction = (cap: CorrectiveActionPlan) =>
   Boolean(cap.rootCauseAnalysis?.trim());
 
-const hasSavedAdditionalCorrectiveActions = (cap: CorrectiveActionPlan) =>
-  Array.isArray(cap.actions)
-  && cap.actions.some((action) => Boolean(action.description?.trim() && action.description.trim() !== 'Primary corrective action responsibility'));
-
 export const parseCapObservation = (finding?: QualityFinding) =>
   finding?.comment?.trim()
   || finding?.gapDescription?.trim()
@@ -60,7 +54,6 @@ interface CapTaskDetailCardProps {
   currentUserId?: string;
   currentUserName?: string;
   rolePermissions?: string[];
-  hideInlineSave?: boolean;
   hideLeadSummary?: boolean;
   onDeleteCap?: (() => void) | null;
   canDeleteCap?: boolean;
@@ -72,7 +65,7 @@ export interface CapTaskDetailCardHandle {
 }
 
 export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDetailCardProps>(function CapTaskDetailCard(
-  { cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideInlineSave = false, hideLeadSummary = false, onDeleteCap = null, canDeleteCap = false, isDeletingCap = false }: CapTaskDetailCardProps,
+  { cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideLeadSummary = false, onDeleteCap = null, canDeleteCap = false, isDeletingCap = false }: CapTaskDetailCardProps,
   ref,
 ) {
   const { toast } = useToast();
@@ -81,7 +74,6 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
   const [rootCauseAnalysis, setRootCauseAnalysis] = useState(hasSavedPrimaryAction ? (cap.rootCauseAnalysis || '') : '');
   const [responsiblePersonId, setResponsiblePersonId] = useState(hasSavedPrimaryAction ? (cap.responsiblePersonId || '') : '');
   const [dueDate, setDueDate] = useState(hasSavedPrimaryAction ? formatCapDueDate(cap.dueDate || audit.auditDate) : '');
-  const [actions, setActions] = useState<CorrectiveAction[]>(cap.actions || []);
   const [responses, setResponses] = useState<CorrectiveActionPlanResponse[]>(cap.responses || []);
   const [responseDraft, setResponseDraft] = useState('');
   const [draftEvidence, setDraftEvidence] = useState<CorrectiveActionPlanEvidence[]>([]);
@@ -97,27 +89,20 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
     currentUserId
     && (
       currentUserId === responsiblePersonId
-      || actions.some((action) => action.responsiblePersonId === currentUserId)
       || hasQualityManagementPermission
     )
   );
-  const primaryAssignee = personnel.find((person) => person.id === responsiblePersonId);
-  const primaryAssigneeLabel = primaryAssignee
-    ? `${primaryAssignee.firstName || ''} ${primaryAssignee.lastName || ''}`.trim() || 'Unassigned'
-    : 'Unassigned';
-
   useEffect(() => {
     const shouldShowPrimaryAssignment = hasSavedPrimaryCorrectiveAction(cap);
     setRootCauseAnalysis(shouldShowPrimaryAssignment ? (cap.rootCauseAnalysis || '') : '');
     setResponsiblePersonId(shouldShowPrimaryAssignment ? (cap.responsiblePersonId || '') : '');
     setDueDate(shouldShowPrimaryAssignment ? formatCapDueDate(cap.dueDate || audit.auditDate) : '');
-    setActions(cap.actions || []);
     setResponses(cap.responses || []);
     setResponseDraft('');
     setDraftEvidence([]);
     setEditingResponseId(null);
     setEditingResponseMeta(null);
-  }, [audit.auditDate, cap.actions, cap.dueDate, cap.id, cap.responsiblePersonId, cap.responses, cap.rootCauseAnalysis]);
+  }, [audit.auditDate, cap.dueDate, cap.id, cap.responsiblePersonId, cap.responses, cap.rootCauseAnalysis]);
 
   useEffect(() => {
     const textarea = correctiveActionRef.current;
@@ -138,7 +123,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
             rootCauseAnalysis,
             responsiblePersonId,
             dueDate: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : '',
-            actions,
+            actions: [],
             responses,
           },
         }),
@@ -151,15 +136,15 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
       const savedCap = payload?.cap as CorrectiveActionPlan | undefined;
       window.dispatchEvent(new Event('safeviate-quality-updated'));
       toast({
-        title: 'Corrective Action Plan Saved',
-        description: 'The CAP has been updated.',
+        title: 'Corrective Action Saved',
+        description: 'The corrective action has been updated.',
       });
       return savedCap || null;
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save CAP.',
+        description: error instanceof Error ? error.message : 'Failed to save corrective action.',
       });
       return null;
     } finally {
@@ -223,29 +208,6 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
     setResponses((current) => current.filter((item) => item.id !== responseId));
   };
 
-  const addCapAction = () => {
-    setActions((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        description: '',
-        responsiblePersonId: '',
-        deadline: dueDate ? toNoonUtcIso(parseLocalDate(dueDate)) : new Date().toISOString(),
-        status: 'Open',
-      },
-    ]);
-  };
-
-  const updateCapAction = <K extends keyof CorrectiveAction>(actionId: string, field: K, value: CorrectiveAction[K]) => {
-    setActions((current) => current.map((action) => (
-      action.id === actionId ? { ...action, [field]: value } : action
-    )));
-  };
-
-  const removeCapAction = (actionId: string) => {
-    setActions((current) => current.filter((action) => action.id !== actionId));
-  };
-
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-lg border border-card-border bg-background shadow-none">
@@ -255,8 +217,8 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
             isMobile={false}
             context={(
               <div className="flex min-w-0 flex-col gap-0.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Corrective Action Plan</p>
-                <p className="text-[11px] font-medium leading-3.5 text-muted-foreground">Manage this CAP, its additional corrective actions, and assignee responses.</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Corrective Action</p>
+                <p className="text-[11px] font-medium leading-3.5 text-muted-foreground">Manage this corrective action, its assignee feedback, and supporting evidence.</p>
               </div>
             )}
             actions={(
@@ -327,7 +289,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
 
         <div className={hideLeadSummary ? "grid gap-3 p-3" : "grid gap-3 p-3"}>
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Edit Primary Corrective Action</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Description</p>
             <Textarea
               ref={correctiveActionRef}
               value={rootCauseAnalysis}
@@ -342,12 +304,12 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
         <div className="mx-3 mb-3 grid gap-3 lg:grid-cols-2">
           <div className="rounded-lg border border-card-border bg-background p-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee Feedback</p>
-              <p className="mt-1 text-xs text-muted-foreground">Use this space for progress notes, updates, and close-out feedback from the assignee.</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Feedback</p>
+              <p className="mt-1 text-xs text-muted-foreground">Use this space for progress notes, implementation updates, and close-out feedback for this corrective action.</p>
             </div>
 
             <div className="mt-3 space-y-3">
-              <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add feedback for this corrective action plan..." className="min-h-24 bg-background" disabled={!canManageCapResponses} />
+              <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add feedback for this corrective action..." className="min-h-24 bg-background" disabled={!canManageCapResponses} />
               {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a user with quality management permissions can post feedback and upload evidence.</div> : null}
 
               <div className="flex justify-end">
@@ -364,8 +326,8 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
           <div className="rounded-lg border border-card-border bg-background p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Evidence Attachments</p>
-                <p className="mt-1 text-xs text-muted-foreground">Upload documents or photos that support the current feedback update.</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Evidence</p>
+                <p className="mt-1 text-xs text-muted-foreground">Upload documents or photos that support this corrective action and its latest feedback update.</p>
               </div>
               <DocumentUploader
                 defaultFileName={`cap-evidence-${audit.auditNumber}`}
