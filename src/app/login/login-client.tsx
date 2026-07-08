@@ -23,6 +23,7 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  WifiOff,
   Wrench,
   X,
 } from 'lucide-react';
@@ -261,9 +262,27 @@ export default function LoginClient() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const tenantId = searchParams?.get('tenantId')?.trim() || '';
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const syncConnectivityState = () => {
+      setIsOnline(window.navigator.onLine);
+    };
+
+    syncConnectivityState();
+    window.addEventListener('online', syncConnectivityState);
+    window.addEventListener('offline', syncConnectivityState);
+
+    return () => {
+      window.removeEventListener('online', syncConnectivityState);
+      window.removeEventListener('offline', syncConnectivityState);
+    };
+  }, []);
 
   useEffect(() => {
     const nextEmail = searchParams?.get('email')?.trim();
@@ -317,6 +336,18 @@ export default function LoginClient() {
 
   const handleUserLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isOnline) {
+      const message =
+        'A fresh sign-in requires a live connection. Reconnect once, sign in online, and then reopen the installed app for offline use.';
+      setErrorMessage(message);
+      toast({
+        variant: 'destructive',
+        title: 'Offline Sign-In Unavailable',
+        description: message,
+      });
+      return;
+    }
 
     if (!email || !password) {
       setErrorMessage('Please enter both email and password.');
@@ -759,9 +790,13 @@ export default function LoginClient() {
               <div className="flex items-center justify-between gap-3">
                 <Badge
                   variant="outline"
-                  className="border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100"
+                  className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
+                    isOnline
+                      ? 'border-white/15 bg-white/10 text-cyan-100'
+                      : 'border-amber-400/30 bg-amber-400/10 text-amber-100'
+                  }`}
                 >
-                  Authenticated
+                  {isOnline ? 'Authenticated' : 'Offline'}
                 </Badge>
                 <button
                   type="button"
@@ -800,6 +835,20 @@ export default function LoginClient() {
                 {errorMessage ? (
                   <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
                     {errorMessage}
+                  </div>
+                ) : null}
+
+                {!isOnline ? (
+                  <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                    <div className="flex items-start gap-3">
+                      <WifiOff className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div>
+                        <p className="font-black uppercase tracking-[0.14em] text-amber-200">Offline sign-in unavailable</p>
+                        <p className="mt-1 text-amber-100/90">
+                          Safeviate can open previously cached screens offline, but signing in after logout still needs a live connection.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
 
@@ -842,10 +891,12 @@ export default function LoginClient() {
                 <UiButton
                   type="submit"
                   className="h-12 w-full bg-gradient-to-r from-cyan-400 via-cyan-500 to-emerald-400 font-black uppercase tracking-[0.18em] text-slate-950 shadow-lg shadow-cyan-500/20 hover:from-cyan-300 hover:to-emerald-300"
-                  disabled={isLoginLoading}
+                  disabled={isLoginLoading || !isOnline}
                 >
                   {isLoginLoading ? (
                     'Authorizing...'
+                  ) : !isOnline ? (
+                    'Reconnect To Sign In'
                   ) : (
                     <span className="inline-flex items-center gap-2">
                       Sign In
