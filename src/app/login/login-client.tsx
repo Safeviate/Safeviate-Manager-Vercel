@@ -339,7 +339,7 @@ export default function LoginClient() {
 
     if (!isOnline) {
       const message =
-        'A fresh sign-in requires a live connection. Reconnect once, sign in online, and then reopen the installed app for offline use.';
+        'A fresh sign-in requires a live connection. Reconnect once, sign in online, and keep that session active if you want to reopen cached Safeviate pages offline.';
       setErrorMessage(message);
       toast({
         variant: 'destructive',
@@ -845,7 +845,7 @@ export default function LoginClient() {
                       <div>
                         <p className="font-black uppercase tracking-[0.14em] text-amber-200">Offline sign-in unavailable</p>
                         <p className="mt-1 text-amber-100/90">
-                          Safeviate can open previously cached screens offline, but signing in after logout still needs a live connection.
+                          Safeviate can open previously cached screens offline, but signing in after logout still needs a live connection. Stay signed in if you want those cached pages to reopen offline.
                         </p>
                       </div>
                     </div>

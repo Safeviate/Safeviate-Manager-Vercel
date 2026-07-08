@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { use, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CapTaskDetailCard, parseCapFindingLevel, parseCapObservation } from '../cap-task-detail-card';
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
+import { OfflineCacheButton } from '@/components/offline-cache-button';
 
 const FINDING_ROUTE_PREFIX = 'finding::';
 const LOCAL_DRAFT_CAP_PREFIX = 'draft::';
@@ -53,6 +54,7 @@ const buildLocalDraftCap = (cap: CorrectiveActionPlan): CorrectiveActionPlan => 
 
 export default function CapTaskDetailPage({ params }: { params: Promise<{ capId: string }> }) {
   const resolvedParams = use(params);
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { tenantId, userProfile, rolePermissions } = useUserProfile();
   const { toast } = useToast();
@@ -69,6 +71,12 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
     rolePermissions.includes('*')
     || rolePermissions.includes('admin-view')
     || rolePermissions.includes('quality-caps-manage');
+  const detailSearch = searchParams?.toString() || '';
+  const currentRoute = `${pathname || `/quality/task-tracker/${resolvedParams.capId}`}${detailSearch ? `?${detailSearch}` : ''}`;
+  const offlineUrls = useMemo(
+    () => [currentRoute, '/quality/task-tracker', '/api/dashboard-summary'],
+    [currentRoute]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -316,6 +324,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
                   <PlusCircle className="h-3.5 w-3.5" />
                   Add Corrective Action
                 </Button>
+                <OfflineCacheButton urls={offlineUrls} className={HEADER_COMPACT_CONTROL_CLASS} cachedLabel="Offline Ready" />
               </div>
             )}
             navigation={(

@@ -155,8 +155,8 @@ export function ServiceWorkerRegistration() {
           {updateReady
             ? 'A new Safeviate build is ready on this device.'
             : isOnline
-              ? 'Offline cache is active for supported Safeviate screens.'
-              : 'You are viewing Safeviate in offline mode from the local cache.'}
+              ? 'Offline cache is active for supported Safeviate screens while your last signed-in session stays active on this device.'
+              : 'You are viewing Safeviate in offline mode from the local cache. If you sign out, a live connection is required before offline access will work again.'}
         </p>
 
         {updateReady ? (

@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChevronDown } from 'lucide-react';
 import { getPersonnelDisplayName } from '@/lib/personnel-label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { OfflineCacheButton } from '@/components/offline-cache-button';
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
@@ -102,6 +103,10 @@ export default function TaskTrackerPage() {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const offlineUrls = useMemo(
+    () => ['/quality/task-tracker', '/api/dashboard-summary', '/api/external-organizations'],
+    []
+  );
   const isCurrentTenantRecord = (record: { tenantId?: string | null } | null | undefined) => record?.tenantId === tenantId;
   const loadData = useCallback(() => {
     setIsLoading(true);
@@ -630,6 +635,7 @@ export default function TaskTrackerPage() {
                   <p className="text-[9px] font-black uppercase tracking-[0.16em] text-red-700">Overdue</p>
                   <p className="text-[11px] font-black text-red-950">{snapshot.overdue}</p>
                 </div>
+                <OfflineCacheButton urls={offlineUrls} className="h-7 px-3 text-[9px] font-black uppercase tracking-[0.08em]" cachedLabel="Offline Ready" />
               </div>
             </div>
           </div>

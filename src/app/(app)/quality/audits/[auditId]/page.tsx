@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useMemo, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { BackNavButton } from '@/components/back-nav-button';
 import { PrintButton } from '@/components/print-button';
 import { usePageLayout } from '@/hooks/use-page-layout';
+import { OfflineCacheButton } from '@/components/offline-cache-button';
 
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -36,10 +37,15 @@ interface AuditDetailPageProps {
 export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const pathname = usePathname();
   const { tenantId, userProfile } = useUserProfile();
   const { hasPermission } = usePermissions();
   const { isPageEnabled } = usePageLayout('audits');
   const auditId = resolvedParams.auditId;
+  const offlineUrls = useMemo(
+    () => [pathname || `/quality/audits/${auditId}`, '/quality/audits', '/api/quality-audits'],
+    [auditId, pathname]
+  );
 
   const [audit, setAudit] = useState<QualityAudit | null>(null);
   const [template, setTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
@@ -184,6 +190,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
               <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
                 <BackNavButton href="/quality/audits" text="Back to Audits" />
+                <OfflineCacheButton urls={offlineUrls} className="h-9 px-3 text-[10px] font-black uppercase tracking-[0.08em]" cachedLabel="Offline Ready" />
                 <Button onClick={handleStartAudit} disabled={isStartingAudit} className="h-9">
                   <PlayCircle className="mr-2 h-4 w-4" />
                   {isStartingAudit ? 'Starting Audit...' : 'Start Audit'}
@@ -251,6 +258,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
             <div className="flex w-full flex-col items-start gap-4 md:w-auto md:items-end">
               <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+                <OfflineCacheButton urls={offlineUrls} className="no-print h-9 px-3 text-[10px] font-black uppercase tracking-[0.08em]" cachedLabel="Offline Ready" />
                 <Button asChild variant="outline" size="sm" className="no-print h-9">
                   <Link href={`/print/quality-audits/${audit.id}`}>
                     <FileText className="mr-2 h-4 w-4" />
