@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import { getServerSession } from 'next-auth';
 import { cookies } from 'next/headers';
 import 'leaflet/dist/leaflet.css';
@@ -18,6 +19,12 @@ import {
 } from '@/lib/server/tenant-access';
 
 ensureAiEnvironment('application bootstrap');
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 assertRequiredEnv(
   [['DATABASE_URL', 'DATABASE_URL_UNPOOLED'], 'NEXTAUTH_SECRET', ['Safeviate_AI_KEY', 'OPENAI_API_KEY']],
@@ -427,7 +434,7 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: buildThemeBootstrapScript(initialTenantBootstrap) }} />
       </head>
-      <body className="font-body antialiased">
+      <body className={`${inter.variable} font-body antialiased`}>
         <AppProviders>
           {children}
           <Toaster />
