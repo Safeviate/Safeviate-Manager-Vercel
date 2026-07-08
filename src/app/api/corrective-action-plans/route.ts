@@ -197,7 +197,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const cap = body?.cap as CorrectiveActionPlan | null | undefined;
   if (!cap || typeof cap !== 'object') return NextResponse.json({ error: 'Invalid CAP payload' }, { status: 400 });
-  const id = cap.id || randomUUID();
+  const id = !cap.id || cap.id === 'new' || cap.id.startsWith('draft::') ? randomUUID() : cap.id;
   const data = normalizeCapPayload({ ...cap, id });
   await prisma.$executeRawUnsafe(
     `INSERT INTO corrective_action_plans (id, tenant_id, data, created_at, updated_at) VALUES ($1, $2, $3::jsonb, NOW(), NOW()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,

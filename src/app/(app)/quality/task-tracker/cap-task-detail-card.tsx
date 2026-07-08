@@ -56,6 +56,7 @@ interface CapTaskDetailCardProps {
   rolePermissions?: string[];
   hideLeadSummary?: boolean;
   onDeleteCap?: (() => void) | null;
+  onSaved?: ((cap: CorrectiveActionPlan) => void) | null;
   canDeleteCap?: boolean;
   isDeletingCap?: boolean;
 }
@@ -65,7 +66,7 @@ export interface CapTaskDetailCardHandle {
 }
 
 export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDetailCardProps>(function CapTaskDetailCard(
-  { cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideLeadSummary = false, onDeleteCap = null, canDeleteCap = false, isDeletingCap = false }: CapTaskDetailCardProps,
+  { cap, audit, observation, findingLevel, personnel, currentUserId, currentUserName, rolePermissions = [], hideLeadSummary = false, onDeleteCap = null, onSaved = null, canDeleteCap = false, isDeletingCap = false }: CapTaskDetailCardProps,
   ref,
 ) {
   const { toast } = useToast();
@@ -139,6 +140,9 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
         title: 'Corrective Action Saved',
         description: 'The corrective action has been updated.',
       });
+      if (savedCap) {
+        onSaved?.(savedCap);
+      }
       return savedCap || null;
     } catch (error) {
       toast({
@@ -309,7 +313,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
             </div>
 
             <div className="mt-3 space-y-3">
-              <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add feedback for this corrective action..." className="min-h-24 bg-background" disabled={!canManageCapResponses} />
+              <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add feedback for this corrective action..." className="min-h-[25px] bg-background" disabled={!canManageCapResponses} />
               {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a user with quality management permissions can post feedback and upload evidence.</div> : null}
 
               <div className="flex justify-end">

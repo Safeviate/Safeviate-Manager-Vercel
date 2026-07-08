@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -19,6 +19,7 @@ import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 
 const FINDING_ROUTE_PREFIX = 'finding::';
+const LOCAL_DRAFT_CAP_PREFIX = 'draft::';
 
 const hasSavedCorrectiveAction = (cap: CorrectiveActionPlan) => {
   if (cap.rootCauseAnalysis?.trim()) {
@@ -32,6 +33,7 @@ const hasSavedCorrectiveAction = (cap: CorrectiveActionPlan) => {
 };
 
 const isFindingRouteId = (value: string) => value.startsWith(FINDING_ROUTE_PREFIX);
+const isLocalDraftCapId = (value: string) => value.startsWith(LOCAL_DRAFT_CAP_PREFIX);
 
 const parseFindingRouteId = (value: string) => {
   if (!isFindingRouteId(value)) return null;
@@ -39,6 +41,15 @@ const parseFindingRouteId = (value: string) => {
   if (!auditId || !findingId) return null;
   return { auditId, findingId };
 };
+
+const buildLocalDraftCap = (cap: CorrectiveActionPlan): CorrectiveActionPlan => ({
+  ...cap,
+  id: `${LOCAL_DRAFT_CAP_PREFIX}${crypto.randomUUID()}`,
+  rootCauseAnalysis: '',
+  responsiblePersonId: '',
+  dueDate: '',
+  responses: [],
+});
 
 export default function CapTaskDetailPage({ params }: { params: Promise<{ capId: string }> }) {
   const resolvedParams = use(params);
@@ -49,9 +60,11 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
   const [caps, setCaps] = useState<CorrectiveActionPlan[]>([]);
   const [audits, setAudits] = useState<QualityAudit[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [draftCaps, setDraftCaps] = useState<CorrectiveActionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingCapId, setDeletingCapId] = useState<string | null>(null);
-  const [isEditorVisible, setIsEditorVisible] = useState(false);
+  const initialDraftCapIdRef = useRef(`${LOCAL_DRAFT_CAP_PREFIX}${crypto.randomUUID()}`);
+  const latestDraftCardRef = useRef<HTMLDivElement | null>(null);
   const canDeleteCaps =
     rolePermissions.includes('*')
     || rolePermissions.includes('admin-view')
@@ -105,7 +118,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
     if (!finding) return null;
     return {
       cap: {
-        id: resolvedParams.capId,
+        id: queryAuditId && queryFindingId ? initialDraftCapIdRef.current : resolvedParams.capId,
         auditId: audit.id,
         findingId: resolvedFinding.findingId,
         rootCauseAnalysis: '',
@@ -139,69 +152,71 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
     [capEntry, relatedCaps]
   );
 
+  const isDraftEditorRoute = useMemo(
+    () => Boolean(
+      capEntry
+      && !caps.some((item) => item.id === resolvedParams.capId)
+      && (Boolean(searchParams?.get('auditId')?.trim()) && Boolean(searchParams?.get('findingId')?.trim()))
+    ),
+    [capEntry, caps, resolvedParams.capId, searchParams]
+  );
+
   const hasAnySavedCorrectiveActions = relatedCaps.length > 0;
 
   useEffect(() => {
-    if (hasAnySavedCorrectiveActions) {
-      setIsEditorVisible(true);
-    }
-  }, [hasAnySavedCorrectiveActions, resolvedParams.capId]);
-
-  const handleAddCorrectiveAction = async () => {
-    if (!hasAnySavedCorrectiveActions) {
-      setIsEditorVisible(true);
+    if (!capEntry) {
+      setDraftCaps([]);
       return;
     }
-    await handleCreateAdditionalCap();
-    setIsEditorVisible(true);
+
+    if (!isDraftEditorRoute && !isDraftFindingOnly) {
+      setDraftCaps([]);
+      return;
+    }
+
+    const draftKey = `${capEntry.cap.auditId}:${capEntry.cap.findingId}`;
+    setDraftCaps((current) => {
+      const matchingDrafts = current.filter((draft) => `${draft.auditId}:${draft.findingId}` === draftKey);
+      if (matchingDrafts.length > 0) {
+        return matchingDrafts;
+      }
+      return [buildLocalDraftCap(capEntry.cap)];
+    });
+  }, [capEntry, isDraftEditorRoute, isDraftFindingOnly]);
+
+  useEffect(() => {
+    if (draftCaps.length === 0) return;
+    latestDraftCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [draftCaps.length]);
+
+  const handleAddCorrectiveAction = async () => {
+    if (!capEntry) return;
+    const draftUrl = `/quality/task-tracker/new?auditId=${encodeURIComponent(capEntry.cap.auditId)}&findingId=${encodeURIComponent(capEntry.cap.findingId)}`;
+    if (isDraftEditorRoute || isDraftFindingOnly) {
+      setDraftCaps((current) => [...current, buildLocalDraftCap(capEntry.cap)]);
+      return;
+    }
+    window.location.href = draftUrl;
   };
 
-  const handleCreateAdditionalCap = async () => {
-    if (!capEntry) return;
-    const sourceCap = capEntry.cap;
-    const nextCap: CorrectiveActionPlan = {
-      id: isFindingRouteId(sourceCap.id) ? sourceCap.id : crypto.randomUUID(),
-      auditId: sourceCap.auditId,
-      findingId: sourceCap.findingId,
-      rootCauseAnalysis: '',
-      status: 'Open',
-      responsiblePersonId: sourceCap.responsiblePersonId || '',
-      dueDate: sourceCap.dueDate || capEntry.audit.auditDate,
-      actions: [],
-      responses: [],
-    };
+  const handleCapSaved = (savedCap: CorrectiveActionPlan) => {
+    setCaps((current) => {
+      const withoutCurrent = current.filter((item) => item.id !== savedCap.id);
+      return [{ ...savedCap, tenantId }, ...withoutCurrent];
+    });
+  };
 
-    try {
-      const response = await fetch('/api/corrective-action-plans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cap: nextCap }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to create additional CAP.');
-      }
-      const payload = await response.json().catch(() => null);
-      const savedCap = payload?.cap as CorrectiveActionPlan | undefined;
-      window.dispatchEvent(new Event('safeviate-quality-updated'));
-      setCaps((current) => [{ ...(savedCap || nextCap), tenantId }, ...current.filter((item) => item.id !== (savedCap?.id || nextCap.id))]);
-      if (savedCap?.id && savedCap.id !== resolvedParams.capId) {
-        window.history.replaceState({}, '', `/quality/task-tracker/${savedCap.id}`);
-      }
-      toast({
-        title: 'Additional CAP Created',
-        description: 'A sibling CAP was added for this finding.',
-      });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'CAP Creation Failed',
-        description: error instanceof Error ? error.message : 'Failed to create additional CAP.',
-      });
-    }
+  const handleDraftSaved = (draftId: string, savedCap: CorrectiveActionPlan) => {
+    handleCapSaved(savedCap);
+    setDraftCaps((current) => current.filter((draft) => draft.id !== draftId));
   };
 
   const handleDeleteCap = async (targetCapId: string) => {
     if (!capEntry || deletingCapId) return;
+    if (isLocalDraftCapId(targetCapId)) {
+      setDraftCaps((current) => current.filter((draft) => draft.id !== targetCapId));
+      return;
+    }
     if (!window.confirm('Delete this CAP only? The audit finding and observation will remain in place. This cannot be undone.')) return;
 
     try {
@@ -275,7 +290,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 px-1 pt-4 pb-6">
       <Card className="overflow-hidden border shadow-none">
-        <div className="sticky top-0 z-20 border-b border-card-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <CardControlHeader
             className="flex w-full shrink-0 flex-col bg-[hsl(var(--card-header-band-background))]"
             isMobile={false}
@@ -283,7 +298,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
               <div className="flex min-w-0 flex-col gap-1.5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Corrective Action Task</p>
                 <p className="text-[11px] font-medium leading-3.5 text-muted-foreground">Review the finding, open its corrective actions, and maintain each action separately.</p>
-                <div className="rounded-md border border-card-border bg-background px-3 py-2">
+                <div className="px-0 py-0">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Finding</p>
                   <p className="mt-1 text-sm font-medium text-foreground">{capEntry.observation}</p>
                 </div>
@@ -323,6 +338,24 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
         </div>
         <CardContent className="bg-muted/5 p-4">
           <div className="space-y-4">
+            {draftCaps.map((draftCap, index) => (
+              <div key={draftCap.id} ref={index === draftCaps.length - 1 ? latestDraftCardRef : null}>
+                <CapTaskDetailCard
+                  cap={draftCap}
+                  audit={capEntry.audit}
+                  observation={capEntry.observation}
+                  findingLevel={capEntry.findingLevel}
+                  personnel={personnel}
+                  currentUserId={userProfile?.id}
+                  currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
+                  rolePermissions={rolePermissions}
+                  onDeleteCap={() => void handleDeleteCap(draftCap.id)}
+                  onSaved={(savedCap) => handleDraftSaved(draftCap.id, savedCap)}
+                  canDeleteCap={canDeleteCaps}
+                  isDeletingCap={deletingCapId === draftCap.id}
+                />
+              </div>
+            ))}
             {relatedCaps.map((relatedCap) => (
               <CapTaskDetailCard
                 key={relatedCap.id}
@@ -335,25 +368,11 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
                 currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
                 rolePermissions={rolePermissions}
                 onDeleteCap={() => void handleDeleteCap(relatedCap.id)}
+                onSaved={handleCapSaved}
                 canDeleteCap={canDeleteCaps}
                 isDeletingCap={deletingCapId === relatedCap.id}
               />
             ))}
-            {isEditorVisible && (!hasAnySavedCorrectiveActions || isDraftFindingOnly) ? (
-              <CapTaskDetailCard
-                cap={capEntry.cap}
-                audit={capEntry.audit}
-                observation={capEntry.observation}
-                findingLevel={capEntry.findingLevel}
-                personnel={personnel}
-                currentUserId={userProfile?.id}
-                currentUserName={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || userProfile?.email || userProfile?.id || 'Unknown user'}
-                rolePermissions={rolePermissions}
-                onDeleteCap={() => void handleDeleteCap(capEntry.cap.id)}
-                canDeleteCap={canDeleteCaps && !isFindingRouteId(capEntry.cap.id)}
-                isDeletingCap={deletingCapId === capEntry.cap.id}
-              />
-            ) : null}
           </div>
         </CardContent>
       </Card>
