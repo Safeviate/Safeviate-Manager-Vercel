@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Tenant } from '@/types/quality';
 import type { TechnicalQuickReport } from '@/types/quick-reports';
+import type { Alert } from '@/types/alert';
 import Link from 'next/link';
 
 const findCurrentItem = (
@@ -89,6 +90,12 @@ export function AppHeader() {
     aircraftId: string;
     aircraftLabel: string;
     severity: 'open' | 'closed';
+  }>>([]);
+  const [auditNotifications, setAuditNotifications] = useState<Array<{
+    id: string;
+    title: string;
+    detail: string;
+    link: string;
   }>>([]);
   type CapNotification = {
     id: string;
@@ -167,6 +174,10 @@ export function AppHeader() {
         const technicalReports = Array.isArray(payload?.technicalReports)
           ? (payload.technicalReports as TechnicalQuickReport[])
           : [];
+        const currentUserEmail = (userProfile?.email || '').trim().toLowerCase();
+        const alertsResponse = await fetch('/api/alerts', { cache: 'no-store' });
+        const alertsPayload = alertsResponse.ok ? await alertsResponse.json().catch(() => ({})) : {};
+        const alerts = Array.isArray(alertsPayload?.alerts) ? (alertsPayload.alerts as Alert[]) : [];
 
         const notifications = caps.flatMap((cap: any) => {
           const activeActions = Array.isArray(cap?.actions)
@@ -202,6 +213,19 @@ export function AppHeader() {
             aircraftLabel: report.aircraftLabel || 'Aircraft not set',
             severity: 'open' as const,
           }));
+        const auditSignoffNotifications = alerts
+          .filter((alert) => {
+            if (alert.status !== 'Active' || alert.category !== 'quality-audit-signoff') return false;
+            const recipientEmail = (alert.recipientEmail || '').trim().toLowerCase();
+            return !!currentUserEmail && recipientEmail === currentUserEmail;
+          })
+          .slice(0, 5)
+          .map((alert) => ({
+            id: alert.id,
+            title: alert.title,
+            detail: alert.content,
+            link: alert.link || '/quality/audits',
+          }));
 
         if (!cancelled) {
           setCapNotifications(
@@ -210,11 +234,13 @@ export function AppHeader() {
               .slice(0, 5)
           );
           setTechnicalReportNotifications(reportNotifications);
+          setAuditNotifications(auditSignoffNotifications);
         }
       } catch {
         if (!cancelled) {
           setCapNotifications([]);
           setTechnicalReportNotifications([]);
+          setAuditNotifications([]);
         }
       }
     };
@@ -234,14 +260,15 @@ export function AppHeader() {
       window.removeEventListener('safeviate-technical-reports-updated', loadNotifications);
       window.removeEventListener('storage', handleStorage);
     };
-  }, []);
+  }, [userProfile?.email]);
 
   const capAlertCount = useMemo(() => capNotifications.length, [capNotifications]);
   const technicalReportAlertCount = useMemo(
     () => technicalReportNotifications.length,
     [technicalReportNotifications]
   );
-  const notificationCount = capAlertCount + technicalReportAlertCount;
+  const auditAlertCount = useMemo(() => auditNotifications.length, [auditNotifications]);
+  const notificationCount = capAlertCount + technicalReportAlertCount + auditAlertCount;
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: '/login' });
@@ -342,6 +369,25 @@ export function AppHeader() {
             ) : (
               <div className="px-3 py-4 text-sm text-sidebar-foreground/60">Nothing urgent right now.</div>
             )}
+            {auditNotifications.length > 0 ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/70">
+                  Audit Sign-Off
+                </DropdownMenuLabel>
+                {auditNotifications.map((item) => (
+                  <DropdownMenuItem key={item.id} asChild>
+                    <Link href={item.link} className="flex items-start gap-3">
+                      <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-semibold text-sidebar-foreground">{item.title}</span>
+                        <span className="block text-[10px] text-sidebar-foreground/55">{item.detail}</span>
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            ) : null}
             {technicalReportNotifications.length > 0 ? (
               <>
                 <DropdownMenuSeparator />

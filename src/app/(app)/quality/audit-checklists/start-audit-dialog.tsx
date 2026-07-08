@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -73,9 +72,7 @@ export function StartAuditDialog({
   const [isOpen, setIsOpen] = useState(false);
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newAuditId, setNewAuditId] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>(providedOrganizations || []);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
 
@@ -171,14 +168,6 @@ export function StartAuditDialog({
     }
   }, [departments, form, organizations, selectedTargetId]);
   
-  useEffect(() => {
-    if (!isOpen && newAuditId) {
-      router.push(`/quality/audits/${newAuditId}`);
-      setNewAuditId(null);
-    }
-  }, [isOpen, newAuditId, router]);
-
-
   const onSubmit = async (values: FormValues) => {
     if (!userProfile) {
       toast({ variant: 'destructive', title: 'Error', description: 'User session not found.' });
@@ -219,14 +208,13 @@ export function StartAuditDialog({
         const payload = await response.json().catch(() => null);
         const savedAudit = payload?.audit as QualityAudit | undefined;
         
-        setNewAuditId(createdId);
-        toast({ title: 'Audit Created', description: `Audit ${savedAudit?.auditNumber || 'AUD-0001'} is ready to open.` });
+        toast({ title: 'Audit Scheduled', description: `Audit ${savedAudit?.auditNumber || 'AUD-0001'} has been created under Audits and is ready to start when needed.` });
         
         window.dispatchEvent(new Event('safeviate-quality-updated'));
         setIsOpen(false);
 
     } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Failed to start audit', description: error.message });
+        toast({ variant: 'destructive', title: 'Failed to create audit', description: error.message });
     } finally {
         setIsSubmitting(false);
     }
@@ -245,7 +233,7 @@ export function StartAuditDialog({
         <DialogHeader>
           <DialogTitle>Create Audit Session</DialogTitle>
           <DialogDescription>
-            Using template: &quot;{template.title}&quot;. This will create a scheduled audit record and open the audit workspace after save.
+            Using template: &quot;{template.title}&quot;. This will create a scheduled audit record only. The audit can be started later from the Audits page.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -255,7 +243,7 @@ export function StartAuditDialog({
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Audit session details</p>
                 <p className="text-sm font-semibold text-foreground">{template.title}</p>
-                <p className="text-xs text-muted-foreground">Set the target, auditee, scope, and planned date below. The scheduled audit will be created from these values.</p>
+                <p className="text-xs text-muted-foreground">Set the target, auditee, scope, and planned date below. The audit will be created in Scheduled status and can be started later.</p>
               </div>
             </div>
             <Card className="hidden">
@@ -479,7 +467,7 @@ export function StartAuditDialog({
                         </PopoverContent>
                         </Popover>
                     <p className="text-xs text-muted-foreground">
-                      This is the date the audit session will be opened and scheduled from.
+                      This is the planned date the audit will appear as scheduled before it is manually started.
                     </p>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="rounded-lg border bg-muted/10 px-3 py-2">

@@ -254,6 +254,13 @@ type QualityMetrics = {
     complianceScore: number | null;
     findingCount: number;
   }>;
+  upcomingAuditRows: Array<{
+    id: string;
+    title: string;
+    auditNumber: string;
+    dateLabel: string;
+    scope: string;
+  }>;
   upcomingCapRows: Array<{
     id: string;
     sourceType: 'Audit' | 'Gap Analysis';
@@ -718,6 +725,18 @@ const getQualityMetrics = (summary: SummaryPayload, organizationScopeId: string)
       findingCount: Array.isArray(audit.findings) ? audit.findings.filter((finding) => finding.finding === 'Non Compliant').length : 0,
     }));
 
+  const upcomingAuditRows = [...audits]
+    .filter((audit) => audit.status === 'Scheduled')
+    .sort((a, b) => new Date(a.auditDate).getTime() - new Date(b.auditDate).getTime())
+    .slice(0, 4)
+    .map((audit) => ({
+      id: audit.id,
+      title: audit.title,
+      auditNumber: audit.auditNumber,
+      dateLabel: format(new Date(audit.auditDate), 'dd MMM yyyy'),
+      scope: audit.scope || 'Scope not specified',
+    }));
+
   const compliantScores = audits
     .map((audit) => audit.complianceScore)
     .filter((score): score is number => typeof score === 'number' && Number.isFinite(score));
@@ -790,7 +809,7 @@ const getQualityMetrics = (summary: SummaryPayload, organizationScopeId: string)
   }).length;
 
   return {
-    openAudits: audits.filter((audit) => audit.status !== 'Closed' && audit.status !== 'Archived').length,
+    openAudits: audits.filter((audit) => audit.status !== 'Scheduled' && audit.status !== 'Closed' && audit.status !== 'Archived').length,
     closedAudits: audits.filter((audit) => audit.status === 'Closed' || audit.status === 'Archived').length,
     openFindings,
     averageCompliance:
@@ -803,6 +822,7 @@ const getQualityMetrics = (summary: SummaryPayload, organizationScopeId: string)
       return !Number.isNaN(auditDate.getTime()) && auditDate >= recentCutoff;
     }).length,
     auditRows,
+    upcomingAuditRows,
     upcomingCapRows,
     recentCapRows,
   };
@@ -3185,6 +3205,42 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                 <SummaryLine label="CAP due soon" value={String(metrics.dueSoonCaps)} />
                 <SummaryLine label="CAP overdue" value={String(metrics.overdueCaps)} />
                 <SummaryLine label="Avg compliance" value={`${metrics.averageCompliance.toFixed(1)}%`} />
+              </div>
+            </div>
+
+            <div className="rounded-md border bg-background">
+              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black uppercase tracking-tight">Upcoming Audits</p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Scheduled audits waiting to be started.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-black uppercase">
+                  {metrics.upcomingAuditRows.length} shown
+                </Badge>
+              </div>
+              <div className="divide-y">
+                {metrics.upcomingAuditRows.length > 0 ? (
+                  metrics.upcomingAuditRows.map((audit) => (
+                    <div key={audit.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black uppercase tracking-tight">{audit.title}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {audit.auditNumber} · {audit.scope}
+                        </p>
+                      </div>
+                      <div className="rounded-md border bg-background px-3 py-2.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Planned start</p>
+                        <p className="mt-1 text-sm font-black">{audit.dateLabel}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No scheduled audits are waiting to start.
+                  </div>
+                )}
               </div>
             </div>
 

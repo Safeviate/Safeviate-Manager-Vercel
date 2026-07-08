@@ -35,6 +35,9 @@ const toNoonUtcIso = (date: Date) =>
 const hasSavedPrimaryCorrectiveAction = (cap: CorrectiveActionPlan) =>
   Boolean(cap.rootCauseAnalysis?.trim());
 
+const getDefaultResponsiblePersonId = (cap: CorrectiveActionPlan, audit: QualityAudit) =>
+  cap.responsiblePersonId?.trim() || audit.auditeeId?.trim() || '';
+
 export const parseCapObservation = (finding?: QualityFinding) =>
   finding?.comment?.trim()
   || finding?.gapDescription?.trim()
@@ -73,7 +76,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
   const correctiveActionRef = useRef<HTMLTextAreaElement | null>(null);
   const hasSavedPrimaryAction = hasSavedPrimaryCorrectiveAction(cap);
   const [rootCauseAnalysis, setRootCauseAnalysis] = useState(hasSavedPrimaryAction ? (cap.rootCauseAnalysis || '') : '');
-  const [responsiblePersonId, setResponsiblePersonId] = useState(hasSavedPrimaryAction ? (cap.responsiblePersonId || '') : '');
+  const [responsiblePersonId, setResponsiblePersonId] = useState(getDefaultResponsiblePersonId(cap, audit));
   const [dueDate, setDueDate] = useState(hasSavedPrimaryAction ? formatCapDueDate(cap.dueDate || audit.auditDate) : '');
   const [responses, setResponses] = useState<CorrectiveActionPlanResponse[]>(cap.responses || []);
   const [responseDraft, setResponseDraft] = useState('');
@@ -96,7 +99,7 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
   useEffect(() => {
     const shouldShowPrimaryAssignment = hasSavedPrimaryCorrectiveAction(cap);
     setRootCauseAnalysis(shouldShowPrimaryAssignment ? (cap.rootCauseAnalysis || '') : '');
-    setResponsiblePersonId(shouldShowPrimaryAssignment ? (cap.responsiblePersonId || '') : '');
+    setResponsiblePersonId(getDefaultResponsiblePersonId(cap, audit));
     setDueDate(shouldShowPrimaryAssignment ? formatCapDueDate(cap.dueDate || audit.auditDate) : '');
     setResponses(cap.responses || []);
     setResponseDraft('');

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle2, FileText } from 'lucide-react';
+import { CheckCircle2, FileText, PlayCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import type { QualityAudit, QualityAuditChecklistTemplate, CorrectiveActionPlan, ExternalOrganization } from '@/types/quality';
@@ -49,6 +49,7 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isStartingAudit, setIsStartingAudit] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,6 +108,34 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
 
   const assetLabel = aircraft.find((item) => item.id === audit?.assetId)?.tailNumber || '';
 
+  const handleStartAudit = async () => {
+    if (!audit) return;
+
+    try {
+      setIsStartingAudit(true);
+      const response = await fetch('/api/quality-audits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audit: {
+            ...audit,
+            status: 'In Progress',
+          },
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to start audit');
+      }
+      setAudit(payload?.audit || { ...audit, status: 'In Progress' });
+      window.dispatchEvent(new Event('safeviate-quality-updated'));
+    } catch (error) {
+      console.error('Failed to start audit', error);
+    } finally {
+      setIsStartingAudit(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 max-w-[1100px] mx-auto w-full pt-4 px-1">
@@ -133,6 +162,67 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
       <div className="max-w-[1100px] mx-auto w-full text-center py-20 px-1">
         <p className="text-muted-foreground mb-4">Audit record not found.</p>
         <BackNavButton href="/quality/audits" text="Back to Audits" />
+      </div>
+    );
+  }
+
+  if (audit.status === 'Scheduled') {
+    return (
+      <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
+        <div className="no-print flex flex-1 flex-col overflow-hidden">
+          <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
+            <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-2xl font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
+                </div>
+                <CardDescription className="text-sm font-medium">
+                  Planned for {format(parseLocalDate(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge> • Asset: <span className="font-semibold text-foreground">{assetLabel || 'No linked asset'}</span>
+                </CardDescription>
+              </div>
+
+              <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+                <BackNavButton href="/quality/audits" text="Back to Audits" />
+                <Button onClick={handleStartAudit} disabled={isStartingAudit} className="h-9">
+                  <PlayCircle className="mr-2 h-4 w-4" />
+                  {isStartingAudit ? 'Starting Audit...' : 'Start Audit'}
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="flex-1 space-y-4 p-6 bg-background">
+              <div className="rounded-xl border bg-muted/10 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Scheduled Audit</p>
+                <p className="mt-2 text-base font-semibold text-foreground">
+                  This audit has been created and scheduled, but it has not started yet.
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Use Start Audit when the audit session is actually ready to begin. Until then it remains listed under Audits as scheduled work.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-xl border bg-muted/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Audit Date</p>
+                  <p className="mt-1 text-sm font-semibold">{format(parseLocalDate(audit.auditDate), 'PPP')}</p>
+                </div>
+                <div className="rounded-xl border bg-muted/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Scope</p>
+                  <p className="mt-1 text-sm font-semibold whitespace-pre-wrap">{audit.scope || 'Not specified'}</p>
+                </div>
+                <div className="rounded-xl border bg-muted/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Asset</p>
+                  <p className="mt-1 text-sm font-semibold">{assetLabel || 'No linked asset'}</p>
+                </div>
+                <div className="rounded-xl border bg-muted/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Checklist</p>
+                  <p className="mt-1 text-sm font-semibold">{template?.title || 'Audit checklist'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

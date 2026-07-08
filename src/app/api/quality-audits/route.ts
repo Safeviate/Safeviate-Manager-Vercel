@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import type { QualityAudit } from '@/types/quality';
 import type { Aircraft } from '@/types/aircraft';
+import type { Alert } from '@/types/alert';
 
 function toStableJson(value: unknown) {
   return JSON.stringify(value ?? null);
@@ -53,6 +54,120 @@ async function getConfig(tenantId: string) {
   return (rows[0]?.data as any) || {};
 }
 
+type TenantPersonnelRecord = {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+};
+
+function normalizeText(value: string | null | undefined) {
+  return (value || '').trim().toLowerCase();
+}
+
+function getPersonnelDisplayName(person: TenantPersonnelRecord | null | undefined) {
+  if (!person) return '';
+  const fullName = `${person.firstName || ''} ${person.lastName || ''}`.trim();
+  return fullName || (person.email || '').trim();
+}
+
+function resolvePersonnelByIdentity(personnel: TenantPersonnelRecord[], value: string | null | undefined) {
+  const normalized = normalizeText(value);
+  if (!normalized) return null;
+
+  return (
+    personnel.find((person) => normalizeText(person.id) === normalized)
+    || personnel.find((person) => normalizeText(person.email) === normalized)
+    || personnel.find((person) => normalizeText(getPersonnelDisplayName(person)) === normalized)
+    || null
+  );
+}
+
+function normalizeAuditIdentity(audit: QualityAudit, personnel: TenantPersonnelRecord[]) {
+  const resolvedAuditor =
+    resolvePersonnelByIdentity(personnel, audit.auditorId)
+    || resolvePersonnelByIdentity(personnel, audit.auditorName);
+  const resolvedAuditee =
+    resolvePersonnelByIdentity(personnel, audit.auditeeId)
+    || resolvePersonnelByIdentity(personnel, audit.auditeeName);
+
+  return {
+    ...audit,
+    auditorId: resolvedAuditor?.id?.trim() || audit.auditorId,
+    auditorName: getPersonnelDisplayName(resolvedAuditor) || audit.auditorName,
+    auditeeId: resolvedAuditee?.id?.trim() || audit.auditeeId,
+    auditeeName: getPersonnelDisplayName(resolvedAuditee) || audit.auditeeName,
+  } as QualityAudit;
+}
+
+function buildAuditeeSignoffAlert(audit: QualityAudit, actorId: string | null, recipientEmail?: string) {
+  const auditNumber = audit.auditNumber?.trim() || 'Audit';
+  const targetLabel = audit.targetName?.trim() || audit.scope?.trim() || 'Assigned audit';
+  const dueContext = audit.auditDate ? new Date(audit.auditDate).toLocaleDateString('en-ZA') : '';
+
+  return {
+    id: `audit-signoff-required:${audit.id}`,
+    type: 'Company Notice',
+    category: 'quality-audit-signoff',
+    title: `${auditNumber} requires auditee sign-off`,
+    content: dueContext
+      ? `${targetLabel}. Auditor sign-off is complete and the auditee signature is now required. Planned audit date ${dueContext}.`
+      : `${targetLabel}. Auditor sign-off is complete and the auditee signature is now required.`,
+    createdAt: new Date().toISOString(),
+    createdBy: actorId || '',
+    status: 'Active',
+    mustRead: true,
+    recipientUserId: audit.auditeeId || '',
+    recipientEmail: recipientEmail || '',
+    relatedEntityId: audit.id,
+    link: `/quality/audits/${audit.id}`,
+  } satisfies Alert;
+}
+
+async function upsertAuditSignoffAlert(
+  tenantId: string,
+  audit: QualityAudit,
+  actorId: string | null,
+  recipientEmail?: string
+) {
+  if (!audit.id || !audit.auditeeId?.trim() || !audit.auditorSignoff || audit.auditeeSignoff) {
+    return;
+  }
+
+  const alert = buildAuditeeSignoffAlert(audit, actorId, recipientEmail);
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO alerts (id, tenant_id, data, created_at, updated_at)
+     VALUES ($1, $2, $3::jsonb, NOW(), NOW())
+     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+    alert.id,
+    tenantId,
+    JSON.stringify(alert)
+  );
+}
+
+async function archiveAuditSignoffAlert(tenantId: string, auditId: string) {
+  const alertId = `audit-signoff-required:${auditId}`;
+  const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
+    `SELECT data FROM alerts WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
+    alertId,
+    tenantId
+  );
+  const existingAlert = rows[0]?.data as Alert | undefined;
+  if (!existingAlert) return;
+
+  const archivedAlert: Alert = {
+    ...existingAlert,
+    status: 'Archived',
+    mustRead: false,
+  };
+  await prisma.$executeRawUnsafe(
+    `UPDATE alerts SET data = $3::jsonb, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`,
+    alertId,
+    tenantId,
+    JSON.stringify(archivedAlert)
+  );
+}
+
 async function loadAudits(tenantId: string) {
   const rows = await prisma.$queryRawUnsafe<{ id: string; data: unknown }[]>(
     `SELECT id, data FROM quality_audits WHERE tenant_id = $1 ORDER BY created_at DESC`,
@@ -89,6 +204,39 @@ async function loadAircraft(tenantId: string) {
   return rows.map((row) => row.data as unknown as Aircraft);
 }
 
+async function loadPersonnel(tenantId: string) {
+  return prisma.personnel.findMany({
+    where: { tenantId },
+    orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }, { email: 'asc' }],
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      organizationId: true,
+      department: true,
+      role: true,
+      permissions: true,
+      accessOverrides: true,
+      documents: true,
+      userType: true,
+      canBeInstructor: true,
+      canBeStudent: true,
+      isErpIncerfaContact: true,
+      isErpAlerfaContact: true,
+      createdAt: true,
+      updatedAt: true,
+      canBePIC: true,
+      primaryInstructorId: true,
+      instructorAssignmentHistory: true,
+      progressionRecommendation: true,
+      progressionReviewHistory: true,
+      userNumber: true,
+      contactNumber: true,
+    },
+  });
+}
+
 export async function GET(request: Request) {
   const startedAt = Date.now();
   let tenantId: string | null = null;
@@ -96,13 +244,20 @@ export async function GET(request: Request) {
     tenantId = await getTenantId(request);
     if (!tenantId) return NextResponse.json({ audits: [], templates: [], personnel: [], departments: [], organizations: [], aircraft: [], caps: [], findingLevels: [] }, { status: 200 });
 
-    const [audits, caps, config, organizations, aircraft] = await Promise.all([
+    const [rawAudits, caps, config, organizations, aircraft, persistedPersonnel] = await Promise.all([
       loadAudits(tenantId),
       loadCaps(tenantId),
       getConfig(tenantId),
       loadExternalOrganizations(tenantId),
       loadAircraft(tenantId),
+      loadPersonnel(tenantId),
     ]);
+    const configPersonnel = Array.isArray(config['personnel']) ? (config['personnel'] as TenantPersonnelRecord[]) : [];
+    const personnel =
+      persistedPersonnel.length > 0
+        ? persistedPersonnel
+        : configPersonnel;
+    const audits = rawAudits.map((audit) => normalizeAuditIdentity(audit as QualityAudit, personnel));
     await recordSimulationRouteMetric({
       tenantId,
       routeKey: 'quality-audits.GET',
@@ -114,7 +269,7 @@ export async function GET(request: Request) {
       audits,
       caps,
       templates: Array.isArray(config['quality-audit-templates']) ? config['quality-audit-templates'] : [],
-      personnel: Array.isArray(config['personnel']) ? config['personnel'] : [],
+      personnel,
       departments: Array.isArray(config['departments']) ? config['departments'] : [],
       organizations,
       aircraft,
@@ -149,7 +304,14 @@ export async function POST(request: Request) {
   const audit = body?.audit;
   if (!audit || typeof audit !== 'object') return NextResponse.json({ error: 'Invalid audit payload' }, { status: 400 });
   const id = audit.id || randomUUID();
-  const incomingAudit = { ...audit, id } as QualityAudit;
+  const config = await getConfig(tenantId);
+  const configPersonnel = Array.isArray(config['personnel']) ? (config['personnel'] as TenantPersonnelRecord[]) : [];
+  const persistedPersonnel = await loadPersonnel(tenantId);
+  const personnel =
+    persistedPersonnel.length > 0
+      ? persistedPersonnel
+      : configPersonnel;
+  const incomingAudit = normalizeAuditIdentity({ ...audit, id } as QualityAudit, personnel);
 
   const actorPersonnelId = actorEmail
     ? await prisma.personnel.findFirst({
@@ -198,6 +360,12 @@ export async function POST(request: Request) {
 
     return data;
   });
+  const resolvedAuditee = resolvePersonnelByIdentity(personnel, persistedAudit.auditeeId || persistedAudit.auditeeName);
+  if (persistedAudit.auditeeSignoff) {
+    await archiveAuditSignoffAlert(tenantId, persistedAudit.id);
+  } else if (persistedAudit.auditorSignoff) {
+    await upsertAuditSignoffAlert(tenantId, persistedAudit, actorId, resolvedAuditee?.email?.trim());
+  }
   await recordSimulationRouteMetric({
     tenantId,
     routeKey: 'quality-audits.POST',

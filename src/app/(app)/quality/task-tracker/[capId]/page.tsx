@@ -46,7 +46,7 @@ const buildLocalDraftCap = (cap: CorrectiveActionPlan): CorrectiveActionPlan => 
   ...cap,
   id: `${LOCAL_DRAFT_CAP_PREFIX}${crypto.randomUUID()}`,
   rootCauseAnalysis: '',
-  responsiblePersonId: '',
+  responsiblePersonId: cap.responsiblePersonId || '',
   dueDate: '',
   responses: [],
 });
@@ -124,7 +124,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
         rootCauseAnalysis: '',
         status: 'Open',
         actions: [],
-        responsiblePersonId: '',
+        responsiblePersonId: audit.auditeeId || '',
         dueDate: audit.auditDate,
         responses: [],
         tenantId,

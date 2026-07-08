@@ -19,4 +19,9 @@ export interface Alert {
     signatureUrl?: string;
     mustRead?: boolean;
     readBy?: ReadReceipt[];
+    link?: string;
+    category?: string;
+    recipientUserId?: string;
+    recipientEmail?: string;
+    relatedEntityId?: string;
 }

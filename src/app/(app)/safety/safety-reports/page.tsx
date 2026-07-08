@@ -37,6 +37,13 @@ import { DeleteActionButton, ViewActionButton } from '@/components/record-action
 import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { dispatchSafeviateEvent, SAFEVIATE_QUICK_SAFETY_REPORTS_UPDATED, SAFEVIATE_SAFETY_REPORTS_UPDATED } from '@/lib/client-events';
 import { usePageLayout } from '@/hooks/use-page-layout';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 const parseLocalDate = (value: string) => {
     const [year, month, day] = value.split('-').map(Number);
@@ -130,6 +137,8 @@ interface QuickSafetyInboxProps {
 interface TechnicalIntakeProps {
     reports: TechnicalQuickReport[];
 }
+
+type ReportSortOrder = 'newest' | 'oldest';
 
 function ReportsTable({ reports, tenantId, canManage, currentUserEmail }: ReportsTableProps) {
     return (
@@ -492,6 +501,7 @@ export default function SafetyReportsPage() {
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoadingReports, setIsLoadingReports] = useState(true);
   const [classifyingQuickReportId, setClassifyingQuickReportId] = useState<string | null>(null);
+  const [reportSortOrder, setReportSortOrder] = useState<ReportSortOrder>('newest');
 
   const canManageAll = hasPermission('safety-reports-manage');
   function isCurrentTenantRecord(record: { tenantId?: string | null }) {
@@ -727,9 +737,13 @@ export default function SafetyReportsPage() {
   };
 
   const renderOrgCard = (orgId: string | 'internal') => {
-    const filteredReports = (allReports || []).filter(r => 
+    const filteredReports = [...((allReports || []).filter(r =>
         orgId === 'internal' ? !r.organizationId : r.organizationId === orgId
-    );
+    ))].sort((left, right) => {
+        const leftDate = parseLocalDate(left.eventDate).getTime();
+        const rightDate = parseLocalDate(right.eventDate).getTime();
+        return reportSortOrder === 'oldest' ? leftDate - rightDate : rightDate - leftDate;
+    });
     const internalQuickSafetyReports = (quickSafetyReports || []).filter((report) => !report.linkedSafetyReportId);
     const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };
     const fileReportButton = (
@@ -762,19 +776,38 @@ export default function SafetyReportsPage() {
         <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border shadow-none">
             <div className="flex flex-col bg-muted/5">
                 <div className={CARD_HEADER_BAND_CLASS} style={headerBandBorderStyle}>
-                    <div className="flex items-center gap-3">
-                        {shouldShowOrganizationTabs ? (
-                            <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div className="min-w-0 flex-1">
+                            {shouldShowOrganizationTabs ? (
                                 <OrganizationTabsRow
                                     organizations={organizations || []}
                                     activeTab={activeOrgTab}
                                     onTabChange={setActiveOrgTab}
                                     className="border-0 bg-transparent px-0 py-0 shrink-0"
                                 />
-                            </div>
-                        ) : null}
-                        <div className={cn('shrink-0', isMobile ? 'w-[92px]' : 'w-auto')}>
+                            ) : (
+                                <div className="min-h-8" />
+                            )}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                            <Select value={reportSortOrder} onValueChange={(value: ReportSortOrder) => setReportSortOrder(value)}>
+                                <SelectTrigger
+                                    className={cn(
+                                        HEADER_COMPACT_CONTROL_CLASS,
+                                        'h-[25px] min-h-[25px] w-full border-slate-200 bg-white px-2 text-[10px] font-black uppercase tracking-[0.08em] text-slate-900 sm:w-[168px]'
+                                    )}
+                                    aria-label="Sort safety reports by date"
+                                >
+                                    <SelectValue placeholder="Sort by date" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="newest">Newest to Oldest</SelectItem>
+                                    <SelectItem value="oldest">Oldest to Newest</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <div className={cn('shrink-0', isMobile ? 'w-full' : 'w-auto')}>
                             {fileReportButton}
+                            </div>
                         </div>
                     </div>
                 </div>

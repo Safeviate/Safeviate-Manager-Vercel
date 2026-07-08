@@ -6,7 +6,7 @@ import { CardControlHeader, CARD_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS, 
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, ListFilter, ChevronDown } from 'lucide-react';
+import { ShieldCheck, ListFilter, ChevronDown, PlayCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,6 +60,8 @@ interface AuditActionsProps {
 
 function AuditActions({ audit, tenantId }: AuditActionsProps) {
     const { toast } = useToast();
+    const router = useRouter();
+    const [isStarting, setIsStarting] = useState(false);
 
     const handleDelete = async () => {
         try {
@@ -71,9 +73,48 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         }
     }
+
+    const handleStart = async () => {
+        try {
+            setIsStarting(true);
+            const response = await fetch('/api/quality-audits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    audit: {
+                        ...audit,
+                        status: 'In Progress',
+                    },
+                }),
+            });
+            if (!response.ok) {
+                const payload = await response.json().catch(() => null);
+                throw new Error(payload?.error || 'Failed to start audit');
+            }
+            window.dispatchEvent(new Event('safeviate-quality-updated'));
+            toast({ title: 'Audit Started', description: `Audit #${audit.auditNumber} is now in progress.` });
+            router.push(`/quality/audits/${audit.id}`);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Unable to start audit', description: error.message });
+        } finally {
+            setIsStarting(false);
+        }
+    };
     
     return (
         <div className="flex items-center justify-end gap-2">
+            {audit.status === 'Scheduled' ? (
+                <Button
+                    variant="outline"
+                    size="compact"
+                    className="border-slate-300"
+                    onClick={handleStart}
+                    disabled={isStarting}
+                >
+                    <PlayCircle className="h-4 w-4" />
+                    <span>{isStarting ? 'Starting...' : 'Start Audit'}</span>
+                </Button>
+            ) : null}
             <ViewActionButton href={`/quality/audits/${audit.id}`} />
             <DeleteActionButton
                 description={`This will permanently delete audit #${audit.auditNumber}.`}
