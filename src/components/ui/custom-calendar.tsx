@@ -1,16 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ScrollArea } from './scroll-area';
 import { startOfToday } from 'date-fns';
 
 interface CustomCalendarProps {
@@ -140,46 +133,32 @@ export function CustomCalendar({ selectedDate, onDateSelect, dayCounts = {}, day
   return (
     <div className="w-full max-w-sm rounded-lg border bg-card p-3 text-card-foreground">
       <div className="flex items-center justify-between pb-2">
-        <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-               <Button variant="ghost" className="flex items-center gap-1 text-lg font-medium">
-                {currentDate.toLocaleString('default', { month: 'long' })}
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-                 {months.map((month, index) => (
-                  <DropdownMenuItem 
-                    key={month} 
-                    onSelect={() => handleMonthSelect(index)}
-                  >
-                    {month}
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="Select month"
+            className="h-9 rounded-md border bg-background px-3 text-sm font-medium"
+            value={currentDate.getMonth()}
+            onChange={(event) => handleMonthSelect(Number(event.target.value))}
+          >
+            {months.map((month, index) => (
+              <option key={month} value={index}>
+                {month}
+              </option>
+            ))}
+          </select>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-1 text-lg font-medium">
-                {currentDisplayYear}
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <ScrollArea className="h-60">
-                {years.map((year) => (
-                  <DropdownMenuItem 
-                    key={year} 
-                    onSelect={() => handleYearSelect(year)}
-                  >
-                    {year}
-                  </DropdownMenuItem>
-                ))}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <select
+            aria-label="Select year"
+            className="h-9 rounded-md border bg-background px-3 text-sm font-medium"
+            value={currentDisplayYear}
+            onChange={(event) => handleYearSelect(Number(event.target.value))}
+          >
+            {years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex items-center gap-1">

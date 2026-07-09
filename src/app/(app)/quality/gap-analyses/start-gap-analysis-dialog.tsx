@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, isValidElement, type ReactElement, useState, useEffect } from 'react';
+import { cloneElement, isValidElement, type ReactElement, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -78,6 +78,7 @@ export function StartGapAnalysisDialog({
   const [newAuditId, setNewAuditId] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -239,7 +240,7 @@ export function StartGapAnalysisDialog({
                 <Button><PlayCircle className='mr-2 h-4 w-4' /> Create Gap Analysis</Button>
             </DialogTrigger>
         )}
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[720px]">
+      <DialogContent ref={dialogContentRef} className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[720px]">
         <DialogHeader>
           <DialogTitle>Create Gap Analysis Session</DialogTitle>
           <DialogDescription>
@@ -437,7 +438,7 @@ export function StartGapAnalysisDialog({
                             </Button>
                         </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0" align="start" container={dialogContentRef.current ?? undefined}>
                         <CustomCalendar
                             selectedDate={field.value}
                             onDateSelect={field.onChange}

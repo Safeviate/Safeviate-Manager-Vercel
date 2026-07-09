@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -75,6 +75,7 @@ export function StartAuditDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>(providedOrganizations || []);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -229,7 +230,7 @@ export function StartAuditDialog({
                 <Button><PlayCircle className='mr-2 h-4 w-4' /> Create Audit</Button>
             </DialogTrigger>
         )}
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[720px]">
+      <DialogContent ref={dialogContentRef} className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[720px]">
         <DialogHeader>
           <DialogTitle>Create Audit Session</DialogTitle>
           <DialogDescription>
@@ -459,7 +460,7 @@ export function StartAuditDialog({
                             </Button>
                         </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0" align="start" container={dialogContentRef.current ?? undefined}>
                         <CustomCalendar
                             selectedDate={field.value}
                             onDateSelect={field.onChange}

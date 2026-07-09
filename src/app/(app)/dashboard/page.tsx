@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -562,7 +562,7 @@ const getSafetyMetrics = (summary: SummaryPayload): SafetyMetrics => {
     .slice(0, 3)
     .map((report) => ({
       id: report.id,
-      title: `${report.reportNumber} · ${report.reportType}`.trim(),
+      title: `${report.reportNumber} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· ${report.reportType}`.trim(),
       status: report.status,
       dateLabel: format(new Date(report.submittedAt), 'dd MMM yyyy'),
       classification: report.eventClassification || 'Unclassified',
@@ -1483,7 +1483,7 @@ export default function DashboardPage() {
       .map((booking) => ({
         id: booking.bookingNumber || `${booking.aircraftId || 'booking'}-${booking.date || 'date'}`,
         title: booking.bookingNumber || booking.type || 'Booking',
-        subtitle: `${aircraftMap.get(booking.aircraftId || '') || 'Aircraft not set'} · ${booking.type || 'Type not set'}`,
+        subtitle: `${aircraftMap.get(booking.aircraftId || '') || 'Aircraft not set'} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· ${booking.type || 'Type not set'}`,
         meta: booking.date ? format(parseLocalDate(booking.date), 'dd MMM yyyy') : 'Date not set',
         status: booking.status || 'Planned',
       }));
@@ -2379,7 +2379,7 @@ function InstructorOverviewCard({
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <div className="rounded-md border bg-background">
+          <div className="flex min-h-[18rem] flex-col overflow-hidden rounded-md border bg-background">
             <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Top Instructor Load</p>
@@ -2391,7 +2391,7 @@ function InstructorOverviewCard({
                 {metrics.rows.length} instructors
               </Badge>
             </div>
-            <div className="divide-y">
+            <div className="min-h-0 flex-1 divide-y overflow-y-auto">
               {topRows.length > 0 ? (
                 topRows.map((row) => {
                   const statusClass = getStatusStyles(row.status);
@@ -2463,10 +2463,10 @@ function InstructorOverviewCard({
                 <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,0.95fr))] md:items-stretch">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black uppercase tracking-tight">
-                      {report.reportNumber} · {report.title || report.summary}
+                      {report.reportNumber} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.title || report.summary}
                     </p>
                     <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      {report.aircraftLabel || 'Aircraft not set'} · {report.location || 'Unknown location'}
+                      {report.aircraftLabel || 'Aircraft not set'} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.location || 'Unknown location'}
                     </p>
                   </div>
                   <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
@@ -2699,7 +2699,7 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-md border bg-background">
+            <div className="flex min-h-[18rem] flex-col overflow-hidden rounded-md border bg-background">
               <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight">Inactive Students</p>
@@ -2741,7 +2741,7 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
               </div>
             </div>
 
-            <div className="rounded-md border bg-background">
+            <div className="flex min-h-[18rem] flex-col overflow-hidden rounded-md border bg-background">
               <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight">Milestone Readiness</p>
@@ -2753,7 +2753,7 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
                   {milestoneRows.length} shown
                 </Badge>
               </div>
-              <div className="divide-y">
+              <div className="min-h-0 flex-1 divide-y overflow-y-auto">
                 {milestoneRows.length > 0 ? (
                   milestoneRows.map((row) => (
                     <div key={row.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,0.78fr))] md:items-center">
@@ -2949,7 +2949,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black uppercase tracking-tight">{report.title}</p>
                       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                        {report.location} · {report.dateLabel}
+                        {report.location} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.dateLabel}
                       </p>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-3">
@@ -2996,7 +2996,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
               </div>
             </div>
 
-            <div className="rounded-md border bg-background">
+            <div className="flex min-h-[18rem] flex-col overflow-hidden rounded-md border bg-background">
               <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight">Preliminary Technical Reports</p>
@@ -3008,14 +3008,14 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                   {technicalNotifications.length} open
                 </Badge>
               </div>
-              <div className="divide-y">
+              <div className="min-h-0 flex-1 divide-y overflow-y-auto">
                 {technicalNotifications.length > 0 ? (
                   technicalNotifications.map((report) => (
                     <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.15fr)_repeat(2,minmax(0,1fr))] md:items-stretch">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black uppercase tracking-tight">{report.aircraftLabel || 'Aircraft not set'}</p>
                         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          {report.reportNumber} Â· {report.title || report.summary}
+                          {report.reportNumber} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.title || report.summary}
                         </p>
                       </div>
                       <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
@@ -3094,6 +3094,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
 function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern: boolean; summary: SummaryPayload; organizationScopeId: string }) {
   const metrics = getQualityMetrics(summary, organizationScopeId);
   const QualityIcon = ClipboardCheck;
+  const qualityPanelClass = 'flex min-h-[18rem] max-h-[22rem] flex-col overflow-hidden rounded-md border bg-background';
+  const qualityPanelHeaderClass = 'flex items-center justify-between gap-3 border-b bg-muted/3 px-4 py-3';
+  const qualityPanelBodyClass = 'min-h-0 flex-1 overflow-y-auto';
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
@@ -3112,56 +3115,60 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
-        <div className="space-y-2">
-          <StatTile label="Open Audits" value={String(metrics.openAudits)} hint="Audits not yet closed" />
-          <StatTile label="Closed Audits" value={String(metrics.closedAudits)} hint="Finalised or archived" />
-          <StatTile label="Open Findings" value={String(metrics.openFindings)} hint="Non-compliant items raised" />
-          <StatTile label="Avg Score" value={`${metrics.averageCompliance.toFixed(1)}%`} hint="Average compliance score" />
-          <StatTile label="CAP Due Soon" value={String(metrics.dueSoonCaps)} hint="Actions due in the next 30 days" />
-          <StatTile label="CAP Overdue" value={String(metrics.overdueCaps)} hint="Action deadlines already passed" />
-        </div>
+        <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+          <div className="rounded-md border bg-background p-3 xl:col-span-2 2xl:col-span-3">
+            <div className="mb-3 min-w-0">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Quality Snapshot</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
+                Audit progress, findings, and corrective action pressure.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <StatTile label="Open Audits" value={String(metrics.openAudits)} hint="Audits not yet closed" />
+              <StatTile label="Closed Audits" value={String(metrics.closedAudits)} hint="Finalised or archived" />
+              <StatTile label="Open Findings" value={String(metrics.openFindings)} hint="Non-compliant items raised" />
+              <StatTile label="Avg Score" value={`${metrics.averageCompliance.toFixed(1)}%`} hint="Average compliance score" />
+              <StatTile label="CAP Due Soon" value={String(metrics.dueSoonCaps)} hint="Actions due in the next 30 days" />
+              <StatTile label="CAP Overdue" value={String(metrics.overdueCaps)} hint="Action deadlines already passed" />
+            </div>
+          </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <div className="rounded-md border bg-background">
-            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+          <div className={qualityPanelClass}>
+            <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-sm font-black uppercase tracking-tight">Recent Audits</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Recent Audits</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
                   Latest audit activity and compliance score.
                 </p>
               </div>
-              <Badge variant="outline" className="text-[10px] font-black uppercase">
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
                 {metrics.recentAudits} recent
               </Badge>
             </div>
-            <div className="divide-y">
+            <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.auditRows.length > 0 ? (
-                metrics.auditRows.map((audit) => (
-                  <div key={audit.id} className="space-y-3 px-3 py-3">
+                                metrics.auditRows.map((audit) => (
+                  <div key={audit.id} className="space-y-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black uppercase tracking-tight">{audit.title}</p>
-                      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      <p className="text-[13px] font-bold leading-snug text-foreground">{audit.title}</p>
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {audit.auditNumber} · {audit.dateLabel}
                       </p>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-md border bg-muted/10 px-3 py-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Status</p>
-                        <div className="mt-2">
-                          <Badge variant="outline" className="text-[10px] font-black uppercase">
-                            {audit.status}
-                          </Badge>
-                        </div>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Status</p>
+                        <p className="text-xs font-semibold text-foreground">{audit.status}</p>
                       </div>
-                      <div className="rounded-md border bg-muted/10 px-3 py-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Compliance</p>
-                        <p className="mt-1 text-base font-black">
-                          {audit.complianceScore !== null ? `${audit.complianceScore.toFixed(1)}%` : 'N/A'}
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Compliance</p>
+                        <p className="text-xs font-semibold text-foreground">
+                          {audit.complianceScore !== null ? audit.complianceScore.toFixed(1) + '%' : 'N/A'}
                         </p>
                       </div>
-                      <div className="rounded-md border bg-muted/10 px-3 py-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Findings</p>
-                        <p className="mt-1 text-base font-black">{audit.findingCount}</p>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Findings</p>
+                        <p className="text-xs font-semibold text-foreground">{audit.findingCount}</p>
                       </div>
                     </div>
                   </div>
@@ -3174,32 +3181,19 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             </div>
           </div>
 
-          <div className="space-y-4">
-            {(metrics.overdueCaps > 0 || metrics.dueSoonCaps > 0) && (
-              <div className="rounded-md border border-amber-200 bg-amber-50/80 p-4">
-                <div className="flex flex-col gap-3 rounded-md border border-amber-200 bg-background px-4 py-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-black uppercase tracking-tight text-amber-900">Corrective action attention required</p>
-                    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-amber-800">
-                      {metrics.overdueCaps > 0
-                        ? `${metrics.overdueCaps} overdue corrective action${metrics.overdueCaps === 1 ? '' : 's'} need follow-up.`
-                        : `${metrics.dueSoonCaps} corrective action${metrics.dueSoonCaps === 1 ? '' : 's'} are due soon.`}
-                    </p>
-                  </div>
-                  <Button asChild variant="outline" size="sm" className="h-8 w-fit border-amber-300 text-[10px] font-black uppercase">
-                    <Link href="/quality/task-tracker">Open Task Tracker</Link>
-                  </Button>
-                </div>
+          <div className={qualityPanelClass}>
+            <div className={qualityPanelHeaderClass}>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Quality Quick Read</p>
+                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
+                  Audit and corrective action flow.
+                </p>
               </div>
-            )}
-
-            <div className="rounded-md border bg-background p-4">
-              <p className="text-sm font-black uppercase tracking-tight">Quality Quick Read</p>
-              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Audit and corrective action flow.
-              </p>
-              <div className="mt-4 space-y-3">
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <div className="space-y-3">
                 <SummaryLine label="Open audits" value={String(metrics.openAudits)} />
+                <SummaryLine label="Closed audits" value={String(metrics.closedAudits)} />
                 <SummaryLine label="Open findings" value={String(metrics.openFindings)} />
                 <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
                 <SummaryLine label="CAP due soon" value={String(metrics.dueSoonCaps)} />
@@ -3207,121 +3201,152 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                 <SummaryLine label="Avg compliance" value={`${metrics.averageCompliance.toFixed(1)}%`} />
               </div>
             </div>
+          </div>
 
-            <div className="rounded-md border bg-background">
-              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-black uppercase tracking-tight">Upcoming Audits</p>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Scheduled audits waiting to be started.
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-[10px] font-black uppercase">
-                  {metrics.upcomingAuditRows.length} shown
-                </Badge>
+          {(metrics.overdueCaps > 0 || metrics.dueSoonCaps > 0) && (
+            <div className={cn(qualityPanelClass, 'border-amber-200 bg-amber-50/70')}>
+              <div className="border-b border-amber-200 bg-amber-50/90 px-4 py-3">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-amber-900">Corrective Action Attention Required</p>
+                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-amber-800/90">
+                  {metrics.overdueCaps > 0
+                    ? `${metrics.overdueCaps} overdue corrective action${metrics.overdueCaps === 1 ? '' : 's'} need follow-up.`
+                    : `${metrics.dueSoonCaps} corrective action${metrics.dueSoonCaps === 1 ? '' : 's'} are due soon.`}
+                </p>
               </div>
-              <div className="divide-y">
-                {metrics.upcomingAuditRows.length > 0 ? (
-                  metrics.upcomingAuditRows.map((audit) => (
-                    <div key={audit.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:items-center">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black uppercase tracking-tight">{audit.title}</p>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          {audit.auditNumber} · {audit.scope}
-                        </p>
-                      </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Planned start</p>
-                        <p className="mt-1 text-sm font-black">{audit.dateLabel}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    No scheduled audits are waiting to start.
-                  </div>
-                )}
+              <div className="flex min-h-0 flex-1 flex-col justify-between gap-4 px-4 py-4">
+                <div className="space-y-3">
+                  <SummaryLine label="Overdue CAPs" value={String(metrics.overdueCaps)} />
+                  <SummaryLine label="Due soon" value={String(metrics.dueSoonCaps)} />
+                  <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
+                </div>
+                <Button asChild variant="outline" size="sm" className="h-8 w-fit border-amber-300 text-[10px] font-black uppercase">
+                  <Link href="/quality/task-tracker">Open Task Tracker</Link>
+                </Button>
               </div>
             </div>
+          )}
 
-            <div className="rounded-md border bg-background">
-              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-black uppercase tracking-tight">Upcoming CAP Deadlines</p>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Actions due in the next 30 days.
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-[10px] font-black uppercase">
-                  {metrics.upcomingCapRows.length} shown
-                </Badge>
+          <div className={qualityPanelClass}>
+            <div className={qualityPanelHeaderClass}>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Upcoming Audits</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
+                  Scheduled audits waiting to be started.
+                </p>
               </div>
-              <div className="divide-y">
-                {metrics.upcomingCapRows.length > 0 ? (
-                  metrics.upcomingCapRows.map((action) => (
-                    <div key={action.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))] md:items-center">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black uppercase tracking-tight">{action.description}</p>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          {action.sourceType} · {action.sourceIdentifier}
-                        </p>
-                      </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
-                        <p className="mt-1 text-sm font-black">{action.assignee}</p>
-                      </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Do by</p>
-                        <p className="mt-1 text-sm font-black">{format(parseLocalDate(action.dueDate), 'dd MMM yyyy')}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    No corrective action deadlines are due soon.
-                  </div>
-                )}
-              </div>
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
+                {metrics.upcomingAuditRows.length} shown
+              </Badge>
             </div>
-
-            <div className="rounded-md border bg-background">
-              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-black uppercase tracking-tight">New Corrective Actions</p>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Recently opened CAP actions and plans.
-                  </p>
+            <div className={cn(qualityPanelBodyClass, 'divide-y')}>
+              {metrics.upcomingAuditRows.length > 0 ? (
+                                metrics.upcomingAuditRows.map((audit) => (
+                  <div key={audit.id} className="space-y-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold leading-snug text-foreground">{audit.title}</p>
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        {audit.auditNumber} · {audit.scope}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Planned start</p>
+                      <p className="text-xs font-semibold text-foreground">{audit.dateLabel}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No scheduled audits are waiting to start.
                 </div>
-                <Badge variant="outline" className="text-[10px] font-black uppercase">
-                  {metrics.recentCapRows.length} shown
-                </Badge>
+              )}
+            </div>
+          </div>
+
+          <div className={qualityPanelClass}>
+            <div className={qualityPanelHeaderClass}>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Upcoming CAP Deadlines</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
+                  Actions due in the next 30 days.
+                </p>
               </div>
-              <div className="divide-y">
-                {metrics.recentCapRows.length > 0 ? (
-                  metrics.recentCapRows.map((action) => (
-                    <div key={action.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))] md:items-center">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black uppercase tracking-tight">{action.description}</p>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          {action.sourceType} · {action.sourceIdentifier} · Opened {format(parseLocalDate(action.openedDate), 'dd MMM yyyy')}
-                        </p>
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
+                {metrics.upcomingCapRows.length} shown
+              </Badge>
+            </div>
+            <div className={cn(qualityPanelBodyClass, 'divide-y')}>
+              {metrics.upcomingCapRows.length > 0 ? (
+                                metrics.upcomingCapRows.map((action) => (
+                  <div key={action.id} className="space-y-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold leading-snug text-foreground">{action.description}</p>
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        {action.sourceType} · {action.sourceIdentifier}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Assignee</p>
+                        <p className="text-xs font-semibold text-foreground">{action.assignee}</p>
                       </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assignee</p>
-                        <p className="mt-1 text-sm font-black">{action.assignee}</p>
-                      </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                        <p className="mt-1 text-sm font-black">{action.status}</p>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Do by</p>
+                        <p className="text-xs font-semibold text-foreground">{format(parseLocalDate(action.dueDate), 'dd MMM yyyy')}</p>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    No new corrective actions have been opened yet.
                   </div>
-                )}
+                ))
+              ) : (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No corrective action deadlines are due soon.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={qualityPanelClass}>
+            <div className={qualityPanelHeaderClass}>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">New Corrective Actions</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
+                  Recently opened CAP actions and plans.
+                </p>
               </div>
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
+                {metrics.recentCapRows.length} shown
+              </Badge>
+            </div>
+            <div className={cn(qualityPanelBodyClass, 'divide-y')}>
+              {metrics.recentCapRows.length > 0 ? (
+                                metrics.recentCapRows.map((action) => (
+                  <div key={action.id} className="space-y-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold leading-snug text-foreground">{action.description}</p>
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        {action.sourceType} · {action.sourceIdentifier}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Opened</p>
+                        <p className="text-xs font-semibold text-foreground">{format(parseLocalDate(action.openedDate), 'dd MMM yyyy')}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Assignee</p>
+                        <p className="text-xs font-semibold text-foreground">{action.assignee}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Status</p>
+                        <p className="text-xs font-semibold text-foreground">{action.status}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No new corrective actions have been opened yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -3329,7 +3354,6 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
     </Card>
   );
 }
-
 function InstructorLoadCard({ modern, metrics }: { modern: boolean; metrics: InstructorMetrics }) {
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
@@ -3438,4 +3462,9 @@ function SummaryLine({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+
+
+
+
 

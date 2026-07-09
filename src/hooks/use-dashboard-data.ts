@@ -36,6 +36,17 @@ export type CapTaskSummary = {
     overdue: number;
 };
 
+export type UpcomingScheduledAudit = {
+    id: string;
+    auditNumber: string;
+    title: string;
+    targetName: string;
+    auditDate: string;
+    status: 'Scheduled';
+    role: 'Auditor' | 'Auditee' | 'Auditor & Auditee';
+    link: string;
+};
+
 type SummaryPerson = Pick<Personnel, 'id' | 'firstName' | 'lastName'>;
 
 const isSummaryPerson = (value: unknown): value is SummaryPerson => {
@@ -278,11 +289,51 @@ export function useDashboardData() {
         return messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [reports, userProfile]);
 
+    const myScheduledAudits = useMemo((): UpcomingScheduledAudit[] => {
+        if (!userProfile || !audits) return [];
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return audits
+            .filter((audit) => {
+                if (audit.status !== 'Scheduled') return false;
+                const auditDate = new Date(audit.auditDate);
+                if (Number.isNaN(auditDate.getTime())) return false;
+                auditDate.setHours(0, 0, 0, 0);
+                return auditDate >= today;
+            })
+            .flatMap((audit) => {
+                const isAuditor = audit.auditorId === userProfile.id;
+                const isAuditee = audit.auditeeId === userProfile.id;
+                if (!isAuditor && !isAuditee) return [];
+
+                const role: UpcomingScheduledAudit['role'] = isAuditor && isAuditee
+                    ? 'Auditor & Auditee'
+                    : isAuditor
+                        ? 'Auditor'
+                        : 'Auditee';
+
+                return [{
+                    id: audit.id,
+                    auditNumber: audit.auditNumber,
+                    title: audit.title,
+                    targetName: audit.targetName?.trim() || audit.auditeeName?.trim() || audit.scope?.trim() || 'Assigned audit',
+                    auditDate: audit.auditDate,
+                    status: 'Scheduled' as const,
+                    role,
+                    link: `/quality/audits/${audit.id}`,
+                }];
+            })
+            .sort((a, b) => new Date(a.auditDate).getTime() - new Date(b.auditDate).getTime());
+    }, [audits, userProfile]);
+
     const isLoading = isProfileLoading || isLoadingTenant || isLoadingData;
 
     return {
         myTasks,
         myCapTaskSummary,
+        myScheduledAudits,
         myMessages,
         isLoading,
         userProfile,

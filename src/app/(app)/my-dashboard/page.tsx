@@ -28,7 +28,7 @@ const parseLocalDate = (value: string) => {
 };
 
 export default function MyDashboardPage() {
-    const { myTasks, myCapTaskSummary, myMessages, isLoading, userProfile, tenant } = useDashboardData();
+    const { myTasks, myCapTaskSummary, myScheduledAudits, myMessages, isLoading, userProfile, tenant } = useDashboardData();
     const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/my-dashboard' });
     const { isSectionEnabled } = usePageLayout('my-dashboard');
     const isMobile = useIsMobile();
@@ -90,7 +90,7 @@ export default function MyDashboardPage() {
                     <Card className="shadow-none border">
                         <MainPageHeader
                             title="My Outstanding Tasks"
-                            description="A list of all tasks assigned to you across all modules."
+                            description="A list of your assigned tasks and upcoming audits across all modules."
                         />
                         <CardContent className="p-0 overflow-hidden">
                             {(myCapTaskSummary.overdue > 0 || myCapTaskSummary.dueSoon > 0) && (
@@ -123,6 +123,61 @@ export default function MyDashboardPage() {
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Overdue</p>
                                     <p className="mt-1 text-lg font-black">{myCapTaskSummary.overdue}</p>
                                 </div>
+                            </div>
+                            <div className="border-b bg-background">
+                                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-black uppercase tracking-tight text-foreground">Upcoming Scheduled Audits</p>
+                                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Assigned audits where you are the auditor or auditee.</p>
+                                    </div>
+                                    <Badge variant="outline" className="h-6 border-slate-300 px-2 text-[10px] font-black uppercase">
+                                        {myScheduledAudits.length}
+                                    </Badge>
+                                </div>
+                                <Table>
+                                    <TableHeader className="[&_tr]:h-11">
+                                        <TableRow>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Audit</TableHead>
+                                            <TableHead className={cn("text-[10px] uppercase font-bold tracking-wider", isMobile && "hidden")}>Target</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Role</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider">Planned Date</TableHead>
+                                            <TableHead className="text-right text-[10px] uppercase font-bold tracking-wider">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {myScheduledAudits.length > 0 ? (
+                                            myScheduledAudits.map((audit) => (
+                                                <TableRow key={audit.id} className="h-11">
+                                                    <TableCell>
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-semibold">{audit.auditNumber}</p>
+                                                            <p className="truncate text-[11px] text-muted-foreground">{audit.title}</p>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className={cn("text-xs", isMobile && "hidden")}>{audit.targetName}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className="text-[9px] font-bold uppercase">{audit.role}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-xs whitespace-nowrap">{format(parseLocalDate(audit.auditDate), 'dd MMM yy')}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button asChild variant="outline" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3 sm:gap-2 border-slate-300">
+                                                            <Link href={audit.link}>
+                                                                <Eye className="h-4 w-4" />
+                                                                <span className="hidden sm:inline">View</span>
+                                                            </Link>
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow className="h-11">
+                                                <TableCell colSpan={isMobile ? 4 : 5} className="h-11 py-0 text-center text-muted-foreground italic text-sm">
+                                                    You have no upcoming scheduled audits.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
                             <Table>
                                 <TableHeader className="[&_tr]:h-11">
