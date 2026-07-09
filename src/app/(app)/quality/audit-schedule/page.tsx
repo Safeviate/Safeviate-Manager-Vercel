@@ -324,7 +324,7 @@ export default function AuditSchedulePage() {
   };
 
   const extraLanes = ['', ''];
-  const scheduleRowHeights = 'grid-rows-[40px_repeat(12,44px)]';
+  const scheduleRowHeights = 'grid-rows-[56px_repeat(12,44px)]';
 
   if (isLoading) {
     return <Skeleton className="h-full w-full" />;
@@ -334,7 +334,7 @@ export default function AuditSchedulePage() {
     <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden px-1">
         <Card className={cn(
             "w-full overflow-hidden border shadow-none",
-            isMobile ? "flex min-h-0 flex-1 flex-col" : "self-start"
+            isMobile ? "flex min-h-0 flex-1 flex-col" : "flex min-h-0 flex-1 flex-col"
         )}>
             <MainPageHeader 
                 title="Annual Audit Schedule"
@@ -353,21 +353,18 @@ export default function AuditSchedulePage() {
                     </Button>
                 }
             />
-            <CardContent className={cn(
-                "p-0",
-                isMobile ? "flex min-h-0 flex-1 flex-col" : ""
-            )}>
+            <CardContent className="flex min-h-0 flex-1 flex-col p-0">
                 <div className={cn(
-                    "overflow-x-auto overscroll-contain bg-card custom-scrollbar",
+                    "overscroll-contain bg-card custom-scrollbar",
                     isMobile
-                        ? "min-h-0 flex-1 overflow-y-auto touch-pan-x touch-pan-y"
-                        : "overflow-y-visible"
+                        ? "min-h-0 flex-1 overflow-x-auto overflow-y-auto touch-pan-x touch-pan-y"
+                        : "min-h-0 flex-1 overflow-x-scroll overflow-y-scroll"
                 )}>
                     <div className="relative flex h-fit min-w-full w-fit items-start">
                         
                         {/* Sticky Month Column */}
                         <div className={cn("sticky left-0 z-40 grid h-fit w-20 flex-shrink-0 self-start border-r bg-swimlane-header shadow-[2px_0_5px_rgba(0,0,0,0.05)] content-start", scheduleRowHeights)}>
-                            <div className="sticky top-0 left-0 z-50 bg-swimlane-header border-b border-white/10 flex h-10 items-center justify-center font-bold text-[10px] text-white uppercase tracking-wider">
+                            <div className="sticky top-0 left-0 z-50 flex min-h-[56px] items-center justify-center border-b border-white/10 bg-swimlane-header px-2 text-center font-bold text-[10px] text-white uppercase tracking-wider">
                                 MONTH
                             </div>
                             {MONTHS.map((month, idx) => {
@@ -394,8 +391,10 @@ export default function AuditSchedulePage() {
                         <div className="relative flex flex-1 items-start">
                             {auditAreas.map((area) => (
                                 <div key={area} className={cn("relative grid h-fit min-w-[160px] flex-1 self-start border-r content-start", scheduleRowHeights)}>
-                                    <div className="sticky top-0 z-30 bg-swimlane-header text-white border-b border-white/10 flex items-center justify-between gap-1 px-3 text-center shrink-0 h-10">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider truncate">{area}</span>
+                                    <div className="sticky top-0 z-30 flex min-h-[56px] items-center justify-between gap-2 border-b border-white/10 bg-swimlane-header px-3 py-2 text-white">
+                                        <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-[9px] font-bold uppercase leading-tight tracking-wider">
+                                            {area}
+                                        </span>
                                         <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
                                     </div>
                                     {MONTHS.map((month, idx) => {
@@ -445,7 +444,7 @@ export default function AuditSchedulePage() {
 
                             {extraLanes.map((_, laneIdx) => (
                                 <div key={`extra-${laneIdx}`} className={cn("grid h-fit min-w-[160px] flex-1 self-start border-r bg-muted/5 opacity-50 content-start", scheduleRowHeights)}>
-                                    <div className="sticky top-0 z-30 bg-swimlane-header border-b border-white/10 h-10" />
+                                    <div className="sticky top-0 z-30 min-h-[56px] border-b border-white/10 bg-swimlane-header" />
                                     {MONTHS.map((month) => (
                                         <div key={month} className="h-11 border-b" />
                                     ))}

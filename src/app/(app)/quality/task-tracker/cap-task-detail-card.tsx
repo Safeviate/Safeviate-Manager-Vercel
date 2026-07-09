@@ -309,20 +309,20 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
         </div>
 
         <div className="mx-3 mb-3 grid gap-3 lg:grid-cols-2">
-          <div className="rounded-lg border border-card-border bg-background p-3">
+          <div className="flex h-full flex-col rounded-lg border border-card-border bg-background p-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Feedback</p>
               <p className="mt-1 text-xs text-muted-foreground">Use this space for progress notes, implementation updates, and close-out feedback for this corrective action.</p>
             </div>
 
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 flex flex-1 flex-col gap-3">
               <Textarea value={responseDraft} onChange={(event) => setResponseDraft(event.target.value)} placeholder="Add feedback for this corrective action..." className="min-h-[25px] bg-background" disabled={!canManageCapResponses} />
               {!canManageCapResponses ? <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900">Only the assigned CAP owner or a user with quality management permissions can post feedback and upload evidence.</div> : null}
 
-              <div className="flex justify-end">
+              <div className="mt-auto flex justify-end">
                 <div className="flex items-center gap-2">
-                  {editingResponseId ? <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingResponseId(null); setEditingResponseMeta(null); setResponseDraft(''); setDraftEvidence([]); }}>Cancel Edit</Button> : null}
-                  <Button type="button" variant="outline" size="sm" onClick={addResponse} disabled={!canManageCapResponses}>
+                  {editingResponseId ? <Button type="button" variant="ghost" size="sm" className="h-[25px] px-3 text-xs" onClick={() => { setEditingResponseId(null); setEditingResponseMeta(null); setResponseDraft(''); setDraftEvidence([]); }}>Cancel Edit</Button> : null}
+                  <Button type="button" variant="outline" size="sm" className="h-[25px] px-3 text-xs" onClick={addResponse} disabled={!canManageCapResponses}>
                     {editingResponseId ? 'Update Feedback' : 'Add Feedback'}
                   </Button>
                 </div>
@@ -330,30 +330,14 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
             </div>
           </div>
 
-          <div className="rounded-lg border border-card-border bg-background p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Evidence</p>
-                <p className="mt-1 text-xs text-muted-foreground">Upload documents or photos that support this corrective action and its latest feedback update.</p>
-              </div>
-              <DocumentUploader
-                defaultFileName={`cap-evidence-${audit.auditNumber}`}
-                trigger={(open) => (
-                  <Button type="button" variant="outline" size="sm" onClick={() => open()} disabled={!canManageCapResponses} className="h-7 px-3 text-[10px] font-black uppercase tracking-[0.08em]">
-                    <PlusCircle className="mr-1 h-3 w-3" />
-                    Add Evidence
-                  </Button>
-                )}
-                onDocumentUploaded={async (document) => {
-                  setDraftEvidence((current) => [
-                    ...current,
-                    { id: crypto.randomUUID(), name: document.name, url: document.url, uploadDate: document.uploadDate },
-                  ]);
-                }}
-              />
+          <div className="flex h-full flex-col rounded-lg border border-card-border bg-background p-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Corrective Action Evidence</p>
+              <p className="mt-1 text-xs text-muted-foreground">Upload documents or photos that support this corrective action and its latest feedback update.</p>
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 flex flex-1 flex-col gap-3">
+              <div className="space-y-2">
               {draftEvidence.length > 0 ? (
                 draftEvidence.map((document) => (
                   <div key={document.id} className="flex items-center justify-between gap-3 rounded-md border bg-muted/10 px-3 py-2">
@@ -372,6 +356,25 @@ export const CapTaskDetailCard = forwardRef<CapTaskDetailCardHandle, CapTaskDeta
                   No draft evidence attached yet.
                 </div>
               )}
+              </div>
+
+              <div className="mt-auto flex justify-end">
+                <DocumentUploader
+                  defaultFileName={`cap-evidence-${audit.auditNumber}`}
+                  trigger={(open) => (
+                    <Button type="button" variant="outline" size="sm" onClick={() => open()} disabled={!canManageCapResponses} className="h-[25px] px-3 text-xs">
+                      <PlusCircle className="mr-1 h-3 w-3" />
+                      Add Evidence
+                    </Button>
+                  )}
+                  onDocumentUploaded={async (document) => {
+                    setDraftEvidence((current) => [
+                      ...current,
+                      { id: crypto.randomUUID(), name: document.name, url: document.url, uploadDate: document.uploadDate },
+                    ]);
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
