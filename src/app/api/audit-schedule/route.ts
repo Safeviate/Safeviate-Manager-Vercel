@@ -4,22 +4,11 @@ import { getTenantIdFromSession } from '@/lib/server/session-tenant';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
-const DEFAULT_AUDIT_AREAS = [
-  'Personnel & Training',
-  'Flight Operations',
-  'Ground Operations',
-  'Maintenance',
-  'Cabin Safety',
-  'Facilities & Equipment',
-  'Emergency Response',
-  'Security',
-];
-
 async function getTenantId(request: Request) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return null;
-  return (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || 'safeviate';
+  return (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
 }
 
 async function getConfig(tenantId: string) {
@@ -34,17 +23,17 @@ export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId(request);
     if (!tenantId) {
-      return NextResponse.json({ areas: DEFAULT_AUDIT_AREAS, items: [] }, { status: 200 });
+      return NextResponse.json({ areas: [], items: [] }, { status: 200 });
     }
 
     const config = await getConfig(tenantId);
     return NextResponse.json({
-      areas: Array.isArray(config['audit-areas']) && config['audit-areas'].length ? config['audit-areas'] : DEFAULT_AUDIT_AREAS,
+      areas: Array.isArray(config['audit-areas']) ? config['audit-areas'] : [],
       items: Array.isArray(config['audit-schedule-items']) ? config['audit-schedule-items'] : [],
     });
   } catch (error) {
-    console.error('[audit-schedule] fallback to defaults:', error);
-    return NextResponse.json({ areas: DEFAULT_AUDIT_AREAS, items: [] }, { status: 200 });
+    console.error('[audit-schedule] returning empty tenant schedule:', error);
+    return NextResponse.json({ areas: [], items: [] }, { status: 200 });
   }
 }
 
@@ -53,7 +42,7 @@ export async function POST(request: Request) {
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json().catch(() => null);
-  const areas = Array.isArray(body?.areas) ? body.areas.filter((area: unknown) => typeof area === 'string' && area.trim()) : DEFAULT_AUDIT_AREAS;
+  const areas = Array.isArray(body?.areas) ? body.areas.filter((area: unknown) => typeof area === 'string' && area.trim()) : [];
   const items = Array.isArray(body?.items) ? body.items : [];
   const config = await getConfig(tenantId);
   const next = {

@@ -3118,7 +3118,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
         <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
           <div className="rounded-md border bg-background p-3 xl:col-span-2 2xl:col-span-3">
             <div className="mb-3 min-w-0">
-              <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Quality Snapshot</p>
+              <p className="text-[13px] font-bold leading-none text-foreground/90">Quality Snapshot</p>
               <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
                 Audit progress, findings, and corrective action pressure.
               </p>
@@ -3136,12 +3136,12 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Recent Audits</p>
+                <p className="text-[13px] font-bold leading-none text-foreground/90">Recent Audits</p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
                   Latest audit activity and compliance score.
                 </p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.recentAudits} recent
               </Badge>
             </div>
@@ -3184,7 +3184,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Quality Quick Read</p>
+                <p className="text-[13px] font-bold leading-none text-foreground/90">Quality Quick Read</p>
                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
                   Audit and corrective action flow.
                 </p>
@@ -3206,7 +3206,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           {(metrics.overdueCaps > 0 || metrics.dueSoonCaps > 0) && (
             <div className={cn(qualityPanelClass, 'border-amber-200 bg-amber-50/70')}>
               <div className="border-b border-amber-200 bg-amber-50/90 px-4 py-3">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-amber-900">Corrective Action Attention Required</p>
+                <p className="text-[13px] font-bold leading-none text-amber-900">Corrective Action Attention Required</p>
                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-amber-800/90">
                   {metrics.overdueCaps > 0
                     ? `${metrics.overdueCaps} overdue corrective action${metrics.overdueCaps === 1 ? '' : 's'} need follow-up.`
@@ -3229,12 +3229,12 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Upcoming Audits</p>
+                <p className="text-[13px] font-bold leading-none text-foreground/90">Upcoming Audits</p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
                   Scheduled audits waiting to be started.
                 </p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.upcomingAuditRows.length} shown
               </Badge>
             </div>
@@ -3265,12 +3265,12 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">Upcoming CAP Deadlines</p>
+                <p className="text-[13px] font-bold leading-none text-foreground/90">Upcoming CAP Deadlines</p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
                   Actions due in the next 30 days.
                 </p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.upcomingCapRows.length} shown
               </Badge>
             </div>
@@ -3307,12 +3307,12 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground/90">New Corrective Actions</p>
+                <p className="text-[13px] font-bold leading-none text-foreground/90">New Corrective Actions</p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
                   Recently opened CAP actions and plans.
                 </p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/80">
+              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.recentCapRows.length} shown
               </Badge>
             </div>

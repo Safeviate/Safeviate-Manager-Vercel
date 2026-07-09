@@ -16,6 +16,8 @@
     "test:e2e": "playwright test",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:inspect:tenant": "node scripts/inspect-tenant-data.cjs",
+    "db:recover:tenant-audit-config": "node scripts/recover-tenant-audit-config.cjs",
     "db:push:local": "dotenv -e .env.local -- drizzle-kit push",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",

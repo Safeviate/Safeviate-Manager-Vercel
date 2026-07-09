@@ -43,7 +43,7 @@ async function getTenantId(request: Request) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) return null;
-  return (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || 'safeviate';
+  return (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
 }
 
 async function getConfig(tenantId: string) {

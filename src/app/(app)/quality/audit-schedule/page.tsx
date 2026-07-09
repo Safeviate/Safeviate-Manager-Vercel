@@ -49,16 +49,7 @@ import type { AuditScheduleItem, AuditScheduleStatus } from '@/types/quality';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 
-const INITIAL_AUDIT_AREAS = [
-  'Personnel & Training',
-  'Flight Operations',
-  'Ground Operations',
-  'Maintenance',
-  'Cabin Safety',
-  'Facilities & Equipment',
-  'Emergency Response',
-  'Security',
-];
+const INITIAL_AUDIT_AREAS: string[] = [];
 
 const STATUSES: AuditScheduleStatus[] = [
   'Scheduled',
@@ -210,8 +201,8 @@ export default function AuditSchedulePage() {
     setIsLoading(true);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ areas: INITIAL_AUDIT_AREAS, items: [] }));
-        if (Array.isArray(payload.areas) && payload.areas.length) setAuditAreas(payload.areas);
+        const payload = await response.json().catch(() => ({ areas: [], items: [] }));
+        if (Array.isArray(payload.areas)) setAuditAreas(payload.areas);
         if (Array.isArray(payload.items)) setSchedule((payload.items as AuditScheduleItem[]).filter(i => i.year === currentYear));
     } catch (e) {
         console.error("Failed to load audit schedule", e);
