@@ -83,7 +83,8 @@ export const usePermissions = () => {
 
       const itemHref = item.href;
       const isCompanyDashboard = itemHref === '/dashboard';
-      const isSafeviateOnlyAdminSurface = itemHref === '/users/access-overview';
+      const isSafeviateOnlyAdminSurface =
+        itemHref === '/users/access-overview' || itemHref === '/admin/activity-tracker';
 
       if (isSafeviateOnlyAdminSurface && tenantId && tenantId !== MASTER_TENANT_ID) {
         return false;

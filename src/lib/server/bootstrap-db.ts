@@ -29,7 +29,8 @@ type TableName =
   | 'risks'
   | 'management_of_change'
   | 'erp_state'
-  | 'simulation_route_metrics';
+  | 'simulation_route_metrics'
+  | 'activity_logs';
 
 const tableCache = new Map<TableName, boolean>();
 
@@ -559,6 +560,39 @@ export async function ensureSimulationRouteMetricsSchema() {
     ON simulation_route_metrics (tenant_id, run_id)
   `);
   tableCache.set('simulation_route_metrics', true);
+}
+
+export async function ensureActivityLogsSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('activity_logs')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS activity_logs (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      scope TEXT NOT NULL,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      entity_label TEXT NOT NULL,
+      actor_user_id VARCHAR(128),
+      actor_email TEXT NOT NULL,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS activity_logs_tenant_scope_idx
+    ON activity_logs (tenant_id, scope, created_at DESC)
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS activity_logs_tenant_action_idx
+    ON activity_logs (tenant_id, action, created_at DESC)
+  `);
+  tableCache.set('activity_logs', true);
 }
 
 export async function ensurePersonnelSchema() {

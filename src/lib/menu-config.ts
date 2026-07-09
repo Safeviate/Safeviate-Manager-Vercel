@@ -423,6 +423,12 @@ export const menuConfig: MenuItem[] = [
         permissionId: 'admin-permissions-view',
       },
       {
+        href: '/admin/activity-tracker',
+        label: 'Activity Tracker',
+        description: 'Track audit schedule changes and edits.',
+        permissionId: 'admin-permissions-view',
+      },
+      {
         href: '/users/access-overview',
         label: 'Access Overview',
         description: 'View a matrix of what users and roles can access.',
