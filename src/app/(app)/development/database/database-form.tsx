@@ -53,6 +53,7 @@ type TenantConfigPayload = {
   enabledMenus?: string[];
   pageLayoutSettings?: PageLayoutSettings | null;
   tabVisibilitySettings?: { id: string; visibilities: Record<string, boolean> } | null;
+  defaultRoleTemplate?: 'standard' | 'none';
 };
 
 type TenantSummary = Tenant;
@@ -124,6 +125,7 @@ export function DatabaseForm({
   const [logoPreview, setLogoPreview] = useState('');
   const [enabledHrefs, setEnabledHrefs] = useState<Set<string>>(() => buildDefaultEnabledHrefs());
   const [pageLayoutSettings, setPageLayoutSettings] = useState<PageLayoutSettings>(() => buildDefaultPageLayoutSettings());
+  const [defaultRoleTemplate, setDefaultRoleTemplate] = useState<'standard' | 'none'>('standard');
   const [menuFilter, setMenuFilter] = useState('');
   const isEditingExistingTenant = Boolean(selectedTenantId);
   const isCreatingNewTenant = !selectedTenantId;
@@ -201,9 +203,11 @@ export function DatabaseForm({
       const nextEnabledHrefs = getTenantMenuState(tenant, config);
       setEnabledHrefs(nextEnabledHrefs.size > 0 ? nextEnabledHrefs : getDefaultTenantMenuState());
       setPageLayoutSettings(getTenantPageLayoutSettings(config));
+      setDefaultRoleTemplate(config?.defaultRoleTemplate === 'none' ? 'none' : 'standard');
     } catch {
       setEnabledHrefs(getDefaultTenantMenuState());
       setPageLayoutSettings(buildDefaultPageLayoutSettings());
+      setDefaultRoleTemplate('standard');
     }
 
     toast({
@@ -237,6 +241,7 @@ export function DatabaseForm({
     setLogoPreview('');
     setEnabledHrefs(getDefaultTenantMenuState());
     setPageLayoutSettings(buildDefaultPageLayoutSettings());
+    setDefaultRoleTemplate('standard');
     setMenuFilter('');
   };
 
@@ -369,7 +374,7 @@ export function DatabaseForm({
       const tenantResponse = await fetch('/api/tenants', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant: tenantData, isNewTenant }),
+        body: JSON.stringify({ tenant: tenantData, isNewTenant, roleTemplate: defaultRoleTemplate }),
       });
       if (!tenantResponse.ok) {
         const payload = await tenantResponse.json().catch(() => null);
@@ -388,6 +393,7 @@ export function DatabaseForm({
             enabledMenus: effectiveEnabledHrefs,
             pageLayoutSettings,
             tabVisibilitySettings: tenantData.tabVisibilitySettings,
+            defaultRoleTemplate,
           },
         }),
       });
@@ -611,6 +617,24 @@ export function DatabaseForm({
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {isCreatingNewTenant ? (
+                        <div className="space-y-2 rounded-2xl border bg-muted/5 p-3">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Default Roles</Label>
+                          <Select value={defaultRoleTemplate} onValueChange={(value) => setDefaultRoleTemplate(value === 'none' ? 'none' : 'standard')}>
+                            <SelectTrigger className="h-10 rounded-xl border-2 bg-background text-[10px] font-black uppercase tracking-tight shadow-none">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-2">
+                              <SelectItem value="standard" className="text-[10px] font-black uppercase">Standard Administrator and Viewer</SelectItem>
+                              <SelectItem value="none" className="text-[10px] font-black uppercase">No Default Roles</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Standard creates tenant-local Administrator and Viewer roles using the current CRUD permission model.
+                          </p>
+                        </div>
+                      ) : null}
                     </CardContent>
                   </Card>
                 </div>

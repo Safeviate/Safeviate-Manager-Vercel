@@ -19,7 +19,7 @@ export const aiFlowPermissions: Record<string, FlowPermissionRule> = {
   analyzeMoc: { anyOf: ['moc-manage'] },
   generateChecklist: { anyOf: ['quality-templates-manage', 'quality-audits-manage'] },
   generateExam: { anyOf: ['training-exams-manage'] },
-  generateSafetyProtocolRecommendations: { anyOf: ['safety-view', 'safety-reports-manage'] },
+  generateSafetyProtocolRecommendations: { anyOf: ['safety-view', 'safety-reports-edit'] },
   parseLogbook: { anyOf: ['development-view'] },
   summarizeDocument: { anyOf: ['operations-documents-manage', 'quality-view', 'safety-view'] },
   summarizeMaintenanceLogs: { anyOf: ['assets-view', 'assets-edit'] },

@@ -91,7 +91,7 @@ function ArchiveReportButton({ reportId, reportNumber }: { reportId: string, rep
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
 
-    const canDelete = hasPermission('safety-reports-manage');
+    const canDelete = hasPermission('safety-reports-delete');
 
     if (!canDelete) return null;
 
@@ -508,7 +508,7 @@ function SafetyRecommendationsDialog({ reports }: { reports: SafetyReport[] }) {
 export default function SafetyReportsPage() {
   const { tenantId, userProfile } = useUserProfile();
   const { hasPermission } = usePermissions();
-  const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'safety-reports-manage' });
+  const { scopedOrganizationId, shouldShowOrganizationTabs } = useOrganizationScope({ viewAllPermissionId: 'safety-reports-view' });
   const { isPageEnabled } = usePageLayout('safety-reports');
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -522,7 +522,7 @@ export default function SafetyReportsPage() {
   const [reportSortOrder, setReportSortOrder] = useState<ReportSortOrder>('newest');
   const [reportView, setReportView] = useState<'active' | 'archived'>('active');
 
-  const canManageAll = hasPermission('safety-reports-manage');
+  const canManageAll = hasPermission('safety-reports-edit');
   function isCurrentTenantRecord(record: { tenantId?: string | null }) {
     return record.tenantId === tenantId;
   }

@@ -12,7 +12,7 @@ import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-s
 export default function PageFormatPage() {
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/admin/page-format' });
-  const canManage = hasPermission('admin-settings-manage');
+  const canManage = hasPermission('admin-settings-edit');
 
   if (isPermissionsLoading) {
     return (

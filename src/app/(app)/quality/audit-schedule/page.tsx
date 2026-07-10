@@ -207,8 +207,9 @@ export default function AuditSchedulePage() {
   const { tenantId } = useUserProfile();
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
-  const canEditAuditSchedule = hasPermission('quality-audit-schedule-edit') || hasPermission('quality-audit-schedule-manage');
-  const canDeleteAuditSchedule = hasPermission('quality-audit-schedule-manage');
+  const canCreateAuditSchedule = hasPermission('quality-audit-schedule-create');
+  const canEditAuditSchedule = hasPermission('quality-audit-schedule-edit');
+  const canDeleteAuditSchedule = hasPermission('quality-audit-schedule-delete');
 
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
   const [schedule, setSchedule] = useState<AuditScheduleItem[]>([]);
@@ -241,10 +242,8 @@ export default function AuditSchedulePage() {
     return <TenantLayoutDisabledState />;
   }
 
-  const canModifySchedule = canEditAuditSchedule;
-
   const handleStatusChange = async (area: string, month: string, status: AuditScheduleStatus) => {
-    if (!canModifySchedule) return;
+    if (!canEditAuditSchedule && !canCreateAuditSchedule) return;
     setOpenPopoverId(null);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
@@ -278,7 +277,7 @@ export default function AuditSchedulePage() {
   };
 
   const handleAddArea = async () => {
-    if (!canModifySchedule) return;
+    if (!canCreateAuditSchedule) return;
     const trimmed = newAreaName.trim();
     if (trimmed && !auditAreas.includes(trimmed)) {
         const nextAreas = [...auditAreas, trimmed];
@@ -296,7 +295,7 @@ export default function AuditSchedulePage() {
   }
 
   const handleEditArea = async (oldName: string, newName: string) => {
-    if (!canModifySchedule) return;
+    if (!canEditAuditSchedule) return;
     const nextAreas = auditAreas.map(area => area === oldName ? newName : area);
     setAuditAreas(nextAreas);
     try {
@@ -356,7 +355,7 @@ export default function AuditSchedulePage() {
             <MainPageHeader 
                 title="Annual Audit Schedule"
                 actions={
-                    canModifySchedule ? (
+                    canCreateAuditSchedule ? (
                       <Button
                           variant={isMobile ? 'outline' : 'default'}
                           size="sm"
@@ -416,7 +415,7 @@ export default function AuditSchedulePage() {
                                         </span>
                                         <AreaActions
                                           area={area}
-                                          canEdit={canModifySchedule}
+                                          canEdit={canEditAuditSchedule && canCreateAuditSchedule && canDeleteAuditSchedule}
                                           canDelete={canDeleteAuditSchedule}
                                           onEdit={handleEditArea}
                                           onDelete={handleDeleteArea}
@@ -424,6 +423,8 @@ export default function AuditSchedulePage() {
                                     </div>
                                     {MONTHS.map((month, idx) => {
                                         const status = getScheduleItem(area, month);
+                                        const hasExistingItem = schedule.some((item) => item.area === area && item.month === month);
+                                        const canUpdateCell = canEditAuditSchedule || (canCreateAuditSchedule && !hasExistingItem);
                                         const popoverId = `${area}-${month}`;
                                         const isCurrentMonth = idx === currentMonthIdx;
 
@@ -435,7 +436,7 @@ export default function AuditSchedulePage() {
                                                     isCurrentMonth ? "bg-muted/30" : "hover:bg-muted/10"
                                                 )}
                                             >
-                                                {canModifySchedule ? (
+                                                {canUpdateCell ? (
                                                   <Popover 
                                                       open={openPopoverId === popoverId} 
                                                       onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}

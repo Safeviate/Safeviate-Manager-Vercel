@@ -14,6 +14,7 @@ type SessionContext = {
   tenantId: string | null;
   actorUserId: string | null;
   actorEmail: string | null;
+  canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
 };
@@ -24,17 +25,17 @@ async function getSessionContext(request: Request): Promise<SessionContext> {
   const actorUserId = session?.user?.id?.trim() || null;
 
   if (!actorEmail) {
-    return { tenantId: null, actorUserId, actorEmail, canEdit: false, canDelete: false };
+    return { tenantId: null, actorUserId, actorEmail, canCreate: false, canEdit: false, canDelete: false };
   }
 
   const tenantId = (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
 
   if (!tenantId) {
-    return { tenantId: null, actorUserId, actorEmail, canEdit: false, canDelete: false };
+    return { tenantId: null, actorUserId, actorEmail, canCreate: false, canEdit: false, canDelete: false };
   }
 
   if (isMasterTenantEmail(actorEmail) || session?.user?.role?.trim().toLowerCase() === 'developer' || session?.user?.role?.trim().toLowerCase() === 'dev') {
-    return { tenantId, actorUserId, actorEmail, canEdit: true, canDelete: true };
+    return { tenantId, actorUserId, actorEmail, canCreate: true, canEdit: true, canDelete: true };
   }
 
   const personnelProfile = await prisma.personnel.findFirst({
@@ -76,16 +77,18 @@ async function getSessionContext(request: Request): Promise<SessionContext> {
     grantedPermissions.add(permission);
   });
 
+  const canCreate = grantedPermissions.has('*')
+    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-create', deniedPermissions);
   const canEdit = grantedPermissions.has('*')
-    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-edit', deniedPermissions)
-    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-manage', deniedPermissions);
+    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-edit', deniedPermissions);
   const canDelete = grantedPermissions.has('*')
-    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-manage', deniedPermissions);
+    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-delete', deniedPermissions);
 
   return {
     tenantId,
     actorUserId,
     actorEmail,
+    canCreate,
     canEdit,
     canDelete,
   };
@@ -312,12 +315,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { tenantId, actorUserId, actorEmail, canEdit, canDelete } = await getSessionContext(request);
+  const { tenantId, actorUserId, actorEmail, canCreate, canEdit, canDelete } = await getSessionContext(request);
   if (!tenantId || !actorEmail) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (!canEdit) {
-    return NextResponse.json({ error: 'You do not have permission to edit the audit schedule.' }, { status: 403 });
+  if (!canCreate && !canEdit && !canDelete) {
+    return NextResponse.json({ error: 'You do not have permission to change the audit schedule.' }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
@@ -326,7 +329,19 @@ export async function POST(request: Request) {
   const config = await getConfig(tenantId);
   const changes = diffAuditSchedule(config, areas, items);
 
-  if (changes.removedAreas.length > 0 && !canDelete) {
+  const hasCreatedItems = changes.itemLogs.some((entry) => entry.action === 'created');
+  const hasUpdatedItems = changes.itemLogs.some((entry) => entry.action === 'updated');
+  const hasDeletedItems = changes.itemLogs.some((entry) => entry.action === 'deleted');
+
+  if ((changes.addedAreas.length > 0 || hasCreatedItems) && !canCreate) {
+    return NextResponse.json({ error: 'You do not have permission to create audit schedule entries.' }, { status: 403 });
+  }
+
+  if (hasUpdatedItems && !canEdit) {
+    return NextResponse.json({ error: 'You do not have permission to edit audit schedule entries.' }, { status: 403 });
+  }
+
+  if ((changes.removedAreas.length > 0 || hasDeletedItems) && !canDelete) {
     return NextResponse.json({ error: 'You do not have permission to delete audit schedule areas.' }, { status: 403 });
   }
 

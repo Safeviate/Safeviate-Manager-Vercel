@@ -3,12 +3,40 @@ import { isDatabaseAvailable, prisma } from '@/lib/prisma';
 import { invalidateTenantScopedCaches } from '@/lib/server/route-cache';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
 import { isMasterTenantEmail } from '@/lib/server/tenant-access';
+import { ensureRolesSchema } from '@/lib/server/bootstrap-db';
+import { permissionsConfig } from '@/lib/permissions-config';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
 const MASTER_TENANT_ID = 'safeviate';
 const MASTER_TENANT_NAME = 'Safeviate';
 const FALLBACK_TENANTS = [{ id: MASTER_TENANT_ID, name: MASTER_TENANT_NAME }];
+
+type TenantRoleTemplate = 'standard' | 'none';
+
+function buildTenantDefaultRoles(tenantId: string) {
+  const administratorPermissions = permissionsConfig.flatMap((resource) =>
+    resource.actions.map((action) => `${resource.id}-${action}`)
+  );
+  const viewerPermissions = permissionsConfig
+    .filter((resource) => resource.actions.includes('view'))
+    .map((resource) => `${resource.id}-view`);
+
+  return [
+    {
+      id: `${tenantId}-tenant-administrator`,
+      tenantId,
+      name: 'Tenant Administrator',
+      permissions: administratorPermissions,
+    },
+    {
+      id: `${tenantId}-tenant-viewer`,
+      tenantId,
+      name: 'Tenant Viewer',
+      permissions: viewerPermissions,
+    },
+  ];
+}
 
 async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
@@ -66,6 +94,10 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  if (!(await canManageTenants())) {
+    return NextResponse.json({ error: 'Unauthorized to manage tenants.' }, { status: 403 });
+  }
+
   const tenantId = await getTenantId(request);
   if (!tenantId) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
@@ -74,6 +106,7 @@ export async function PUT(request: Request) {
   const body = await request.json().catch(() => null);
   const tenant = body?.tenant;
   const isNewTenant = body?.isNewTenant === true;
+  const roleTemplate: TenantRoleTemplate = body?.roleTemplate === 'none' ? 'none' : 'standard';
   if (!tenant || !tenant.id || !tenant.name) {
     return NextResponse.json({ error: 'Invalid tenant payload.' }, { status: 400 });
   }
@@ -97,6 +130,8 @@ export async function PUT(request: Request) {
     }
   }
 
+  await ensureRolesSchema();
+
   await prisma.$transaction(async (tx) => {
     await tx.tenant.upsert({
       where: { id: normalizedTenantId },
@@ -117,16 +152,25 @@ export async function PUT(request: Request) {
         data: {
           id: normalizedTenantId,
           name: normalizedTenantName,
+          defaultRoleTemplate: roleTemplate,
         },
       },
       update: {
         data: {
           id: normalizedTenantId,
           name: normalizedTenantName,
+          defaultRoleTemplate: roleTemplate,
         },
         updatedAt: new Date(),
       },
     });
+
+    if (isNewTenant && roleTemplate === 'standard') {
+      await tx.role.createMany({
+        data: buildTenantDefaultRoles(normalizedTenantId),
+        skipDuplicates: true,
+      });
+    }
   });
 
   invalidateTenantScopedCaches(normalizedTenantId);

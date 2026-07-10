@@ -66,7 +66,7 @@ const defaultFleetTargetHours = 20;
 export default function DocumentDatesPage() {
   const { toast } = useToast();
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
-  const canManage = hasPermission('admin-settings-manage');
+  const canManage = hasPermission('admin-settings-edit');
   
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettings | null>(null);
   const [milestoneSettings, setMilestoneSettings] = useState<StudentMilestoneSettings | null>(null);

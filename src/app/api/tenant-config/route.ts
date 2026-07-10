@@ -49,8 +49,8 @@ async function canManageTenantSettings(tenantId: string, email: string, sessionR
     .forEach((permission) => grantedPermissions.add(permission));
 
   return grantedPermissions.has('*')
-    || hasHierarchicalPermission(grantedPermissions, 'admin-settings-manage', deniedPermissions)
-    || hasHierarchicalPermission(grantedPermissions, 'settings-manage', deniedPermissions);
+    || hasHierarchicalPermission(grantedPermissions, 'admin-settings-edit', deniedPermissions)
+    || hasHierarchicalPermission(grantedPermissions, 'settings-edit', deniedPermissions);
 }
 
 export async function GET(request: Request) {

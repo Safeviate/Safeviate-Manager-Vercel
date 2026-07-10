@@ -23,7 +23,7 @@ import type { LogbookTemplate } from '@/app/(app)/development/logbook-parser/pag
 import { Switch } from '@/components/ui/switch';
 import { parseJsonResponse } from '@/lib/safe-json';
 import { getPermissionDisplayLabel } from '@/lib/permission-display';
-import { hasHierarchicalPermission, normalizePermissionIds } from '@/lib/permission-model';
+import { expandLegacyManagePermissions, hasHierarchicalPermission } from '@/lib/permission-model';
 import { getPermissionSections } from '@/lib/permission-sections';
 import type { InstructorAssignmentRecord } from '../personnel-directory-page';
 
@@ -145,7 +145,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     const cloned = JSON.parse(JSON.stringify(user)) as PersonnelFormState;
     setFormData({
       ...cloned,
-      permissions: normalizePermissionIds(cloned.permissions || []),
+      permissions: expandLegacyManagePermissions(cloned.permissions || []),
     });
   }, [user]);
   
@@ -217,7 +217,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
     if (!formData) return;
       const currentPermissions = formData.permissions || [];
       const role = roles.find((r) => r.id === formData.role);
-    const rolePermissions = normalizePermissionIds(role?.permissions || []);
+    const rolePermissions = expandLegacyManagePermissions(role?.permissions || []);
     const isRoleGranted = rolePermissions.includes('*') || hasHierarchicalPermission(rolePermissions, permissionId);
 
     if (!isRoleGranted && !canBypassPermissionRoleGate) {
@@ -237,7 +237,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
 
   const handleSelectAllToggle = () => {
     const role = formData ? roles.find((r) => r.id === formData.role) : null;
-    const rolePermissions = normalizePermissionIds(role?.permissions || []);
+    const rolePermissions = expandLegacyManagePermissions(role?.permissions || []);
     const currentPermissions = formData?.permissions || [];
     handleInputChange(
       'permissions',
@@ -250,7 +250,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
   const handleRoleChange = (roleId: string) => {
     const role = roles.find(r => r.id === roleId);
     if (role) {
-      const normalizedRolePermissions = normalizePermissionIds(role.permissions || []);
+      const normalizedRolePermissions = expandLegacyManagePermissions(role.permissions || []);
       const currentOverrides = (formData?.permissions || []).filter((permissionId) =>
         permissionId.startsWith('!') || normalizedRolePermissions.includes(permissionId)
       );
@@ -409,7 +409,7 @@ export function EditPersonnelForm({ tenantId, user, roles, departments, logbookT
                                                   {resource.actions.map((action) => {
                                                           const permissionId = `${resource.id}-${action}`;
                                                           const role = formData ? roles.find((r) => r.id === formData.role) : null;
-                                                          const normalizedRolePermissions = normalizePermissionIds(role?.permissions || []);
+                                                          const normalizedRolePermissions = expandLegacyManagePermissions(role?.permissions || []);
                                                           const isRoleGranted = normalizedRolePermissions.includes('*') || hasHierarchicalPermission(normalizedRolePermissions, permissionId);
                                                           const isUserGranted = !!(formData?.permissions || []).includes(permissionId);
                                                           const isDenied = !!(formData?.permissions || []).includes(`!${permissionId}`);

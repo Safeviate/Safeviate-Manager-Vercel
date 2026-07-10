@@ -194,7 +194,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
   const sidebarLogoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const localTenantConfigKey = getTenantThemeLocalOverrideKey(tenantId);
 
-  const canManageOrganization = hasPermission('admin-settings-manage') || hasPermission('settings-manage');
+  const canManageOrganization = hasPermission('admin-settings-edit') || hasPermission('settings-edit');
 
   const buildOrganizationTheme = useCallback((overrides?: {
     sidebarBackgroundImage?: string;

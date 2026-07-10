@@ -1,15 +1,11 @@
-export type PermissionTier = 'view' | 'edit' | 'manage';
+export type PermissionTier = 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'sign' | 'export' | 'manage';
 
 export type CanonicalPermission = {
   resource: string;
   tier: PermissionTier;
 };
 
-const TIER_RANK: Record<PermissionTier, number> = {
-  view: 1,
-  edit: 2,
-  manage: 3,
-};
+const CRUD_TIERS: Array<'view' | 'create' | 'edit' | 'delete'> = ['view', 'create', 'edit', 'delete'];
 
 const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   bookings: { resource: 'bookings', tier: 'view' },
@@ -21,13 +17,13 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'bookings-preflight-manage': { resource: 'bookings', tier: 'edit' },
   'bookings-postflight-manage': { resource: 'bookings', tier: 'edit' },
   'bookings-manage': { resource: 'bookings', tier: 'manage' },
-  'bookings-delete': { resource: 'bookings', tier: 'manage' },
-  'bookings-approve': { resource: 'bookings', tier: 'manage' },
-  'bookings-approve-override': { resource: 'bookings', tier: 'manage' },
+  'bookings-delete': { resource: 'bookings', tier: 'delete' },
+  'bookings-approve': { resource: 'bookings', tier: 'approve' },
+  'bookings-approve-override': { resource: 'bookings', tier: 'approve' },
   'bookings-techlog-override': { resource: 'bookings', tier: 'manage' },
 
   'accounting-view': { resource: 'accounting', tier: 'view' },
-  'accounting-export': { resource: 'accounting', tier: 'edit' },
+  'accounting-export': { resource: 'accounting', tier: 'export' },
   'accounting-edit': { resource: 'accounting', tier: 'edit' },
   'accounting-manage': { resource: 'accounting', tier: 'manage' },
 
@@ -44,9 +40,9 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'quality-caps-manage': { resource: 'quality-caps', tier: 'manage' },
 
   'operations-alerts-view': { resource: 'operations-alerts', tier: 'view' },
-  'operations-alerts-create': { resource: 'operations-alerts', tier: 'edit' },
+  'operations-alerts-create': { resource: 'operations-alerts', tier: 'create' },
   'operations-alerts-edit': { resource: 'operations-alerts', tier: 'edit' },
-  'operations-alerts-delete': { resource: 'operations-alerts', tier: 'manage' },
+  'operations-alerts-delete': { resource: 'operations-alerts', tier: 'delete' },
 
   'operations-erp-view': { resource: 'operations-erp', tier: 'view' },
   'operations-erp-manage': { resource: 'operations-erp', tier: 'manage' },
@@ -60,29 +56,29 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'risk-matrix-edit-colors': { resource: 'risk-matrix', tier: 'edit' },
 
   'assets-view': { resource: 'assets', tier: 'view' },
-  'assets-create': { resource: 'assets', tier: 'edit' },
+  'assets-create': { resource: 'assets', tier: 'create' },
   'assets-edit': { resource: 'assets', tier: 'edit' },
-  'assets-delete': { resource: 'assets', tier: 'manage' },
+  'assets-delete': { resource: 'assets', tier: 'delete' },
 
   'maintenance-workpacks-view': { resource: 'maintenance-workpacks', tier: 'view' },
-  'maintenance-workpacks-create': { resource: 'maintenance-workpacks', tier: 'edit' },
+  'maintenance-workpacks-create': { resource: 'maintenance-workpacks', tier: 'create' },
   'maintenance-workpacks-edit': { resource: 'maintenance-workpacks', tier: 'edit' },
-  'maintenance-workpacks-delete': { resource: 'maintenance-workpacks', tier: 'manage' },
-  'maintenance-workpacks-sign': { resource: 'maintenance-workpacks', tier: 'manage' },
-  'maintenance-workpacks-approve': { resource: 'maintenance-workpacks', tier: 'manage' },
+  'maintenance-workpacks-delete': { resource: 'maintenance-workpacks', tier: 'delete' },
+  'maintenance-workpacks-sign': { resource: 'maintenance-workpacks', tier: 'sign' },
+  'maintenance-workpacks-approve': { resource: 'maintenance-workpacks', tier: 'approve' },
 
   'maintenance-defects-view': { resource: 'maintenance-defects', tier: 'view' },
-  'maintenance-defects-create': { resource: 'maintenance-defects', tier: 'edit' },
+  'maintenance-defects-create': { resource: 'maintenance-defects', tier: 'create' },
   'maintenance-defects-edit': { resource: 'maintenance-defects', tier: 'edit' },
-  'maintenance-defects-delete': { resource: 'maintenance-defects', tier: 'manage' },
+  'maintenance-defects-delete': { resource: 'maintenance-defects', tier: 'delete' },
 
   'users-view': { resource: 'users', tier: 'view' },
-  'users-create': { resource: 'users', tier: 'edit' },
+  'users-create': { resource: 'users', tier: 'create' },
   'users-edit': { resource: 'users', tier: 'edit' },
-  'users-delete': { resource: 'users', tier: 'manage' },
+  'users-delete': { resource: 'users', tier: 'delete' },
 };
 
-const CANONICAL_PERMISSION_PATTERN = /^(.*)-(view|edit|manage)$/;
+const CANONICAL_PERMISSION_PATTERN = /^(.*)-(view|create|edit|delete|approve|sign|export|manage)$/;
 
 export function parseCanonicalPermission(permissionId: string): CanonicalPermission | null {
   const legacy = LEGACY_TO_CANONICAL[permissionId];
@@ -123,6 +119,29 @@ export function normalizePermissionIds(permissionIds: string[] | undefined | nul
   return Array.from(normalized);
 }
 
+/** Converts a legacy full-access grant into explicit CRUD selections for role editors. */
+export function expandLegacyManagePermissions(permissionIds: string[] | undefined | null): string[] {
+  const expanded = new Set<string>();
+
+  for (const permissionId of normalizePermissionIds(permissionIds)) {
+    if (permissionId === '*') {
+      expanded.add('*');
+      continue;
+    }
+
+    const isDeny = permissionId.startsWith('!');
+    const canonical = parseCanonicalPermission(isDeny ? permissionId.slice(1) : permissionId);
+    if (!canonical || canonical.tier !== 'manage') {
+      expanded.add(permissionId);
+      continue;
+    }
+
+    CRUD_TIERS.forEach((tier) => expanded.add(`${isDeny ? '!' : ''}${canonical.resource}-${tier}`));
+  }
+
+  return Array.from(expanded);
+}
+
 export function hasHierarchicalPermission(
   grantedPermissionIds: Iterable<string>,
   requestedPermissionId: string,
@@ -133,12 +152,24 @@ export function hasHierarchicalPermission(
 
   const requestedKey = `${requested.resource}-${requested.tier}`;
   const deniedSet = deniedPermissionIds ? new Set(deniedPermissionIds) : new Set<string>();
-  if (deniedSet.has(requestedKey)) return false;
+  const manageKey = `${requested.resource}-manage`;
+  if (deniedSet.has(requestedKey) || (requested.tier !== 'manage' && deniedSet.has(manageKey))) return false;
 
-  for (const grantedPermissionId of grantedPermissionIds) {
+  const grantedSet = new Set(grantedPermissionIds);
+  if (grantedSet.has(manageKey)) return true;
+
+  if (requested.tier === 'manage') {
+    return CRUD_TIERS.every((tier) => grantedSet.has(`${requested.resource}-${tier}`));
+  }
+
+  if (requested.tier === 'view') {
+    return CRUD_TIERS.some((tier) => grantedSet.has(`${requested.resource}-${tier}`));
+  }
+
+  for (const grantedPermissionId of grantedSet) {
     const granted = parseCanonicalPermission(grantedPermissionId);
     if (!granted || granted.resource !== requested.resource) continue;
-    if (TIER_RANK[granted.tier] >= TIER_RANK[requested.tier]) {
+    if (granted.tier === requested.tier) {
       return true;
     }
   }

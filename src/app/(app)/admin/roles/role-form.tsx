@@ -29,7 +29,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { menuConfig } from '@/lib/menu-config';
 import { PAGE_FORMAT_MOBILE_DARK_BUTTON_CLASS } from '@/lib/page-format-buttons';
 import { getPermissionDisplayLabel } from '@/lib/permission-display';
-import { normalizePermissionIds } from '@/lib/permission-model';
+import { expandLegacyManagePermissions } from '@/lib/permission-model';
 import { getPermissionSections } from '@/lib/permission-sections';
 import type { Role } from './page';
 
@@ -93,7 +93,7 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
   const isMobile = useIsMobile();
   const router = useRouter();
   const [roleName, setRoleName] = useState(existingRole?.name || '');
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(existingRole?.permissions || []);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(() => expandLegacyManagePermissions(existingRole?.permissions || []));
   const [hiddenMenus, setHiddenMenus] = useState<string[]>(existingRole?.accessOverrides?.hiddenMenus || []);
   const [isOpen, setIsOpen] = useState(mode === 'page');
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(mode === 'page');
@@ -110,12 +110,12 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
     );
   }, [permissionSections]);
 
-  const canManagePermissions = hasPermission('admin-permissions-manage');
+  const canManagePermissions = hasPermission('admin-permissions-edit');
 
   useEffect(() => {
     if (isOpen || mode === 'page') {
       setRoleName(existingRole?.name || '');
-      setSelectedPermissions(normalizePermissionIds(existingRole?.permissions || []));
+      setSelectedPermissions(expandLegacyManagePermissions(existingRole?.permissions || []));
       setHiddenMenus(existingRole?.accessOverrides?.hiddenMenus || []);
       setRequiredDocuments(existingRole?.requiredDocuments || []);
     }
@@ -287,6 +287,9 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
             </Button>
           ) : null}
         </div>
+        <p className="px-1 text-xs text-muted-foreground">
+          View reads records. Create adds records. Edit changes records. Delete removes or archives records. Specialist actions such as Approve, Sign, and Export remain separate.
+        </p>
         <CollapsibleContent>
           <ScrollArea className="mt-2 h-72 w-full rounded-md border">
             <div className="p-4">

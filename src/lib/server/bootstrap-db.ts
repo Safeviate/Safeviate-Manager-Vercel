@@ -708,9 +708,14 @@ export async function ensureRolesSchema() {
 
   await prisma.$executeRawUnsafe(`
     UPDATE roles
-    SET permissions = permissions || '["training-student-instructors-manage"]'::jsonb,
+    SET permissions = permissions || '["training-student-instructors-view","training-student-instructors-create","training-student-instructors-edit","training-student-instructors-delete"]'::jsonb,
         updated_at = NOW()
-    WHERE NOT (permissions ? 'training-student-instructors-manage')
+    WHERE NOT (
+      permissions ? 'training-student-instructors-view'
+      AND permissions ? 'training-student-instructors-create'
+      AND permissions ? 'training-student-instructors-edit'
+      AND permissions ? 'training-student-instructors-delete'
+    )
       AND (
         permissions ? 'training-exams-manage'
         OR permissions ? 'admin-settings-manage'
@@ -723,9 +728,14 @@ export async function ensureRolesSchema() {
 
   await prisma.$executeRawUnsafe(`
     UPDATE roles
-    SET permissions = permissions || '["training-student-progression-manage"]'::jsonb,
+    SET permissions = permissions || '["training-student-progression-view","training-student-progression-create","training-student-progression-edit","training-student-progression-delete"]'::jsonb,
         updated_at = NOW()
-    WHERE NOT (permissions ? 'training-student-progression-manage')
+    WHERE NOT (
+      permissions ? 'training-student-progression-view'
+      AND permissions ? 'training-student-progression-create'
+      AND permissions ? 'training-student-progression-edit'
+      AND permissions ? 'training-student-progression-delete'
+    )
       AND (
         permissions ? 'training-exams-manage'
         OR permissions ? 'admin-settings-manage'
@@ -739,9 +749,14 @@ export async function ensureRolesSchema() {
   await prisma.$executeRawUnsafe(`
     UPDATE roles
     SET permissions = permissions
-      || '["quality-audit-schedule-view","quality-audit-schedule-edit","quality-audit-schedule-manage"]'::jsonb,
+      || '["quality-audit-schedule-view","quality-audit-schedule-create","quality-audit-schedule-edit","quality-audit-schedule-delete"]'::jsonb,
         updated_at = NOW()
-    WHERE NOT (permissions ? 'quality-audit-schedule-manage')
+    WHERE NOT (
+      permissions ? 'quality-audit-schedule-view'
+      AND permissions ? 'quality-audit-schedule-create'
+      AND permissions ? 'quality-audit-schedule-edit'
+      AND permissions ? 'quality-audit-schedule-delete'
+    )
       AND (
         permissions ? 'quality-audits-manage'
         OR permissions ? 'admin-settings-manage'
@@ -752,9 +767,14 @@ export async function ensureRolesSchema() {
 
   await prisma.$executeRawUnsafe(`
     UPDATE roles
-    SET permissions = permissions || '["quality-caps-manage"]'::jsonb,
+    SET permissions = permissions || '["quality-caps-view","quality-caps-create","quality-caps-edit","quality-caps-delete"]'::jsonb,
         updated_at = NOW()
-    WHERE NOT (permissions ? 'quality-caps-manage')
+    WHERE NOT (
+      permissions ? 'quality-caps-view'
+      AND permissions ? 'quality-caps-create'
+      AND permissions ? 'quality-caps-edit'
+      AND permissions ? 'quality-caps-delete'
+    )
       AND (
         permissions ? 'quality-audits-manage'
         OR permissions ? 'admin-settings-manage'

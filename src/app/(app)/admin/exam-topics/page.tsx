@@ -35,7 +35,7 @@ const DEFAULT_TOPICS = [
 export default function ExamTopicsPage() {
   const { toast } = useToast();
   const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
-  const canManage = hasPermission('admin-settings-manage');
+  const canManage = hasPermission('admin-settings-edit');
   
   const [settings, setSettings] = useState<ExamTopicsSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);

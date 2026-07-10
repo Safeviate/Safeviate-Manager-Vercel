@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { authenticateAiRequest } from '@/lib/server/ai-auth';
 import { ensureTenantConfigSchema } from '@/lib/server/bootstrap-db';
+import { hasHierarchicalPermission } from '@/lib/permission-model';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -21,7 +22,9 @@ export async function saveOrganizationThemeAction(themeConfig: any) {
     const role = auth.userProfile.role?.toLowerCase();
     const isDeveloper = role === 'dev' || role === 'developer';
     
-    if (!isDeveloper && !auth.effectivePermissions.has('admin-settings-manage') && !auth.effectivePermissions.has('settings-manage')) {
+    if (!isDeveloper
+      && !hasHierarchicalPermission(auth.effectivePermissions, 'admin-settings-edit')
+      && !hasHierarchicalPermission(auth.effectivePermissions, 'settings-edit')) {
       return { ok: false, error: 'Unauthorized to update organization branding.' };
     }
 
