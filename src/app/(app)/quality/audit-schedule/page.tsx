@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
 } from '@/components/ui/card';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS } from "@/components/page-header";
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_MOBILE_ACTION_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS } from "@/components/page-header";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,13 +38,13 @@ import {
   Pencil,
   PlusCircle,
   Trash2,
-  Settings2,
   ChevronDown,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { usePermissions } from '@/hooks/use-permissions';
 import type { AuditScheduleItem, AuditScheduleStatus } from '@/types/quality';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
@@ -101,11 +101,13 @@ function StatusSelector({ onSelect }: StatusSelectorProps) {
 
 interface AreaActionsProps {
     area: string;
+    canEdit: boolean;
+    canDelete: boolean;
     onEdit: (oldName: string, newName: string) => void;
     onDelete: (areaName: string) => void;
 }
 
-function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
+function AreaActions({ area, canEdit, canDelete, onEdit, onDelete }: AreaActionsProps) {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [newName, setNewName] = useState(area);
@@ -130,21 +132,36 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
     
     return (
         <>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/10 shrink-0">
-                        <Settings2 className="h-3 w-3" />
+            <div className="flex items-center gap-1">
+                {canEdit ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsEditOpen(true)}
+                        className={cn(
+                            HEADER_COMPACT_CONTROL_CLASS,
+                            "h-6 border-white/20 bg-white/10 px-2 text-[8px] font-black text-white hover:bg-white/20"
+                        )}
+                    >
+                        <Pencil className="mr-1 h-3 w-3" />
+                        Edit
                     </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-40 p-1">
-                    <Button variant="ghost" size="sm" onClick={() => setIsEditOpen(true)} className="w-full justify-start text-xs">
-                        <Pencil className="mr-2 h-3 w-3" /> Edit Name
+                ) : null}
+                {canDelete ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsDeleteOpen(true)}
+                        className={cn(
+                            HEADER_COMPACT_CONTROL_CLASS,
+                            "h-6 border-white/20 bg-transparent px-2 text-[8px] font-black text-white hover:bg-white/10"
+                        )}
+                    >
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        Delete
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setIsDeleteOpen(true)} className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 text-xs">
-                        <Trash2 className="mr-2 h-3 w-3" /> Delete Area
-                    </Button>
-                </PopoverContent>
-            </Popover>
+                ) : null}
+            </div>
             
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DialogContent>
@@ -185,10 +202,13 @@ function AreaActions({ area, onEdit, onDelete }: AreaActionsProps) {
 
 export default function AuditSchedulePage() {
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/quality/audit-schedule' });
+  const { hasPermission } = usePermissions();
   const isMobile = useIsMobile();
   const { tenantId } = useUserProfile();
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
+  const canEditAuditSchedule = hasPermission('quality-audit-schedule-edit') || hasPermission('quality-audit-schedule-manage');
+  const canDeleteAuditSchedule = hasPermission('quality-audit-schedule-manage');
 
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
   const [schedule, setSchedule] = useState<AuditScheduleItem[]>([]);
@@ -221,7 +241,10 @@ export default function AuditSchedulePage() {
     return <TenantLayoutDisabledState />;
   }
 
+  const canModifySchedule = canEditAuditSchedule;
+
   const handleStatusChange = async (area: string, month: string, status: AuditScheduleStatus) => {
+    if (!canModifySchedule) return;
     setOpenPopoverId(null);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
@@ -255,6 +278,7 @@ export default function AuditSchedulePage() {
   };
 
   const handleAddArea = async () => {
+    if (!canModifySchedule) return;
     const trimmed = newAreaName.trim();
     if (trimmed && !auditAreas.includes(trimmed)) {
         const nextAreas = [...auditAreas, trimmed];
@@ -272,6 +296,7 @@ export default function AuditSchedulePage() {
   }
 
   const handleEditArea = async (oldName: string, newName: string) => {
+    if (!canModifySchedule) return;
     const nextAreas = auditAreas.map(area => area === oldName ? newName : area);
     setAuditAreas(nextAreas);
     try {
@@ -291,6 +316,7 @@ export default function AuditSchedulePage() {
   }
 
   const handleDeleteArea = async (areaToDelete: string) => {
+    if (!canDeleteAuditSchedule) return;
     const nextAreas = auditAreas.filter(area => area !== areaToDelete);
     setAuditAreas(nextAreas);
     try {
@@ -330,18 +356,20 @@ export default function AuditSchedulePage() {
             <MainPageHeader 
                 title="Annual Audit Schedule"
                 actions={
-                    <Button
-                        variant={isMobile ? 'outline' : 'default'}
-                        size="sm"
-                        onClick={() => setIsAddAreaOpen(true)}
-                        className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
-                    >
-                        <span className="flex items-center gap-2">
-                            <PlusCircle className="h-4 w-4" />
-                            Add Area
-                        </span>
-                        {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-                    </Button>
+                    canModifySchedule ? (
+                      <Button
+                          variant={isMobile ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => setIsAddAreaOpen(true)}
+                          className={isMobile ? HEADER_MOBILE_ACTION_BUTTON_CLASS : HEADER_ACTION_BUTTON_CLASS}
+                      >
+                          <span className="flex items-center gap-2">
+                              <PlusCircle className="h-4 w-4" />
+                              Add Area
+                          </span>
+                          {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
+                      </Button>
+                    ) : undefined
                 }
             />
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
@@ -386,7 +414,13 @@ export default function AuditSchedulePage() {
                                         <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-[9px] font-bold uppercase leading-tight tracking-wider">
                                             {area}
                                         </span>
-                                        <AreaActions area={area} onEdit={handleEditArea} onDelete={handleDeleteArea} />
+                                        <AreaActions
+                                          area={area}
+                                          canEdit={canModifySchedule}
+                                          canDelete={canDeleteAuditSchedule}
+                                          onEdit={handleEditArea}
+                                          onDelete={handleDeleteArea}
+                                        />
                                     </div>
                                     {MONTHS.map((month, idx) => {
                                         const status = getScheduleItem(area, month);
@@ -401,32 +435,43 @@ export default function AuditSchedulePage() {
                                                     isCurrentMonth ? "bg-muted/30" : "hover:bg-muted/10"
                                                 )}
                                             >
-                                                <Popover 
-                                                    open={openPopoverId === popoverId} 
-                                                    onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
-                                                >
-                                                    <PopoverTrigger asChild>
-                                                        <button
-                                                            type="button"
-                                                            className="w-full h-full cursor-pointer flex items-center justify-center"
-                                                            aria-label={`Set schedule status for ${area} in ${month}. Current status: ${status}.`}
-                                                        >
-                                                            <Badge
-                                                                className={cn(
-                                                                    "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
-                                                                    getStatusBadgeClass(status)
-                                                                )}
-                                                            >
-                                                                {status === 'Not Scheduled' ? '' : status}
-                                                            </Badge>
-                                                        </button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-48 p-0" align="center">
-                                                        <StatusSelector
-                                                            onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
+                                                {canModifySchedule ? (
+                                                  <Popover 
+                                                      open={openPopoverId === popoverId} 
+                                                      onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? popoverId : null)}
+                                                  >
+                                                      <PopoverTrigger asChild>
+                                                          <button
+                                                              type="button"
+                                                              className="w-full h-full cursor-pointer flex items-center justify-center"
+                                                              aria-label={`Set schedule status for ${area} in ${month}. Current status: ${status}.`}
+                                                          >
+                                                              <Badge
+                                                                  className={cn(
+                                                                      "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm transition-transform group-hover:scale-[1.02] border leading-tight h-6 text-center",
+                                                                      getStatusBadgeClass(status)
+                                                                  )}
+                                                              >
+                                                                  {status === 'Not Scheduled' ? '' : status}
+                                                              </Badge>
+                                                          </button>
+                                                      </PopoverTrigger>
+                                                      <PopoverContent className="w-48 p-0" align="center">
+                                                          <StatusSelector
+                                                              onSelect={(newStatus) => handleStatusChange(area, month, newStatus)}
+                                                          />
+                                                      </PopoverContent>
+                                                  </Popover>
+                                                ) : (
+                                                  <Badge
+                                                    className={cn(
+                                                      "py-0.5 px-1 w-full justify-center text-[7px] uppercase font-bold shadow-sm border leading-tight h-6 text-center",
+                                                      getStatusBadgeClass(status)
+                                                    )}
+                                                  >
+                                                    {status === 'Not Scheduled' ? '' : status}
+                                                  </Badge>
+                                                )}
                                             </div>
                                         );
                                     })}

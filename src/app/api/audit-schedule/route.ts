@@ -1,7 +1,9 @@
 import { authOptions } from '@/auth';
+import { hasHierarchicalPermission, normalizePermissionIds } from '@/lib/permission-model';
 import { prisma } from '@/lib/prisma';
 import { recordActivityLog } from '@/lib/server/activity-log';
 import { getTenantIdFromSession } from '@/lib/server/session-tenant';
+import { isMasterTenantEmail } from '@/lib/server/tenant-access';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import type { AuditScheduleItem } from '@/types/quality';
@@ -12,6 +14,8 @@ type SessionContext = {
   tenantId: string | null;
   actorUserId: string | null;
   actorEmail: string | null;
+  canEdit: boolean;
+  canDelete: boolean;
 };
 
 async function getSessionContext(request: Request): Promise<SessionContext> {
@@ -20,15 +24,70 @@ async function getSessionContext(request: Request): Promise<SessionContext> {
   const actorUserId = session?.user?.id?.trim() || null;
 
   if (!actorEmail) {
-    return { tenantId: null, actorUserId, actorEmail };
+    return { tenantId: null, actorUserId, actorEmail, canEdit: false, canDelete: false };
   }
 
   const tenantId = (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
+
+  if (!tenantId) {
+    return { tenantId: null, actorUserId, actorEmail, canEdit: false, canDelete: false };
+  }
+
+  if (isMasterTenantEmail(actorEmail) || session?.user?.role?.trim().toLowerCase() === 'developer' || session?.user?.role?.trim().toLowerCase() === 'dev') {
+    return { tenantId, actorUserId, actorEmail, canEdit: true, canDelete: true };
+  }
+
+  const personnelProfile = await prisma.personnel.findFirst({
+    where: {
+      tenantId,
+      email: actorEmail,
+    },
+    select: { permissions: true, role: true },
+  }).catch(() => null);
+
+  const roleId = personnelProfile?.role?.trim() || session?.user?.role?.trim() || '';
+  const role = roleId
+    ? await prisma.role.findFirst({
+        where: {
+          tenantId,
+          OR: [
+            { id: roleId },
+            { name: roleId },
+          ],
+        },
+        select: { permissions: true },
+      }).catch(() => null)
+    : null;
+
+  const inheritedPermissions = Array.isArray(role?.permissions) ? role.permissions.filter((permission): permission is string => typeof permission === 'string') : [];
+  const overridePermissions = Array.isArray(personnelProfile?.permissions) ? personnelProfile.permissions.filter((permission): permission is string => typeof permission === 'string') : [];
+  const deniedPermissions = new Set(
+    normalizePermissionIds(overridePermissions.filter((permission) => permission.startsWith('!')).map((permission) => permission.slice(1)))
+  );
+  const grantedPermissions = new Set<string>();
+
+  normalizePermissionIds(inheritedPermissions).forEach((permission) => {
+    if (!deniedPermissions.has(permission)) {
+      grantedPermissions.add(permission);
+    }
+  });
+
+  normalizePermissionIds(overridePermissions.filter((permission) => !permission.startsWith('!'))).forEach((permission) => {
+    grantedPermissions.add(permission);
+  });
+
+  const canEdit = grantedPermissions.has('*')
+    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-edit', deniedPermissions)
+    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-manage', deniedPermissions);
+  const canDelete = grantedPermissions.has('*')
+    || hasHierarchicalPermission(grantedPermissions, 'quality-audit-schedule-manage', deniedPermissions);
 
   return {
     tenantId,
     actorUserId,
     actorEmail,
+    canEdit,
+    canDelete,
   };
 }
 
@@ -253,15 +312,24 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { tenantId, actorUserId, actorEmail } = await getSessionContext(request);
+  const { tenantId, actorUserId, actorEmail, canEdit, canDelete } = await getSessionContext(request);
   if (!tenantId || !actorEmail) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!canEdit) {
+    return NextResponse.json({ error: 'You do not have permission to edit the audit schedule.' }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
   const areas = toAuditAreas(body?.areas);
   const items = toAuditItems(body?.items);
   const config = await getConfig(tenantId);
+  const changes = diffAuditSchedule(config, areas, items);
+
+  if (changes.removedAreas.length > 0 && !canDelete) {
+    return NextResponse.json({ error: 'You do not have permission to delete audit schedule areas.' }, { status: 403 });
+  }
+
   const next = {
     ...config,
     'audit-areas': areas,
@@ -275,7 +343,6 @@ export async function POST(request: Request) {
   );
 
   try {
-    const changes = diffAuditSchedule(config, areas, items);
     if (changes.addedAreas.length || changes.removedAreas.length || changes.itemLogs.length) {
       await writeAuditScheduleActivityLogs(tenantId, actorUserId, actorEmail, changes);
     }
