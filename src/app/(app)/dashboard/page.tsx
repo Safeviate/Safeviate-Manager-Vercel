@@ -298,7 +298,7 @@ type BookingOverviewMetrics = {
   }>;
 };
 
-const DASHBOARD_SHELL_CLASS = 'overflow-hidden rounded-lg border border-card-border bg-background shadow-none';
+const DASHBOARD_SHELL_CLASS = 'dashboard-card-theme overflow-hidden rounded-lg border border-card-border bg-card shadow-none';
 const DEFAULT_INSTRUCTOR_WARNING_BANDS: InstructorWarningBand[] = [
   { hours: 20, warningHours: 10, color: '#60a5fa', foregroundColor: '#ffffff' },
   { hours: 40, warningHours: 30, color: '#facc15', foregroundColor: '#000000' },
@@ -1787,7 +1787,7 @@ export default function DashboardPage() {
               <div className="p-5 pb-10 md:p-6 md:pb-10">
                 <>
                     <TabsContent value="overview" className="m-0 space-y-5">
-                      <div className="flex items-center justify-between gap-3 rounded-md border border-dashed border-card-border/70 bg-muted/5 px-4 py-2.5">
+                      <div className="dashboard-card-band flex items-center justify-between gap-3 rounded-md border border-dashed border-card-border/70 px-4 py-2.5">
                         <div className="min-w-0">
                           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/75">Operations Board</p>
                           <p className="mt-1 text-xs text-muted-foreground">

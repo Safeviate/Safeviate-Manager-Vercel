@@ -193,6 +193,25 @@
 }
 
 @layer utilities {
+  /* The dashboard inherits company card settings without changing status or alert surfaces. */
+  .dashboard-card-theme {
+    background-color: hsl(var(--card)) !important;
+    border-color: hsl(var(--card-border)) !important;
+    color: hsl(var(--card-foreground));
+  }
+
+  .dashboard-card-theme [data-slot="card-header"],
+  .dashboard-card-band {
+    background-color: hsl(var(--card-header-band-background)) !important;
+    border-color: hsl(var(--card-border)) !important;
+    color: hsl(var(--card-header-band-foreground)) !important;
+  }
+
+  .dashboard-card-theme [data-slot="card-header"] .text-muted-foreground,
+  .dashboard-card-band .text-muted-foreground {
+    color: hsl(var(--card-header-band-foreground) / 0.72) !important;
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
