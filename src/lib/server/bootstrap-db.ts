@@ -30,7 +30,8 @@ type TableName =
   | 'management_of_change'
   | 'erp_state'
   | 'simulation_route_metrics'
-  | 'activity_logs';
+  | 'activity_logs'
+  | 'recovery_archives';
 
 const tableCache = new Map<TableName, boolean>();
 
@@ -593,6 +594,42 @@ export async function ensureActivityLogsSchema() {
     ON activity_logs (tenant_id, action, created_at DESC)
   `);
   tableCache.set('activity_logs', true);
+}
+
+export async function ensureRecoveryArchivesSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('recovery_archives')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS recovery_archives (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      entity_label TEXT NOT NULL,
+      snapshot JSONB NOT NULL,
+      archived_by_user_id VARCHAR(128),
+      archived_by_email TEXT NOT NULL,
+      archived_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      restored_by_user_id VARCHAR(128),
+      restored_by_email TEXT,
+      restored_at TIMESTAMPTZ(6),
+      status TEXT NOT NULL DEFAULT 'archived',
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS recovery_archives_tenant_status_idx
+    ON recovery_archives (tenant_id, status, archived_at DESC)
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS recovery_archives_entity_idx
+    ON recovery_archives (tenant_id, entity_type, entity_id, archived_at DESC)
+  `);
+  tableCache.set('recovery_archives', true);
 }
 
 export async function ensurePersonnelSchema() {

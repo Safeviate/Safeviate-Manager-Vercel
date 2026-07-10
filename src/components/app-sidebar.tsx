@@ -30,6 +30,7 @@ import {
 import type { Role } from '@/app/(app)/admin/roles/page';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { MASTER_TENANT_ID } from '@/lib/tenant-constants';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useTheme } from '@/components/theme-provider';
 import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
@@ -151,6 +152,7 @@ const SidebarItems = () => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
     const { canAccessMenuItem } = usePermissions();
+    const { tenantId, userProfile } = useUserProfile();
     const currentPathname = pathname ?? '';
     const lastSubmenuByParent = useMemo(() => getLastSubmenuByParent(), [pathname]);
     const normalizePath = (path: string) => path.replace(/\/+$/, '');
@@ -230,7 +232,12 @@ const SidebarItems = () => {
                   item.href === '/users'
                     ? (roleBasedUserSubItems.length > 0 ? roleBasedUserSubItems : item.subItems || [])
                     : item.subItems || [];
-                const subItems = configuredSubItems.filter((sub) => canAccessMenuItem(sub, item));
+                const subItems = configuredSubItems.filter((sub) => {
+                  if (sub.masterOnly && !(tenantId === MASTER_TENANT_ID && userProfile?.email?.trim().toLowerCase() === 'barry@safeviate.com')) {
+                    return false;
+                  }
+                  return canAccessMenuItem(sub, item);
+                });
                 const activeSubItem = findSubItemByHref(subItems, currentPathname);
                 const rememberedSubHref = lastSubmenuByParent[item.href];
                 const rememberedSubItem = findSubItemByHref(subItems, rememberedSubHref || '');

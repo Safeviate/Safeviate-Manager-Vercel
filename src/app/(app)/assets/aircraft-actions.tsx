@@ -23,15 +23,15 @@ export function AircraftActions({ aircraft }: AircraftActionsProps) {
         if (!response.ok) throw new Error(result.error || 'Failed to remove the aircraft.');
         window.dispatchEvent(new Event('safeviate-aircrafts-updated'));
         toast({
-          title: 'Aircraft Removed',
-          description: `Aircraft ${aircraft.tailNumber} has been permanently deleted from the database.`,
+          title: 'Aircraft Archived',
+          description: `Aircraft ${aircraft.tailNumber} was moved to the Recovery Vault.`,
         });
       })
       .catch(() => {
         toast({
           variant: 'destructive',
-          title: 'Deletion Failed',
-          description: 'Failed to remove the aircraft from the database.',
+          title: 'Archive Failed',
+          description: 'Failed to archive the aircraft.',
         });
       });
   };
@@ -41,10 +41,10 @@ export function AircraftActions({ aircraft }: AircraftActionsProps) {
       <ViewActionButton href={`/assets/aircraft/${aircraft.id}`} />
       {canDelete && (
         <DeleteActionButton
-          title="Delete Aircraft?"
-          description={`This will permanently delete ${aircraft.tailNumber} and all its associated logs and records from the local system.`}
+          title="Archive Aircraft?"
+          description={`${aircraft.tailNumber} will be removed from active records and retained in the Recovery Vault for restoration by the Safeviate master administrator.`}
           onDelete={handleDelete}
-          srLabel="Delete aircraft"
+          srLabel="Archive aircraft"
         />
       )}
     </div>

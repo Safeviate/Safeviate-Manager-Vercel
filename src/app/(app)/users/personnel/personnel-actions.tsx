@@ -62,8 +62,8 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
         throw new Error('Failed to delete user');
       }
       toast({
-        title: 'User Removed',
-        description: `The user profile for ${user.firstName} ${user.lastName} was deleted.`,
+        title: 'User Archived',
+        description: `${user.firstName} ${user.lastName} was moved to the Recovery Vault.`,
       });
       window.dispatchEvent(new Event('safeviate-personnel-updated'));
       window.dispatchEvent(new Event('safeviate-users-updated'));
@@ -71,8 +71,8 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
     } catch (error: unknown) {
       toast({
         variant: 'destructive',
-        title: 'Delete Failed',
-        description: error instanceof Error ? error.message : 'The user profile could not be deleted.',
+        title: 'Archive Failed',
+        description: error instanceof Error ? error.message : 'The user profile could not be archived.',
       });
     } finally {
       setIsDeleteDialogOpen(false);
@@ -285,7 +285,7 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
             onClick={() => setIsDeleteDialogOpen(true)}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            Archive
           </Button>
         )}
       </div>
@@ -316,13 +316,13 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete the user account and profile for {user.firstName} {user.lastName}.
+                    This will remove the user account and profile from active records. A recoverable snapshot will be retained in the Recovery Vault.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDeleteUser} className='bg-destructive text-destructive-foreground hover:bg-destructive/90'>
-                    Delete
+                    Archive
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

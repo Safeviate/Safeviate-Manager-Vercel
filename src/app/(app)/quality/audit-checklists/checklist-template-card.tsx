@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/accordion';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Pencil, PlayCircle, Trash2, MoreHorizontal, ChevronsUpDown } from 'lucide-react';
+import { Archive, FileText, Pencil, PlayCircle, MoreHorizontal, ChevronsUpDown } from 'lucide-react';
 import { StartAuditDialog } from './start-audit-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
@@ -47,15 +47,15 @@ export function ChecklistTemplateCard({
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  const handleDelete = async (templateId: string, templateTitle: string) => {
+  const handleArchive = async (templateId: string, templateTitle: string) => {
     try {
       const response = await fetch(
         `/api/quality-audit-templates?id=${encodeURIComponent(templateId)}`,
         { method: 'DELETE' }
       );
-      if (!response.ok) throw new Error('Failed to delete template');
+      if (!response.ok) throw new Error('Failed to archive template');
       window.dispatchEvent(new Event('safeviate-quality-templates-updated'));
-      toast({ title: 'Template Deleted', description: `"${templateTitle}" has been removed.` });
+      toast({ title: 'Template Archived', description: `"${templateTitle}" was moved to the Recovery Vault.` });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
@@ -109,10 +109,10 @@ export function ChecklistTemplateCard({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="cursor-pointer text-red-600"
-                        onClick={() => handleDelete(template.id, template.title)}
+                        className="cursor-pointer text-amber-700"
+                        onClick={() => handleArchive(template.id, template.title)}
                       >
-                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Template
+                        <Archive className="mr-2 h-3.5 w-3.5" /> Archive Template
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -155,10 +155,10 @@ export function ChecklistTemplateCard({
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          className="cursor-pointer text-red-600"
-                          onClick={() => handleDelete(template.id, template.title)}
+                          className="cursor-pointer text-amber-700"
+                          onClick={() => handleArchive(template.id, template.title)}
                         >
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Template
+                          <Archive className="mr-2 h-3.5 w-3.5" /> Archive Template
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -200,10 +200,10 @@ export function ChecklistTemplateCard({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="cursor-pointer text-red-600"
-                        onClick={() => handleDelete(template.id, template.title)}
+                        className="cursor-pointer text-amber-700"
+                        onClick={() => handleArchive(template.id, template.title)}
                       >
-                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Template
+                        <Archive className="mr-2 h-3.5 w-3.5" /> Archive Template
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

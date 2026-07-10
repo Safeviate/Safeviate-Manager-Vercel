@@ -18,6 +18,7 @@ interface AircraftListProps {
   data: Aircraft[];
   tenantId: string;
   canEdit: boolean;
+  archived?: boolean;
 }
 
 function getAircraftDocumentStatus(
@@ -71,7 +72,7 @@ function getAircraftDocumentStatus(
   };
 }
 
-export function AircraftList({ data, tenantId, canEdit }: AircraftListProps) {
+export function AircraftList({ data, tenantId, canEdit, archived = false }: AircraftListProps) {
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettingsLike | null>(null);
 
   useEffect(() => {
@@ -202,8 +203,8 @@ export function AircraftList({ data, tenantId, canEdit }: AircraftListProps) {
                   </div>
 
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    <ViewActionButton href={`/assets/aircraft/${ac.id}`} label="Open" />
-                    <AircraftActions tenantId={tenantId} aircraft={ac} canEdit={canEdit} />
+                    {!archived ? <ViewActionButton href={`/assets/aircraft/${ac.id}`} label="Open" /> : null}
+                    <AircraftActions tenantId={tenantId} aircraft={ac} canEdit={canEdit} archived={archived} />
                   </div>
                 </CardContent>
               </Card>

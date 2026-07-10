@@ -14,6 +14,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ArchiveRestore } from 'lucide-react';
 import type { ExternalOrganization, QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
@@ -30,11 +31,12 @@ export default function AuditChecklistsManager() {
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<QualityAuditChecklistTemplate | null>(null);
+  const [templateView, setTemplateView] = useState<'active' | 'archived'>('active');
 
   const loadData = async () => {
     try {
         const [templatesResponse, personnelResponse, deptsResponse, organizationsResponse] = await Promise.all([
-          fetch('/api/quality-audit-templates', { cache: 'no-store' }),
+          fetch(`/api/quality-audit-templates${templateView === 'archived' ? '?view=archived' : ''}`, { cache: 'no-store' }),
           fetch('/api/personnel', { cache: 'no-store' }),
           fetch('/api/departments', { cache: 'no-store' }),
           fetch('/api/external-organizations', { cache: 'no-store' }),
@@ -64,7 +66,21 @@ export default function AuditChecklistsManager() {
       window.removeEventListener('safeviate-quality-templates-updated', loadData);
       window.removeEventListener('safeviate-departments-updated', loadData);
     };
-  }, []);
+  }, [templateView]);
+
+  const handleRestoreTemplate = async (template: QualityAuditChecklistTemplate) => {
+    try {
+      const response = await fetch('/api/quality-audit-templates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: template.id }),
+      });
+      if (!response.ok) throw new Error('Failed to restore audit checklist template.');
+      await loadData();
+    } catch (error) {
+      console.error('Failed to restore audit checklist template', error);
+    }
+  };
 
   const groupedTemplates = useMemo(() => {
     if (!templates) return {};
@@ -126,6 +142,14 @@ export default function AuditChecklistsManager() {
             >
               <Link href="/quality/audits">Audits</Link>
             </Button>
+            <Button
+              type="button"
+              variant={templateView === 'archived' ? 'default' : 'outline'}
+              className={HEADER_COMPACT_CONTROL_CLASS}
+              onClick={() => setTemplateView((view) => view === 'active' ? 'archived' : 'active')}
+            >
+              {templateView === 'active' ? 'Archived Checklists' : 'Active Checklists'}
+            </Button>
           </div>
         </div>
         <CardContent className={cn("flex-1 p-0 bg-muted/5", isMobile ? "overflow-y-auto" : "overflow-hidden")}>
@@ -134,21 +158,39 @@ export default function AuditChecklistsManager() {
               {Object.keys(groupedTemplates).length > 0 ? (
                   <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-6">
                     {Object.entries(groupedTemplates).map(([category, categoryTemplates]) => (
-                        <ChecklistTemplateCard 
-                            key={category}
-                            category={category}
-                            templates={categoryTemplates}
-                            tenantId={tenantId || ''}
-                            personnel={personnel || []}
-                            departments={departments || []}
-                            organizations={organizations || []}
-                            onEditTemplate={setEditingTemplate}
-                        />
+                        templateView === 'active' ? (
+                          <ChecklistTemplateCard
+                              key={category}
+                              category={category}
+                              templates={categoryTemplates}
+                              tenantId={tenantId || ''}
+                              personnel={personnel || []}
+                              departments={departments || []}
+                              organizations={organizations || []}
+                              onEditTemplate={setEditingTemplate}
+                          />
+                        ) : (
+                          <div key={category} className="space-y-3">
+                            <h2 className="text-sm font-semibold">{category}</h2>
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                              {categoryTemplates.map((template) => (
+                                <Card key={template.id} className="border border-card-border shadow-none">
+                                  <CardContent className="flex items-center justify-between gap-3 p-4">
+                                    <p className="min-w-0 truncate text-sm font-semibold">{template.title}</p>
+                                    <Button type="button" variant="outline" size="sm" className={HEADER_COMPACT_CONTROL_CLASS} onClick={() => void handleRestoreTemplate(template)}>
+                                      <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" /> Restore
+                                    </Button>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        )
                     ))}
                   </Accordion>
               ) : (
                 <div className="text-center py-20 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-background rounded-2xl border-2 border-dashed shadow-sm">
-                    No checklist templates found.
+                    No {templateView === 'archived' ? 'archived ' : ''}checklist templates found.
                 </div>
               )}
             </div>

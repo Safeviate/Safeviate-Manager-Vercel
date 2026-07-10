@@ -8,9 +8,12 @@ import { useTenantConfig } from '@/hooks/use-tenant-config';
 import { isTenantHrefEnabledByLayout } from '@/lib/tenant-layout-access';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { MASTER_TENANT_ID } from '@/lib/tenant-constants';
 
 export default function AdminPage() {
   const { tenant } = useTenantConfig();
+  const { tenantId, userProfile } = useUserProfile();
   const { canAccessMenuItem } = usePermissions();
   const { isLoading, isAllowed } = useTenantRouteAccess({ href: '/admin' });
   const adminMenu = menuConfig.find(item => item.href === '/admin');
@@ -27,8 +30,10 @@ export default function AdminPage() {
     );
   }
   
-  const visibleSubItems = (adminMenu.subItems || []).filter(
-    item => canAccessMenuItem(item, adminMenu) && isTenantHrefEnabledByLayout(tenant, item.href)
+  const visibleSubItems = (adminMenu.subItems || []).filter((item) =>
+    canAccessMenuItem(item, adminMenu)
+    && isTenantHrefEnabledByLayout(tenant, item.href)
+    && (!item.masterOnly || (tenantId === MASTER_TENANT_ID && userProfile?.email?.trim().toLowerCase() === 'barry@safeviate.com'))
   );
 
   if (visibleSubItems.length === 0) {

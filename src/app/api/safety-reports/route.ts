@@ -7,6 +7,7 @@ import { allocateNextSafetyReportNumber } from '@/lib/server/safety-report-seque
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
+import { markRecoveryArchivesRestoredForEntity, recordRecoveryArchive } from '@/lib/server/recovery-vault';
 
 async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
@@ -110,18 +111,40 @@ export async function DELETE(request: Request) {
   try {
     tenantId = await getTenantId(request);
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const activeTenantId = tenantId;
     await ensureSafetyReportsSchema();
 
     const body = await request.json();
     const reportId = body?.reportId;
     if (!reportId) return NextResponse.json({ error: 'Missing report id.' }, { status: 400 });
 
-    await prisma.$executeRawUnsafe(
-      `UPDATE safety_reports SET data = jsonb_set(data, '{status}', '"Archived"'::jsonb), updated_at = NOW()
-       WHERE id = $1 AND tenant_id = $2`,
+    const session = await getServerSession(authOptions);
+    const actorEmail = session?.user?.email?.trim().toLowerCase();
+    const existingRows = await prisma.$queryRawUnsafe<{ data: Record<string, unknown> }[]>(
+      `SELECT data FROM safety_reports WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
       reportId,
-      tenantId
+      tenantId,
     );
+    const existing = existingRows[0]?.data;
+    if (!existing) return NextResponse.json({ error: 'Safety report not found.' }, { status: 404 });
+
+    await prisma.$transaction(async (tx) => {
+      await recordRecoveryArchive({
+        tenantId: activeTenantId,
+        entityType: 'safety-report',
+        entityId: reportId,
+        entityLabel: String(existing.reportNumber || existing.title || reportId),
+        snapshot: { report: existing },
+        actorUserId: session?.user?.id || null,
+        actorEmail: actorEmail || 'unknown',
+      }, tx);
+      await tx.$executeRawUnsafe(
+        `UPDATE safety_reports SET data = jsonb_set(data, '{status}', '"Archived"'::jsonb), updated_at = NOW()
+         WHERE id = $1 AND tenant_id = $2`,
+        reportId,
+        activeTenantId
+      );
+    });
     await recordSimulationRouteMetric({
       tenantId,
       routeKey: 'safety-reports.ARCHIVE',
@@ -164,6 +187,14 @@ export async function PATCH(request: Request) {
       tenantId,
       status
     );
+    const session = await getServerSession(authOptions);
+    const actorEmail = session?.user?.email?.trim().toLowerCase();
+    if (actorEmail) {
+      await markRecoveryArchivesRestoredForEntity(
+        { tenantId, entityType: 'safety-report', entityId: reportId },
+        { userId: session?.user?.id || null, email: actorEmail },
+      );
+    }
     await recordSimulationRouteMetric({ tenantId, routeKey: 'safety-reports.RESTORE', reads: 0, writes: 1, durationMs: Date.now() - startedAt });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {

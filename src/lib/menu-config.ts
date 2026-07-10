@@ -29,6 +29,7 @@ export type SubMenuItem = {
   label: string;
   description?: string;
   permissionId?: string;
+  masterOnly?: boolean;
   subItems?: SubMenuItem[];
 };
 
@@ -427,6 +428,13 @@ export const menuConfig: MenuItem[] = [
         label: 'Activity Tracker',
         description: 'Track audit schedule changes and edits.',
         permissionId: 'admin-permissions-view',
+      },
+      {
+        href: '/admin/recovery-vault',
+        label: 'Recovery Vault',
+        description: 'Restore archived sensitive records across tenants.',
+        permissionId: 'admin-permissions-view',
+        masterOnly: true,
       },
       {
         href: '/users/access-overview',

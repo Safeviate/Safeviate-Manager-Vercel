@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     tenantId = await getTenantId(request);
     if (!tenantId) return NextResponse.json({ aircraft: [] }, { status: 200 });
     const resolvedTenantId = tenantId;
+    const archived = new URL(request.url).searchParams.get('view') === 'archived';
 
     const aircraft = await getOrSetRouteCache(
       `aircraft:${resolvedTenantId}`,
@@ -40,7 +41,11 @@ export async function GET(request: Request) {
       writes: 0,
       durationMs: Date.now() - startedAt,
     });
-    return NextResponse.json({ aircraft: aircraft.map((row) => normalizeAircraftRecord(row.data)) }, { status: 200 });
+    const filteredAircraft = aircraft.filter((row) => {
+      const data = row.data as Record<string, unknown>;
+      return archived ? data.archiveStatus === 'Archived' : data.archiveStatus !== 'Archived';
+    });
+    return NextResponse.json({ aircraft: filteredAircraft.map((row) => normalizeAircraftRecord(row.data)) }, { status: 200 });
   } catch (error) {
     console.error('[aircraft] fallback to empty list:', error);
     await recordSimulationRouteMetric({

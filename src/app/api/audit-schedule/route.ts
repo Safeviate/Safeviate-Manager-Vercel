@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { recordActivityLog } from '@/lib/server/activity-log';
 import { getTenantIdFromSession } from '@/lib/server/session-tenant';
 import { isMasterTenantEmail } from '@/lib/server/tenant-access';
+import { markRecoveryArchivesRestoredForEntity, recordRecoveryArchive } from '@/lib/server/recovery-vault';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import type { AuditScheduleItem } from '@/types/quality';
@@ -296,6 +297,43 @@ async function writeAuditScheduleActivityLogs(
   );
 }
 
+async function archiveRemovedScheduleEntries(
+  tenantId: string,
+  actorUserId: string | null,
+  actorEmail: string,
+  oldConfig: Record<string, unknown>,
+  changes: ReturnType<typeof diffAuditSchedule>,
+  executor: Pick<typeof prisma, '$executeRawUnsafe'>
+) {
+  const oldItems = toAuditItems(oldConfig['audit-schedule-items']);
+  const removedItems = oldItems.filter((item) => changes.itemLogs.some((entry) => entry.action === 'deleted' && entry.entityId === item.id));
+
+  await Promise.all([
+    ...changes.removedAreas.map((area) =>
+      recordRecoveryArchive({
+        tenantId,
+        entityType: 'audit-schedule-area',
+        entityId: area,
+        entityLabel: summariseAreaChange(area),
+        snapshot: { area, items: oldItems.filter((item) => item.area === area) },
+        actorUserId,
+        actorEmail,
+      }, executor)
+    ),
+    ...removedItems.map((item) =>
+      recordRecoveryArchive({
+        tenantId,
+        entityType: 'audit-schedule-item',
+        entityId: item.id,
+        entityLabel: summariseItem(item),
+        snapshot: { item },
+        actorUserId,
+        actorEmail,
+      }, executor)
+    ),
+  ]);
+}
+
 export async function GET(request: Request) {
   try {
     const { tenantId } = await getSessionContext(request);
@@ -307,6 +345,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       areas: Array.isArray(config['audit-areas']) ? config['audit-areas'] : [],
       items: Array.isArray(config['audit-schedule-items']) ? config['audit-schedule-items'] : [],
+      archivedAreas: Array.isArray(config['archived-audit-areas']) ? config['archived-audit-areas'] : [],
+      archivedItems: Array.isArray(config['archived-audit-schedule-items']) ? config['archived-audit-schedule-items'] : [],
     });
   } catch (error) {
     console.error('[audit-schedule] returning empty tenant schedule:', error);
@@ -327,6 +367,8 @@ export async function POST(request: Request) {
   const areas = toAuditAreas(body?.areas);
   const items = toAuditItems(body?.items);
   const config = await getConfig(tenantId);
+  const archivedAreas = toAuditAreas(body?.archivedAreas ?? config['archived-audit-areas']);
+  const archivedItems = toAuditItems(body?.archivedItems ?? config['archived-audit-schedule-items']);
   const changes = diffAuditSchedule(config, areas, items);
 
   const hasCreatedItems = changes.itemLogs.some((entry) => entry.action === 'created');
@@ -345,17 +387,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'You do not have permission to delete audit schedule areas.' }, { status: 403 });
   }
 
+  const previouslyArchivedAreas = toAuditAreas(config['archived-audit-areas']);
+  const previouslyArchivedItems = toAuditItems(config['archived-audit-schedule-items']);
+  const oldItems = toAuditItems(config['audit-schedule-items']);
+  const removedItems = oldItems.filter((item) => changes.itemLogs.some((entry) => entry.action === 'deleted' && entry.entityId === item.id));
+  const nextArchivedAreas = Array.from(new Set([...previouslyArchivedAreas, ...archivedAreas, ...changes.removedAreas]));
+  const nextArchivedItemMap = new Map([...previouslyArchivedItems, ...archivedItems, ...removedItems].map((item) => [item.id, item]));
+  const restoredAreaSet = new Set(areas);
+  const restoredItemSet = new Set(items.map((item) => item.id));
+  const restoredAreas = previouslyArchivedAreas.filter((area) => restoredAreaSet.has(area));
+  const restoredItems = previouslyArchivedItems.filter((item) => restoredItemSet.has(item.id));
   const next = {
     ...config,
     'audit-areas': areas,
     'audit-schedule-items': items,
+    'archived-audit-areas': nextArchivedAreas.filter((area) => !restoredAreaSet.has(area)),
+    'archived-audit-schedule-items': Array.from(nextArchivedItemMap.values()).filter((item) => !restoredItemSet.has(item.id)),
   };
 
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at) VALUES ($1, $2::jsonb, NOW(), NOW()) ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-    tenantId,
-    JSON.stringify(next)
-  );
+  await prisma.$transaction(async (tx) => {
+    await archiveRemovedScheduleEntries(tenantId, actorUserId, actorEmail, config, changes, tx);
+    await tx.$executeRawUnsafe(
+      `INSERT INTO tenant_configs (tenant_id, data, created_at, updated_at) VALUES ($1, $2::jsonb, NOW(), NOW()) ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+      tenantId,
+      JSON.stringify(next)
+    );
+    await Promise.all([
+      ...restoredAreas.map((area) => markRecoveryArchivesRestoredForEntity(
+        { tenantId, entityType: 'audit-schedule-area', entityId: area },
+        { userId: actorUserId, email: actorEmail },
+        tx,
+      )),
+      ...restoredItems.map((item) => markRecoveryArchivesRestoredForEntity(
+        { tenantId, entityType: 'audit-schedule-item', entityId: item.id },
+        { userId: actorUserId, email: actorEmail },
+        tx,
+      )),
+    ]);
+  });
 
   try {
     if (changes.addedAreas.length || changes.removedAreas.length || changes.itemLogs.length) {
@@ -365,5 +434,10 @@ export async function POST(request: Request) {
     console.error('[audit-schedule] failed to write activity logs:', error);
   }
 
-  return NextResponse.json({ areas, items }, { status: 200 });
+  return NextResponse.json({
+    areas,
+    items,
+    archivedAreas: next['archived-audit-areas'],
+    archivedItems: next['archived-audit-schedule-items'],
+  }, { status: 200 });
 }

@@ -5,6 +5,7 @@ import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import { recordRecoveryArchive } from '@/lib/server/recovery-vault';
 
 export async function DELETE(
   request: Request,
@@ -13,7 +14,6 @@ export async function DELETE(
   await ensurePersonnelSchema();
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
-  const role = session?.user?.role?.trim().toLowerCase() || '';
   const { id } = await params;
 
   if (!email) {
@@ -25,16 +25,17 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [existingPersonnel, existingUser] = await Promise.all([
-    prisma.personnel.findFirst({ where: { id }, select: { email: true, tenantId: true } }),
-    prisma.user.findFirst({ where: { id }, select: { email: true, tenantId: true } }),
-  ]);
+  const existingPersonnel = await prisma.personnel.findFirst({ where: { id, tenantId } });
+  const existingUser = await prisma.user.findFirst({
+    where: existingPersonnel?.email
+      ? { tenantId, OR: [{ id }, { email: existingPersonnel.email.trim().toLowerCase() }] }
+      : { tenantId, id },
+  });
   const normalizedEmail = String(existingUser?.email || existingPersonnel?.email || '').trim().toLowerCase();
-  const recordTenantId = String(existingUser?.tenantId || existingPersonnel?.tenantId || tenantId).trim();
+  const recordTenantId = tenantId;
 
-  const isPrivilegedActor = role === 'dev' || role === 'developer' || email === 'barry@safeviate.com';
-  if (!isPrivilegedActor && recordTenantId !== tenantId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  if (!existingPersonnel) {
+    return NextResponse.json({ error: 'User not found.' }, { status: 404 });
   }
 
   const deletedPersonnel = await prisma.$transaction(async (tx) => {
@@ -45,6 +46,7 @@ export async function DELETE(
     if (normalizedEmail) {
       const matchingUsers = await tx.user.findMany({
         where: {
+          tenantId: recordTenantId,
           email: normalizedEmail,
         },
         select: { id: true },
@@ -54,9 +56,23 @@ export async function DELETE(
       });
     }
 
+    await recordRecoveryArchive({
+      tenantId: recordTenantId,
+      entityType: 'personnel-account',
+      entityId: id,
+      entityLabel: `${existingPersonnel.firstName} ${existingPersonnel.lastName}`.trim() || normalizedEmail || id,
+      snapshot: {
+        personnel: existingPersonnel as unknown as Record<string, unknown>,
+        user: existingUser as unknown as Record<string, unknown> | null,
+      },
+      actorUserId: session?.user?.id || null,
+      actorEmail: email,
+    }, tx);
+
     if (normalizedEmail) {
       await tx.passwordSetupInvite.deleteMany({
         where: {
+          tenantId: recordTenantId,
           OR: [
             { userId: id },
             ...(linkedUserIds.size > 0 ? [{ userId: { in: Array.from(linkedUserIds) } }] : []),
@@ -67,12 +83,14 @@ export async function DELETE(
 
       await tx.betaNdaAcceptance.deleteMany({
         where: {
+          tenantId: recordTenantId,
           email: normalizedEmail,
         },
       });
     } else {
       await tx.passwordSetupInvite.deleteMany({
         where: {
+          tenantId: recordTenantId,
           OR: [
             { userId: id },
             ...(linkedUserIds.size > 0 ? [{ userId: { in: Array.from(linkedUserIds) } }] : []),
@@ -84,17 +102,19 @@ export async function DELETE(
     const deleted = await tx.personnel.deleteMany({
       where: normalizedEmail
         ? {
+            tenantId: recordTenantId,
             OR: [
               { id },
               { email: normalizedEmail },
             ],
           }
-        : { id },
+        : { id, tenantId: recordTenantId },
     });
 
     await tx.user.deleteMany({
       where: normalizedEmail
         ? {
+            tenantId: recordTenantId,
             OR: [
               { id },
               { email: normalizedEmail },
@@ -102,12 +122,13 @@ export async function DELETE(
           }
         : linkedUserIds.size > 0
           ? {
+              tenantId: recordTenantId,
               OR: [
                 { id },
                 { id: { in: Array.from(linkedUserIds) } },
               ],
             }
-          : { id },
+          : { id, tenantId: recordTenantId },
     });
 
     return deleted;

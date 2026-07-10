@@ -39,6 +39,7 @@ import {
   PlusCircle,
   Trash2,
   ChevronDown,
+  ArchiveRestore,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -158,7 +159,7 @@ function AreaActions({ area, canEdit, canDelete, onEdit, onDelete }: AreaActions
                         )}
                     >
                         <Trash2 className="mr-1 h-3 w-3" />
-                        Delete
+                        Archive
                     </Button>
                 ) : null}
             </div>
@@ -183,15 +184,15 @@ function AreaActions({ area, canEdit, canDelete, onEdit, onDelete }: AreaActions
              <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Archive audit area?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the "{area}" audit area.
+                            This moves "{area}" and its schedule entries to Archived. They can be restored later.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
+                            Archive
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -213,6 +214,9 @@ export default function AuditSchedulePage() {
 
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
   const [schedule, setSchedule] = useState<AuditScheduleItem[]>([]);
+  const [archivedAreas, setArchivedAreas] = useState<string[]>([]);
+  const [archivedSchedule, setArchivedSchedule] = useState<AuditScheduleItem[]>([]);
+  const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
@@ -222,9 +226,11 @@ export default function AuditSchedulePage() {
     setIsLoading(true);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ areas: [], items: [] }));
+        const payload = await response.json().catch(() => ({ areas: [], items: [], archivedAreas: [], archivedItems: [] }));
         if (Array.isArray(payload.areas)) setAuditAreas(payload.areas);
         if (Array.isArray(payload.items)) setSchedule((payload.items as AuditScheduleItem[]).filter(i => i.year === currentYear));
+        if (Array.isArray(payload.archivedAreas)) setArchivedAreas(payload.archivedAreas);
+        if (Array.isArray(payload.archivedItems)) setArchivedSchedule(payload.archivedItems as AuditScheduleItem[]);
     } catch (e) {
         console.error("Failed to load audit schedule", e);
     } finally {
@@ -247,7 +253,7 @@ export default function AuditSchedulePage() {
     setOpenPopoverId(null);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [] }));
+        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
         const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
         const existingIdx = items.findIndex(item => item.area === area && item.month === month && item.year === currentYear);
 
@@ -268,7 +274,7 @@ export default function AuditSchedulePage() {
         await fetch('/api/audit-schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ areas: auditAreas, items: nextItems }),
+          body: JSON.stringify({ areas: auditAreas, items: nextItems, archivedAreas: payload.archivedAreas || [], archivedItems: payload.archivedItems || [] }),
         });
         window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
     } catch (e) {
@@ -283,11 +289,11 @@ export default function AuditSchedulePage() {
         const nextAreas = [...auditAreas, trimmed];
         setAuditAreas(nextAreas);
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [] }));
+        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
         await fetch('/api/audit-schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ areas: nextAreas, items: payload.items || [] }),
+          body: JSON.stringify({ areas: nextAreas, items: payload.items || [], archivedAreas: payload.archivedAreas || [], archivedItems: payload.archivedItems || [] }),
         });
     }
     setNewAreaName('');
@@ -300,13 +306,13 @@ export default function AuditSchedulePage() {
     setAuditAreas(nextAreas);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [] }));
+        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
         const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
         const nextItems = items.map(item => item.area === oldName ? { ...item, area: newName } : item);
         await fetch('/api/audit-schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ areas: nextAreas, items: nextItems }),
+          body: JSON.stringify({ areas: nextAreas, items: nextItems, archivedAreas: payload.archivedAreas || [], archivedItems: payload.archivedItems || [] }),
         });
         window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
     } catch (e) {
@@ -320,19 +326,48 @@ export default function AuditSchedulePage() {
     setAuditAreas(nextAreas);
     try {
         const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [] }));
+        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
         const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
         const nextItems = items.filter(item => item.area !== areaToDelete);
         await fetch('/api/audit-schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ areas: nextAreas, items: nextItems }),
+          body: JSON.stringify({
+            areas: nextAreas,
+            items: nextItems,
+            archivedAreas: Array.from(new Set([...(payload.archivedAreas || []), areaToDelete])),
+            archivedItems: [...(payload.archivedItems || []), ...items.filter(item => item.area === areaToDelete)],
+          }),
         });
         window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
     } catch (e) {
         console.error("Failed to delete area items", e);
     }
   }
+
+  const handleRestoreArea = async (areaToRestore: string) => {
+    if (!canDeleteAuditSchedule) return;
+    try {
+      const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({ areas: [], items: [], archivedAreas: [], archivedItems: [] }));
+      const activeAreas = Array.isArray(payload.areas) ? payload.areas : [];
+      const activeItems = Array.isArray(payload.items) ? payload.items as AuditScheduleItem[] : [];
+      const storedArchivedItems = Array.isArray(payload.archivedItems) ? payload.archivedItems as AuditScheduleItem[] : [];
+      await fetch('/api/audit-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          areas: Array.from(new Set([...activeAreas, areaToRestore])),
+          items: [...activeItems, ...storedArchivedItems.filter((item) => item.area === areaToRestore)],
+          archivedAreas: (payload.archivedAreas || []).filter((area: string) => area !== areaToRestore),
+          archivedItems: storedArchivedItems.filter((item) => item.area !== areaToRestore),
+        }),
+      });
+      window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+    } catch (error) {
+      console.error('Failed to restore audit area', error);
+    }
+  };
 
   const getScheduleItem = (area: string, month: string): AuditScheduleStatus => {
     const found = schedule.find(item => item.area === area && item.month === month);
@@ -355,8 +390,11 @@ export default function AuditSchedulePage() {
             <MainPageHeader 
                 title="Annual Audit Schedule"
                 actions={
-                    canCreateAuditSchedule ? (
-                      <Button
+                    <div className="flex items-center gap-2">
+                      {canDeleteAuditSchedule ? <Button variant="outline" size="sm" onClick={() => setIsArchivedOpen(true)} className={HEADER_COMPACT_CONTROL_CLASS}>
+                        <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" /> Archived ({archivedAreas.length})
+                      </Button> : null}
+                      {canCreateAuditSchedule ? <Button
                           variant={isMobile ? 'outline' : 'default'}
                           size="sm"
                           onClick={() => setIsAddAreaOpen(true)}
@@ -367,10 +405,31 @@ export default function AuditSchedulePage() {
                               Add Area
                           </span>
                           {isMobile ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-                      </Button>
-                    ) : undefined
+                      </Button> : null}
+                    </div>
                 }
             />
+            <Dialog open={isArchivedOpen} onOpenChange={setIsArchivedOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Archived Audit Schedule Areas</DialogTitle>
+                  <DialogDescription>Restored areas return with their archived schedule entries.</DialogDescription>
+                </DialogHeader>
+                <div className="max-h-80 space-y-2 overflow-y-auto">
+                  {archivedAreas.length ? archivedAreas.map((area) => (
+                    <div key={area} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <div>
+                        <p className="text-sm font-medium">{area}</p>
+                        <p className="text-xs text-muted-foreground">{archivedSchedule.filter((item) => item.area === area).length} archived schedule entries</p>
+                      </div>
+                      <Button type="button" size="sm" variant="outline" onClick={() => void handleRestoreArea(area)}>
+                        <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" /> Restore
+                      </Button>
+                    </div>
+                  )) : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No archived audit schedule areas.</p>}
+                </div>
+              </DialogContent>
+            </Dialog>
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
                 <div className={cn(
                     "overscroll-contain bg-card custom-scrollbar",

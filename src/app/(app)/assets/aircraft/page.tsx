@@ -17,13 +17,14 @@ export default function AircraftFleetPage() {
   const { tenantId } = useUserProfile();
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [aircraftView, setAircraftView] = useState<'active' | 'archived'>('active');
 
   const canManageAssets = hasPermission('assets-create') || hasPermission('assets-edit');
 
   const loadAircrafts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/aircraft', { cache: 'no-store' });
+      const response = await fetch(`/api/aircraft${aircraftView === 'archived' ? '?view=archived' : ''}`, { cache: 'no-store' });
       const payload = await response.json().catch(() => ({ aircraft: [] }));
       setAircrafts(Array.isArray(payload.aircraft) ? payload.aircraft : []);
     } catch (e) {
@@ -32,7 +33,7 @@ export default function AircraftFleetPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [aircraftView]);
 
   useEffect(() => {
     void loadAircrafts();
@@ -73,11 +74,19 @@ export default function AircraftFleetPage() {
               <Button asChild variant="default" className={HEADER_COMPACT_CONTROL_CLASS}>
                 <Link href="/assets/inspections">Inspections</Link>
               </Button>
+              <Button
+                type="button"
+                variant={aircraftView === 'archived' ? 'default' : 'outline'}
+                className={HEADER_COMPACT_CONTROL_CLASS}
+                onClick={() => setAircraftView((view) => view === 'active' ? 'archived' : 'active')}
+              >
+                {aircraftView === 'active' ? 'Archived Aircraft' : 'Active Aircraft'}
+              </Button>
             </div>
           )}
         />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <AircraftList data={aircrafts || []} tenantId={tenantId || ''} canEdit={canManageAssets} />
+          <AircraftList data={aircrafts || []} tenantId={tenantId || ''} canEdit={canManageAssets} archived={aircraftView === 'archived'} />
         </CardContent>
       </Card>
     </div>

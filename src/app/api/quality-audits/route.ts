@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import type { QualityAudit } from '@/types/quality';
 import type { Aircraft } from '@/types/aircraft';
 import type { Alert } from '@/types/alert';
+import { markRecoveryArchivesRestoredForEntity, recordRecoveryArchive } from '@/lib/server/recovery-vault';
 
 function toStableJson(value: unknown) {
   return JSON.stringify(value ?? null);
@@ -383,12 +384,32 @@ export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-  await prisma.$executeRawUnsafe(
-    `UPDATE quality_audits SET data = jsonb_set(data, '{status}', '"Archived"'::jsonb), updated_at = NOW()
-     WHERE id = $1 AND tenant_id = $2`,
+  const session = await getServerSession(authOptions);
+  const actorEmail = session?.user?.email?.trim().toLowerCase();
+  const existingRows = await prisma.$queryRawUnsafe<{ data: Record<string, unknown> }[]>(
+    `SELECT data FROM quality_audits WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
     id,
-    tenantId
+    tenantId,
   );
+  const existing = existingRows[0]?.data;
+  if (!existing) return NextResponse.json({ error: 'Audit not found.' }, { status: 404 });
+  await prisma.$transaction(async (tx) => {
+    await recordRecoveryArchive({
+      tenantId,
+      entityType: 'quality-audit',
+      entityId: id,
+      entityLabel: String(existing.auditNumber || existing.title || existing.scope || id),
+      snapshot: { audit: existing },
+      actorUserId: session?.user?.id || null,
+      actorEmail: actorEmail || 'unknown',
+    }, tx);
+    await tx.$executeRawUnsafe(
+      `UPDATE quality_audits SET data = jsonb_set(data, '{status}', '"Archived"'::jsonb), updated_at = NOW()
+       WHERE id = $1 AND tenant_id = $2`,
+      id,
+      tenantId
+    );
+  });
   await recordSimulationRouteMetric({
     tenantId,
     routeKey: 'quality-audits.ARCHIVE',
@@ -412,6 +433,14 @@ export async function PATCH(request: Request) {
     id,
     tenantId
   );
+  const session = await getServerSession(authOptions);
+  const actorEmail = session?.user?.email?.trim().toLowerCase();
+  if (actorEmail) {
+    await markRecoveryArchivesRestoredForEntity(
+      { tenantId, entityType: 'quality-audit', entityId: id },
+      { userId: session?.user?.id || null, email: actorEmail },
+    );
+  }
   await recordSimulationRouteMetric({ tenantId, routeKey: 'quality-audits.RESTORE', reads: 0, writes: 1, durationMs: Date.now() - startedAt });
   return NextResponse.json({ ok: true }, { status: 200 });
 }
