@@ -5,6 +5,8 @@ import { ensureRolesSchema } from '@/lib/server/bootstrap-db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { invalidatePersonnelDirectoryCaches } from '@/lib/server/route-cache';
+import { authenticateAiRequest } from '@/lib/server/ai-auth';
+import { hasHierarchicalPermission } from '@/lib/permission-model';
 
 async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
@@ -40,6 +42,17 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authResult = await authenticateAiRequest(request);
+  if (!authResult.ok) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+  }
+  if (
+    !hasHierarchicalPermission(authResult.effectivePermissions, 'admin-permissions-edit', authResult.deniedPermissions) &&
+    authResult.userProfile.role?.toLowerCase() !== 'developer'
+  ) {
+    return NextResponse.json({ error: 'You do not have permission to edit roles.' }, { status: 403 });
+  }
+
   await ensureRolesSchema();
   const tenantId = await getTenantId(request);
   if (!tenantId) {

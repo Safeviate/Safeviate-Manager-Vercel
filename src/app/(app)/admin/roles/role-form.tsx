@@ -22,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { permissionsConfig } from '@/lib/permissions-config';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -96,8 +96,6 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(() => expandLegacyManagePermissions(existingRole?.permissions || []));
   const [hiddenMenus, setHiddenMenus] = useState<string[]>(existingRole?.accessOverrides?.hiddenMenus || []);
   const [isOpen, setIsOpen] = useState(mode === 'page');
-  const [isPermissionsOpen, setIsPermissionsOpen] = useState(mode === 'page');
-  const [isModulesOpen, setIsModulesOpen] = useState(mode === 'page');
   const [requiredDocuments, setRequiredDocuments] = useState<string[]>(existingRole?.requiredDocuments || []);
   const [currentDocument, setCurrentDocument] = useState('');
   const permissionSections = useMemo(() => getPermissionSections(permissionsConfig), []);
@@ -201,6 +199,10 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
     setSelectedPermissions((prev) =>
       checked ? [...prev, permissionId] : prev.filter((id) => id !== permissionId)
     );
+    toast({
+      title: checked ? 'Permission selected' : 'Permission deselected',
+      description: 'Save Changes to apply this permission update.',
+    });
   };
 
   const handleSelectAllToggle = () => {
@@ -234,64 +236,62 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
 
   const formContent = (
     <div className="flex flex-col gap-6 py-4">
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] xl:items-start">
-        <div className="space-y-2">
-          <Label htmlFor="name">Role Name</Label>
-          <Input
-            id="name"
-            value={roleName}
-            onChange={(e) => setRoleName(e.target.value)}
-            placeholder="e.g., Chief Pilot"
-          />
-        </div>
-        <div className="space-y-2">
-          <h4 className="text-md font-medium">Required Documents</h4>
-          <div className="flex items-center gap-2">
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="details">Role Details</TabsTrigger>
+          <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="module-access">Module Access</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="mt-4 space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Role Name</Label>
             <Input
-              value={currentDocument}
-              onChange={(e) => setCurrentDocument(e.target.value)}
-              placeholder="e.g., Pilot's License"
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddDocument())}
+              id="name"
+              value={roleName}
+              onChange={(e) => setRoleName(e.target.value)}
+              placeholder="e.g., Chief Pilot"
             />
-            <Button onClick={handleAddDocument} type="button">Add</Button>
           </div>
-          <div className="space-y-2 pt-2">
-            {requiredDocuments.map((doc) => (
-              <div key={doc} className="flex items-center justify-between gap-2">
-                <Badge variant="secondary">{doc}</Badge>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveDocument(doc)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
+          <div className="space-y-2">
+            <h4 className="text-md font-medium">Required Documents</h4>
+            <div className="flex items-center gap-2">
+              <Input
+                value={currentDocument}
+                onChange={(e) => setCurrentDocument(e.target.value)}
+                placeholder="e.g., Pilot's License"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddDocument())}
+              />
+              <Button onClick={handleAddDocument} type="button">Add</Button>
+            </div>
+            <div className="space-y-2 pt-2">
+              {requiredDocuments.map((doc) => (
+                <div key={doc} className="flex items-center justify-between gap-2">
+                  <Badge variant="secondary">{doc}</Badge>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveDocument(doc)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="permissions" className="mt-4 space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-md font-medium">Permissions</h4>
+              {canManagePermissions ? (
+                <Button variant="link" onClick={handleSelectAllToggle} className="h-auto p-0">
+                  {areAllSelected ? 'Deselect All' : 'Select All'}
                 </Button>
-              </div>
-            ))}
+              ) : null}
+            </div>
+            <p className="px-1 text-xs text-muted-foreground">
+              View reads records. Create adds records. Edit changes records. Delete removes or archives records. Specialist actions such as Approve, Sign, and Export remain separate.
+            </p>
           </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      <Collapsible open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen} className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h4 className="text-md font-medium">Permissions</h4>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-9 p-0">
-                <ChevronsUpDown className="h-4 w-4" />
-                <span className="sr-only">Toggle</span>
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-          {canManagePermissions ? (
-            <Button variant="link" onClick={handleSelectAllToggle} className="h-auto p-0">
-              {areAllSelected ? 'Deselect All' : 'Select All'}
-            </Button>
-          ) : null}
-        </div>
-        <p className="px-1 text-xs text-muted-foreground">
-          View reads records. Create adds records. Edit changes records. Delete removes or archives records. Specialist actions such as Approve, Sign, and Export remain separate.
-        </p>
-        <CollapsibleContent>
-          <ScrollArea className="mt-2 h-72 w-full rounded-md border">
+          <ScrollArea className="mt-2 h-[min(60vh,36rem)] w-full rounded-md border">
             <div className="p-4">
               <div className="space-y-6">
                 {permissionSections.map((section) => (
@@ -370,25 +370,12 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
               </div>
             </div>
           </ScrollArea>
-        </CollapsibleContent>
-      </Collapsible>
+        </TabsContent>
 
-      <Separator />
-
-      <Collapsible open={isModulesOpen} onOpenChange={setIsModulesOpen} className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <TabsContent value="module-access" className="mt-4 space-y-2">
+          <div className="space-y-2">
             <h4 className="text-md font-medium">Module Access</h4>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-9 p-0">
-                <ChevronsUpDown className="h-4 w-4" />
-                <span className="sr-only">Toggle</span>
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-        </div>
-        <CollapsibleContent>
-          <ScrollArea className="mt-2 h-72 w-full rounded-md border">
+          <ScrollArea className="mt-2 h-[min(60vh,36rem)] w-full rounded-md border">
             <div className="p-4">
               <div className="space-y-6">
                 {menuSections.map((section) => (
@@ -457,8 +444,9 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
               </div>
             </div>
           </ScrollArea>
-        </CollapsibleContent>
-      </Collapsible>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 
