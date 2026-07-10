@@ -396,6 +396,7 @@ export function ColorThemeForm({ showHeader = true }: ColorThemeFormProps) {
             'card-foreground': cardTheme['card-foreground'],
             'card-border': cardTheme['card-border'],
             'card-header-band-background': cardTheme['card-header-band-background'],
+            'card-header-band-foreground': cardTheme['card-header-band-foreground'],
         },
         popoverColors: (effectiveTheme.popover as SavedTheme['popoverColors']) || { 
             popover: effectiveTheme.backgroundColour || popoverTheme.popover, 

@@ -3095,7 +3095,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
   const metrics = getQualityMetrics(summary, organizationScopeId);
   const QualityIcon = ClipboardCheck;
   const qualityPanelClass = 'flex min-h-[18rem] max-h-[22rem] flex-col overflow-hidden rounded-md border bg-background';
-  const qualityPanelHeaderClass = 'flex items-center justify-between gap-3 border-b bg-muted/3 px-4 py-3';
+  const qualityPanelHeaderClass = 'flex h-[38px] min-h-[38px] items-center justify-between gap-3 border-b bg-[hsl(var(--card-header-band-background))] px-4 py-0 text-[hsl(var(--card-header-band-foreground))]';
   const qualityPanelBodyClass = 'min-h-0 flex-1 overflow-y-auto';
 
   return (
@@ -3130,9 +3130,9 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-none text-foreground/90">Recent Audits</p>
+                <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Recent Audits</p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
+              <Badge variant="outline" className="bg-transparent text-[10px] font-bold text-[hsl(var(--card-header-band-foreground))]">
                 {metrics.recentAudits} recent
               </Badge>
             </div>
@@ -3175,7 +3175,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-none text-foreground/90">Quality Quick Read</p>
+                <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Quality Quick Read</p>
               </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -3212,7 +3212,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-none text-foreground/90">Upcoming Audits</p>
+                <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Upcoming Audits</p>
               </div>
               <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.upcomingAuditRows.length} shown
@@ -3245,7 +3245,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-none text-foreground/90">Upcoming CAP Deadlines</p>
+                <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Upcoming CAP Deadlines</p>
               </div>
               <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.upcomingCapRows.length} shown
@@ -3284,7 +3284,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <div className={qualityPanelClass}>
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-none text-foreground/90">New Corrective Actions</p>
+                <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">New Corrective Actions</p>
               </div>
               <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.recentCapRows.length} shown

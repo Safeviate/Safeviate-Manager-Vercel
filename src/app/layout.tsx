@@ -161,6 +161,7 @@ function buildThemeBootstrapScript(bootstrap: TenantBootstrapConfig) {
       'card-foreground': '#1e293b',
       'card-border': '#d1d5db',
       'card-header-band-background': '#f8fafc',
+      'card-header-band-foreground': '#1e293b',
     },
     popover: {
       popover: '#ebf5fb',
