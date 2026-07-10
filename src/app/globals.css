@@ -212,6 +212,13 @@
     color: hsl(var(--card-header-band-foreground) / 0.72) !important;
   }
 
+  .dashboard-card-theme:not(.dashboard-card-theme--expanded) > [data-slot="card-header"] {
+    height: 38px;
+    min-height: 38px;
+    justify-content: center;
+    padding: 0 1rem !important;
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

@@ -25,7 +25,7 @@ const CardHeader = React.forwardRef<
   <div
     ref={ref}
     data-slot="card-header"
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex min-h-[38px] flex-col space-y-1.5 p-6", className)}
     {...props}
   />
 ))

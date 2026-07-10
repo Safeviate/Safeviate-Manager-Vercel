@@ -23,7 +23,10 @@ export const HEADER_COMPACT_CONTROL_CLASS =
   "h-7 rounded-md border border-input bg-background px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] shadow-none gap-1.5 shrink-0";
 
 export const CARD_HEADER_BAND_CLASS =
-  "border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-2 py-1 min-h-9 shrink-0 md:px-3";
+  "min-h-[38px] shrink-0 border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-2 py-1 text-[hsl(var(--card-header-band-foreground))] md:px-3";
+
+export const CARD_COMPACT_HEADER_BAND_CLASS =
+  "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-4 py-0 text-[hsl(var(--card-header-band-foreground))]";
 
 export const CARD_HEADER_TOP_ROW_CLASS =
   "flex min-h-[34px] items-start justify-between gap-3";

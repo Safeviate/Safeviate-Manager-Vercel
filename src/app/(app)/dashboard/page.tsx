@@ -6,7 +6,7 @@ import { AlertTriangle, BadgeAlert, ChevronDown, ClipboardCheck, MoreHorizontal,
 import { format } from 'date-fns';
 import { useTheme } from '@/components/theme-provider';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import { buildTrainingCompetencyAreas } from '@/lib/training-competencies';
 import { parseJsonResponse } from '@/lib/safe-json';
 import {
   CARD_HEADER_BAND_CLASS,
+  CARD_COMPACT_HEADER_BAND_CLASS,
   CARD_HEADER_SCOPE_ZONE_CLASS,
   HEADER_COMPACT_CONTROL_CLASS,
   HEADER_SECONDARY_BUTTON_CLASS,
@@ -1662,7 +1663,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       ) : null}
-      <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-0 flex-1 flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
+      <Card className={cn(DASHBOARD_SHELL_CLASS, 'dashboard-card-theme--expanded flex min-h-0 flex-1 flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
         <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'sticky top-0 z-10 rounded-t-lg bg-background', isModern && 'bg-white')}>
           <div className={CARD_HEADER_SCOPE_ZONE_CLASS}>
             <CardTitle className="text-sm font-black uppercase tracking-tight">Company Dashboard</CardTitle>
@@ -1790,9 +1791,6 @@ export default function DashboardPage() {
                       <div className="dashboard-card-band flex items-center justify-between gap-3 rounded-md border border-dashed border-card-border/70 px-4 py-2.5">
                         <div className="min-w-0">
                           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/75">Operations Board</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Daily activity, upcoming load, disruption pressure, and fleet readiness in one view.
-                          </p>
                         </div>
                         <Badge variant="outline" className="shrink-0 text-[10px] font-black uppercase">
                           {activeDashboardPeriodLongLabel || 'Current period'}
@@ -1805,7 +1803,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Operations Overview</CardTitle>
-                                <CardDescription className="text-xs">Bookings, cancellations, and fleet use in one management view.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/bookings/history">Open bookings</Link>
@@ -1835,7 +1832,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Booking Mix</CardTitle>
-                                <CardDescription className="text-xs">Which booking types are consuming the schedule this period.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/bookings/schedule">Open schedule</Link>
@@ -1879,7 +1875,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Upcoming Bookings</CardTitle>
-                                <CardDescription className="text-xs">The next scheduled activity over the coming 7 days.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/bookings/schedule">View all</Link>
@@ -1917,7 +1912,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Most Booked Aircraft</CardTitle>
-                                <CardDescription className="text-xs">Which aircraft are carrying the schedule load.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/assets/aircraft">Open aircraft</Link>
@@ -1950,7 +1944,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Most Booked Instructors</CardTitle>
-                                <CardDescription className="text-xs">Where the training load is concentrated.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/users/instructors">Open instructors</Link>
@@ -1992,7 +1985,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Cancellations by Reason</CardTitle>
-                                <CardDescription className="text-xs">Primary disruption themes affecting bookings in the selected period.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/bookings/history">Open booking history</Link>
@@ -2031,7 +2023,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Operational Disruptions</CardTitle>
-                                <CardDescription className="text-xs">Quick read on the biggest cancellation pressure points.</CardDescription>
                               </div>
                               <div className="flex shrink-0 items-center gap-2">
                                 <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase">
@@ -2076,7 +2067,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Flight Hours Summary</CardTitle>
-                                <CardDescription className="text-xs">Flown hours for {activeDashboardPeriodLongLabel || 'the selected period'}.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/bookings/history">Open flight history</Link>
@@ -2096,7 +2086,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Per Aircraft Flight Hours</CardTitle>
-                                <CardDescription className="text-xs">Hour totals by aircraft for the active period selection.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/assets/aircraft">View fleet</Link>
@@ -2146,7 +2135,6 @@ export default function DashboardPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <CardTitle className="text-sm font-black uppercase tracking-tight">Fleet Overview</CardTitle>
-                                <CardDescription className="text-xs">Aircraft readiness, fuel, oil, and utilisation at a glance.</CardDescription>
                               </div>
                               <Button asChild variant="outline" size="sm" className="h-8 shrink-0 text-[10px] font-black uppercase">
                                 <Link href="/assets/aircraft">Manage fleet</Link>
@@ -2175,7 +2163,6 @@ export default function DashboardPage() {
                           <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
                             <CardHeader className="border-b bg-muted/5 px-4 py-3">
                               <CardTitle className="text-sm font-black uppercase tracking-tight">Fleet Trend</CardTitle>
-                              <CardDescription className="text-xs">Selected aircraft utilisation and maintenance load over the period.</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[240px] p-4">
                               {isLoading || isTargetLoading ? (
@@ -2208,7 +2195,6 @@ export default function DashboardPage() {
                           <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
                             <CardHeader className="border-b bg-muted/5 px-4 py-3">
                               <CardTitle className="text-sm font-black uppercase tracking-tight">Fleet Mix</CardTitle>
-                              <CardDescription className="text-xs">Status distribution and target performance in one glance.</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[240px] p-4">
                               <ResponsiveContainer width="100%" height="100%">
@@ -2328,7 +2314,6 @@ function StageCard({ tabLabel, modern }: { tabLabel: string; modern: boolean }) 
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">{tabLabel}</CardTitle>
-        <CardDescription className="text-xs">{EMPTY_NOTE}</CardDescription>
       </CardHeader>
       <CardContent className="flex min-h-[280px] items-center justify-center p-6">
           <div className="max-w-xl rounded-md border border-dashed border-card-border/70 bg-muted/5 px-6 py-10 text-center">
@@ -2366,9 +2351,6 @@ function InstructorOverviewCard({
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">Instructor Snapshot</CardTitle>
-        <CardDescription className="text-xs">
-          Daily flight load and duty pressure at a glance for {metrics.periodLabel.toLowerCase()}.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
         <div className="space-y-2">
@@ -2383,9 +2365,6 @@ function InstructorOverviewCard({
             <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Top Instructor Load</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Sorted by today's flight hours.
-                </p>
               </div>
               <Badge variant="outline" className="text-[10px] font-black uppercase">
                 {metrics.rows.length} instructors
@@ -2432,9 +2411,6 @@ function InstructorOverviewCard({
 
           <div className="rounded-md border bg-background p-4">
             <p className="text-sm font-black uppercase tracking-tight">Quick Read</p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              A simple summary for the duty team.
-            </p>
             <div className="mt-4 space-y-3">
               <SummaryLine label="Flight period" value={formatHours(metrics.totalPeriodFlightHours)} />
               <SummaryLine label="Duty period" value={formatHours(metrics.totalPeriodDutyHours)} />
@@ -2449,9 +2425,6 @@ function InstructorOverviewCard({
           <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
             <div className="min-w-0">
               <p className="text-sm font-black uppercase tracking-tight">Preliminary Technical Report Notifications</p>
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Open preliminary technical reports needing company follow-up.
-              </p>
             </div>
             <Badge variant="outline" className="text-[10px] font-black uppercase">
               {technicalNotifications.length} open
@@ -2518,9 +2491,6 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">Student Snapshot</CardTitle>
-        <CardDescription className="text-xs">
-          Progress, recency, and milestone pressure for {metrics.periodLabel.toLowerCase()}.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
         <div className="space-y-2">
@@ -2535,9 +2505,6 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
             <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Students at Risk</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Milestone pressure and missing recent activity.
-                </p>
               </div>
               <Badge
                 variant={metrics.overCount > 0 ? 'destructive' : metrics.watchCount > 0 ? 'secondary' : 'outline'}
@@ -2651,9 +2618,6 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
 
           <div className="rounded-md border bg-background p-4">
             <p className="text-sm font-black uppercase tracking-tight">Student Quick Read</p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              Recent movement and milestone pressure.
-            </p>
             <div className="mt-4 space-y-3">
               <SummaryLine label="Watch" value={String(metrics.watchCount)} />
               <SummaryLine label="Over" value={String(metrics.overCount)} />
@@ -2670,9 +2634,6 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
             <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Student Health Mix</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Overall movement across on-track, watch, and at-risk students.
-                </p>
               </div>
             </div>
             <div className="h-[260px] p-4">
@@ -2703,9 +2664,6 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
               <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight">Inactive Students</p>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Students needing re-engagement after two weeks or more without a flight.
-                  </p>
                 </div>
                 <Badge variant="outline" className="text-[10px] font-black uppercase">
                   {inactiveRows.length} shown
@@ -2745,9 +2703,6 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
               <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight">Milestone Readiness</p>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Students forecast closest to their next milestone.
-                  </p>
                 </div>
                 <Badge variant="outline" className="text-[10px] font-black uppercase">
                   {milestoneRows.length} shown
@@ -2815,9 +2770,6 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
           <SafetyIcon className="h-4 w-4 text-amber-600" />
           <CardTitle className="text-sm font-black uppercase tracking-tight">Safety Snapshot</CardTitle>
         </div>
-        <CardDescription className="text-xs">
-          Open reports, risk pressure, and active corrective actions in one place.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
         <div className="space-y-2">
@@ -2831,12 +2783,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
 
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-md border bg-background">
-            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Flight Cancellations</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  What is blocking sortie completion this period.
-                </p>
               </div>
               <Badge variant="outline" className="text-[10px] font-black uppercase">
                 {metrics.cancelledFlights} total
@@ -2897,12 +2846,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
           </div>
 
           <div className="rounded-md border bg-background">
-            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Flight Outcome Mix</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Scheduled output across completed, cancelled, and active bookings.
-                </p>
               </div>
             </div>
             <div className="h-[288px] p-4">
@@ -2931,12 +2877,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
 
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-md border bg-background">
-            <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Recent Safety Reports</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Submitted reports and escalation status.
-                </p>
               </div>
               <Badge variant="outline" className="text-[10px] font-black uppercase">
                 {reports.length} shown
@@ -2981,12 +2924,11 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-md border bg-background p-4">
-              <p className="text-sm font-black uppercase tracking-tight">Safety Quick Read</p>
-              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Simple oversight for the duty team.
-              </p>
-              <div className="mt-4 space-y-3">
+            <div className="overflow-hidden rounded-md border bg-background">
+              <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+                <p className="text-sm font-black uppercase tracking-tight">Safety Quick Read</p>
+              </div>
+              <div className="space-y-3 p-4">
                 <SummaryLine label="Open reports" value={String(metrics.openReports)} />
                 <SummaryLine label="Open hazards" value={String(metrics.openRisks)} />
                 <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
@@ -2997,12 +2939,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
             </div>
 
             <div className="flex min-h-[18rem] flex-col overflow-hidden rounded-md border bg-background">
-              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight">Preliminary Technical Reports</p>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Aircraft-linked reports filed through QR or quick intake.
-                  </p>
                 </div>
                 <Badge variant="outline" className="text-[10px] font-black uppercase">
                   {technicalNotifications.length} open
@@ -3044,12 +2983,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
             </div>
 
             <div className="rounded-md border bg-background">
-              <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
+              <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight">Open Hazards</p>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Current risk register pressure.
-                  </p>
                 </div>
                 <Badge variant="outline" className="text-[10px] font-black uppercase">
                   {risks.length} shown
@@ -3095,7 +3031,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
   const metrics = getQualityMetrics(summary, organizationScopeId);
   const QualityIcon = ClipboardCheck;
   const qualityPanelClass = 'flex min-h-[18rem] max-h-[22rem] flex-col overflow-hidden rounded-md border bg-background';
-  const qualityPanelHeaderClass = 'flex h-[38px] min-h-[38px] items-center justify-between gap-3 border-b bg-[hsl(var(--card-header-band-background))] px-4 py-0 text-[hsl(var(--card-header-band-foreground))]';
+  const qualityPanelHeaderClass = CARD_COMPACT_HEADER_BAND_CLASS;
   const qualityPanelBodyClass = 'min-h-0 flex-1 overflow-y-auto';
 
   return (
@@ -3338,9 +3274,6 @@ function InstructorLoadCard({ modern, metrics }: { modern: boolean; metrics: Ins
         )}
       >
         <CardTitle className="text-sm font-black uppercase tracking-tight">Instructor Load</CardTitle>
-        <CardDescription className="text-xs">
-          Duty period, flight time, and daily pressure for {metrics.periodLabel.toLowerCase()}.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
         <div className="space-y-2">
@@ -3354,9 +3287,6 @@ function InstructorLoadCard({ modern, metrics }: { modern: boolean; metrics: Ins
           <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
             <div className="min-w-0">
               <p className="text-sm font-black uppercase tracking-tight">Instructor Watchlist</p>
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Ordered by today's flight time.
-              </p>
             </div>
             <Badge
               variant={metrics.overCount > 0 ? 'destructive' : metrics.watchCount > 0 ? 'secondary' : 'outline'}
