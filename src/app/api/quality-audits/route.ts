@@ -383,14 +383,36 @@ export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-  await prisma.$executeRawUnsafe(`DELETE FROM quality_audits WHERE id = $1 AND tenant_id = $2`, id, tenantId);
+  await prisma.$executeRawUnsafe(
+    `UPDATE quality_audits SET data = jsonb_set(data, '{status}', '"Archived"'::jsonb), updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $2`,
+    id,
+    tenantId
+  );
   await recordSimulationRouteMetric({
     tenantId,
-    routeKey: 'quality-audits.DELETE',
+    routeKey: 'quality-audits.ARCHIVE',
     reads: 0,
     writes: 1,
     durationMs: Date.now() - startedAt,
   });
+  return NextResponse.json({ ok: true }, { status: 200 });
+}
+
+export async function PATCH(request: Request) {
+  const startedAt = Date.now();
+  const tenantId = await getTenantId(request);
+  if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  const id = body?.id;
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  await prisma.$executeRawUnsafe(
+    `UPDATE quality_audits SET data = jsonb_set(data, '{status}', '"Finalized"'::jsonb), updated_at = NOW()
+     WHERE id = $1 AND tenant_id = $2 AND data->>'status' = 'Archived'`,
+    id,
+    tenantId
+  );
+  await recordSimulationRouteMetric({ tenantId, routeKey: 'quality-audits.RESTORE', reads: 0, writes: 1, durationMs: Date.now() - startedAt });
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 

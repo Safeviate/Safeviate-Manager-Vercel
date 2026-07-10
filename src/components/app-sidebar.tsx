@@ -33,6 +33,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useTheme } from '@/components/theme-provider';
 import { getOrSetClientApiCache, invalidateClientApiCache } from '@/lib/client/api-cache';
+import { ServiceWorkerStatusPanel } from '@/components/service-worker-registration';
 
 const USERS_STATIC_SUB_ITEMS: SubMenuItem[] = [
   { href: '/users/personnel', label: 'All Users', permissionId: 'users-view' },
@@ -316,6 +317,7 @@ const SidebarBrandLogoFooter = () => {
   return (
     <SidebarFooter className="border-t border-sidebar-border/25 p-3 pt-4 group-data-[collapsible=icon]:hidden">
       <div className="space-y-2">
+        <ServiceWorkerStatusPanel />
         <div
           className="relative mx-auto aspect-[204.1/112.8] w-full max-w-[204.1px] overflow-hidden rounded-2xl border border-sidebar-border/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
           style={{ backgroundColor: sidebarLogoBackgroundColor || 'transparent' }}

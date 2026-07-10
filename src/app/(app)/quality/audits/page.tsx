@@ -6,7 +6,7 @@ import { CardControlHeader, CARD_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS, 
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, ListFilter, ChevronDown, PlayCircle } from 'lucide-react';
+import { ShieldCheck, ListFilter, ChevronDown, PlayCircle, ArchiveRestore } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,7 +18,7 @@ import { usePageLayout } from '@/hooks/use-page-layout';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
-import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
+import { ArchiveActionButton, ViewActionButton } from '@/components/record-action-buttons';
 import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
@@ -63,16 +63,23 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
     const router = useRouter();
     const [isStarting, setIsStarting] = useState(false);
 
-    const handleDelete = async () => {
+    const handleArchive = async () => {
         try {
             const response = await fetch(`/api/quality-audits?id=${encodeURIComponent(audit.id)}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Failed to delete audit');
+            if (!response.ok) throw new Error('Failed to archive audit');
             window.dispatchEvent(new Event('safeviate-quality-updated'));
-            toast({ title: "Audit Deleted", description: `Audit #${audit.auditNumber} has been removed.`});
+            toast({ title: "Audit Archived", description: `Audit #${audit.auditNumber} can be recalled from Archived.`});
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         }
     }
+
+    const handleRestore = async () => {
+        const response = await fetch('/api/quality-audits', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: audit.id }) });
+        if (!response.ok) throw new Error('Failed to recall audit');
+        window.dispatchEvent(new Event('safeviate-quality-updated'));
+        toast({ title: 'Audit Recalled', description: `Audit #${audit.auditNumber} is active again.` });
+    };
 
     const handleStart = async () => {
         try {
@@ -116,11 +123,17 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
                 </Button>
             ) : null}
             <ViewActionButton href={`/quality/audits/${audit.id}`} />
-            <DeleteActionButton
-                description={`This will permanently delete audit #${audit.auditNumber}.`}
-                onDelete={handleDelete}
-                srLabel="Delete audit"
-            />
+            {audit.status === 'Archived' ? (
+                <Button variant="outline" size="compact" className="gap-2 border-slate-300" onClick={() => void handleRestore()}>
+                    <ArchiveRestore className="h-4 w-4" /> Recall Audit
+                </Button>
+            ) : (
+                <ArchiveActionButton
+                    description={`Audit #${audit.auditNumber} will be moved to Archived. It will not be deleted and can be recalled later.`}
+                    onArchive={() => void handleArchive()}
+                    srLabel="Archive audit"
+                />
+            )}
         </div>
     )
 }

@@ -1,4 +1,4 @@
-export type ReportStatus = 'Open' | 'Under Review' | 'Awaiting Action' | 'Closed';
+export type ReportStatus = 'Open' | 'Under Review' | 'Awaiting Action' | 'Closed' | 'Archived';
 export type ReportType = string;
 export type EventClassification = 'Hazard' | 'Incident' | 'Accident';
 export type InvestigationMemberRole = 'Lead Investigator' | 'Team Member' | 'Technical Expert' | 'Observer';

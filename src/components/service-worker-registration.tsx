@@ -1,10 +1,48 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Wifi, WifiOff, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+
+type ServiceWorkerStatusSnapshot = {
+  isOnline: boolean;
+  isPwaReady: boolean;
+  updateReady: boolean;
+};
+
+const serviceWorkerStatusListeners = new Set<() => void>();
+let serviceWorkerStatusSnapshot: ServiceWorkerStatusSnapshot = {
+  isOnline: true,
+  isPwaReady: false,
+  updateReady: false,
+};
+let waitingServiceWorkerRef: ServiceWorker | null = null;
+
+const emitServiceWorkerStatus = (next: Partial<ServiceWorkerStatusSnapshot>) => {
+  serviceWorkerStatusSnapshot = { ...serviceWorkerStatusSnapshot, ...next };
+  serviceWorkerStatusListeners.forEach((listener) => listener());
+};
+
+export const requestServiceWorkerUpdate = () => {
+  waitingServiceWorkerRef?.postMessage({ type: 'SKIP_WAITING' });
+};
+
+const subscribeToServiceWorkerStatus = (listener: () => void) => {
+  serviceWorkerStatusListeners.add(listener);
+  return () => {
+    serviceWorkerStatusListeners.delete(listener);
+  };
+};
+
+export function useServiceWorkerStatus() {
+  return useSyncExternalStore(
+    subscribeToServiceWorkerStatus,
+    () => serviceWorkerStatusSnapshot,
+    () => serviceWorkerStatusSnapshot
+  );
+}
 
 export function ServiceWorkerRegistration() {
   const { toast } = useToast();
@@ -17,9 +55,11 @@ export function ServiceWorkerRegistration() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setIsOnline(window.navigator.onLine);
+    emitServiceWorkerStatus({ isOnline: window.navigator.onLine });
 
     const handleOnline = () => {
       setIsOnline(true);
+      emitServiceWorkerStatus({ isOnline: true });
       toast({
         title: 'Connection restored',
         description: 'Safeviate is back online and syncing live data again.',
@@ -28,6 +68,7 @@ export function ServiceWorkerRegistration() {
 
     const handleOffline = () => {
       setIsOnline(false);
+      emitServiceWorkerStatus({ isOnline: false });
       toast({
         title: 'Offline mode',
         description: 'You are offline. Cached Safeviate content remains available on this device.',
@@ -63,6 +104,7 @@ export function ServiceWorkerRegistration() {
       void unregisterDevelopmentWorkers().catch((error) => {
         console.warn('[service-worker] development cleanup failed', error);
       });
+      emitServiceWorkerStatus({ isPwaReady: false, updateReady: false });
       return;
     }
 
@@ -71,7 +113,9 @@ export function ServiceWorkerRegistration() {
     const markUpdateReady = (worker: ServiceWorker | null) => {
       if (!worker) return;
       waitingWorkerRef.current = worker;
+      waitingServiceWorkerRef = worker;
       setUpdateReady(true);
+      emitServiceWorkerStatus({ updateReady: true });
 
       if (!hasShownUpdateToastRef.current) {
         hasShownUpdateToastRef.current = true;
@@ -85,6 +129,7 @@ export function ServiceWorkerRegistration() {
     const registerServiceWorker = async () => {
       const registration = await navigator.serviceWorker.register('/sw.js');
       setIsPwaReady(true);
+      emitServiceWorkerStatus({ isPwaReady: true });
 
       if (registration.waiting) {
         markUpdateReady(registration.waiting);
@@ -123,51 +168,56 @@ export function ServiceWorkerRegistration() {
     waitingWorkerRef.current?.postMessage({ type: 'SKIP_WAITING' });
   };
 
+  return null;
+}
+
+export function ServiceWorkerStatusPanel() {
+  const { isOnline, isPwaReady, updateReady } = useServiceWorkerStatus();
+  const applyUpdate = () => requestServiceWorkerUpdate();
+
   const showStatusShell = updateReady || !isOnline || isPwaReady;
   if (!showStatusShell) {
     return null;
   }
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[120] flex max-w-[280px] flex-col gap-2">
-      <div className="pointer-events-auto rounded-lg border border-card-border bg-background/95 p-3 shadow-lg backdrop-blur">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant="outline"
-            className={isOnline ? 'border-emerald-300 text-emerald-700' : 'border-amber-300 text-amber-700'}
-          >
-            {isOnline ? <Wifi className="mr-1 h-3 w-3" /> : <WifiOff className="mr-1 h-3 w-3" />}
-            {isOnline ? 'Online' : 'Offline'}
+    <div className="space-y-2 rounded-2xl border border-sidebar-border/50 bg-[hsl(var(--sidebar-button-background)/0.6)] p-2 text-sidebar-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge
+          variant="outline"
+          className={isOnline ? 'h-5 border-emerald-300 px-2 text-[9px] font-black uppercase text-emerald-700' : 'h-5 border-amber-300 px-2 text-[9px] font-black uppercase text-amber-700'}
+        >
+          {isOnline ? <Wifi className="mr-1 h-2.5 w-2.5" /> : <WifiOff className="mr-1 h-2.5 w-2.5" />}
+          {isOnline ? 'Online' : 'Offline'}
+        </Badge>
+        {isPwaReady ? (
+          <Badge variant="outline" className="h-5 border-slate-300 px-2 text-[9px] font-black uppercase text-slate-700">
+            PWA Ready
           </Badge>
-          {isPwaReady ? (
-            <Badge variant="outline" className="border-slate-300 text-slate-700">
-              PWA Ready
-            </Badge>
-          ) : null}
-          {updateReady ? (
-            <Badge variant="outline" className="border-blue-300 text-blue-700">
-              Update Ready
-            </Badge>
-          ) : null}
-        </div>
-
-        <p className="mt-2 text-xs text-muted-foreground">
-          {updateReady
-            ? 'A new Safeviate build is ready on this device.'
-            : isOnline
-              ? 'Offline cache is active for supported Safeviate screens while your last signed-in session stays active on this device.'
-              : 'You are viewing Safeviate in offline mode from the local cache. If you sign out, a live connection is required before offline access will work again.'}
-        </p>
-
+        ) : null}
         {updateReady ? (
-          <div className="mt-3 flex justify-end">
-            <Button type="button" size="sm" className="h-8 gap-2" onClick={applyUpdate}>
-              <Download className="h-3.5 w-3.5" />
-              Update App
-            </Button>
-          </div>
+          <Badge variant="outline" className="h-5 border-blue-300 px-2 text-[9px] font-black uppercase text-blue-700">
+            Update Ready
+          </Badge>
         ) : null}
       </div>
+
+      <p className="text-[10px] leading-snug text-sidebar-foreground/80">
+        {updateReady
+          ? 'A new Safeviate build is ready on this device.'
+          : isOnline
+            ? 'Offline cache is active for supported Safeviate screens while your last signed-in session stays active on this device.'
+            : 'You are viewing Safeviate in offline mode from the local cache. If you sign out, a live connection is required before offline access will work again.'}
+      </p>
+
+      {updateReady ? (
+        <div className="flex justify-end">
+          <Button type="button" size="sm" className="h-6 gap-1.5 px-2 text-[9px] font-black uppercase tracking-[0.06em]" onClick={applyUpdate}>
+            <Download className="h-3 w-3" />
+            Update App
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

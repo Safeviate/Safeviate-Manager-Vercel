@@ -116,10 +116,15 @@ export async function DELETE(request: Request) {
     const reportId = body?.reportId;
     if (!reportId) return NextResponse.json({ error: 'Missing report id.' }, { status: 400 });
 
-    await prisma.$executeRawUnsafe(`DELETE FROM safety_reports WHERE id = $1 AND tenant_id = $2`, reportId, tenantId);
+    await prisma.$executeRawUnsafe(
+      `UPDATE safety_reports SET data = jsonb_set(data, '{status}', '"Archived"'::jsonb), updated_at = NOW()
+       WHERE id = $1 AND tenant_id = $2`,
+      reportId,
+      tenantId
+    );
     await recordSimulationRouteMetric({
       tenantId,
-      routeKey: 'safety-reports.DELETE',
+      routeKey: 'safety-reports.ARCHIVE',
       reads: 0,
       writes: 1,
       durationMs: Date.now() - startedAt,
@@ -135,6 +140,35 @@ export async function DELETE(request: Request) {
       durationMs: Date.now() - startedAt,
       isError: true,
     });
-    return NextResponse.json({ error: 'Failed to delete report.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to archive report.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const startedAt = Date.now();
+  let tenantId: string | null = null;
+  try {
+    tenantId = await getTenantId(request);
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await ensureSafetyReportsSchema();
+    const body = await request.json();
+    const reportId = body?.reportId;
+    const status = body?.status;
+    if (!reportId || !['Open', 'Closed', 'Under Review'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid report restore request.' }, { status: 400 });
+    }
+    await prisma.$executeRawUnsafe(
+      `UPDATE safety_reports SET data = jsonb_set(data, '{status}', to_jsonb($3::text)), updated_at = NOW()
+       WHERE id = $1 AND tenant_id = $2 AND data->>'status' = 'Archived'`,
+      reportId,
+      tenantId,
+      status
+    );
+    await recordSimulationRouteMetric({ tenantId, routeKey: 'safety-reports.RESTORE', reads: 0, writes: 1, durationMs: Date.now() - startedAt });
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error('[safety-reports] restore failed:', error);
+    await recordSimulationRouteMetric({ tenantId, routeKey: 'safety-reports.RESTORE', reads: 0, writes: 0, durationMs: Date.now() - startedAt, isError: true });
+    return NextResponse.json({ error: 'Failed to restore report.' }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -562,7 +562,7 @@ const getSafetyMetrics = (summary: SummaryPayload): SafetyMetrics => {
     .slice(0, 3)
     .map((report) => ({
       id: report.id,
-      title: `${report.reportNumber} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· ${report.reportType}`.trim(),
+      title: `${report.reportNumber} / ${report.reportType}`.trim(),
       status: report.status,
       dateLabel: format(new Date(report.submittedAt), 'dd MMM yyyy'),
       classification: report.eventClassification || 'Unclassified',
@@ -1483,7 +1483,7 @@ export default function DashboardPage() {
       .map((booking) => ({
         id: booking.bookingNumber || `${booking.aircraftId || 'booking'}-${booking.date || 'date'}`,
         title: booking.bookingNumber || booking.type || 'Booking',
-        subtitle: `${aircraftMap.get(booking.aircraftId || '') || 'Aircraft not set'} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· ${booking.type || 'Type not set'}`,
+        subtitle: `${aircraftMap.get(booking.aircraftId || '') || 'Aircraft not set'} / ${booking.type || 'Type not set'}`,
         meta: booking.date ? format(parseLocalDate(booking.date), 'dd MMM yyyy') : 'Date not set',
         status: booking.status || 'Planned',
       }));
@@ -2463,10 +2463,10 @@ function InstructorOverviewCard({
                 <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,0.95fr))] md:items-stretch">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black uppercase tracking-tight">
-                      {report.reportNumber} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.title || report.summary}
+                      {report.reportNumber} / {report.title || report.summary}
                     </p>
                     <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      {report.aircraftLabel || 'Aircraft not set'} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.location || 'Unknown location'}
+                      {report.aircraftLabel || 'Aircraft not set'} / {report.location || 'Unknown location'}
                     </p>
                   </div>
                   <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
@@ -2949,7 +2949,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black uppercase tracking-tight">{report.title}</p>
                       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                        {report.location} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.dateLabel}
+                        {report.location} / {report.dateLabel}
                       </p>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-3">
@@ -3015,7 +3015,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black uppercase tracking-tight">{report.aircraftLabel || 'Aircraft not set'}</p>
                         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          {report.reportNumber} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÂ· {report.title || report.summary}
+                          {report.reportNumber} / {report.title || report.summary}
                         </p>
                       </div>
                       <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
@@ -3110,18 +3110,12 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
           <QualityIcon className="h-4 w-4 text-blue-600" />
           <CardTitle className="text-sm font-black uppercase tracking-tight">Quality Snapshot</CardTitle>
         </div>
-        <CardDescription className="text-xs">
-          Audit progress, open findings, and corrective action flow for the current tenant.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
         <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
           <div className="rounded-md border bg-background p-3 xl:col-span-2 2xl:col-span-3">
             <div className="mb-3 min-w-0">
               <p className="text-[13px] font-bold leading-none text-foreground/90">Quality Snapshot</p>
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
-                Audit progress, findings, and corrective action pressure.
-              </p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <StatTile label="Open Audits" value={String(metrics.openAudits)} hint="Audits not yet closed" />
@@ -3137,9 +3131,6 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-foreground/90">Recent Audits</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
-                  Latest audit activity and compliance score.
-                </p>
               </div>
               <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.recentAudits} recent
@@ -3185,9 +3176,6 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-foreground/90">Quality Quick Read</p>
-                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
-                  Audit and corrective action flow.
-                </p>
               </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -3207,11 +3195,6 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={cn(qualityPanelClass, 'border-amber-200 bg-amber-50/70')}>
               <div className="border-b border-amber-200 bg-amber-50/90 px-4 py-3">
                 <p className="text-[13px] font-bold leading-none text-amber-900">Corrective Action Attention Required</p>
-                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-amber-800/90">
-                  {metrics.overdueCaps > 0
-                    ? `${metrics.overdueCaps} overdue corrective action${metrics.overdueCaps === 1 ? '' : 's'} need follow-up.`
-                    : `${metrics.dueSoonCaps} corrective action${metrics.dueSoonCaps === 1 ? '' : 's'} are due soon.`}
-                </p>
               </div>
               <div className="flex min-h-0 flex-1 flex-col justify-between gap-4 px-4 py-4">
                 <div className="space-y-3">
@@ -3230,9 +3213,6 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-foreground/90">Upcoming Audits</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
-                  Scheduled audits waiting to be started.
-                </p>
               </div>
               <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.upcomingAuditRows.length} shown
@@ -3266,9 +3246,6 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-foreground/90">Upcoming CAP Deadlines</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
-                  Actions due in the next 30 days.
-                </p>
               </div>
               <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.upcomingCapRows.length} shown
@@ -3308,9 +3285,6 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={qualityPanelHeaderClass}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-foreground/90">New Corrective Actions</p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/90">
-                  Recently opened CAP actions and plans.
-                </p>
               </div>
               <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
                 {metrics.recentCapRows.length} shown

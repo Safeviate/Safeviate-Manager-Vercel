@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles } from 'lucide-react';
+import { PlusCircle, Clock, MapPin, User, ArrowRight, Loader2, WandSparkles, ArchiveRestore } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +33,7 @@ import type { GenerateSafetyProtocolRecommendationsOutput } from '@/ai/flows/gen
 import { CARD_HEADER_BAND_CLASS, HEADER_COMPACT_CONTROL_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow } from '@/components/responsive-tab-row';
-import { DeleteActionButton, ViewActionButton } from '@/components/record-action-buttons';
+import { ArchiveActionButton, ViewActionButton } from '@/components/record-action-buttons';
 import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { dispatchSafeviateEvent, SAFEVIATE_QUICK_SAFETY_REPORTS_UPDATED, SAFEVIATE_SAFETY_REPORTS_UPDATED } from '@/lib/client-events';
 import { usePageLayout } from '@/hooks/use-page-layout';
@@ -87,7 +87,7 @@ const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destr
     }
 };
 
-function DeleteReportButton({ reportId, reportNumber }: { reportId: string, reportNumber: string }) {
+function ArchiveReportButton({ reportId, reportNumber }: { reportId: string, reportNumber: string }) {
     const { toast } = useToast();
     const { hasPermission } = usePermissions();
 
@@ -107,14 +107,14 @@ function DeleteReportButton({ reportId, reportNumber }: { reportId: string, repo
             throw new Error(payload?.error || 'Unable to delete this report right now.');
         }
         dispatchSafeviateEvent(SAFEVIATE_SAFETY_REPORTS_UPDATED);
-        toast({ title: 'Report Deleted', description: `Safety Report #${reportNumber} is being deleted.` });
+        toast({ title: 'Report Archived', description: `Safety Report #${reportNumber} can be recalled from Archived.` });
     };
 
     return (
-        <DeleteActionButton
-            description={`This will permanently delete safety report #${reportNumber}. This action cannot be undone.`}
-            onDelete={handleDelete}
-            srLabel="Delete report"
+        <ArchiveActionButton
+            description={`Safety Report #${reportNumber} will be moved to Archived. It will not be deleted and can be recalled later.`}
+            onArchive={handleDelete}
+            srLabel="Archive report"
         />
     );
 }
@@ -132,6 +132,21 @@ interface QuickSafetyInboxProps {
     classifyingReportId: string | null;
     onClassify: (report: QuickSafetyReport) => Promise<void>;
     onDelete: (report: QuickSafetyReport) => Promise<void>;
+}
+
+function RecallReportButton({ reportId, reportNumber }: { reportId: string; reportNumber: string }) {
+    const { toast } = useToast();
+    const handleRecall = async () => {
+        const response = await fetch('/api/safety-reports', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reportId, status: 'Open' }),
+        });
+        if (!response.ok) throw new Error('Unable to recall this report right now.');
+        dispatchSafeviateEvent(SAFEVIATE_SAFETY_REPORTS_UPDATED);
+        toast({ title: 'Report Recalled', description: `Safety Report #${reportNumber} is active again.` });
+    };
+    return <Button type="button" variant="outline" size="icon" className="h-8 w-8 border-slate-300" onClick={() => void handleRecall()} aria-label={`Recall report ${reportNumber}`}><ArchiveRestore className="h-3.5 w-3.5" /></Button>;
 }
 
 interface TechnicalIntakeProps {
@@ -206,7 +221,11 @@ function ReportsTable({ reports, tenantId, canManage, currentUserEmail }: Report
                         {canManage && (
                             <div className="flex gap-1">
                                 <EditReportDialog report={report} tenantId={tenantId} />
-                                <DeleteReportButton reportId={report.id} reportNumber={report.reportNumber} />
+                                {report.status === 'Archived' ? (
+                                    <RecallReportButton reportId={report.id} reportNumber={report.reportNumber} />
+                                ) : (
+                                    <ArchiveReportButton reportId={report.id} reportNumber={report.reportNumber} />
+                                )}
                             </div>
                         )}
                     </div>
@@ -306,11 +325,10 @@ function QuickSafetyInbox({ reports, canManage, classifyingReportId, onClassify,
                                             {classifyingReportId === report.id ? 'Classifying...' : 'Classify into Safety'}
                                             <ArrowRight className="ml-2 h-3.5 w-3.5" />
                                         </Button>
-                                        <DeleteActionButton
-                                            description={`This will permanently delete preliminary safety report #${report.reportNumber}. This action cannot be undone.`}
-                                            onDelete={() => void onDelete(report)}
-                                            srLabel={`Delete preliminary safety report ${report.reportNumber}`}
-                                            iconOnly={false}
+                                        <ArchiveActionButton
+                                            description={`Preliminary safety report #${report.reportNumber} will be archived and can be recalled later.`}
+                                            onArchive={() => void onDelete(report)}
+                                            srLabel={`Archive preliminary safety report ${report.reportNumber}`}
                                         />
                                     </div>
                                 ) : (
@@ -502,6 +520,7 @@ export default function SafetyReportsPage() {
   const [isLoadingReports, setIsLoadingReports] = useState(true);
   const [classifyingQuickReportId, setClassifyingQuickReportId] = useState<string | null>(null);
   const [reportSortOrder, setReportSortOrder] = useState<ReportSortOrder>('newest');
+  const [reportView, setReportView] = useState<'active' | 'archived'>('active');
 
   const canManageAll = hasPermission('safety-reports-manage');
   function isCurrentTenantRecord(record: { tenantId?: string | null }) {
@@ -738,7 +757,8 @@ export default function SafetyReportsPage() {
 
   const renderOrgCard = (orgId: string | 'internal') => {
     const filteredReports = [...((allReports || []).filter(r =>
-        orgId === 'internal' ? !r.organizationId : r.organizationId === orgId
+        (orgId === 'internal' ? !r.organizationId : r.organizationId === orgId) &&
+        (reportView === 'archived' ? r.status === 'Archived' : r.status !== 'Archived')
     ))].sort((left, right) => {
         const leftDate = parseLocalDate(left.eventDate).getTime();
         const rightDate = parseLocalDate(right.eventDate).getTime();
@@ -790,6 +810,15 @@ export default function SafetyReportsPage() {
                             )}
                         </div>
                         <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                            <Select value={reportView} onValueChange={(value: 'active' | 'archived') => setReportView(value)}>
+                                <SelectTrigger className={cn(HEADER_COMPACT_CONTROL_CLASS, 'h-[25px] min-h-[25px] w-full border-slate-200 bg-white px-2 text-[10px] font-black uppercase tracking-[0.08em] text-slate-900 sm:w-[120px]')} aria-label="Filter archived safety reports">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="archived">Archived</SelectItem>
+                                </SelectContent>
+                            </Select>
                             <Select value={reportSortOrder} onValueChange={(value: ReportSortOrder) => setReportSortOrder(value)}>
                                 <SelectTrigger
                                     className={cn(

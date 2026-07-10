@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { Archive, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -115,6 +115,29 @@ export function DeleteActionButton({
           <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
             Delete
           </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export function ArchiveActionButton({ description, onArchive, srLabel = 'Archive' }: { description: string; onArchive: () => void; srLabel?: string }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="icon" className="h-8 w-8 border-amber-300 text-amber-700 hover:bg-amber-50">
+          <Archive className="h-3.5 w-3.5" />
+          <span className="sr-only">{srLabel}</span>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Archive this record?</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onArchive}>Archive</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
