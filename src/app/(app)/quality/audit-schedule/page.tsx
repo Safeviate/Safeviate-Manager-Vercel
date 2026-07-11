@@ -14,12 +14,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -119,6 +113,7 @@ interface AreaActionsProps {
 function AreaActions({ area, canEdit, canDelete, onEdit, onArchive }: AreaActionsProps) {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [newName, setNewName] = useState(area);
     const [reason, setReason] = useState('');
 
@@ -145,8 +140,8 @@ function AreaActions({ area, canEdit, canDelete, onEdit, onArchive }: AreaAction
     return (
         <>
             {canEdit || canDelete ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                <PopoverTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -155,20 +150,20 @@ function AreaActions({ area, canEdit, canDelete, onEdit, onArchive }: AreaAction
                   >
                     <Menu className="h-3.5 w-3.5" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                </PopoverTrigger>
+                <PopoverContent align="end" side="bottom" sideOffset={6} className="z-[70] w-32 p-1">
                   {canEdit ? (
-                    <DropdownMenuItem className="cursor-pointer" onSelect={() => setIsEditOpen(true)}>
+                    <Button variant="ghost" size="sm" className="h-8 w-full justify-start text-xs" onClick={() => { setIsMenuOpen(false); setIsEditOpen(true); }}>
                       <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
-                    </DropdownMenuItem>
+                    </Button>
                   ) : null}
                   {canDelete ? (
-                    <DropdownMenuItem className="cursor-pointer text-amber-700" onSelect={() => { setReason(''); setIsArchiveOpen(true); }}>
+                    <Button variant="ghost" size="sm" className="h-8 w-full justify-start text-xs text-amber-700 hover:text-amber-800" onClick={() => { setIsMenuOpen(false); setReason(''); setIsArchiveOpen(true); }}>
                       <Archive className="mr-2 h-3.5 w-3.5" /> Archive
-                    </DropdownMenuItem>
+                    </Button>
                   ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </PopoverContent>
+              </Popover>
             ) : null}
             
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
