@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { ensureActivityLogsSchema } from '@/lib/server/bootstrap-db';
 
-export type ActivityLogAction = 'created' | 'updated' | 'deleted';
+export type ActivityLogAction = 'created' | 'updated' | 'deleted' | 'archived' | 'restored' | 'submitted' | 'approved' | 'rejected' | 'published' | 'overridden';
 
 export type ActivityLogEntry = {
   tenantId: string;
@@ -29,10 +29,13 @@ export type ActivityLogRow = {
   createdAt: string;
 };
 
-export async function recordActivityLog(entry: ActivityLogEntry) {
+export async function recordActivityLog(
+  entry: ActivityLogEntry,
+  executor: Pick<typeof prisma, '$executeRawUnsafe'> = prisma
+) {
   await ensureActivityLogsSchema();
 
-  await prisma.$executeRawUnsafe(
+  await executor.$executeRawUnsafe(
     `
       INSERT INTO activity_logs (
         id,
@@ -110,4 +113,3 @@ export async function listActivityLogs(
     details: row.details && typeof row.details === 'object' ? row.details : null,
   }));
 }
-

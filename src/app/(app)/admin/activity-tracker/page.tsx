@@ -13,7 +13,7 @@ type ActivityLogRow = {
   id: string;
   tenantId: string;
   scope: string;
-  action: 'created' | 'updated' | 'deleted';
+  action: 'created' | 'updated' | 'deleted' | 'archived' | 'restored' | 'submitted' | 'approved' | 'rejected' | 'published' | 'overridden';
   entityType: string;
   entityId: string;
   entityLabel: string;
@@ -111,7 +111,7 @@ export default function ActivityTrackerPage() {
         acc[log.action] += 1;
         return acc;
       },
-      { created: 0, updated: 0, deleted: 0 }
+      { created: 0, updated: 0, deleted: 0, archived: 0, restored: 0, submitted: 0, approved: 0, rejected: 0, published: 0, overridden: 0 }
     );
   }, [logs]);
 
@@ -132,10 +132,10 @@ export default function ActivityTrackerPage() {
     <div className="mx-auto w-full max-w-[1200px] space-y-6 px-1">
       <MainPageHeader
         title="Activity Tracker"
-        description="Barry-only audit schedule change history for created, updated, and deleted items."
+        description="Barry-only audit schedule history for created, updated, archived, and restored items."
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border shadow-none">
           <CardHeader className="space-y-1 pb-3">
             <CardDescription className="text-[10px] font-black uppercase tracking-widest">Created</CardDescription>
@@ -150,8 +150,14 @@ export default function ActivityTrackerPage() {
         </Card>
         <Card className="border shadow-none">
           <CardHeader className="space-y-1 pb-3">
-            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Deleted</CardDescription>
-            <CardTitle className="text-2xl font-black">{groupedCounts.deleted}</CardTitle>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Archived</CardDescription>
+            <CardTitle className="text-2xl font-black">{groupedCounts.archived}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border shadow-none">
+          <CardHeader className="space-y-1 pb-3">
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Restored</CardDescription>
+            <CardTitle className="text-2xl font-black">{groupedCounts.restored}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -162,7 +168,7 @@ export default function ActivityTrackerPage() {
             <div className="space-y-1">
               <CardTitle className="text-sm font-black uppercase tracking-[-0.01em]">Audit Schedule Changes</CardTitle>
               <CardDescription className="text-[10px] font-bold uppercase tracking-widest italic">
-                Records written when audit areas or schedule items are added, updated, or removed.
+                Records written when audit areas or schedule items are created, updated, archived, or restored.
               </CardDescription>
             </div>
             <Badge variant="outline" className="h-6 rounded-full px-2 text-[10px] font-black uppercase">
@@ -196,7 +202,7 @@ export default function ActivityTrackerPage() {
 
                     <div className="space-y-2">
                       <Badge
-                        variant={log.action === 'deleted' ? 'destructive' : log.action === 'updated' ? 'secondary' : 'default'}
+                        variant={log.action === 'deleted' ? 'destructive' : log.action === 'archived' ? 'secondary' : log.action === 'updated' ? 'secondary' : 'default'}
                         className="h-6 rounded-full px-2 text-[10px] font-black uppercase"
                       >
                         {log.action}

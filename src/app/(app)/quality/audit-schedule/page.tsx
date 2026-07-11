@@ -14,15 +14,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -37,9 +33,13 @@ import { Label } from '@/components/ui/label';
 import {
   Pencil,
   PlusCircle,
-  Trash2,
+  Archive,
   ChevronDown,
   ArchiveRestore,
+  Menu,
+  ClipboardCheck,
+  Check,
+  X,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -63,6 +63,14 @@ const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
+
+type ScheduleChangeRequest = {
+  id: string;
+  action: string;
+  payload: Record<string, unknown>;
+  requestedByEmail: string;
+  requestedAt: string;
+};
 
 const getStatusBadgeClass = (status: AuditScheduleStatus): string => {
     switch (status) {
@@ -104,65 +112,64 @@ interface AreaActionsProps {
     area: string;
     canEdit: boolean;
     canDelete: boolean;
-    onEdit: (oldName: string, newName: string) => void;
-    onDelete: (areaName: string) => void;
+    onEdit: (oldName: string, newName: string, reason: string) => void;
+    onArchive: (areaName: string, reason: string) => void;
 }
 
-function AreaActions({ area, canEdit, canDelete, onEdit, onDelete }: AreaActionsProps) {
+function AreaActions({ area, canEdit, canDelete, onEdit, onArchive }: AreaActionsProps) {
     const [isEditOpen, setIsEditOpen] = useState(false);
-    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isArchiveOpen, setIsArchiveOpen] = useState(false);
     const [newName, setNewName] = useState(area);
+    const [reason, setReason] = useState('');
 
     useEffect(() => {
         if (isEditOpen) {
             setNewName(area);
+            setReason('');
         }
     }, [isEditOpen, area]);
 
     const handleSave = () => {
         if (newName.trim() && newName.trim() !== area) {
-            onEdit(area, newName.trim());
+            onEdit(area, newName.trim(), reason.trim());
         }
         setIsEditOpen(false);
     }
 
-    const handleDeleteConfirm = () => {
-        onDelete(area);
-        setIsDeleteOpen(false);
+    const handleArchiveConfirm = () => {
+        if (!reason.trim()) return;
+        onArchive(area, reason.trim());
+        setIsArchiveOpen(false);
     }
     
     return (
         <>
-            <div className="flex items-center gap-1">
-                {canEdit ? (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsEditOpen(true)}
-                        className={cn(
-                            HEADER_COMPACT_CONTROL_CLASS,
-                            "h-6 border-white/20 bg-white/10 px-2 text-[8px] font-black text-white hover:bg-white/20"
-                        )}
-                    >
-                        <Pencil className="mr-1 h-3 w-3" />
-                        Edit
-                    </Button>
-                ) : null}
-                {canDelete ? (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsDeleteOpen(true)}
-                        className={cn(
-                            HEADER_COMPACT_CONTROL_CLASS,
-                            "h-6 border-white/20 bg-transparent px-2 text-[8px] font-black text-white hover:bg-white/10"
-                        )}
-                    >
-                        <Trash2 className="mr-1 h-3 w-3" />
-                        Archive
-                    </Button>
-                ) : null}
-            </div>
+            {canEdit || canDelete ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0 border border-white/20 bg-white/10 p-0 text-white hover:bg-white/20"
+                    aria-label={`Open actions for ${area}`}
+                  >
+                    <Menu className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canEdit ? (
+                    <DropdownMenuItem className="cursor-pointer" onSelect={() => setIsEditOpen(true)}>
+                      <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canDelete ? (
+                    <DropdownMenuItem className="cursor-pointer text-amber-700" onSelect={() => { setReason(''); setIsArchiveOpen(true); }}>
+                      <Archive className="mr-2 h-3.5 w-3.5" /> Archive
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
             
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DialogContent>
@@ -173,30 +180,36 @@ function AreaActions({ area, canEdit, canDelete, onEdit, onDelete }: AreaActions
                     <div className="py-4">
                         <Label htmlFor="area-name">Area Name</Label>
                         <Input id="area-name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                        <Label className="mt-3 block" htmlFor="area-rename-reason">Reason for change</Label>
+                        <Input id="area-rename-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this audit area being renamed?" />
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button onClick={handleSave}>Save Changes</Button>
+                        <Button onClick={handleSave} disabled={!reason.trim()}>Save Changes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-             <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Archive audit area?</AlertDialogTitle>
-                        <AlertDialogDescription>
+             <Dialog open={isArchiveOpen} onOpenChange={setIsArchiveOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Archive audit area?</DialogTitle>
+                        <DialogDescription>
                             This moves "{area}" and its schedule entries to Archived. They can be restored later.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 py-2">
+                      <Label htmlFor="area-archive-reason">Reason for archive</Label>
+                      <Input id="area-archive-reason" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why is this area being archived?" />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button onClick={handleArchiveConfirm} disabled={!reason.trim()} variant="destructive">
                             Archive
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
@@ -210,13 +223,17 @@ export default function AuditSchedulePage() {
   const currentMonthIdx = new Date().getMonth();
   const canCreateAuditSchedule = hasPermission('quality-audit-schedule-create');
   const canEditAuditSchedule = hasPermission('quality-audit-schedule-edit');
-  const canDeleteAuditSchedule = hasPermission('quality-audit-schedule-delete');
+  const canDeleteAuditSchedule = hasPermission('quality-audit-schedule-archive') || hasPermission('quality-audit-schedule-delete');
+  const canApproveAuditSchedule = hasPermission('quality-audit-schedule-approve');
 
   const [auditAreas, setAuditAreas] = useState<string[]>(INITIAL_AUDIT_AREAS);
   const [schedule, setSchedule] = useState<AuditScheduleItem[]>([]);
   const [archivedAreas, setArchivedAreas] = useState<string[]>([]);
   const [archivedSchedule, setArchivedSchedule] = useState<AuditScheduleItem[]>([]);
+  const [revision, setRevision] = useState(1);
+  const [pendingChanges, setPendingChanges] = useState<ScheduleChangeRequest[]>([]);
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
+  const [isChangesOpen, setIsChangesOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
@@ -231,6 +248,8 @@ export default function AuditSchedulePage() {
         if (Array.isArray(payload.items)) setSchedule((payload.items as AuditScheduleItem[]).filter(i => i.year === currentYear));
         if (Array.isArray(payload.archivedAreas)) setArchivedAreas(payload.archivedAreas);
         if (Array.isArray(payload.archivedItems)) setArchivedSchedule(payload.archivedItems as AuditScheduleItem[]);
+        if (Number.isSafeInteger(payload.revision) && payload.revision > 0) setRevision(payload.revision);
+        if (Array.isArray(payload.pendingChanges)) setPendingChanges(payload.pendingChanges as ScheduleChangeRequest[]);
     } catch (e) {
         console.error("Failed to load audit schedule", e);
     } finally {
@@ -248,37 +267,31 @@ export default function AuditSchedulePage() {
     return <TenantLayoutDisabledState />;
   }
 
+  const runScheduleAction = async (action: string, payload: Record<string, unknown>) => {
+    const response = await fetch('/api/audit-schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, revision, ...payload }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 409) await loadData();
+      throw new Error(typeof result.error === 'string' ? result.error : 'Unable to update the audit schedule.');
+    }
+    await loadData();
+    window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+    return result as { pending?: boolean };
+  };
+
   const handleStatusChange = async (area: string, month: string, status: AuditScheduleStatus) => {
     if (!canEditAuditSchedule && !canCreateAuditSchedule) return;
     setOpenPopoverId(null);
     try {
-        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
-        const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
-        const existingIdx = items.findIndex(item => item.area === area && item.month === month && item.year === currentYear);
-
-        let nextItems: AuditScheduleItem[];
-        if (existingIdx > -1) {
-            nextItems = [...items];
-            nextItems[existingIdx] = { ...nextItems[existingIdx], status };
-        } else {
-            nextItems = [...items, {
-                id: crypto.randomUUID(),
-                area,
-                month,
-                year: currentYear,
-                status,
-            }];
-        }
-
-        await fetch('/api/audit-schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ areas: auditAreas, items: nextItems, archivedAreas: payload.archivedAreas || [], archivedItems: payload.archivedItems || [] }),
-        });
-        window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+        const result = await runScheduleAction('set-status', { area, month, year: currentYear, status });
+        if (result.pending) window.alert('Your schedule change has been submitted for approval.');
     } catch (e) {
         console.error("Failed to update status", e);
+        window.alert(e instanceof Error ? e.message : 'Unable to update the audit schedule.');
     }
   };
 
@@ -286,86 +299,63 @@ export default function AuditSchedulePage() {
     if (!canCreateAuditSchedule) return;
     const trimmed = newAreaName.trim();
     if (trimmed && !auditAreas.includes(trimmed)) {
-        const nextAreas = [...auditAreas, trimmed];
-        setAuditAreas(nextAreas);
-        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
-        await fetch('/api/audit-schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ areas: nextAreas, items: payload.items || [], archivedAreas: payload.archivedAreas || [], archivedItems: payload.archivedItems || [] }),
-        });
+        try {
+          const result = await runScheduleAction('add-area', { area: trimmed });
+          if (result.pending) window.alert('Your audit area request has been submitted for approval.');
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'Unable to add the audit area.');
+          return;
+        }
     }
     setNewAreaName('');
     setIsAddAreaOpen(false);
   }
 
-  const handleEditArea = async (oldName: string, newName: string) => {
+  const handleEditArea = async (oldName: string, newName: string, reason: string) => {
     if (!canEditAuditSchedule) return;
-    const nextAreas = auditAreas.map(area => area === oldName ? newName : area);
-    setAuditAreas(nextAreas);
     try {
-        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
-        const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
-        const nextItems = items.map(item => item.area === oldName ? { ...item, area: newName } : item);
-        await fetch('/api/audit-schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ areas: nextAreas, items: nextItems, archivedAreas: payload.archivedAreas || [], archivedItems: payload.archivedItems || [] }),
-        });
-        window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+        const result = await runScheduleAction('rename-area', { area: oldName, newArea: newName, reason });
+        if (result.pending) window.alert('Your rename request has been submitted for approval.');
     } catch (e) {
         console.error("Failed to rename area items", e);
+        window.alert(e instanceof Error ? e.message : 'Unable to rename the audit area.');
     }
   }
 
-  const handleDeleteArea = async (areaToDelete: string) => {
+  const handleDeleteArea = async (areaToDelete: string, reason: string) => {
     if (!canDeleteAuditSchedule) return;
-    const nextAreas = auditAreas.filter(area => area !== areaToDelete);
-    setAuditAreas(nextAreas);
     try {
-        const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ items: [], archivedAreas: [], archivedItems: [] }));
-        const items = Array.isArray(payload.items) ? (payload.items as AuditScheduleItem[]) : [];
-        const nextItems = items.filter(item => item.area !== areaToDelete);
-        await fetch('/api/audit-schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            areas: nextAreas,
-            items: nextItems,
-            archivedAreas: Array.from(new Set([...(payload.archivedAreas || []), areaToDelete])),
-            archivedItems: [...(payload.archivedItems || []), ...items.filter(item => item.area === areaToDelete)],
-          }),
-        });
-        window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+        const result = await runScheduleAction('archive-area', { area: areaToDelete, reason });
+        if (result.pending) window.alert('Your archive request has been submitted for approval.');
     } catch (e) {
-        console.error("Failed to delete area items", e);
+        console.error("Failed to archive area items", e);
+        window.alert(e instanceof Error ? e.message : 'Unable to archive the audit area.');
     }
   }
 
   const handleRestoreArea = async (areaToRestore: string) => {
     if (!canDeleteAuditSchedule) return;
+    const reason = window.prompt(`Why is "${areaToRestore}" being restored?`);
+    if (!reason?.trim()) return;
     try {
-      const response = await fetch('/api/audit-schedule', { cache: 'no-store' });
-      const payload = await response.json().catch(() => ({ areas: [], items: [], archivedAreas: [], archivedItems: [] }));
-      const activeAreas = Array.isArray(payload.areas) ? payload.areas : [];
-      const activeItems = Array.isArray(payload.items) ? payload.items as AuditScheduleItem[] : [];
-      const storedArchivedItems = Array.isArray(payload.archivedItems) ? payload.archivedItems as AuditScheduleItem[] : [];
-      await fetch('/api/audit-schedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          areas: Array.from(new Set([...activeAreas, areaToRestore])),
-          items: [...activeItems, ...storedArchivedItems.filter((item) => item.area === areaToRestore)],
-          archivedAreas: (payload.archivedAreas || []).filter((area: string) => area !== areaToRestore),
-          archivedItems: storedArchivedItems.filter((item) => item.area !== areaToRestore),
-        }),
-      });
-      window.dispatchEvent(new Event('safeviate-audit-schedule-updated'));
+      const result = await runScheduleAction('restore-area', { area: areaToRestore, reason: reason.trim() });
+      if (result.pending) window.alert('Your restore request has been submitted for approval.');
     } catch (error) {
       console.error('Failed to restore audit area', error);
+      window.alert(error instanceof Error ? error.message : 'Unable to restore the audit area.');
+    }
+  };
+
+  const handleChangeDecision = async (requestId: string, decision: 'approve-change' | 'reject-change') => {
+    const reason = decision === 'reject-change'
+      ? window.prompt('Reason for rejecting this schedule change?')
+      : window.prompt('Approval note (optional):') || '';
+    const decisionReason = reason?.trim() || '';
+    if (decision === 'reject-change' && !decisionReason) return;
+    try {
+      await runScheduleAction(decision, { requestId, reason: decisionReason });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Unable to process the change request.');
     }
   };
 
@@ -391,6 +381,9 @@ export default function AuditSchedulePage() {
                 title="Annual Audit Schedule"
                 actions={
                     <div className="flex items-center gap-2">
+                      {canApproveAuditSchedule ? <Button variant="outline" size="sm" onClick={() => setIsChangesOpen(true)} className={HEADER_COMPACT_CONTROL_CLASS}>
+                        <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" /> Changes ({pendingChanges.length})
+                      </Button> : null}
                       {canDeleteAuditSchedule ? <Button variant="outline" size="sm" onClick={() => setIsArchivedOpen(true)} className={HEADER_COMPACT_CONTROL_CLASS}>
                         <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" /> Archived ({archivedAreas.length})
                       </Button> : null}
@@ -427,6 +420,36 @@ export default function AuditSchedulePage() {
                       </Button>
                     </div>
                   )) : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No archived audit schedule areas.</p>}
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={isChangesOpen} onOpenChange={setIsChangesOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Pending Schedule Changes</DialogTitle>
+                  <DialogDescription>Approve to apply the requested change to the current schedule, or reject it with a reason.</DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+                  {pendingChanges.length ? pendingChanges.map((change) => (
+                    <div key={change.id} className="space-y-3 rounded-lg border p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold capitalize">{change.action.replace(/-/g, ' ')}</p>
+                          <p className="text-xs text-muted-foreground">Requested by {change.requestedByEmail}</p>
+                        </div>
+                        <Badge variant="secondary" className="capitalize">Pending</Badge>
+                      </div>
+                      <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                        {Object.entries(change.payload).filter(([key, value]) => key !== 'action' && value !== undefined && value !== '').map(([key, value]) => (
+                          <p key={key}><span className="font-semibold capitalize text-foreground">{key.replace(/([A-Z])/g, ' $1')}: </span>{String(value)}</p>
+                        ))}
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => void handleChangeDecision(change.id, 'reject-change')}><X className="mr-1.5 h-3.5 w-3.5" /> Reject</Button>
+                        <Button size="sm" onClick={() => void handleChangeDecision(change.id, 'approve-change')}><Check className="mr-1.5 h-3.5 w-3.5" /> Approve</Button>
+                      </div>
+                    </div>
+                  )) : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No schedule changes are awaiting approval.</p>}
                 </div>
               </DialogContent>
             </Dialog>
@@ -474,10 +497,10 @@ export default function AuditSchedulePage() {
                                         </span>
                                         <AreaActions
                                           area={area}
-                                          canEdit={canEditAuditSchedule && canCreateAuditSchedule && canDeleteAuditSchedule}
+                                          canEdit={canEditAuditSchedule}
                                           canDelete={canDeleteAuditSchedule}
                                           onEdit={handleEditArea}
-                                          onDelete={handleDeleteArea}
+                                          onArchive={handleDeleteArea}
                                         />
                                     </div>
                                     {MONTHS.map((month, idx) => {

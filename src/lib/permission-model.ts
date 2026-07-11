@@ -1,4 +1,4 @@
-export type PermissionTier = 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'sign' | 'export' | 'manage';
+export type PermissionTier = 'view' | 'create' | 'edit' | 'delete' | 'archive' | 'approve' | 'sign' | 'export' | 'manage';
 
 export type CanonicalPermission = {
   resource: string;
@@ -34,6 +34,7 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
 
   'quality-audit-schedule-view': { resource: 'quality-audit-schedule', tier: 'view' },
   'quality-audit-schedule-edit': { resource: 'quality-audit-schedule', tier: 'edit' },
+  'quality-audit-schedule-archive': { resource: 'quality-audit-schedule', tier: 'archive' },
   'quality-audit-schedule-manage': { resource: 'quality-audit-schedule', tier: 'manage' },
 
   'quality-caps-view': { resource: 'quality-caps', tier: 'view' },
@@ -78,7 +79,7 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'users-delete': { resource: 'users', tier: 'delete' },
 };
 
-const CANONICAL_PERMISSION_PATTERN = /^(.*)-(view|create|edit|delete|approve|sign|export|manage)$/;
+const CANONICAL_PERMISSION_PATTERN = /^(.*)-(view|create|edit|delete|archive|approve|sign|export|manage)$/;
 
 export function parseCanonicalPermission(permissionId: string): CanonicalPermission | null {
   const legacy = LEGACY_TO_CANONICAL[permissionId];

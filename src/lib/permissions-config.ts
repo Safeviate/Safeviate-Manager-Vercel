@@ -1,4 +1,4 @@
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'sign' | 'export';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'archive' | 'approve' | 'sign' | 'export';
 
 export type PermissionResource = {
   id: string;
@@ -40,7 +40,8 @@ export const permissionsConfig: PermissionResource[] = [
 
   { id: 'quality', name: 'Quality', actions: ['view'] },
   { id: 'quality-audits', name: 'Audits', actions: [...CRUD_ACTIONS, 'sign'] },
-  { id: 'quality-audit-schedule', name: 'Audit Schedule', actions: CRUD_ACTIONS },
+  // Audit schedules are recovered through archive/restore, not hard deletion.
+  { id: 'quality-audit-schedule', name: 'Audit Schedule', actions: ['view', 'create', 'edit', 'archive', 'approve'] },
   { id: 'quality-templates', name: 'Quality Templates', actions: CRUD_ACTIONS, hidden: true },
   { id: 'quality-caps', name: 'Quality CAPs', actions: CRUD_ACTIONS, hidden: true },
   { id: 'quality-tasks', name: 'Task Tracker', actions: ['view'] },

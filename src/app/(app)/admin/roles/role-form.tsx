@@ -288,7 +288,7 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
               ) : null}
             </div>
             <p className="px-1 text-xs text-muted-foreground">
-              View reads records. Create adds records. Edit changes records. Delete removes or archives records. Specialist actions such as Approve, Sign, and Export remain separate.
+              View reads records. Create adds records. Edit changes records. Delete removes records where permitted; Archive retains recoverable records. Specialist actions such as Approve, Sign, and Export remain separate.
             </p>
           </div>
           <ScrollArea className="mt-2 h-[min(60vh,36rem)] w-full rounded-md border">
