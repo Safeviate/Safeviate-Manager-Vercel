@@ -20,14 +20,15 @@ type ViewActionButtonProps = {
   href?: string;
   onClick?: () => void;
   label?: string;
+  iconOnly?: boolean;
 };
 
-export function ViewActionButton({ href, onClick, label = 'View' }: ViewActionButtonProps) {
+export function ViewActionButton({ href, onClick, label = 'View', iconOnly = false }: ViewActionButtonProps) {
   const isMobile = useIsMobile();
   const content = (
     <>
       <Eye className="h-4 w-4" />
-      {isMobile ? <span className="sr-only">{label}</span> : <span>{label}</span>}
+      {isMobile || iconOnly ? <span className="sr-only">{label}</span> : <span>{label}</span>}
     </>
   );
 
@@ -36,8 +37,8 @@ export function ViewActionButton({ href, onClick, label = 'View' }: ViewActionBu
       <Button
         asChild
         variant="outline"
-        size={isMobile ? "icon" : "compact"}
-        className={isMobile ? "h-8 w-8 border-slate-300 p-0" : "border-slate-300"}
+        size={isMobile || iconOnly ? "icon" : "compact"}
+        className={isMobile || iconOnly ? "h-8 w-8 border-slate-300 p-0" : "border-slate-300"}
       >
         <Link href={href}>{content}</Link>
       </Button>
@@ -47,8 +48,8 @@ export function ViewActionButton({ href, onClick, label = 'View' }: ViewActionBu
   return (
     <Button
       variant="outline"
-      size={isMobile ? "icon" : "compact"}
-      className={isMobile ? "h-8 w-8 border-slate-300 p-0" : "border-slate-300"}
+      size={isMobile || iconOnly ? "icon" : "compact"}
+      className={isMobile || iconOnly ? "h-8 w-8 border-slate-300 p-0" : "border-slate-300"}
       onClick={onClick}
     >
       {content}

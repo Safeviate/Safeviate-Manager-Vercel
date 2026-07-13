@@ -3,11 +3,9 @@
 import { Plane } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Aircraft } from '@/types/aircraft';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AircraftActions } from './aircraft-actions';
 import { ViewActionButton } from '@/components/record-action-buttons';
-import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import {
   getContrastingTextColor,
   getDocumentExpiryColor,
@@ -118,13 +116,8 @@ export function AircraftList({ data, tenantId, canEdit, archived = false }: Airc
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-0">
-        <ResponsiveCardGrid
-          items={data}
-          isLoading={false}
-          className="p-4"
-          gridClassName="sm:grid-cols-2 xl:grid-cols-3"
-          renderItem={(ac) => {
+      <div className="divide-y">
+        {data.map((ac) => {
             const documentStatus =
               aircraftStatusMap.get(ac.id) ?? getAircraftDocumentStatus(ac, expirySettings);
 
@@ -137,93 +130,55 @@ export function AircraftList({ data, tenantId, canEdit, archived = false }: Airc
               : undefined;
 
             return (
-              <Card key={ac.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
-                <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
-                  <div className="min-w-0 space-y-1">
+              <div
+                key={ac.id}
+                className="grid gap-3 px-4 py-3 transition-colors hover:bg-muted/10 lg:grid-cols-[minmax(180px,1.2fr)_minmax(190px,1fr)_minmax(180px,1fr)_minmax(150px,0.8fr)_auto] lg:items-center"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground">
                       {ac.tailNumber}
                     </p>
-                    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      {ac.make} {ac.model}
-                    </p>
+                    <span
+                      className="shrink-0 rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em]"
+                      style={statusStyle}
+                    >
+                      {documentStatus.label}
+                    </span>
                   </div>
-                  <div
-                    className="rounded-lg border bg-background px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em]"
-                    style={statusStyle}
-                  >
-                    {documentStatus.label}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 px-4 py-4">
-                  <div className="rounded-lg border bg-muted/10 px-3 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                      Document Status
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
-                      {documentStatus.summary}
-                    </p>
-                  </div>
+                  <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    {ac.make} {ac.model}
+                  </p>
+                </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border bg-background px-3 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                        Category
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">
-                        {ac.type || 'Single-Engine'}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border bg-background px-3 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                        Configuration
-                      </p>
-                      <p className="mt-1 text-sm font-semibold uppercase text-foreground">
-                        OEM Specification
-                      </p>
-                    </div>
-                  </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Document Status</p>
+                  <p className="truncate text-xs font-semibold text-foreground">{documentStatus.summary}</p>
+                </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border bg-background px-3 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                        Hobbs
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">
-                        {ac.currentHobbs?.toFixed(1) || '0.0'}h
-                      </p>
-                    </div>
-                    <div className="rounded-lg border bg-background px-3 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                        Tacho
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">
-                        {ac.currentTacho?.toFixed(1) || '0.0'}h
-                      </p>
-                    </div>
-                  </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Category</p>
+                  <p className="truncate text-xs font-semibold text-foreground">{ac.type || 'Single-Engine'}</p>
+                </div>
 
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {!archived ? <ViewActionButton href={`/assets/aircraft/${ac.id}`} label="Open" /> : null}
-                    <AircraftActions tenantId={tenantId} aircraft={ac} canEdit={canEdit} archived={archived} />
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
+                  <span>
+                    <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Hobbs</span>
+                    <strong className="block text-xs font-semibold text-foreground">{ac.currentHobbs?.toFixed(1) || '0.0'}h</strong>
+                  </span>
+                  <span>
+                    <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Tacho</span>
+                    <strong className="block text-xs font-semibold text-foreground">{ac.currentTacho?.toFixed(1) || '0.0'}h</strong>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  {!archived ? <ViewActionButton href={`/assets/aircraft/${ac.id}`} label="Open" iconOnly /> : null}
+                  <AircraftActions tenantId={tenantId} aircraft={ac} canEdit={canEdit} archived={archived} />
+                </div>
+              </div>
             );
-          }}
-          emptyState={(
-            <div className="flex min-h-[360px] flex-col items-center justify-center border-b bg-muted/5 p-8 text-center text-muted-foreground">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md border bg-background">
-                <Plane className="h-6 w-6 text-muted-foreground/60" />
-              </div>
-              <div className="space-y-1 text-center">
-                <p className="text-sm font-bold uppercase tracking-wider text-foreground">Hangar Empty</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest italic">
-                  No aviation assets have been registered yet.
-                </p>
-              </div>
-            </div>
-          )}
-        />
+          })}
       </div>
     </ScrollArea>
   );

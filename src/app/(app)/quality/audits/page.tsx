@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OrganizationTabsRow, ResponsiveTabRow } from '@/components/responsive-tab-row';
 import { ArchiveActionButton, ViewActionButton } from '@/components/record-action-buttons';
-import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -119,10 +118,10 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
                     disabled={isStarting}
                 >
                     <PlayCircle className="h-4 w-4" />
-                    <span>{isStarting ? 'Starting...' : 'Start Audit'}</span>
+                    <span>{isStarting ? 'Starting...' : 'Start'}</span>
                 </Button>
             ) : null}
-            <ViewActionButton href={`/quality/audits/${audit.id}`} />
+            <ViewActionButton href={`/quality/audits/${audit.id}`} iconOnly />
             {audit.status === 'Archived' ? (
                 <Button variant="outline" size="compact" className="gap-2 border-slate-300" onClick={() => void handleRestore()}>
                     <ArchiveRestore className="h-4 w-4" /> Recall Audit
@@ -149,76 +148,52 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
         return <div className="text-center p-8 text-muted-foreground text-sm italic uppercase font-bold tracking-widest bg-muted/5">No audits found for this context.</div>
     }
 
+    const groups = new Map<string, EnrichedAudit[]>();
+    audits.forEach((audit) => {
+        const group = audit.targetName || audit.auditeeName || audit.auditeeId || 'Unassigned department';
+        groups.set(group, [...(groups.get(group) || []), audit]);
+    });
+
     return (
-        <ResponsiveCardGrid
-            items={audits}
-            isLoading={false}
-            className="p-4"
-            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
-            renderItem={(audit) => (
-                <Card key={audit.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
-                    <CardHeader className="flex flex-row items-start justify-between gap-3 border-b bg-muted/20 px-4 py-3">
-                        <div className="min-w-0 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <Link href={`/quality/audits/${audit.id}`} className="truncate text-sm font-black uppercase tracking-[-0.01em] text-foreground hover:underline">{audit.auditNumber}</Link>
-                                <Badge variant="outline" className="h-6 rounded-full px-2 text-[10px] font-black uppercase tracking-[0.08em]">
-                                    Audit
-                                </Badge>
-                            </div>
-                            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{format(parseLocalDate(audit.auditDate), 'dd MMM yyyy')}</p>
+        <div className="space-y-4 p-4 lg:p-6">
+            {[...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([group, groupAudits]) => (
+                <section key={group} className="overflow-hidden rounded-lg border bg-background shadow-none">
+                    <div className="flex items-center justify-between border-b bg-muted/20 px-4 py-3">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">{group}</p>
+                            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{groupAudits.length} audit{groupAudits.length === 1 ? '' : 's'}</p>
                         </div>
-                        <Badge variant={getStatusBadgeVariant(audit.status)} className="text-[9px] font-black uppercase py-0.5 px-2">{audit.status}</Badge>
-                    </CardHeader>
-                    <CardContent className="space-y-4 px-4 py-4">
-                        <div className="rounded-lg border bg-background px-3 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Title</p>
-                            <p className="mt-1 text-sm font-semibold text-foreground">{audit.title}</p>
-                        </div>
-                        <div className="rounded-lg border bg-background px-3 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Scope</p>
-                            <p className="mt-1 text-sm font-semibold text-foreground">{audit.scope || '-'}</p>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-lg border bg-background px-3 py-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Audit Target</p>
-                                <p className="mt-1 text-sm font-semibold text-foreground">{audit.targetName || audit.auditeeName || audit.auditeeId}</p>
+                    </div>
+                    <div className="divide-y">
+                        {groupAudits.sort((a, b) => b.auditDate.localeCompare(a.auditDate)).map((audit) => (
+                            <div key={audit.id} className="grid gap-3 px-4 py-3 lg:grid-cols-[minmax(190px,1.5fr)_minmax(150px,1.2fr)_minmax(120px,0.8fr)_minmax(150px,1.1fr)_auto] lg:items-center">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Link href={`/quality/audits/${audit.id}`} className="text-sm font-black uppercase text-foreground hover:underline">{audit.auditNumber}</Link>
+                                        <Badge variant={getStatusBadgeVariant(audit.status)} className="h-5 px-2 text-[9px] font-black uppercase">{audit.status}</Badge>
+                                    </div>
+                                    <p className="mt-1 truncate text-sm font-semibold text-foreground">{audit.title}</p>
+                                    <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">{audit.scope || 'No scope recorded'}</p>
+                                </div>
+                                <div className="min-w-0 text-xs">
+                                    <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Auditee</span>
+                                    <span className="block truncate font-semibold">{audit.auditeeName || '-'}</span>
+                                </div>
+                                <div className="min-w-0 text-xs">
+                                    <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Date</span>
+                                    <span className="block truncate font-semibold">{format(parseLocalDate(audit.auditDate), 'dd MMM yyyy')}</span>
+                                </div>
+                                <div className="grid min-w-0 grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-2">
+                                    <span className="truncate"><span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Auditor</span><span className="font-semibold">{audit.auditorName || '-'}</span></span>
+                                    <span className="truncate"><span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Asset</span><span className="font-semibold">{audit.assetName || '-'}</span></span>
+                                </div>
+                                <AuditActions audit={audit} tenantId={tenantId} />
                             </div>
-                            <div className="rounded-lg border bg-background px-3 py-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Auditee</p>
-                                <p className="mt-1 text-sm font-semibold text-foreground">{audit.auditeeName || '-'}</p>
-                            </div>
-                            <div className="rounded-lg border bg-background px-3 py-3 sm:col-span-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assigned Auditor</p>
-                                <p className="mt-1 text-sm font-semibold text-foreground">{audit.auditorName || '-'}</p>
-                            </div>
-                            <div className="rounded-lg border bg-background px-3 py-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Asset</p>
-                                <p className="mt-1 text-sm font-semibold text-foreground">{audit.assetName || 'Not linked to an asset'}</p>
-                            </div>
-                            <div className="rounded-lg border bg-background px-3 py-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Score</p>
-                                <p className="mt-1 text-sm font-semibold text-foreground">
-                                    {audit.complianceScore !== undefined ? (
-                                        <Badge variant="outline" className={cn(
-                                            "font-black text-[9px] uppercase py-0.5 px-2",
-                                            audit.complianceScore >= 80 ? "text-primary border-primary/40 bg-primary/10" : 
-                                            audit.complianceScore >= 60 ? "text-foreground border-border bg-muted" : 
-                                            "text-destructive border-destructive/40 bg-destructive/10"
-                                        )}>
-                                            {audit.complianceScore}%
-                                        </Badge>
-                                    ) : '-'}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-end">
-                            <AuditActions audit={audit} tenantId={tenantId} />
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-            emptyState={<div className="text-center p-8 text-muted-foreground text-sm italic uppercase font-bold tracking-widest bg-muted/5">No audits found for this context.</div>}
-        />
+                        ))}
+                    </div>
+                </section>
+            ))}
+        </div>
     );
 }
 

@@ -156,83 +156,45 @@ interface TechnicalIntakeProps {
 type ReportSortOrder = 'newest' | 'oldest';
 
 function ReportsTable({ reports, tenantId, canManage, currentUserEmail }: ReportsTableProps) {
+    const groupedReports = reports.reduce<Record<string, SafetyReport[]>>((groups, report) => {
+        const group = report.reportType?.trim() || 'Unclassified';
+        (groups[group] ??= []).push(report);
+        return groups;
+    }, {});
+
     return (
-        <ResponsiveCardGrid
-            items={reports}
-            isLoading={false}
-            className="p-4"
-            gridClassName="sm:grid-cols-2 xl:grid-cols-3"
-            renderItem={(report) => (
-                <Card key={report.id} className="shadow-none border-slate-200 overflow-hidden">
-                    <CardHeader className="p-4 pb-2 border-b bg-muted/5 flex flex-row items-center justify-between space-y-0">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">{report.reportNumber}</span>
-                            <span className="text-sm font-black mt-1">{report.reportType}</span>
-                        </div>
-                        <Badge variant={getStatusBadgeVariant(report.status)} className="h-5 text-[9px] font-black uppercase">
-                            {report.status}
-                        </Badge>
-                    </CardHeader>
-                    <CardContent className="p-4 py-3 space-y-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                <Clock className="h-3.5 w-3.5" />
-                                {format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                <MapPin className="h-3.5 w-3.5" />
-                                {report.location}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-bold">
-                            <User className="h-3.5 w-3.5 text-muted-foreground" />
-                            Filed by: {resolveReporterLabel(report, currentUserEmail)}
-                        </div>
-                        {report.submittedOnBehalfOf ? (
-                            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                                On behalf of {report.submittedOnBehalfOf}
-                            </div>
-                        ) : null}
-                        {report.sourceQuickReportNumber ? (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className="h-5 text-[9px] font-black uppercase">
-                                    From Quick Intake
-                                </Badge>
-                                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                                    Source {report.sourceQuickReportNumber}
-                                </span>
-                            </div>
-                        ) : null}
-                        {report.immediateAction ? (
-                            <div className="rounded-lg border bg-muted/5 px-3 py-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Immediate Action</p>
-                                <p className="mt-1 text-xs font-medium text-foreground line-clamp-3 whitespace-pre-wrap">{report.immediateAction}</p>
-                            </div>
-                        ) : null}
-                        <p className="text-xs text-muted-foreground line-clamp-2 italic font-medium">&quot;{report.description}&quot;</p>
-                    </CardContent>
-                    <div className="p-2 border-t bg-muted/5 flex gap-2">
-                        <Button asChild variant="ghost" size="sm" className="flex-1 justify-between text-xs font-black uppercase h-8 px-4">
-                            <Link href={`/safety/safety-reports/${report.id}`}>
-                                View Detailed Investigation
-                                <ArrowRight className="h-3.5 w-3.5 ml-2" />
-                            </Link>
-                        </Button>
-                        {canManage && (
-                            <div className="flex gap-1">
-                                <EditReportDialog report={report} tenantId={tenantId} />
-                                {report.status === 'Archived' ? (
-                                    <RecallReportButton reportId={report.id} reportNumber={report.reportNumber} />
-                                ) : (
-                                    <ArchiveReportButton reportId={report.id} reportNumber={report.reportNumber} />
-                                )}
-                            </div>
-                        )}
+        <div className="space-y-3 p-4">
+            {Object.entries(groupedReports).map(([group, groupReports]) => (
+                <section key={group} className="overflow-hidden rounded-lg border border-card-border bg-card">
+                    <div className="flex h-[38px] items-center justify-between border-b border-card-border bg-muted/20 px-3">
+                        <span className="text-[13px] font-bold uppercase tracking-[0.08em] text-foreground">{group}</span>
+                        <Badge variant="outline" className="h-5 text-[9px] font-black uppercase">{groupReports.length} reports</Badge>
                     </div>
-                </Card>
-            )}
-            emptyState={<div className="text-center p-12 text-muted-foreground text-sm italic">No safety reports found for this context.</div>}
-        />
+                    <div className="divide-y divide-card-border">
+                        {groupReports.map((report) => (
+                            <div key={report.id} className="grid min-w-0 gap-3 p-3 md:grid-cols-[minmax(0,1.7fr)_minmax(110px,0.7fr)_minmax(120px,0.8fr)_minmax(120px,0.8fr)_auto] md:items-center">
+                                <div className="min-w-0">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">{report.reportNumber}</span>
+                                        <Badge variant={getStatusBadgeVariant(report.status)} className="h-5 text-[9px] font-black uppercase">{report.status}</Badge>
+                                    </div>
+                                    <p className="mt-1 truncate text-sm font-bold text-foreground">{report.description || report.reportType}</p>
+                                    <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Filed by: {resolveReporterLabel(report, currentUserEmail)}</p>
+                                </div>
+                                <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Date</p><p className="truncate text-xs font-semibold">{format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}</p></div>
+                                <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Location</p><p className="truncate text-xs font-semibold">{report.location}</p></div>
+                                <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Source</p><p className="truncate text-xs font-semibold">{report.sourceQuickReportNumber || 'Direct report'}</p></div>
+                                <div className="flex items-center justify-start gap-1 md:justify-end">
+                                    <Button asChild variant="outline" size="sm" className="h-8 px-2 text-[9px] font-black uppercase"><Link href={`/safety/safety-reports/${report.id}`}>Open<ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+                                    {canManage && <><EditReportDialog report={report} tenantId={tenantId} />{report.status === 'Archived' ? <RecallReportButton reportId={report.id} reportNumber={report.reportNumber} /> : <ArchiveReportButton reportId={report.id} reportNumber={report.reportNumber} />}</>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            ))}
+            {reports.length === 0 && <div className="p-12 text-center text-sm italic text-muted-foreground">No safety reports found for this context.</div>}
+        </div>
     );
 }
 
@@ -354,6 +316,12 @@ function QuickSafetyInbox({ reports, canManage, classifyingReportId, onClassify,
 }
 
 function TechnicalIntake({ reports }: TechnicalIntakeProps) {
+    const groupedReports = reports.reduce<Record<string, TechnicalQuickReport[]>>((groups, report) => {
+        const group = report.aircraftLabel?.trim() || 'Unassigned aircraft';
+        (groups[group] ??= []).push(report);
+        return groups;
+    }, {});
+
     return (
         <div className="border-b bg-muted/5 p-4">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -369,53 +337,34 @@ function TechnicalIntake({ reports }: TechnicalIntakeProps) {
             </div>
 
             {reports.length > 0 ? (
-                <ResponsiveCardGrid
-                    items={reports}
-                    isLoading={false}
-                    gridClassName="sm:grid-cols-2 xl:grid-cols-3"
-                    renderItem={(report) => (
-                        <Card key={report.id} className="overflow-hidden border-slate-200 shadow-none">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b bg-background px-4 py-3">
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">{report.reportNumber}</span>
-                                    <span className="mt-1 text-sm font-black">{report.title || report.summary}</span>
-                                </div>
-                                <Badge variant={report.status === 'Closed' ? 'default' : 'destructive'} className="text-[9px] font-black uppercase">
-                                    {report.status}
-                                </Badge>
-                            </CardHeader>
-                            <CardContent className="space-y-3 p-4">
-                                <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
-                                    <span className="flex items-center gap-1.5">
-                                        <Clock className="h-3.5 w-3.5" />
-                                        {format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
-                                        <MapPin className="h-3.5 w-3.5" />
-                                        {report.location}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs font-bold">
-                                    <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                    Filed by: {resolveReporterLabel(report)}
-                                </div>
-                                {report.aircraftLabel ? (
-                                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                                        Aircraft {report.aircraftLabel}
+                <div className="space-y-3">
+                    {Object.entries(groupedReports).map(([group, groupReports]) => (
+                        <section key={group} className="overflow-hidden rounded-lg border border-card-border bg-card">
+                            <div className="flex h-[38px] items-center justify-between border-b border-card-border bg-muted/20 px-3">
+                                <span className="truncate text-[13px] font-bold uppercase tracking-[0.08em] text-foreground">{group}</span>
+                                <Badge variant="outline" className="h-5 text-[9px] font-black uppercase">{groupReports.length} reports</Badge>
+                            </div>
+                            <div className="divide-y divide-card-border">
+                                {groupReports.map((report) => (
+                                    <div key={report.id} className="grid min-w-0 gap-3 p-3 md:grid-cols-[minmax(0,1.7fr)_minmax(110px,0.7fr)_minmax(120px,0.8fr)_minmax(120px,0.8fr)_auto] md:items-center">
+                                        <div className="min-w-0">
+                                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">{report.reportNumber}</span>
+                                                <Badge variant={report.status === 'Closed' ? 'default' : 'destructive'} className="h-5 text-[9px] font-black uppercase">{report.status}</Badge>
+                                            </div>
+                                            <p className="mt-1 truncate text-sm font-bold">{report.title || report.summary}</p>
+                                            <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Filed by: {resolveReporterLabel(report)}</p>
+                                        </div>
+                                        <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Date</p><p className="truncate text-xs font-semibold">{format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}</p></div>
+                                        <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Location</p><p className="truncate text-xs font-semibold">{report.location}</p></div>
+                                        <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p><p className="truncate text-xs font-semibold">{report.aircraftLabel || 'Not specified'}</p></div>
+                                        <Button asChild variant="outline" size="sm" className="h-8 justify-start px-2 text-[9px] font-black uppercase md:justify-center"><Link href={`/quick-reports/technical-report/${report.id}`}>Open<ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
                                     </div>
-                                ) : null}
-                                <p className="text-sm font-medium text-foreground line-clamp-2">{report.summary}</p>
-                                <Button asChild variant="outline" size="sm" className="h-8 w-full justify-between px-3 text-[10px] font-black uppercase">
-                                    <Link href={`/quick-reports/technical-report/${report.id}`}>
-                                        Open technical report
-                                        <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                                    </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
-                    emptyState={<div className="text-center p-12 text-muted-foreground text-sm italic">No preliminary technical reports found for this context.</div>}
-                />
+                                ))}
+                            </div>
+                        </section>
+                    ))}
+                </div>
             ) : (
                 <div className="rounded-xl border border-dashed bg-background px-6 py-8 text-center text-sm text-muted-foreground">
                     No preliminary technical reports have been filed yet.
