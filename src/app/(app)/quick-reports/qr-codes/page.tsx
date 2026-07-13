@@ -108,12 +108,34 @@ export default async function QuickReportQrCodesPage() {
             html[data-qr-print-target="technical"] [data-qr-type="safety"] {
               display: none !important;
             }
+
+            html[data-qr-print-target="safety"] .qr-code-print-grid,
+            html[data-qr-print-target="technical"] .qr-code-print-grid {
+              grid-template-columns: minmax(0, 420px) !important;
+              justify-content: center;
+            }
+
+            html[data-qr-print-target="safety"] .qr-code-print-card,
+            html[data-qr-print-target="technical"] .qr-code-print-card {
+              width: 420px;
+            }
+
+            html[data-qr-print-target="safety"] .qr-code-image,
+            html[data-qr-print-target="technical"] .qr-code-image {
+              height: 200px !important;
+              width: 200px !important;
+            }
+
+            .qr-code-share-url,
+            .qr-code-placement-note {
+              display: block !important;
+            }
           }`}</style>
-          <div className="grid gap-4 md:grid-cols-2 print:grid-cols-2 print:gap-3">
+          <div className="qr-code-print-grid grid gap-4 md:grid-cols-2 print:grid-cols-2 print:gap-3">
           {qrCards.map((card) => {
             const Icon = card.icon;
             return (
-              <Card key={card.title} data-qr-type={card.title === 'Safety Report' ? 'safety' : 'technical'} className="overflow-hidden border shadow-none print:break-inside-avoid print:border">
+              <Card key={card.title} data-qr-type={card.title === 'Safety Report' ? 'safety' : 'technical'} className="qr-code-print-card overflow-hidden border shadow-none print:break-inside-avoid print:border">
                 <CardHeader className="border-b bg-muted/5 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-background">
@@ -131,7 +153,7 @@ export default async function QuickReportQrCodesPage() {
                 <CardContent className="space-y-3 p-4 text-center print:p-3">
                   <div className="mx-auto flex w-fit flex-col items-center rounded-2xl border bg-white p-4 print:p-2.5">
                     <div
-                      className="h-[200px] w-[200px] print:h-[160px] print:w-[160px]"
+                      className="qr-code-image h-[200px] w-[200px] print:h-[160px] print:w-[160px]"
                       aria-label={`${tenant.name} ${card.title} QR code`}
                       dangerouslySetInnerHTML={{ __html: card.qrSvg }}
                     />
@@ -144,10 +166,10 @@ export default async function QuickReportQrCodesPage() {
                       Powered by Safeviate
                     </p>
                   </div>
-                  <div className="hidden rounded-lg border bg-muted/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] break-all md:block print:hidden">
+                  <div className="qr-code-share-url hidden rounded-lg border bg-muted/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] break-all md:block print:hidden">
                     {card.shareUrl}
                   </div>
-                  <p className="hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground md:block print:hidden">
+                  <p className="qr-code-placement-note hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground md:block print:hidden">
                     {card.note}
                   </p>
                 </CardContent>
