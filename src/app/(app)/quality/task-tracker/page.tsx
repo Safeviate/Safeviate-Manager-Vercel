@@ -515,23 +515,23 @@ export default function TaskTrackerPage() {
                               <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                                 {groupEntries.length} observation{groupEntries.length === 1 ? '' : 's'} · {openCount} open
                               </p>
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <div className="rounded-md border border-card-border bg-muted/10 px-2.5 py-1">
+                              <div className="mt-2 flex flex-wrap items-center gap-4">
+                                <div className="px-0 py-1">
                                   <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Asset</p>
                                   <p className="text-[11px] font-semibold text-foreground">{auditAsset}</p>
                                 </div>
-                                <div className="rounded-md border border-card-border bg-muted/10 px-2.5 py-1">
+                                <div className="px-0 py-1">
                                   <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Scope</p>
                                   <p className="text-[11px] font-semibold text-foreground">{auditScope}</p>
                                 </div>
-                                <div className="rounded-md border border-card-border bg-muted/10 px-2.5 py-1">
+                                <div className="px-0 py-1">
                                   <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Target</p>
                                   <p className="text-[11px] font-semibold text-foreground">{auditTarget}</p>
                                 </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 pr-2">
-                              <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                              <Badge variant="secondary" className="h-6 border-0 bg-muted/50 px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-none">
                                 {audit.status}
                               </Badge>
                               </div>
@@ -542,6 +542,25 @@ export default function TaskTrackerPage() {
                             {groupEntries.map((entry) => {
                               const primaryCap = entry.caps[0];
                               const capCount = entry.caps.length;
+                              const nextOpenCapDueDate = entry.caps
+                                .filter((cap) => cap.status !== 'Closed' && cap.status !== 'Cancelled' && Boolean(cap.dueDate))
+                                .map((cap) => formatCapDueDate(cap.dueDate))
+                                .sort((left, right) => parseLocalDate(left).getTime() - parseLocalDate(right).getTime())[0];
+                              const nextOpenCapDue = nextOpenCapDueDate ? parseLocalDate(nextOpenCapDueDate) : null;
+                              const dueTimestamp = nextOpenCapDue?.getTime() ?? Number.NaN;
+                              const dueSoonTimestamp = auditCapWindow + 7 * 24 * 60 * 60 * 1000;
+                              const dueState = !nextOpenCapDue || Number.isNaN(dueTimestamp)
+                                ? 'No open CAP'
+                                : dueTimestamp < auditCapWindow
+                                  ? 'Overdue'
+                                  : dueTimestamp <= dueSoonTimestamp
+                                    ? 'Due soon'
+                                    : 'Due';
+                              const dueStateClass = dueState === 'Overdue'
+                                ? 'text-rose-700'
+                                : dueState === 'Due soon'
+                                  ? 'text-amber-700'
+                                  : 'text-muted-foreground';
 
                               return (
                                 <div key={entry.id} className="overflow-hidden rounded-lg border border-card-border bg-background">
@@ -549,10 +568,10 @@ export default function TaskTrackerPage() {
                                     <div className="flex min-w-0 items-start">
                                       <div className="min-w-0 space-y-2">
                                         <div className="flex flex-wrap items-center gap-2">
-                                          <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                                          <Badge variant="secondary" className="h-6 border-0 bg-muted/50 px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-none">
                                             {primaryCap?.status || 'Open'}
                                           </Badge>
-                                          <Badge variant="outline" className="h-6 border-card-border bg-background px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                                          <Badge variant="secondary" className="h-6 border-0 bg-muted/50 px-2 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-none">
                                             {entry.findingLevel}
                                           </Badge>
                                         </div>
@@ -562,10 +581,16 @@ export default function TaskTrackerPage() {
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="grid shrink-0 gap-2 text-right sm:grid-cols-1 sm:text-left">
-                                      <div className="rounded-md border bg-background px-3 py-2">
+                                    <div className="grid shrink-0 gap-2 text-right sm:grid-cols-2 sm:text-left">
+                                      <div className="px-3 py-2">
                                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAP Amount</p>
                                         <p className="mt-1 text-sm font-semibold text-foreground">{capCount}</p>
+                                      </div>
+                                      <div className="px-3 py-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">CAP Due</p>
+                                        <p className={cn('mt-1 text-sm font-semibold', dueStateClass)}>
+                                          {nextOpenCapDue ? `${dueState} ${format(nextOpenCapDue, 'dd MMM')}` : dueState}
+                                        </p>
                                       </div>
                                       <div className="sm:col-span-3 sm:flex sm:justify-end sm:gap-2">
                                         <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase">

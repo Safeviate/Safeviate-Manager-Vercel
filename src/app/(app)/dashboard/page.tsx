@@ -318,7 +318,6 @@ const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
 ];
 const DASHBOARD_TABS: IndustryTab[] = [
   { value: 'overview', label: 'Overview' },
-  { value: 'list', label: 'List View' },
   { value: 'instructors', label: 'Instructors' },
   { value: 'students', label: 'Students' },
   { value: 'safety', label: 'Safety' },
@@ -1632,10 +1631,6 @@ export default function DashboardPage() {
   );
   const quickReportAttentionCount = openTechnicalReports.length + openQuickSafetyReports.length;
   const overviewSafetyMetrics = useMemo(() => getSafetyMetrics(summary), [summary]);
-  const qualityMetrics = useMemo(
-    () => getQualityMetrics(summary, scopedOrganizationId),
-    [scopedOrganizationId, summary]
-  );
   const renderTabLabel = (tab: IndustryTab) => (
     <span className="flex items-center gap-2">
       <span>{tab.label}</span>
@@ -1896,7 +1891,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="grid gap-5 xl:grid-cols-3">
+                      <div className="grid gap-5 xl:grid-cols-2">
                         <Card className={cn(DASHBOARD_SHELL_CLASS, 'flex min-h-[250px] flex-col', isModern && 'border-slate-200/80 bg-white/95')}>
                           <CardHeader className="border-b bg-muted/5 px-4 py-3">
                             <div className="flex items-start justify-between gap-3">
@@ -2263,15 +2258,6 @@ export default function DashboardPage() {
                       <TabsContent key={tab.value} value={tab.value} className="m-0">
                         {tab.value === 'instructors' ? (
                           <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} summary={summary} />
-                        ) : tab.value === 'list' ? (
-                          <OperationalListView
-                            modern={isModern}
-                            summary={summary}
-                            fleetRows={fleetRows}
-                            qualityMetrics={qualityMetrics}
-                            technicalReports={openTechnicalReports}
-                            quickSafetyReports={openQuickSafetyReports}
-                          />
                         ) : tab.value === 'students' ? (
                           <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
                         ) : tab.value === 'safety' ? (
@@ -3223,12 +3209,12 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
         </div>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
-        <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-          <div className="rounded-md border bg-background p-3 xl:col-span-2 2xl:col-span-3">
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="rounded-md border bg-background p-3 xl:col-span-2">
             <div className="mb-3 min-w-0">
               <p className="text-[13px] font-bold leading-none text-foreground/90">Quality Snapshot</p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2">
               <StatTile label="Open Audits" value={String(metrics.openAudits)} hint="Audits not yet closed" />
               <StatTile label="Closed Audits" value={String(metrics.closedAudits)} hint="Finalised or archived" />
               <StatTile label="Open Findings" value={String(metrics.openFindings)} hint="Non-compliant items raised" />
