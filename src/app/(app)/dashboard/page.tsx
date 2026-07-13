@@ -305,8 +305,8 @@ type BookingOverviewMetrics = {
 
 const DASHBOARD_SHELL_CLASS = 'dashboard-card-theme overflow-hidden rounded-lg border border-card-border bg-card shadow-none';
 const DASHBOARD_TAB_HEADER_CLASS = 'sticky top-0 z-10 rounded-t-lg border-b bg-[hsl(var(--card-header-band-background))] px-4 py-2.5 text-[hsl(var(--card-header-band-foreground))]';
-const DASHBOARD_ROW_METRIC_CLASS = 'min-w-0 border-card-border/70 px-3 py-2.5 md:border-l';
-const DASHBOARD_ROW_STATUS_CLASS = 'min-w-0 border-card-border/70 px-3 py-2.5 md:border-l';
+const DASHBOARD_ROW_METRIC_CLASS = 'min-w-0 px-3 py-2.5';
+const DASHBOARD_ROW_STATUS_CLASS = 'min-w-0 px-3 py-2.5';
 const DEFAULT_INSTRUCTOR_WARNING_BANDS: InstructorWarningBand[] = [
   { hours: 20, warningHours: 10, color: '#60a5fa', foregroundColor: '#ffffff' },
   { hours: 40, warningHours: 30, color: '#facc15', foregroundColor: '#000000' },
@@ -2909,12 +2909,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
-      <CardHeader
-        className={cn(
-          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
-          modern && 'bg-white'
-        )}
-      >
+      <CardHeader className={DASHBOARD_TAB_HEADER_CLASS}>
         <div className="flex items-center gap-2">
           <SafetyIcon className="h-4 w-4 text-amber-600" />
           <CardTitle className="text-sm font-black uppercase tracking-tight">Safety Snapshot</CardTitle>
@@ -2926,106 +2921,11 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
           <StatTile label="Open Hazards" value={String(metrics.openRisks)} hint="Risk items requiring attention" />
           <StatTile label="Open CAPs" value={String(metrics.openCaps)} hint="Corrective actions in flight" />
           <StatTile label="Recent Reports" value={String(metrics.recentReports)} hint="Submitted in the last 30 days" />
-          <StatTile label="Cancelled Flights" value={String(metrics.cancelledFlights)} hint={`${metrics.cancellationRate.toFixed(1)}% of scheduled flights`} tone={metrics.cancelledFlights > 0 ? 'warning' : 'positive'} />
           <StatTile label="Dispatch Reliability" value={`${metrics.dispatchReliability.toFixed(1)}%`} hint={`${metrics.completedFlights} of ${metrics.scheduledFlights} flights completed`} tone={metrics.dispatchReliability >= 85 ? 'positive' : metrics.dispatchReliability >= 70 ? 'warning' : 'danger'} />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <div className="rounded-md border bg-background">
-            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-              <div className="min-w-0">
-                <p className="text-sm font-black uppercase tracking-tight">Flight Cancellations</p>
-              </div>
-              <Badge variant="outline" className="text-[10px] font-black uppercase">
-                {metrics.cancelledFlights} total
-              </Badge>
-            </div>
-            <div className="grid gap-4 p-4 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="h-[220px]">
-                {metrics.cancellationReasonRows.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={metrics.cancellationReasonRows}
-                      layout="vertical"
-                      margin={{ top: 0, right: 10, left: 18, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
-                      <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} fontSize={11} width={118} />
-                      <Tooltip />
-                      <Bar dataKey="value" radius={8} barSize={18}>
-                        {metrics.cancellationReasonRows.map((entry) => (
-                          <Cell key={entry.label} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted/5 text-sm text-muted-foreground">
-                    No cancellations logged yet.
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <div className="rounded-md border bg-muted/10 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Reliability read</p>
-                  <div className="mt-3 space-y-3">
-                    <SummaryLine label="Scheduled" value={String(metrics.scheduledFlights)} />
-                    <SummaryLine label="Completed" value={String(metrics.completedFlights)} />
-                    <SummaryLine label="Cancelled" value={String(metrics.cancelledFlights)} />
-                    <SummaryLine label="No-shows" value={String(metrics.noShowFlights)} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {metrics.disruptionRows.map((row) => (
-                    <div key={row.id} className="border-b border-card-border/70 px-3 py-2.5 last:border-b-0">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{row.hint}</p>
-                      <div className="mt-1 flex items-start justify-between gap-3">
-                        <p className="min-w-0 text-sm font-black break-words">{row.title}</p>
-                        <Badge variant="outline" className="shrink-0 text-[10px] font-black uppercase">
-                          {row.count}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-md border bg-background">
-            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-              <div className="min-w-0">
-                <p className="text-sm font-black uppercase tracking-tight">Flight Outcome Mix</p>
-              </div>
-            </div>
-            <div className="h-[288px] p-4">
-              {metrics.scheduledFlights > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metrics.flightStatusRows} margin={{ top: 8, right: 10, left: -8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="value" radius={10} barSize={42}>
-                      {metrics.flightStatusRows.map((entry) => (
-                        <Cell key={entry.label} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted/5 text-sm text-muted-foreground">
-                  No booking activity available yet.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <div className="rounded-md border bg-background">
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-md border bg-background">
             <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-tight">Recent Safety Reports</p>
@@ -3084,8 +2984,6 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                 <SummaryLine label="Open hazards" value={String(metrics.openRisks)} />
                 <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
                 <SummaryLine label="Recent reports" value={String(metrics.recentReports)} />
-                <SummaryLine label="Cancellation rate" value={`${metrics.cancellationRate.toFixed(1)}%`} />
-                <SummaryLine label="No-shows" value={String(metrics.noShowFlights)} />
               </div>
             </div>
 
@@ -3181,9 +3079,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
 function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern: boolean; summary: SummaryPayload; organizationScopeId: string }) {
   const metrics = getQualityMetrics(summary, organizationScopeId);
   const QualityIcon = ClipboardCheck;
-  const qualityPanelClass = 'flex min-h-[18rem] max-h-[22rem] flex-col overflow-hidden rounded-md border bg-background';
+  const qualityPanelClass = 'overflow-hidden rounded-md border bg-background';
   const qualityPanelHeaderClass = CARD_COMPACT_HEADER_BAND_CLASS;
-  const qualityPanelBodyClass = 'min-h-0 flex-1 overflow-y-auto';
+  const qualityPanelBodyClass = 'min-h-0';
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
@@ -3194,11 +3092,12 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
         </div>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
-        <div className="grid gap-4 xl:grid-cols-2">
-          <div className="overflow-hidden rounded-md border bg-background xl:col-span-2">
-            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+        <div className="space-y-4">
+          <details open className="overflow-hidden rounded-md border bg-background">
+            <summary className={cn(CARD_COMPACT_HEADER_BAND_CLASS, 'group cursor-pointer list-none [&::-webkit-details-marker]:hidden')}>
               <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Quality Snapshot</p>
-            </div>
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+            </summary>
             <div className="p-3">
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <StatTile label="Open Audits" value={String(metrics.openAudits)} hint="Audits not yet closed" />
@@ -3209,17 +3108,20 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
               <StatTile label="CAP Overdue" value={String(metrics.overdueCaps)} hint="Action deadlines already passed" />
             </div>
             </div>
-          </div>
+          </details>
 
-          <div className={qualityPanelClass}>
-            <div className={qualityPanelHeaderClass}>
+          <details open className={qualityPanelClass}>
+            <summary className={cn(qualityPanelHeaderClass, 'group cursor-pointer list-none [&::-webkit-details-marker]:hidden')}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Recent Audits</p>
               </div>
-              <Badge variant="outline" className="bg-transparent text-[10px] font-bold text-[hsl(var(--card-header-band-foreground))]">
-                {metrics.recentAudits} recent
-              </Badge>
-            </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-transparent text-[10px] font-bold text-[hsl(var(--card-header-band-foreground))]">
+                  {metrics.recentAudits} recent
+                </Badge>
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              </div>
+            </summary>
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.auditRows.length > 0 ? (
                                 metrics.auditRows.map((audit) => (
@@ -3254,32 +3156,14 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                 </div>
               )}
             </div>
-          </div>
-
-          <div className={qualityPanelClass}>
-            <div className={qualityPanelHeaderClass}>
-              <div className="min-w-0">
-                <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Quality Quick Read</p>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-              <div className="space-y-3">
-                <SummaryLine label="Open audits" value={String(metrics.openAudits)} />
-                <SummaryLine label="Closed audits" value={String(metrics.closedAudits)} />
-                <SummaryLine label="Open findings" value={String(metrics.openFindings)} />
-                <SummaryLine label="Open CAPs" value={String(metrics.openCaps)} />
-                <SummaryLine label="CAP due soon" value={String(metrics.dueSoonCaps)} />
-                <SummaryLine label="CAP overdue" value={String(metrics.overdueCaps)} />
-                <SummaryLine label="Avg compliance" value={`${metrics.averageCompliance.toFixed(1)}%`} />
-              </div>
-            </div>
-          </div>
+          </details>
 
           {(metrics.overdueCaps > 0 || metrics.dueSoonCaps > 0) && (
-            <div className={cn(qualityPanelClass, 'border-amber-200 bg-amber-50/70')}>
-              <div className="border-b border-amber-200 bg-amber-50/90 px-4 py-3">
+            <details open className={cn(qualityPanelClass, 'border-amber-200 bg-amber-50/70')}>
+              <summary className="group flex cursor-pointer list-none items-center justify-between gap-3 border-b border-amber-200 bg-amber-50/90 px-4 py-3 [&::-webkit-details-marker]:hidden">
                 <p className="text-[13px] font-bold leading-none text-amber-900">Corrective Action Attention Required</p>
-              </div>
+                <ChevronDown className="h-4 w-4 text-amber-900 transition-transform group-open:rotate-180" />
+              </summary>
               <div className="flex min-h-0 flex-1 flex-col justify-between gap-4 px-4 py-4">
                 <div className="space-y-3">
                   <SummaryLine label="Overdue CAPs" value={String(metrics.overdueCaps)} />
@@ -3290,18 +3174,21 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                   <Link href="/quality/task-tracker">Open Task Tracker</Link>
                 </Button>
               </div>
-            </div>
+            </details>
           )}
 
-          <div className={qualityPanelClass}>
-            <div className={qualityPanelHeaderClass}>
+          <details open className={qualityPanelClass}>
+            <summary className={cn(qualityPanelHeaderClass, 'group cursor-pointer list-none [&::-webkit-details-marker]:hidden')}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Upcoming Audits</p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
-                {metrics.upcomingAuditRows.length} shown
-              </Badge>
-            </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
+                  {metrics.upcomingAuditRows.length} shown
+                </Badge>
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              </div>
+            </summary>
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.upcomingAuditRows.length > 0 ? (
                                 metrics.upcomingAuditRows.map((audit) => (
@@ -3324,17 +3211,20 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                 </div>
               )}
             </div>
-          </div>
+          </details>
 
-          <div className={qualityPanelClass}>
-            <div className={qualityPanelHeaderClass}>
+          <details open className={qualityPanelClass}>
+            <summary className={cn(qualityPanelHeaderClass, 'group cursor-pointer list-none [&::-webkit-details-marker]:hidden')}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Upcoming CAP Deadlines</p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
-                {metrics.upcomingCapRows.length} shown
-              </Badge>
-            </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
+                  {metrics.upcomingCapRows.length} shown
+                </Badge>
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              </div>
+            </summary>
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.upcomingCapRows.length > 0 ? (
                                 metrics.upcomingCapRows.map((action) => (
@@ -3363,17 +3253,20 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                 </div>
               )}
             </div>
-          </div>
+          </details>
 
-          <div className={qualityPanelClass}>
-            <div className={qualityPanelHeaderClass}>
+          <details open className={qualityPanelClass}>
+            <summary className={cn(qualityPanelHeaderClass, 'group cursor-pointer list-none [&::-webkit-details-marker]:hidden')}>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">New Corrective Actions</p>
               </div>
-              <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
-                {metrics.recentCapRows.length} shown
-              </Badge>
-            </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold text-foreground/80">
+                  {metrics.recentCapRows.length} shown
+                </Badge>
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              </div>
+            </summary>
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.recentCapRows.length > 0 ? (
                                 metrics.recentCapRows.map((action) => (
@@ -3406,7 +3299,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                 </div>
               )}
             </div>
-          </div>
+          </details>
         </div>
       </CardContent>
     </Card>
