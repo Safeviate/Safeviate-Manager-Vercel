@@ -113,12 +113,14 @@ function AuditActions({ audit, tenantId }: AuditActionsProps) {
                 <Button
                     variant="outline"
                     size="compact"
-                    className="border-slate-300"
+                    className="h-8 w-8 border-slate-300 p-0"
                     onClick={handleStart}
                     disabled={isStarting}
+                    aria-label={isStarting ? 'Starting audit' : `Start audit ${audit.auditNumber}`}
+                    title={isStarting ? 'Starting audit...' : 'Start audit'}
                 >
                     <PlayCircle className="h-4 w-4" />
-                    <span>{isStarting ? 'Starting...' : 'Start'}</span>
+                    <span className="sr-only">{isStarting ? 'Starting audit' : 'Start audit'}</span>
                 </Button>
             ) : null}
             <ViewActionButton href={`/quality/audits/${audit.id}`} iconOnly />
@@ -166,7 +168,7 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                     </div>
                     <div className="divide-y">
                         {groupAudits.sort((a, b) => b.auditDate.localeCompare(a.auditDate)).map((audit) => (
-                            <div key={audit.id} className="grid gap-3 px-4 py-3 lg:grid-cols-[minmax(190px,1.5fr)_minmax(150px,1.2fr)_minmax(120px,0.8fr)_minmax(150px,1.1fr)_auto] lg:items-center">
+                            <div key={audit.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(200px,1.5fr)_minmax(100px,0.9fr)_minmax(90px,0.75fr)_minmax(110px,0.9fr)_minmax(60px,0.55fr)_112px] md:items-center lg:grid-cols-[minmax(200px,1.5fr)_minmax(120px,0.9fr)_minmax(110px,0.75fr)_minmax(120px,0.9fr)_minmax(72px,0.55fr)_112px]">
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <Link href={`/quality/audits/${audit.id}`} className="text-sm font-black uppercase text-foreground hover:underline">{audit.auditNumber}</Link>
@@ -183,9 +185,13 @@ function AuditsTable({ audits, tenantId }: AuditsTableProps) {
                                     <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Date</span>
                                     <span className="block truncate font-semibold">{format(parseLocalDate(audit.auditDate), 'dd MMM yyyy')}</span>
                                 </div>
-                                <div className="grid min-w-0 grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-2">
-                                    <span className="truncate"><span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Auditor</span><span className="font-semibold">{audit.auditorName || '-'}</span></span>
-                                    <span className="truncate"><span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Asset</span><span className="font-semibold">{audit.assetName || '-'}</span></span>
+                                <div className="min-w-0 text-xs">
+                                    <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Auditor</span>
+                                    <span className="block truncate font-semibold">{audit.auditorName || '-'}</span>
+                                </div>
+                                <div className="min-w-0 text-xs">
+                                    <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Asset</span>
+                                    <span className="block truncate font-semibold">{audit.assetName || '-'}</span>
                                 </div>
                                 <AuditActions audit={audit} tenantId={tenantId} />
                             </div>
