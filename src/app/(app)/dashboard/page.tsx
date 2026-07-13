@@ -248,6 +248,7 @@ type QualityMetrics = {
   recentAudits: number;
   auditRows: Array<{
     id: string;
+    link: string;
     title: string;
     auditNumber: string;
     status: string;
@@ -257,6 +258,7 @@ type QualityMetrics = {
   }>;
   upcomingAuditRows: Array<{
     id: string;
+    link: string;
     title: string;
     auditNumber: string;
     dateLabel: string;
@@ -264,6 +266,7 @@ type QualityMetrics = {
   }>;
   upcomingCapRows: Array<{
     id: string;
+    link: string;
     sourceType: 'Audit' | 'Gap Analysis';
     sourceIdentifier: string;
     description: string;
@@ -273,6 +276,7 @@ type QualityMetrics = {
   }>;
   recentCapRows: Array<{
     id: string;
+    link: string;
     sourceType: 'Audit' | 'Gap Analysis';
     sourceIdentifier: string;
     description: string;
@@ -314,6 +318,7 @@ const DEFAULT_STUDENT_MILESTONES: MilestoneWarning[] = [
 ];
 const DASHBOARD_TABS: IndustryTab[] = [
   { value: 'overview', label: 'Overview' },
+  { value: 'list', label: 'List View' },
   { value: 'instructors', label: 'Instructors' },
   { value: 'students', label: 'Students' },
   { value: 'safety', label: 'Safety' },
@@ -718,6 +723,7 @@ const getQualityMetrics = (summary: SummaryPayload, organizationScopeId: string)
     .slice(0, 3)
     .map((audit) => ({
       id: audit.id,
+      link: `/quality/audits/${audit.id}`,
       title: audit.title,
       auditNumber: audit.auditNumber,
       status: audit.status,
@@ -732,6 +738,7 @@ const getQualityMetrics = (summary: SummaryPayload, organizationScopeId: string)
     .slice(0, 4)
     .map((audit) => ({
       id: audit.id,
+      link: `/quality/audits/${audit.id}`,
       title: audit.title,
       auditNumber: audit.auditNumber,
       dateLabel: format(new Date(audit.auditDate), 'dd MMM yyyy'),
@@ -1625,6 +1632,10 @@ export default function DashboardPage() {
   );
   const quickReportAttentionCount = openTechnicalReports.length + openQuickSafetyReports.length;
   const overviewSafetyMetrics = useMemo(() => getSafetyMetrics(summary), [summary]);
+  const qualityMetrics = useMemo(
+    () => getQualityMetrics(summary, scopedOrganizationId),
+    [scopedOrganizationId, summary]
+  );
   const renderTabLabel = (tab: IndustryTab) => (
     <span className="flex items-center gap-2">
       <span>{tab.label}</span>
@@ -2122,15 +2133,15 @@ export default function DashboardPage() {
                                         {row.aircraft.make} {row.aircraft.model}
                                       </p>
                                     </div>
-                                    <div className="flex min-h-[78px] flex-col justify-between rounded-md border bg-background px-3 py-2.5">
+                                    <div className="flex min-h-[64px] flex-col justify-center px-3 py-2">
                                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Flown</p>
                                       <p className="mt-1 text-sm font-black">{formatHours(row.loggedHours)}</p>
                                     </div>
-                                    <div className="flex min-h-[78px] flex-col justify-between rounded-md border bg-background px-3 py-2.5">
+                                    <div className="flex min-h-[64px] flex-col justify-center px-3 py-2">
                                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Ground</p>
                                       <p className="mt-1 text-sm font-black">{formatHours(row.hoursOnGround)}</p>
                                     </div>
-                                    <div className={cn('flex min-h-[78px] flex-col justify-between rounded-md border px-3 py-2.5', row.targetMet ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                                    <div className={cn('flex min-h-[64px] flex-col justify-center px-3 py-2', row.targetMet ? 'text-emerald-700' : 'text-amber-700')}>
                                       <p className="text-[10px] font-black uppercase tracking-[0.16em]">{row.targetMet ? 'Target Met' : 'Below Target'}</p>
                                       <p className="mt-1 text-sm font-black">{formatHours(row.targetHours)}</p>
                                     </div>
@@ -2252,6 +2263,15 @@ export default function DashboardPage() {
                       <TabsContent key={tab.value} value={tab.value} className="m-0">
                         {tab.value === 'instructors' ? (
                           <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} summary={summary} />
+                        ) : tab.value === 'list' ? (
+                          <OperationalListView
+                            modern={isModern}
+                            summary={summary}
+                            fleetRows={fleetRows}
+                            qualityMetrics={qualityMetrics}
+                            technicalReports={openTechnicalReports}
+                            quickSafetyReports={openQuickSafetyReports}
+                          />
                         ) : tab.value === 'students' ? (
                           <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
                         ) : tab.value === 'safety' ? (
@@ -2271,6 +2291,134 @@ export default function DashboardPage() {
       </Card>
     </div>
   );
+}
+
+function OperationalListView({
+  modern,
+  summary,
+  fleetRows,
+  qualityMetrics,
+  technicalReports,
+  quickSafetyReports,
+}: {
+  modern: boolean;
+  summary: SummaryPayload;
+  fleetRows: FleetRow[];
+  qualityMetrics: QualityMetrics;
+  technicalReports: TechnicalQuickReport[];
+  quickSafetyReports: QuickSafetyReport[];
+}) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcomingBookings = (summary.bookings || [])
+    .filter((booking) => {
+      if (!booking.date) return false;
+      const date = parseLocalDate(booking.date);
+      return !Number.isNaN(date.getTime()) && date >= today;
+    })
+    .sort((left, right) => parseLocalDate(left.date || '').getTime() - parseLocalDate(right.date || '').getTime())
+    .slice(0, 5);
+  const aircraftMap = new Map((summary.aircrafts || []).map((aircraft) => [aircraft.id, aircraft.tailNumber || aircraft.id]));
+  const attentionRows = [
+    ...technicalReports.slice(0, 3).map((report) => ({
+      id: report.id,
+      title: report.title || 'Technical report',
+      detail: 'Preliminary technical report awaiting review',
+      href: '/quick-reports',
+      tone: 'warning' as const,
+    })),
+    ...quickSafetyReports.slice(0, 3).map((report) => ({
+      id: report.id,
+      title: report.title || report.summary || 'Quick safety report',
+      detail: 'Quick safety report awaiting review',
+      href: '/quick-reports',
+      tone: 'danger' as const,
+    })),
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="dashboard-card-band flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed border-card-border/70 px-4 py-2.5">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/75">Operational List</p>
+          <p className="mt-1 text-xs text-muted-foreground">A focused queue for work that needs attention or follow-through.</p>
+        </div>
+        <Badge variant="outline" className="text-[10px] font-black uppercase">Live tenant data</Badge>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <DashboardListCard title="Upcoming Bookings" actionLabel="Open schedule" actionHref="/bookings/schedule" modern={modern}>
+          {upcomingBookings.length > 0 ? upcomingBookings.map((booking) => (
+            <DashboardListRow
+              key={booking.bookingNumber || `${booking.aircraftId}-${booking.date}`}
+              title={booking.bookingNumber || booking.type || 'Booking'}
+              detail={`${aircraftMap.get(booking.aircraftId || '') || 'Aircraft not set'} · ${booking.date ? format(parseLocalDate(booking.date), 'dd MMM yyyy') : 'Date not set'}`}
+              meta={booking.status || 'Planned'}
+              href="/bookings/schedule"
+            />
+          )) : <DashboardEmptyRow message="No scheduled bookings. Create a booking from the schedule when flight activity is confirmed." />}
+        </DashboardListCard>
+
+        <DashboardListCard title="Fleet Readiness" actionLabel="Open aircraft" actionHref="/assets/aircraft" modern={modern}>
+          {fleetRows.slice(0, 5).map((row) => (
+            <DashboardListRow
+              key={row.aircraft.id}
+              title={row.aircraft.tailNumber || row.aircraft.id}
+              detail={`${row.aircraft.make || 'Aircraft'} ${row.aircraft.model || ''}`.trim()}
+              meta={row.serviceState === 'overdue' ? 'Service overdue' : row.serviceState === 'nearing' ? `${row.remainingHours ?? 0}h to service` : 'Available'}
+              href="/assets/aircraft"
+              tone={row.serviceState === 'overdue' ? 'danger' : row.serviceState === 'nearing' ? 'warning' : 'positive'}
+            />
+          ))}
+          {fleetRows.length === 0 ? <DashboardEmptyRow message="No aircraft records found for this tenant." /> : null}
+        </DashboardListCard>
+
+        <DashboardListCard title="Reports Needing Review" actionLabel="Review reports" actionHref="/quick-reports" modern={modern}>
+          {attentionRows.length > 0 ? attentionRows.map((row) => (
+            <DashboardListRow key={row.id} title={row.title} detail={row.detail} meta="Review" href={row.href} tone={row.tone} />
+          )) : <DashboardEmptyRow message="No technical or quick safety reports are waiting for review." />}
+        </DashboardListCard>
+
+        <DashboardListCard title="Quality Actions" actionLabel="Open task tracker" actionHref="/quality/task-tracker" modern={modern}>
+          {qualityMetrics.upcomingCapRows.length > 0 ? qualityMetrics.upcomingCapRows.map((row) => (
+            <DashboardListRow
+              key={row.id}
+              title={row.description}
+              detail={`${row.sourceIdentifier} · ${row.assignee}`}
+              meta={`Due ${format(parseLocalDate(row.dueDate), 'dd MMM yyyy')}`}
+              href="/quality/task-tracker"
+              tone={row.status === 'Overdue' ? 'danger' : 'warning'}
+            />
+          )) : <DashboardEmptyRow message="No corrective actions are currently due. Scheduled audits remain available in the Quality tab." />}
+        </DashboardListCard>
+      </div>
+    </div>
+  );
+}
+
+function DashboardListCard({ title, actionLabel, actionHref, modern, children }: { title: string; actionLabel: string; actionHref: string; modern: boolean; children: ReactNode }) {
+  return (
+    <Card className={cn(DASHBOARD_SHELL_CLASS, isModernCard(modern))}>
+      <CardHeader className="flex-row items-center justify-between border-b bg-muted/5 px-4 py-3">
+        <CardTitle className="text-sm font-black uppercase tracking-tight">{title}</CardTitle>
+        <Button asChild variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase"><Link href={actionHref}>{actionLabel}</Link></Button>
+      </CardHeader>
+      <CardContent className="divide-y p-0">{children}</CardContent>
+    </Card>
+  );
+}
+
+function DashboardListRow({ title, detail, meta, href, tone = 'neutral' }: { title: string; detail: string; meta: string; href: string; tone?: 'neutral' | 'positive' | 'warning' | 'danger' }) {
+  const toneClass = { neutral: 'border-slate-200 bg-slate-50 text-slate-700', positive: 'border-emerald-200 bg-emerald-50 text-emerald-800', warning: 'border-amber-200 bg-amber-50 text-amber-900', danger: 'border-rose-200 bg-rose-50 text-rose-900' }[tone];
+  return <Link href={href} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/40"><div className="min-w-0"><p className="truncate text-sm font-bold">{title}</p><p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{detail}</p></div><Badge variant="outline" className={cn('shrink-0 text-[9px] font-black uppercase', toneClass)}>{meta}</Badge></Link>;
+}
+
+function DashboardEmptyRow({ message }: { message: string }) {
+  return <div className="px-4 py-8 text-center text-sm text-muted-foreground">{message}</div>;
+}
+
+function isModernCard(modern: boolean) {
+  return modern ? 'border-slate-200/80 bg-white/95' : '';
 }
 
 function StatTile({
@@ -2353,7 +2501,7 @@ function InstructorOverviewCard({
   metrics: InstructorMetrics;
   summary: SummaryPayload;
 }) {
-  const topRows = metrics.rows.slice(0, 3);
+  const topRows = metrics.rows.slice(0, 5);
   const technicalNotifications = (Array.isArray(summary.technicalReports) ? summary.technicalReports : [])
     .filter((report) => (report.status || 'Open') !== 'Closed')
     .sort((left, right) => `${right.eventDate}T${right.eventTime}`.localeCompare(`${left.eventDate}T${left.eventTime}`))
@@ -2394,7 +2542,9 @@ function InstructorOverviewCard({
                   return (
                     <div key={row.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <Link href={`/users/personnel/${row.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
+                          {row.name}
+                        </Link>
                         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                           {row.hasOpenSession ? 'Active session' : 'No open session'}
                         </p>
@@ -2452,9 +2602,9 @@ function InstructorOverviewCard({
               technicalNotifications.map((report) => (
                 <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,0.95fr))] md:items-stretch">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black uppercase tracking-tight">
+                    <Link href={`/quick-reports/technical-report/${report.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
                       {report.reportNumber} / {report.title || report.summary}
-                    </p>
+                    </Link>
                     <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                       {report.aircraftLabel || 'Aircraft not set'} / {report.location || 'Unknown location'}
                     </p>
@@ -2553,7 +2703,9 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
                       )}
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <Link href={`/users/personnel/${row.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
+                          {row.name}
+                        </Link>
                         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                           {lastFlight
                             ? `Last flight ${formatDateLabel(lastFlight)}${lastDebrief ? ` - Debrief ${formatDateLabel(lastDebrief)}` : ''}`
@@ -2691,7 +2843,9 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
                   inactiveRows.map((row) => (
                     <div key={row.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.8fr))] md:items-center">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <Link href={`/users/personnel/${row.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
+                          {row.name}
+                        </Link>
                         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{row.recommendedAction}</p>
                       </div>
                       <div className="rounded-md border bg-background px-3 py-2.5">
@@ -2730,7 +2884,9 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
                   milestoneRows.map((row) => (
                     <div key={row.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,0.78fr))] md:items-center">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black uppercase tracking-tight">{row.name}</p>
+                        <Link href={`/users/personnel/${row.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
+                          {row.name}
+                        </Link>
                         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                           {row.milestoneHours !== null ? `Next milestone ${row.milestoneHours}h` : 'Milestone not set'}
                         </p>
@@ -2907,7 +3063,9 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                 reports.map((report) => (
                   <div key={report.id} className="space-y-3 px-3 py-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black uppercase tracking-tight">{report.title}</p>
+                      <Link href={`/safety/safety-reports/${report.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
+                        {report.title}
+                      </Link>
                       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                         {report.location} / {report.dateLabel}
                       </p>
@@ -3094,7 +3252,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                                 metrics.auditRows.map((audit) => (
                   <div key={audit.id} className="space-y-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-bold leading-snug text-foreground">{audit.title}</p>
+                      <Link href={audit.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{audit.title}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {audit.auditNumber} · {audit.dateLabel}
                       </p>
@@ -3176,7 +3334,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                                 metrics.upcomingAuditRows.map((audit) => (
                   <div key={audit.id} className="space-y-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-bold leading-snug text-foreground">{audit.title}</p>
+                      <Link href={audit.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{audit.title}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {audit.auditNumber} · {audit.scope}
                       </p>
@@ -3209,7 +3367,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                                 metrics.upcomingCapRows.map((action) => (
                   <div key={action.id} className="space-y-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-bold leading-snug text-foreground">{action.description}</p>
+                      <Link href={action.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{action.description}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {action.sourceType} · {action.sourceIdentifier}
                       </p>
@@ -3248,7 +3406,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
                                 metrics.recentCapRows.map((action) => (
                   <div key={action.id} className="space-y-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-bold leading-snug text-foreground">{action.description}</p>
+                      <Link href={action.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{action.description}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {action.sourceType} · {action.sourceIdentifier}
                       </p>
