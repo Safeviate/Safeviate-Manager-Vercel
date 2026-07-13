@@ -1516,10 +1516,26 @@ export default function DashboardPage() {
         meta: `${count} bookings`,
       }));
 
+    const registeredAircraft = aircrafts
+      .slice()
+      .sort((left, right) => {
+        const leftName = left.tailNumber || left.abbreviation || left.id;
+        const rightName = right.tailNumber || right.abbreviation || right.id;
+        return leftName.localeCompare(rightName);
+      })
+      .slice(0, 4)
+      .map((aircraft) => ({
+        id: aircraft.id,
+        title: aircraft.tailNumber || aircraft.abbreviation || aircraft.id,
+        subtitle: `${aircraft.make || 'Aircraft'} ${aircraft.model || ''}`.trim(),
+        meta: 'Registered fleet',
+      }));
+
     return {
       upcomingBookings,
       busiestAircraft,
       busiestInstructors,
+      registeredAircraft,
     };
   }, [summary.aircrafts, summary.bookings, summary.instructors]);
 
@@ -1900,7 +1916,7 @@ export default function DashboardPage() {
                                 ))
                               ) : (
                                 <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                                  No upcoming bookings found.
+                                  No flights are scheduled. {summary.aircrafts?.length || 0} aircraft are available for scheduling.
                                 </div>
                               )}
                             </div>
@@ -1920,8 +1936,9 @@ export default function DashboardPage() {
                           </CardHeader>
                           <CardContent className="p-0">
                             <div className="divide-y">
-                              {overviewDetailRows.busiestAircraft.length > 0 ? (
-                                overviewDetailRows.busiestAircraft.map((row) => (
+                              {(overviewDetailRows.busiestAircraft.length > 0
+                                ? overviewDetailRows.busiestAircraft
+                                : overviewDetailRows.registeredAircraft).map((row) => (
                                   <div key={row.id} className="flex items-center justify-between gap-3 px-3 py-3">
                                     <div className="min-w-0">
                                       <p className="truncate text-sm font-black uppercase tracking-tight">{row.title}</p>
@@ -1929,12 +1946,12 @@ export default function DashboardPage() {
                                     </div>
                                     <p className="shrink-0 text-sm font-black">{row.meta}</p>
                                   </div>
-                                ))
-                              ) : (
+                                ))}
+                              {overviewDetailRows.busiestAircraft.length === 0 && overviewDetailRows.registeredAircraft.length === 0 ? (
                                 <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                                  No aircraft booking data yet.
+                                  No aircraft records found.
                                 </div>
-                              )}
+                              ) : null}
                             </div>
                           </CardContent>
                         </Card>

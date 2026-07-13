@@ -160,6 +160,34 @@ export interface CorrectiveActionPlanResponse {
     evidence?: CorrectiveActionPlanEvidence[];
 }
 
+export interface FindingOccurrence {
+    auditId: string;
+    auditNumber: string;
+    findingId: string;
+    observation: string;
+    level?: string;
+    status: AuditStatus;
+    auditDate: string;
+}
+
+export interface RecommendedCorrectiveAction {
+    id: string;
+    title: string;
+    description: string;
+    responsiblePersonId?: string;
+    dueInDays?: number;
+    createdAt: string;
+}
+
+export interface RecurringFindingGroup {
+    id: string;
+    templateId: string;
+    checklistItemId: string;
+    title: string;
+    occurrences: FindingOccurrence[];
+    recommendations: RecommendedCorrectiveAction[];
+}
+
 export interface QualityRiskPlanSignoff {
     signedById?: string;
     signedAt?: string;

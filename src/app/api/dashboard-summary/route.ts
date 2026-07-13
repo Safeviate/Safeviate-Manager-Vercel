@@ -1,4 +1,4 @@
-import { isDatabaseAvailable, prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import {
   ensureAttendanceRecordsSchema,
   ensureAircraftSchema,
@@ -240,10 +240,6 @@ export async function GET(request: Request) {
       return NextResponse.json(EMPTY_SUMMARY, { status: 200 });
     }
     const resolvedTenantId = tenantId;
-
-    if (!(await isDatabaseAvailable())) {
-      return NextResponse.json(EMPTY_SUMMARY, { status: 200 });
-    }
 
     const tenantConfig = await readTenantConfig(resolvedTenantId);
 

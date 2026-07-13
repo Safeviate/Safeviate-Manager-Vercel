@@ -18,6 +18,8 @@ import { CapTaskDetailCard, parseCapFindingLevel, parseCapObservation } from '..
 import type { CorrectiveActionPlan, QualityAudit } from '@/types/quality';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { OfflineCacheButton } from '@/components/offline-cache-button';
+import { RecurringFindingPanel } from '../recurring-finding-panel';
+import type { RecommendedCorrectiveAction } from '@/types/quality';
 
 const FINDING_ROUTE_PREFIX = 'finding::';
 const LOCAL_DRAFT_CAP_PREFIX = 'draft::';
@@ -211,6 +213,16 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
     window.location.href = draftUrl;
   };
 
+  const handleApplyRecommendation = (recommendation: RecommendedCorrectiveAction) => {
+    if (!capEntry) return;
+    setDraftCaps((current) => {
+      const draft = buildLocalDraftCap(capEntry.cap);
+      draft.rootCauseAnalysis = recommendation.description;
+      draft.responsiblePersonId = recommendation.responsiblePersonId || capEntry.cap.responsiblePersonId || '';
+      return [...current, draft];
+    });
+  };
+
   const handleCapSaved = (savedCap: CorrectiveActionPlan) => {
     setCaps((current) => {
       const withoutCurrent = current.filter((item) => item.id !== savedCap.id);
@@ -351,6 +363,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
         </div>
         <CardContent className="bg-muted/5 p-4">
           <div className="space-y-4">
+            <RecurringFindingPanel auditId={capEntry.audit.id} findingId={capEntry.cap.findingId} onApply={handleApplyRecommendation} />
             {draftCaps.map((draftCap, index) => (
               <div key={draftCap.id} ref={index === draftCaps.length - 1 ? latestDraftCardRef : null}>
                 <CapTaskDetailCard

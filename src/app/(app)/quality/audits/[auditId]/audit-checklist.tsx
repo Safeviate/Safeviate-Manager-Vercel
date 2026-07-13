@@ -82,6 +82,14 @@ const findingSchema = z.object({
   comment: z.string().optional(),
   level: z.string().optional(),
   evidence: z.array(evidenceSchema).optional(),
+}).superRefine((finding, context) => {
+  if (finding.finding === 'Non Compliant' && !finding.level?.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['level'],
+      message: 'Select a classification for every non-compliant finding.',
+    });
+  }
 });
 
 const formSchema = z.object({
@@ -353,6 +361,16 @@ export function AuditChecklist({ audit, tenantId, findingLevels, caps, personnel
     };
 
     const handleFinalizeAudit = async () => {
+        const isValid = await form.trigger();
+        if (!isValid) {
+            toast({
+                variant: 'destructive',
+                title: 'Classification Required',
+                description: 'Select a classification for every non-compliant finding before finalizing the audit.',
+            });
+            return;
+        }
+
         const values = form.getValues();
         const applicableItems = values.findings.filter(f => f.finding !== 'Not Applicable');
         const compliantItems = applicableItems.filter(f => f.finding === 'Compliant');
