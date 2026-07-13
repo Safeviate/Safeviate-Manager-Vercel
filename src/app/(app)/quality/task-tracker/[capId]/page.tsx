@@ -167,7 +167,7 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
   const isDraftEditorRoute = useMemo(
     () => Boolean(
       capEntry
-      && !caps.some((item) => item.id === resolvedParams.capId)
+      && (resolvedParams.capId === 'new' || !caps.some((item) => item.id === resolvedParams.capId))
       && (Boolean(searchParams?.get('auditId')?.trim()) && Boolean(searchParams?.get('findingId')?.trim()))
     ),
     [capEntry, caps, resolvedParams.capId, searchParams]
