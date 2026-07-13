@@ -102,7 +102,11 @@ export default function CapTaskDetailPage({ params }: { params: Promise<{ capId:
   }, [tenantId]);
 
   const capEntry = useMemo(() => {
-    const cap = caps.find((item) => item.id === resolvedParams.capId);
+    // "new" is a route sentinel, not a persisted CAP identity. Check the
+    // query-bound finding first so a legacy CAP with id "new" cannot hijack it.
+    const cap = resolvedParams.capId === 'new'
+      ? undefined
+      : caps.find((item) => item.id === resolvedParams.capId);
     if (cap) {
       const audit = audits.find((item) => item.id === cap.auditId);
       if (!audit) return null;
