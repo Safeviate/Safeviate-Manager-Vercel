@@ -9,7 +9,7 @@ import { isMasterTenantEmail, resolveTenantOverride } from '@/lib/server/tenant-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MainPageHeader } from '@/components/page-header';
-import { PrintButton } from '@/components/print-button';
+import { QrCodePrintMenu } from './qr-code-print-menu';
 
 type QrTarget = {
   title: string;
@@ -88,8 +88,8 @@ export default async function QuickReportQrCodesPage() {
       <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border shadow-none print:border-0 print:shadow-none">
         <MainPageHeader
           title={`${tenant.name} QR Codes`}
-          description="Print the two public quick-report QR codes for this organization. Use the print dialog to scale for desk mounts, dashboards, or wall mounts."
-          actions={<PrintButton label="Print QR Codes" className="print:hidden" />}
+          description="Print the public safety or technical quick-report QR code for this organization. Use the print dialog to scale for desk mounts, dashboards, or wall mounts."
+          actions={<QrCodePrintMenu />}
         />
 
         <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 print:space-y-3 print:overflow-visible">
@@ -103,11 +103,17 @@ export default async function QuickReportQrCodesPage() {
             </p>
           </div>
 
+          <style>{`@media print {
+            html[data-qr-print-target="safety"] [data-qr-type="technical"],
+            html[data-qr-print-target="technical"] [data-qr-type="safety"] {
+              display: none !important;
+            }
+          }`}</style>
           <div className="grid gap-4 md:grid-cols-2 print:grid-cols-2 print:gap-3">
           {qrCards.map((card) => {
             const Icon = card.icon;
             return (
-              <Card key={card.title} className="overflow-hidden border shadow-none print:break-inside-avoid print:border">
+              <Card key={card.title} data-qr-type={card.title === 'Safety Report' ? 'safety' : 'technical'} className="overflow-hidden border shadow-none print:break-inside-avoid print:border">
                 <CardHeader className="border-b bg-muted/5 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-background">

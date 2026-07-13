@@ -304,6 +304,9 @@ type BookingOverviewMetrics = {
 };
 
 const DASHBOARD_SHELL_CLASS = 'dashboard-card-theme overflow-hidden rounded-lg border border-card-border bg-card shadow-none';
+const DASHBOARD_TAB_HEADER_CLASS = 'sticky top-0 z-10 rounded-t-lg border-b bg-[hsl(var(--card-header-band-background))] px-4 py-2.5 text-[hsl(var(--card-header-band-foreground))]';
+const DASHBOARD_ROW_METRIC_CLASS = 'min-w-0 border-card-border/70 px-3 py-2.5 md:border-l';
+const DASHBOARD_ROW_STATUS_CLASS = 'min-w-0 border-card-border/70 px-3 py-2.5 md:border-l';
 const DEFAULT_INSTRUCTOR_WARNING_BANDS: InstructorWarningBand[] = [
   { hours: 20, warningHours: 10, color: '#60a5fa', foregroundColor: '#ffffff' },
   { hours: 40, warningHours: 30, color: '#facc15', foregroundColor: '#000000' },
@@ -2458,12 +2461,7 @@ function StatTile({
 function StageCard({ tabLabel, modern }: { tabLabel: string; modern: boolean }) {
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
-      <CardHeader
-        className={cn(
-          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
-          modern && 'bg-white'
-        )}
-      >
+      <CardHeader className={DASHBOARD_TAB_HEADER_CLASS}>
         <CardTitle className="text-sm font-black uppercase tracking-tight">{tabLabel}</CardTitle>
       </CardHeader>
       <CardContent className="flex min-h-[280px] items-center justify-center p-6">
@@ -2495,16 +2493,11 @@ function InstructorOverviewCard({
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
-      <CardHeader
-        className={cn(
-          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
-          modern && 'bg-white'
-        )}
-      >
+      <CardHeader className={DASHBOARD_TAB_HEADER_CLASS}>
         <CardTitle className="text-sm font-black uppercase tracking-tight">Instructor Snapshot</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile label="Today Flight" value={formatHours(metrics.totalTodayFlightHours)} hint="Current daily training load" />
           <StatTile label="Today Duty" value={formatHours(metrics.totalTodayDutyHours)} hint="Attendance-based duty time" />
           <StatTile label="Watch" value={String(metrics.watchCount)} hint="Near daily limit" />
@@ -2535,15 +2528,15 @@ function InstructorOverviewCard({
                           {row.hasOpenSession ? 'Active session' : 'No open session'}
                         </p>
                       </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Today Flight</p>
                         <p className="mt-1 text-sm font-black">{formatHours(row.todayFlightHours)}</p>
                       </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Period Flight</p>
                         <p className="mt-1 text-sm font-black">{formatHours(row.periodFlightHours)}</p>
                       </div>
-                      <div className={cn('rounded-md border px-3 py-2.5', statusClass)}>
+                      <div className={cn(DASHBOARD_ROW_STATUS_CLASS, statusClass)}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em]">
                           {row.status === 'over' ? 'Over' : row.status === 'watch' ? 'Watch' : 'Safe'}
                         </p>
@@ -2562,9 +2555,11 @@ function InstructorOverviewCard({
             </div>
           </div>
 
-          <div className="rounded-md border bg-background p-4">
-            <p className="text-sm font-black uppercase tracking-tight">Quick Read</p>
-            <div className="mt-4 space-y-3">
+          <div className="overflow-hidden rounded-md border bg-background">
+            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+              <p className="text-sm font-black uppercase tracking-tight">Quick Read</p>
+            </div>
+            <div className="space-y-3 p-4">
               <SummaryLine label="Flight period" value={formatHours(metrics.totalPeriodFlightHours)} />
               <SummaryLine label="Duty period" value={formatHours(metrics.totalPeriodDutyHours)} />
               <SummaryLine label="Open sessions" value={String(metrics.openSessions)} />
@@ -2637,16 +2632,11 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
-      <CardHeader
-        className={cn(
-          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
-          modern && 'bg-white'
-        )}
-      >
+      <CardHeader className={DASHBOARD_TAB_HEADER_CLASS}>
         <CardTitle className="text-sm font-black uppercase tracking-tight">Student Snapshot</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile label="Active Students" value={String(metrics.activeStudents)} hint="Students flown in the period" />
           <StatTile label="New Students" value={String(metrics.newStudents)} hint="First flight in the period" />
           <StatTile label="Recent Debriefs" value={String(metrics.recentDebriefs)} hint="Reports captured recently" />
@@ -2723,22 +2713,22 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
                         </div>
                       </div>
 
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Recent Hours</p>
                         <p className="mt-1 text-sm font-black">{formatHours(row.recentFlightHours)}</p>
                       </div>
 
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Since Flight</p>
                         <p className="mt-1 text-sm font-black">{formatDaysSince(row.daysSinceFlight)}</p>
                       </div>
 
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Since Debrief</p>
                         <p className="mt-1 text-sm font-black">{formatDaysSince(row.daysSinceDebrief)}</p>
                       </div>
 
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Pace</p>
                         <p className="mt-1 text-sm font-black">{formatPace(row.pacePerWeek)}</p>
                         <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -2746,7 +2736,7 @@ function StudentOverviewCard({ modern, metrics, summary }: { modern: boolean; me
                         </p>
                       </div>
 
-                      <div className={cn('rounded-md border px-3 py-2.5', statusClass)}>
+                      <div className={cn(DASHBOARD_ROW_STATUS_CLASS, statusClass)}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em]">
                           {row.status === 'over' ? 'At risk' : row.status === 'watch' ? 'Watch' : 'Safe'}
                         </p>
@@ -2931,7 +2921,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
         </div>
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           <StatTile label="Open Reports" value={String(metrics.openReports)} hint="Reports still active" />
           <StatTile label="Open Hazards" value={String(metrics.openRisks)} hint="Risk items requiring attention" />
           <StatTile label="Open CAPs" value={String(metrics.openCaps)} hint="Corrective actions in flight" />
@@ -2989,7 +2979,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                 </div>
                 <div className="space-y-2">
                   {metrics.disruptionRows.map((row) => (
-                    <div key={row.id} className="rounded-md border bg-background px-3 py-2.5">
+                    <div key={row.id} className="border-b border-card-border/70 px-3 py-2.5 last:border-b-0">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{row.hint}</p>
                       <div className="mt-1 flex items-start justify-between gap-3">
                         <p className="min-w-0 text-sm font-black break-words">{row.title}</p>
@@ -3047,7 +3037,7 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
             <div className="divide-y">
               {reports.length > 0 ? (
                 reports.map((report) => (
-                  <div key={report.id} className="space-y-3 px-3 py-3">
+                  <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,0.75fr))] md:items-center">
                     <div className="min-w-0">
                       <Link href={`/safety/safety-reports/${report.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
                         {report.title}
@@ -3056,8 +3046,8 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                         {report.location} / {report.dateLabel}
                       </p>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-md border bg-muted/10 px-3 py-2">
+                    <>
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Status</p>
                         <div className="mt-2">
                           <Badge variant="outline" className="text-[10px] font-black uppercase">
@@ -3065,15 +3055,15 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                           </Badge>
                         </div>
                       </div>
-                      <div className="rounded-md border bg-muted/10 px-3 py-2 min-w-0">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Classification</p>
                         <p className="mt-1 text-base font-black break-words">{report.classification}</p>
                       </div>
-                      <div className="rounded-md border bg-muted/10 px-3 py-2">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">CAPs</p>
                         <p className="mt-1 text-base font-black">{report.actionCount}</p>
                       </div>
-                    </div>
+                    </>
                   </div>
                 ))
               ) : (
@@ -3118,13 +3108,13 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                           {report.reportNumber} / {report.title || report.summary}
                         </p>
                       </div>
-                      <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
+                      <div className={cn('flex h-full flex-col', DASHBOARD_ROW_METRIC_CLASS)}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
                         <Badge variant={report.status === 'Closed' ? 'default' : 'destructive'} className="mt-2 text-[10px] font-black uppercase">
                           {report.status}
                         </Badge>
                       </div>
-                      <div className="flex h-full min-w-0 flex-col rounded-md border bg-background px-3 py-2.5">
+                      <div className={cn('flex h-full min-w-0 flex-col', DASHBOARD_ROW_METRIC_CLASS)}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Filed</p>
                         <p className="mt-1 text-sm font-black">{format(parseLocalDate(report.eventDate) || new Date(report.eventDate), 'dd MMM yyyy')}</p>
                         <Button asChild variant="link" className="mt-1 h-auto justify-start px-0 text-left text-[10px] font-black uppercase tracking-[0.14em] text-primary whitespace-normal break-words">
@@ -3162,11 +3152,11 @@ function SafetyOverviewCard({ modern, summary }: { modern: boolean; summary: Sum
                           {risk.hazardArea}
                         </p>
                       </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
                         <p className="mt-1 text-sm font-black">{risk.status}</p>
                       </div>
-                      <div className="rounded-md border bg-background px-3 py-2.5">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risks / Mitigations</p>
                         <p className="mt-1 text-sm font-black">
                           {risk.riskCount} / {risk.mitigationCount}
@@ -3197,12 +3187,7 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
-      <CardHeader
-        className={cn(
-          'sticky top-0 z-10 rounded-t-lg border-b bg-background',
-          modern && 'bg-white'
-        )}
-      >
+      <CardHeader className={DASHBOARD_TAB_HEADER_CLASS}>
         <div className="flex items-center gap-2">
           <QualityIcon className="h-4 w-4 text-blue-600" />
           <CardTitle className="text-sm font-black uppercase tracking-tight">Quality Snapshot</CardTitle>
@@ -3210,17 +3195,19 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
       </CardHeader>
       <CardContent className="space-y-3 p-3 md:p-4">
         <div className="grid gap-4 xl:grid-cols-2">
-          <div className="rounded-md border bg-background p-3 xl:col-span-2">
-            <div className="mb-3 min-w-0">
-              <p className="text-[13px] font-bold leading-none text-foreground/90">Quality Snapshot</p>
+          <div className="overflow-hidden rounded-md border bg-background xl:col-span-2">
+            <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+              <p className="text-[13px] font-bold leading-none text-[hsl(var(--card-header-band-foreground))]">Quality Snapshot</p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="p-3">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <StatTile label="Open Audits" value={String(metrics.openAudits)} hint="Audits not yet closed" />
               <StatTile label="Closed Audits" value={String(metrics.closedAudits)} hint="Finalised or archived" />
               <StatTile label="Open Findings" value={String(metrics.openFindings)} hint="Non-compliant items raised" />
               <StatTile label="Avg Score" value={`${metrics.averageCompliance.toFixed(1)}%`} hint="Average compliance score" />
               <StatTile label="CAP Due Soon" value={String(metrics.dueSoonCaps)} hint="Actions due in the next 30 days" />
               <StatTile label="CAP Overdue" value={String(metrics.overdueCaps)} hint="Action deadlines already passed" />
+            </div>
             </div>
           </div>
 
@@ -3236,29 +3223,29 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.auditRows.length > 0 ? (
                                 metrics.auditRows.map((audit) => (
-                  <div key={audit.id} className="space-y-3 px-4 py-3">
+                  <div key={audit.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,0.75fr))] md:items-center">
                     <div className="min-w-0">
                       <Link href={audit.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{audit.title}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {audit.auditNumber} · {audit.dateLabel}
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="space-y-1">
+                    <>
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Status</p>
                         <p className="text-xs font-semibold text-foreground">{audit.status}</p>
                       </div>
-                      <div className="space-y-1">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Compliance</p>
                         <p className="text-xs font-semibold text-foreground">
                           {audit.complianceScore !== null ? audit.complianceScore.toFixed(1) + '%' : 'N/A'}
                         </p>
                       </div>
-                      <div className="space-y-1">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Findings</p>
                         <p className="text-xs font-semibold text-foreground">{audit.findingCount}</p>
                       </div>
-                    </div>
+                    </>
                   </div>
                 ))
               ) : (
@@ -3318,14 +3305,14 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.upcomingAuditRows.length > 0 ? (
                                 metrics.upcomingAuditRows.map((audit) => (
-                  <div key={audit.id} className="space-y-3 px-4 py-3">
+                  <div key={audit.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)] md:items-center">
                     <div className="min-w-0">
                       <Link href={audit.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{audit.title}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {audit.auditNumber} · {audit.scope}
                       </p>
                     </div>
-                    <div className="space-y-1">
+                    <div className={DASHBOARD_ROW_METRIC_CLASS}>
                       <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Planned start</p>
                       <p className="text-xs font-semibold text-foreground">{audit.dateLabel}</p>
                     </div>
@@ -3351,23 +3338,23 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.upcomingCapRows.length > 0 ? (
                                 metrics.upcomingCapRows.map((action) => (
-                  <div key={action.id} className="space-y-3 px-4 py-3">
+                  <div key={action.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,0.8fr))] md:items-center">
                     <div className="min-w-0">
                       <Link href={action.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{action.description}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {action.sourceType} · {action.sourceIdentifier}
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="space-y-1">
+                    <>
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Assignee</p>
                         <p className="text-xs font-semibold text-foreground">{action.assignee}</p>
                       </div>
-                      <div className="space-y-1">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Do by</p>
                         <p className="text-xs font-semibold text-foreground">{format(parseLocalDate(action.dueDate), 'dd MMM yyyy')}</p>
                       </div>
-                    </div>
+                    </>
                   </div>
                 ))
               ) : (
@@ -3390,27 +3377,27 @@ function QualityOverviewCard({ modern, summary, organizationScopeId }: { modern:
             <div className={cn(qualityPanelBodyClass, 'divide-y')}>
               {metrics.recentCapRows.length > 0 ? (
                                 metrics.recentCapRows.map((action) => (
-                  <div key={action.id} className="space-y-3 px-4 py-3">
+                  <div key={action.id} className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,0.75fr))] md:items-center">
                     <div className="min-w-0">
                       <Link href={action.link} className="block text-[13px] font-bold leading-snug text-foreground hover:text-primary hover:underline">{action.description}</Link>
                       <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         {action.sourceType} · {action.sourceIdentifier}
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="space-y-1">
+                    <>
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Opened</p>
                         <p className="text-xs font-semibold text-foreground">{format(parseLocalDate(action.openedDate), 'dd MMM yyyy')}</p>
                       </div>
-                      <div className="space-y-1">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Assignee</p>
                         <p className="text-xs font-semibold text-foreground">{action.assignee}</p>
                       </div>
-                      <div className="space-y-1">
+                      <div className={DASHBOARD_ROW_METRIC_CLASS}>
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Status</p>
                         <p className="text-xs font-semibold text-foreground">{action.status}</p>
                       </div>
-                    </div>
+                    </>
                   </div>
                 ))
               ) : (
