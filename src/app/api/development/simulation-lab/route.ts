@@ -771,7 +771,7 @@ function buildSafetyReports(runId: string, settings: SimulationLabSettings, inst
       eventTime: '10:30',
       location: `Apron ${((index % 3) + 1)}`,
       description: 'Simulation-generated safety event for dashboard and workflow testing.',
-      eventClassification: index % 4 === 0 ? 'Incident' : 'Hazard',
+      eventClassification: index % 4 === 0 ? 'Incident' : 'Not Determined',
       correctiveActions: [
         {
           id: randomUUID(),

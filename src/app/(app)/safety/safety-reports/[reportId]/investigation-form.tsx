@@ -43,6 +43,7 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DocumentUploader } from '@/components/document-uploader';
+import { CARD_COMPACT_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -118,11 +119,9 @@ const investigationSchema = z.object({
 type FormValues = z.infer<typeof investigationSchema>;
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon: React.ElementType }) => (
-  <div className="flex items-center gap-2 mb-4">
-    <div className="p-1.5 rounded-md bg-primary/10 text-primary">
-      <Icon className="h-4 w-4" />
-    </div>
-    <h3 className="text-sm font-bold uppercase tracking-wider">{title}</h3>
+  <div className="mb-4 flex items-center gap-2">
+    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+    <h3 className="text-sm font-black uppercase tracking-tight">{title}</h3>
   </div>
 );
 
@@ -132,7 +131,7 @@ const Label = ({ children, className }: { children: React.ReactNode; className?:
   </label>
 );
 
-const LocalSeparator = () => <div className="h-px w-full bg-slate-200/60 my-8" />;
+const LocalSeparator = () => <div className="my-6 h-px w-full bg-card-border" />;
 
 interface InvestigationFormProps {
   report: SafetyReport;
@@ -451,8 +450,8 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
 
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
-      <div className="shrink-0 border-b bg-muted/5 p-4">
-        <h3 className="text-lg font-black uppercase tracking-tight">Investigation Management</h3>
+      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+        <h3 className="text-sm font-black uppercase tracking-tight">Investigation Management</h3>
       </div>
       <div className={cn('flex-1 p-0 overflow-hidden flex flex-col', isStacked && 'overflow-visible h-auto')}>
         <FormProvider {...form}>
@@ -515,7 +514,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
               )}
               {!isStacked && (
                 <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                  <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
+                  <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>
                     <Save className="mr-2 h-4 w-4" /> Save Investigation Details
                   </Button>
                 </div>

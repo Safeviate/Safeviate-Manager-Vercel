@@ -23,11 +23,14 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import React from 'react';
 import { dispatchSafeviateEvent, SAFEVIATE_SAFETY_REPORTS_UPDATED } from '@/lib/client-events';
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import type { ReportHazard, ReportRisk } from '@/types/safety-report';
+import type { ControlEffectivenessStatus, ReportHazard, ReportRisk, ReportStatus, SafetyMonitoringPlan } from '@/types/safety-report';
+import { CARD_COMPACT_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 
 // --- Helper Functions ---
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
@@ -171,9 +174,10 @@ interface FinalReviewProps {
   personnel: Personnel[];
   riskMatrixColors?: Record<string, string>;
   isStacked?: boolean;
+  onReportSaved?: (updatedReport: SafetyReport) => void;
 }
 
-export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isStacked = false }: FinalReviewProps) {
+export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isStacked = false, onReportSaved }: FinalReviewProps) {
   const { toast } = useToast();
   const { userProfile } = useUserProfile();
   const [signatureDataUrl, setSignatureDataUrl] = React.useState('');
@@ -204,6 +208,8 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error || 'Unable to save final review.');
       }
+      const payload = await response.json().catch(() => null);
+      if (payload?.report) onReportSaved?.(payload.report as SafetyReport);
       toast({ title: 'Final Review Saved' });
       dispatchSafeviateEvent(SAFEVIATE_SAFETY_REPORTS_UPDATED);
     } catch (error) {
@@ -251,6 +257,8 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error || 'Unable to sign this report right now.');
       }
+      const payload = await response.json().catch(() => null);
+      if (payload?.report) onReportSaved?.(payload.report as SafetyReport);
       toast({title: "Report Signed"});
       setSignatureDataUrl('');
       dispatchSafeviateEvent(SAFEVIATE_SAFETY_REPORTS_UPDATED);
@@ -265,8 +273,11 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
 
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
-      <div className="shrink-0 border-b bg-muted/5 p-4">
-        <h2 className="text-lg font-black uppercase tracking-tight">Final Review & Closure</h2>
+      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+        <div className="min-w-0">
+        <h2 className="text-sm font-black uppercase tracking-tight">Closure and Monitoring</h2>
+        <p className="text-[10px] text-muted-foreground">Review the evidence, record approval, and verify that controls remain effective in operation.</p>
+        </div>
       </div>
       <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
         <FormProvider {...form}>
@@ -274,18 +285,18 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
             <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
               {isStacked ? (
                 <div className="p-6 space-y-10">
-                    <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} />
+                    <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} onReportSaved={onReportSaved} />
                 </div>
               ) : (
                 <ScrollArea className="flex-1 p-6">
                   <div className="space-y-10">
-                    <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} />
+                    <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} onReportSaved={onReportSaved} />
                   </div>
                 </ScrollArea>
               )}
               {!isStacked && (
                   <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                      <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
+                      <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>
                           <Save className="mr-2 h-4 w-4" /> Save Final Review
                       </Button>
                   </div>
@@ -306,9 +317,10 @@ type ReviewFieldsProps = {
   handleSignReport: () => void | Promise<void>;
   signatureDataUrl: string;
   onSignatureChange: (value: string) => void;
+  onReportSaved?: (updatedReport: SafetyReport) => void;
 };
 
-function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignReport, signatureDataUrl, onSignatureChange }: ReviewFieldsProps) {
+function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignReport, signatureDataUrl, onSignatureChange, onReportSaved }: ReviewFieldsProps) {
   const signatures = form.watch('signatures') ?? [];
 
   return (
@@ -493,6 +505,162 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
           <SignaturePad onSignatureEnd={onSignatureChange} initialDataUrl={signatureDataUrl} height={140} />
         </div>
       </section>
+
+      <Separator className="bg-slate-200/60" />
+
+      <ClosureMonitoringPanel report={report} onReportSaved={onReportSaved} />
     </>
   );
+}
+
+const monitoringStatuses: ControlEffectivenessStatus[] = ['Pending', 'Effective', 'Partially Effective', 'Ineffective'];
+const closureStatuses: ReportStatus[] = ['Pending Closure Review', 'Closed - Monitoring', 'Closed - Effective', 'Reopened'];
+
+const toDateInputValue = (value?: string | null) => value ? value.slice(0, 10) : '';
+
+function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyReport; onReportSaved?: (updatedReport: SafetyReport) => void }) {
+  const { toast } = useToast();
+  const { userProfile } = useUserProfile();
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [nextStatus, setNextStatus] = React.useState<ReportStatus>(report.status);
+  const [closureRationale, setClosureRationale] = React.useState(report.closure?.rationale || '');
+  const [reopenReason, setReopenReason] = React.useState(report.closure?.reopenReason || '');
+  const [plan, setPlan] = React.useState<SafetyMonitoringPlan>({
+    indicatorName: report.monitoringPlan?.indicatorName || '',
+    baseline: report.monitoringPlan?.baseline || '',
+    target: report.monitoringPlan?.target || '',
+    monitoringPeriod: report.monitoringPlan?.monitoringPeriod || '90 days',
+    reviewDate: report.monitoringPlan?.reviewDate || '',
+    reviewCompletedAt: report.monitoringPlan?.reviewCompletedAt || '',
+    reviewResult: report.monitoringPlan?.reviewResult || 'Pending',
+    reviewNotes: report.monitoringPlan?.reviewNotes || '',
+  });
+  const [actionNotes, setActionNotes] = React.useState<Record<string, string>>(() =>
+    Object.fromEntries((report.correctiveActions || []).map((action) => [action.id, action.effectivenessEvidence || ''])),
+  );
+
+  const actorName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : 'Safety Manager';
+  const openActions = (report.correctiveActions || []).filter((action) => !['Closed', 'Cancelled'].includes(action.status));
+  const requiresRootCause = ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
+
+  const saveReport = async (nextReport: SafetyReport, successTitle: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: nextReport }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error || 'Unable to save the closure review.');
+      onReportSaved?.(payload.report as SafetyReport);
+      toast({ title: successTitle });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Closure review not saved', description: error instanceof Error ? error.message : 'Unable to save the closure review.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveLifecycle = () => {
+    const approvedAt = report.closure?.approvedAt || new Date().toISOString();
+    void saveReport({
+      ...report,
+      status: nextStatus,
+      closure: {
+        rationale: closureRationale,
+        approvedBy: report.closure?.approvedBy || actorName,
+        approvedAt,
+        reopenedAt: nextStatus === 'Reopened' ? new Date().toISOString() : report.closure?.reopenedAt,
+        reopenReason: reopenReason || null,
+      },
+      monitoringPlan: {
+        ...plan,
+        reviewDate: plan.reviewDate || null,
+        reviewCompletedAt: plan.reviewCompletedAt || null,
+      },
+    }, nextStatus === 'Reopened' ? 'Report Reopened' : 'Lifecycle Review Saved');
+  };
+
+  const saveActionEffectiveness = (actionId: string, effectivenessStatus: ControlEffectivenessStatus) => {
+    const updatedActions = (report.correctiveActions || []).map((action) => action.id === actionId ? {
+      ...action,
+      effectivenessStatus,
+      effectivenessVerificationMethod: 'Post-implementation operational monitoring',
+      effectivenessEvidence: actionNotes[actionId] || null,
+      effectivenessReviewedAt: new Date().toISOString(),
+      effectivenessReviewedBy: actorName,
+    } : action);
+    void saveReport({ ...report, correctiveActions: updatedActions }, 'Control effectiveness recorded');
+  };
+
+  return (
+    <section className="space-y-4 rounded-xl border border-slate-200 bg-muted/5 p-4 no-print">
+      <div>
+        <p className="text-sm font-black uppercase tracking-tight">Closure and Effectiveness Monitoring</p>
+        <p className="mt-1 text-xs text-muted-foreground">Complete the closure decision, then verify that the controls continue to work in normal operations.</p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <ChecklistItem label="Corrective actions" complete={openActions.length === 0} detail={openActions.length === 0 ? 'All actions are closed or cancelled.' : `${openActions.length} action${openActions.length === 1 ? '' : 's'} still open.`} />
+        <ChecklistItem label="Root cause analysis" complete={!requiresRootCause || (report.rootCauseAnalyses || []).length > 0} detail={requiresRootCause ? `${report.rootCauseAnalyses?.length || 0} root cause record(s).` : 'Recommended for this report type.'} />
+        <ChecklistItem label="Sign-off" complete={(report.signatures || []).length > 0} detail={`${report.signatures?.length || 0} signature(s) recorded.`} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Closure rationale</Label>
+          <Textarea value={closureRationale} onChange={(event) => setClosureRationale(event.target.value)} placeholder="Summarise why the risk is acceptable for closure and what evidence supports that decision." className="min-h-24 bg-background" />
+        </div>
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label>Lifecycle status</Label>
+            <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as ReportStatus)} className="h-10 w-full rounded-md border bg-background px-3 text-sm font-medium">
+              {closureStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+          </div>
+          {nextStatus === 'Reopened' ? (
+            <div className="space-y-2">
+              <Label>Reason for reopening</Label>
+              <Textarea value={reopenReason} onChange={(event) => setReopenReason(event.target.value)} placeholder="Describe the failed control, new information, or changed operating condition." className="min-h-16 bg-background" />
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="rounded-lg border bg-background p-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Post-closure monitoring plan</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1.5"><Label>Indicator</Label><Input value={plan.indicatorName} onChange={(event) => setPlan({ ...plan, indicatorName: event.target.value })} placeholder="e.g. repeat event rate" /></div>
+          <div className="space-y-1.5"><Label>Baseline</Label><Input value={plan.baseline || ''} onChange={(event) => setPlan({ ...plan, baseline: event.target.value })} placeholder="Current value" /></div>
+          <div className="space-y-1.5"><Label>Target</Label><Input value={plan.target || ''} onChange={(event) => setPlan({ ...plan, target: event.target.value })} placeholder="Expected result" /></div>
+          <div className="space-y-1.5"><Label>Review date</Label><Input type="date" value={toDateInputValue(plan.reviewDate)} onChange={(event) => setPlan({ ...plan, reviewDate: event.target.value ? new Date(`${event.target.value}T12:00:00`).toISOString() : null })} /></div>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="space-y-1.5"><Label>Monitoring period</Label><Input value={plan.monitoringPeriod || ''} onChange={(event) => setPlan({ ...plan, monitoringPeriod: event.target.value })} placeholder="e.g. 90 days / 100 flights" /></div>
+          <div className="space-y-1.5"><Label>Review outcome</Label><select value={plan.reviewResult || 'Pending'} onChange={(event) => setPlan({ ...plan, reviewResult: event.target.value as ControlEffectivenessStatus, reviewCompletedAt: event.target.value === 'Pending' ? null : new Date().toISOString() })} className="h-10 w-full rounded-md border bg-background px-3 text-sm font-medium">{monitoringStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+        </div>
+        <div className="mt-3 space-y-1.5"><Label>Monitoring evidence and outcome</Label><Textarea value={plan.reviewNotes || ''} onChange={(event) => setPlan({ ...plan, reviewNotes: event.target.value })} placeholder="Record the operational evidence reviewed and any follow-up decision." className="min-h-20" /></div>
+      </div>
+
+      {(report.correctiveActions || []).length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Control effectiveness records</p>
+          {(report.correctiveActions || []).map((action) => (
+            <div key={action.id} className="grid gap-3 rounded-lg border bg-background p-3 md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-end">
+              <div className="min-w-0"><p className="text-sm font-semibold">{action.description}</p><Textarea value={actionNotes[action.id] || ''} onChange={(event) => setActionNotes({ ...actionNotes, [action.id]: event.target.value })} placeholder="Verification evidence or operational observation" className="mt-2 min-h-16 text-xs" /></div>
+              <div className="space-y-1.5"><Label>Effectiveness</Label><select defaultValue={action.effectivenessStatus || 'Pending'} onChange={(event) => saveActionEffectiveness(action.id, event.target.value as ControlEffectivenessStatus)} className="h-9 w-full rounded-md border bg-background px-2 text-xs font-medium">{monitoringStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+              <Badge variant={action.effectivenessStatus === 'Effective' ? 'secondary' : 'outline'}>{action.effectivenessStatus || 'Pending'}</Badge>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="flex justify-end"><Button type="button" onClick={saveLifecycle} disabled={isSaving} className="h-9 px-5 text-xs font-black uppercase">{isSaving ? 'Saving...' : 'Save Lifecycle Review'}</Button></div>
+    </section>
+  );
+}
+
+function ChecklistItem({ label, detail, complete }: { label: string; detail: string; complete: boolean }) {
+  return <div className={`rounded-lg border px-3 py-2 ${complete ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60'}`}><p className="text-[10px] font-black uppercase tracking-[0.14em]">{label}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>;
 }

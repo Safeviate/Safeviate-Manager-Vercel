@@ -1,11 +1,22 @@
-export type ReportStatus = 'Open' | 'Under Review' | 'Awaiting Action' | 'Closed' | 'Archived';
+export type ReportStatus =
+    | 'Open'
+    | 'Under Review'
+    | 'Awaiting Action'
+    | 'Pending Closure Review'
+    | 'Closed - Monitoring'
+    | 'Closed - Effective'
+    | 'Reopened'
+    | 'Closed'
+    | 'Archived';
 export type ReportType = string;
-export type EventClassification = 'Hazard' | 'Incident' | 'Accident';
+export type EventClassification = 'Accident' | 'Serious Incident' | 'Incident' | 'Not Determined';
+export type SafetyReportingChannel = 'Mandatory' | 'Voluntary';
 export type InvestigationMemberRole = 'Lead Investigator' | 'Team Member' | 'Technical Expert' | 'Observer';
 export type InvestigationTaskStatus = 'Open' | 'In Progress' | 'Completed';
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type CorrectiveActionRiskView = 'Initial' | 'Residual';
+export type ControlEffectivenessStatus = 'Pending' | 'Effective' | 'Partially Effective' | 'Ineffective';
 export type ReportDiaryEntryType = 'comment' | 'task_assignment' | 'task_update' | 'finding' | 'decision' | 'status_change';
 export type ReportRootCauseCategory = 'Human Factors' | 'Process' | 'Equipment' | 'Environment' | 'Training' | 'Communication' | 'Other';
 export type InvestigationInterviewStatus = 'Pending' | 'In Progress' | 'Completed';
@@ -119,6 +130,39 @@ export interface CorrectiveAction {
     residualRiskLevel?: RiskLevel | null;
     deadline: string; // ISO String
     status: CorrectiveActionStatus;
+    completionDate?: string | null;
+    effectivenessStatus?: ControlEffectivenessStatus;
+    effectivenessVerificationMethod?: string | null;
+    effectivenessEvidence?: string | null;
+    effectivenessReviewDate?: string | null;
+    effectivenessReviewedAt?: string | null;
+    effectivenessReviewedBy?: string | null;
+    effectivenessReviewNotes?: string | null;
+}
+
+export interface SafetyMonitoringPlan {
+    indicatorName: string;
+    baseline?: string | null;
+    target?: string | null;
+    monitoringPeriod?: string | null;
+    ownerId?: string | null;
+    reviewDate?: string | null;
+    reviewCompletedAt?: string | null;
+    reviewResult?: ControlEffectivenessStatus;
+    reviewNotes?: string | null;
+}
+
+export interface SafetyReportClosure {
+    rationale: string;
+    approvedBy: string;
+    approvedAt: string;
+    reopenedAt?: string | null;
+    reopenReason?: string | null;
+}
+
+export interface SafetyReportLink {
+    reportId: string;
+    relationship: string;
 }
 
 export interface ReportSignature {
@@ -133,6 +177,7 @@ export interface SafetyReport {
     id: string;
     tenantId?: string | null;
     reportNumber: string;
+    title?: string;
     reportType: ReportType;
     status: ReportStatus;
     submittedBy: string;
@@ -142,6 +187,7 @@ export interface SafetyReport {
     submittedAt: string; // ISO String
     closedDate?: string; // ISO String
     isAnonymous: boolean;
+    reportingChannel?: SafetyReportingChannel;
     eventDate: string; // ISO String
     eventTime: string;
     location: string;
@@ -168,8 +214,12 @@ export interface SafetyReport {
     // CAP Fields
     correctiveActions?: CorrectiveAction[];
     mitigatedHazards?: ReportHazard[];
+    monitoringPlan?: SafetyMonitoringPlan;
     // Closure Fields
     signatures?: ReportSignature[];
+    closure?: SafetyReportClosure;
     sourceQuickReportId?: string;
     sourceQuickReportNumber?: string;
+    relatedReportIds?: string[];
+    relatedReportLinks?: SafetyReportLink[];
 }

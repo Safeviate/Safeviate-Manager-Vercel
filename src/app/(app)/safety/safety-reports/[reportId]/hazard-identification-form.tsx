@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useForm, useFieldArray, useFormContext, Controller, FormProvider, type UseFormReturn, type FieldPath } from 'react-hook-form';
+import { useForm, useFieldArray, useFormContext, Controller, FormProvider, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -24,6 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CARD_COMPACT_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
 
 // --- Helper Functions ---
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
@@ -237,7 +238,7 @@ const RiskAssessmentEditor = ({
 
     if (compact) {
         return (
-            <div className="mb-3 rounded-lg border bg-muted/10 px-3 py-3">
+            <div className="mt-3 rounded-md bg-muted/30 px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
                     <Badge
@@ -262,7 +263,7 @@ const RiskAssessmentEditor = ({
                                     value={field.value ? String(field.value) : '1'}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="h-9 border-slate-200 bg-white text-xs font-bold">
+                                        <SelectTrigger className="h-9 border-card-border bg-background text-xs font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
                                     </FormControl>
@@ -290,7 +291,7 @@ const RiskAssessmentEditor = ({
                                     value={field.value ? String(field.value) : '1'}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="h-9 border-slate-200 bg-white text-xs font-bold">
+                                        <SelectTrigger className="h-9 border-card-border bg-background text-xs font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
                                     </FormControl>
@@ -342,13 +343,13 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
     });
 
     return (
-        <div className="space-y-3 border-t border-slate-100 pt-3">
-            <div className="flex justify-end">
+        <div className="mt-3">
+            <div className="flex justify-end px-3 py-2">
                 <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 px-3 text-[10px] font-black uppercase border-slate-300 no-print"
+                    className={`${HEADER_SECONDARY_BUTTON_CLASS} no-print`}
                     onClick={() => append({
                         id: uuidv4(),
                         description: '',
@@ -359,8 +360,8 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
                 </Button>
             </div>
             {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="rounded-lg border bg-background p-3 space-y-3">
-                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                <div key={field.id} className="mt-3 border-t border-card-border pt-3 first:mt-0 first:border-t-0 first:pt-0">
+                    <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="h-3.5 w-3.5 text-slate-500" />
                             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Mitigation {mitigationIndex + 1}</span>
@@ -369,6 +370,7 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
                             <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                     </div>
+                    <div className="space-y-3 p-3">
                     <FormField
                         control={control}
                         name={`${basePath}.${mitigationIndex}.description`}
@@ -379,7 +381,7 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
                                     <textarea
                                         placeholder="Describe the mitigation action to reduce this risk..."
                                         {...field}
-                                        className="w-full min-h-[56px] rounded-md border border-slate-200 bg-white p-3 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary"
+                                        className="min-h-[56px] w-full rounded-md border border-card-border bg-background p-3 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary"
                                     />
                                 </FormControl>
                                 <FormMessage />
@@ -392,6 +394,7 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
                         riskMatrixColors={riskMatrixColors}
                         compact
                     />
+                    </div>
                 </div>
             ))}
         </div>
@@ -406,40 +409,61 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
     });
 
     return (
-        <div className="space-y-3 pl-0 mt-3">
+        <div className="space-y-3">
             {fields.map((field, riskIndex) => (
-                <div key={field.id} className="p-3 bg-muted/30 border rounded-lg space-y-3">
-                    <div className="flex items-start gap-2">
-                        <FormField
-                            control={control}
-                            name={`initialHazards.${hazardIndex}.risks.${riskIndex}.description`}
-                            render={({ field }) => (
-                                <FormItem className="flex-1">
-                                    <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Identified Risk / Outcome</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g., Loss of separation, Mid-air collision" {...field} className="h-8 text-xs bg-background font-medium" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => remove(riskIndex)} 
-                            className="h-8 w-8 text-destructive mt-5 no-print"
+                <div key={field.id} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
+                    <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risk Assessment {riskIndex + 1}</p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(riskIndex)}
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive no-print"
+                            aria-label={`Remove risk ${riskIndex + 1}`}
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                     </div>
-                    <RiskAssessmentEditor 
-                        path={`initialHazards.${hazardIndex}.risks.${riskIndex}.riskAssessment`}
-                        label="Initial Risk"
-                        riskMatrixColors={riskMatrixColors}
-                        compact
-                    />
-                    <MitigationsArray hazardIndex={hazardIndex} riskIndex={riskIndex} riskMatrixColors={riskMatrixColors} />
+                    <div className="space-y-4 p-4">
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <FormField
+                                control={control}
+                                name={`initialHazards.${hazardIndex}.description`}
+                                render={({ field }) => (
+                                    <FormItem className="rounded-lg border border-card-border bg-background px-3 py-3">
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Hazard</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Name this hazard" {...field} className="mt-2 h-8 border-0 bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-1 focus-visible:ring-primary" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={control}
+                                name={`initialHazards.${hazardIndex}.risks.${riskIndex}.description`}
+                                render={({ field }) => (
+                                    <FormItem className="rounded-lg border border-card-border bg-background px-3 py-3">
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risk</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Describe the risk or outcome" {...field} className="mt-2 h-8 border-0 bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-1 focus-visible:ring-primary" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <RiskAssessmentEditor
+                            path={`initialHazards.${hazardIndex}.risks.${riskIndex}.riskAssessment`}
+                            label="Initial Risk"
+                            riskMatrixColors={riskMatrixColors}
+                            compact
+                        />
+                    </div>
                 </div>
             ))}
             <Button 
@@ -452,7 +476,7 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                     riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' },
                     mitigations: [],
                 })}
-                className="h-7 px-3 text-[10px] font-black uppercase border-slate-300 no-print"
+                className={`${HEADER_SECONDARY_BUTTON_CLASS} no-print`}
             >
                 <PlusCircle className="mr-1 h-3 w-3" /> Add Risk Impact
             </Button>
@@ -501,7 +525,7 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
     });
   }, [form, normalizedHazards]);
 
-  const { fields: hazardFields, append: appendHazard, remove: removeHazard } = useFieldArray({
+  const { fields: hazardFields, append: appendHazard } = useFieldArray({
     control: form.control,
     name: "initialHazards",
   });
@@ -566,9 +590,12 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
 
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
-      <div className="shrink-0 border-b bg-muted/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h3 className="text-lg font-black uppercase tracking-tight">Hazard & Risk Identification</h3>
-        <Button type="button" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', risks: [] })} className="font-black uppercase text-xs h-9 px-6 shadow-md no-print">
+      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-tight">Risk Assessment</h3>
+          <p className="text-[10px] text-muted-foreground">Record each hazard, its associated risk, and the initial risk level.</p>
+        </div>
+        <Button type="button" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', risks: [{ id: uuidv4(), description: '', riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] }] })} className={`${HEADER_SECONDARY_BUTTON_CLASS} no-print`}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard
         </Button>
       </div>
@@ -583,19 +610,19 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
                 </div>
               ) : null}
               {isStacked ? (
-                <div className="p-6 space-y-6">
-                  <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={activeRiskMatrixColors} removeHazard={removeHazard} />
+                <div className="p-4">
+                  <HazardFields hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
                 </div>
               ) : (
-                <ScrollArea className="flex-1 p-6">
-                  <div className="space-y-6">
-                    <HazardFields hazardFields={hazardFields} form={form} riskMatrixColors={activeRiskMatrixColors} removeHazard={removeHazard} />
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-4">
+                    <HazardFields hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
                   </div>
                 </ScrollArea>
               )}
               {!isStacked && (
                 <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                    <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
+                    <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>
                     <Save className="mr-2 h-4 w-4" /> Save Hazard Identification
                     </Button>
                 </div>
@@ -608,31 +635,15 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
   );
 }
 
-function HazardFields({ hazardFields, form, riskMatrixColors, removeHazard }: { hazardFields: Array<{ id: string }>; form: UseFormReturn<FormValues>; riskMatrixColors?: Record<string, string>; removeHazard: (i: number) => void }) {
+function HazardFields({ hazardFields, riskMatrixColors }: { hazardFields: Array<{ id: string }>; riskMatrixColors?: Record<string, string> }) {
   return (
     <>
-      {hazardFields.map((field, index) => (
-          <div key={field.id} className="rounded-xl border bg-muted/10 overflow-hidden border-slate-200">
-              <div className="p-4 border-b bg-background/50">
-                  <div className="flex items-center gap-3">
-                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-black">
-                          {index + 1}
-                      </div>
-                      <FormField control={form.control} name={`initialHazards.${index}.description`} render={({ field }) => (
-                          <FormItem className='flex-1 space-y-0'>
-                              <FormControl>
-                                  <Input placeholder="Describe the hazard (e.g., Bird strike on final)..." {...field} className="h-9 text-sm font-black bg-background border-slate-300" />
-                              </FormControl>
-                          </FormItem>
-                      )} />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeHazard(index)} className="text-destructive no-print hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-              </div>
-              <div className="p-4 pt-2">
-                  <RisksArray hazardIndex={index} riskMatrixColors={riskMatrixColors} />
-              </div>
+      {hazardFields.map((field, index) => {
+        return (
+          <div key={field.id} className="space-y-3">
+              <RisksArray hazardIndex={index} riskMatrixColors={riskMatrixColors} />
           </div>
-      ))}
+      )})}
       {hazardFields.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
               <AlertTriangle className="h-12 w-12 mb-4" />

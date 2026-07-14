@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,6 +27,7 @@ import { Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { CARD_COMPACT_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 
 const isEmailLike = (value?: string | null) => Boolean(value && /\S+@\S+\.\S+/.test(value));
 
@@ -54,8 +56,8 @@ const resolveReporterLabel = (
   return submittedByName || submittedBy || 'Signed-in User';
 };
 
-const reportStatuses = ['Open', 'Under Review', 'Awaiting Action', 'Closed'];
-const eventClassifications = ['Hazard', 'Incident', 'Accident'];
+const reportStatuses = ['Open', 'Under Review', 'Awaiting Action', 'Pending Closure Review', 'Closed - Monitoring', 'Closed - Effective', 'Reopened'];
+const eventClassifications = ['Accident', 'Serious Incident', 'Incident', 'Not Determined'] as const;
 
 const ICAO_CATEGORIES = [
   { code: 'ADRM', description: 'Aerodrome' },
@@ -90,7 +92,9 @@ const ICAO_CATEGORIES = [
 ];
 
 const triageSchema = z.object({
+  title: z.string().trim().max(180).optional(),
   status: z.string().min(1),
+  reportingChannel: z.enum(['Mandatory', 'Voluntary']).optional(),
   occurrenceCategory: z.string().optional(),
   eventClassification: z.string().optional(),
 });
@@ -101,9 +105,10 @@ interface TriageFormProps {
   report: SafetyReport;
   tenantId: string;
   isStacked?: boolean;
+  onReportSaved?: (updatedReport: SafetyReport) => void;
 }
 
-export function TriageForm({ report, tenantId, isStacked = false }: TriageFormProps) {
+export function TriageForm({ report, tenantId, isStacked = false, onReportSaved }: TriageFormProps) {
   const { toast } = useToast();
   const { userProfile } = useUserProfile();
   const reporterLabel = resolveReporterLabel(report, userProfile?.email);
@@ -111,7 +116,9 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
   const form = useForm<TriageFormValues>({
     resolver: zodResolver(triageSchema),
     defaultValues: {
+      title: report.title || report.initialHazards?.[0]?.description || '',
       status: report.status || 'Open',
+      reportingChannel: report.reportingChannel || 'Voluntary',
       occurrenceCategory: report.occurrenceCategory || '',
       eventClassification: report.eventClassification || '',
     },
@@ -129,6 +136,8 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error || 'Unable to save triage details.');
       }
+      const payload = await response.json().catch(() => null);
+      if (payload?.report) onReportSaved?.(payload.report as SafetyReport);
       toast({ title: 'Triage Details Saved' });
     } catch (error) {
       toast({
@@ -141,56 +150,70 @@ export function TriageForm({ report, tenantId, isStacked = false }: TriageFormPr
 
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
-      <div className="shrink-0 border-b bg-muted/5 p-4">
-        <h3 className="text-lg font-black uppercase tracking-tight">Occurrence Details & Triage</h3>
-      </div>
-      
       <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
-        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
-            {/* --- INTEGRATED REPORT SUMMARY --- */}
-            <section className="space-y-3">
-                <div className="flex flex-col gap-0.5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-80">Initial Narrative</p>
-                    <p className="text-[11px] text-muted-foreground font-medium italic">Filed {format(new Date(report.submittedAt), 'PPP')} by {reporterLabel}</p>
-                    {report.submittedOnBehalfOf ? (
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                        On behalf of {report.submittedOnBehalfOf}
-                      </p>
-                    ) : null}
-                </div>
-                <div className="p-5 rounded-xl bg-primary/5 border border-primary/10 shadow-inner">
-                    <p className="text-sm text-foreground font-medium leading-relaxed whitespace-pre-wrap italic opacity-90">&quot;{report.description}&quot;</p>
-                </div>
-            </section>
+        <div className="flex-1 space-y-4 overflow-y-auto p-4 no-scrollbar md:p-5">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    {/* --- INTEGRATED REPORT SUMMARY --- */}
+                    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+                        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-[hsl(var(--card-header-band-background))]`}>
+                          <div className="min-w-0">
+                            <p className="text-sm font-black uppercase tracking-tight">Report Summary</p>
+                            <p className="text-[10px] font-medium text-muted-foreground">Filed {format(new Date(report.submittedAt), 'PPP')} by {reporterLabel}</p>
+                            {report.submittedOnBehalfOf ? (
+                              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                                On behalf of {report.submittedOnBehalfOf}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="space-y-3 p-4">
+                        <FormField
+                          control={form.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Report Heading</FormLabel>
+                              <FormControl><Input className="h-9 border-card-border bg-background text-sm font-bold" placeholder="Summarise the reported safety concern" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="rounded-lg border border-card-border bg-primary/5 px-4 py-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-80">Initial Narrative</p>
+                            <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{report.description}</p>
+                        </div>
+                        {report.immediateAction ? (
+                          <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Immediate Action</p>
+                            <p className="mt-1.5 whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{report.immediateAction}</p>
+                          </div>
+                        ) : null}
+                        </div>
+                    </section>
 
-            <Separator />
-
-            {/* --- TRIAGE CONTROLS --- */}
-            <section className="space-y-6">
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary border-b pb-2">Classification & Management</p>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* --- TRIAGE CONTROLS --- */}
+                    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+                        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-[hsl(var(--card-header-band-background))]`}>
+                          <p className="text-sm font-black uppercase tracking-tight">Classification &amp; Management</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
                             <TriageFields form={form} />
                         </div>
+                    </section>
                         {!isStacked && (
                             <div className="flex justify-end pt-4">
-                                <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
+                                <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>
                                     <Save className="mr-2 h-4 w-4" /> Save Triage Details
                                 </Button>
                             </div>
                         )}
-                    </form>
-                </Form>
-            </section>
+                </form>
+            </Form>
         </div>
       </div>
     </div>
   );
-}
-
-function Separator() {
-    return <div className="h-px w-full bg-slate-200/60" />;
 }
 
 function TriageFields({ form }: { form: any }) {
@@ -212,12 +235,26 @@ function TriageFields({ form }: { form: any }) {
       />
       <FormField
         control={form.control}
+        name="reportingChannel"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Reporting Channel</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue /></SelectTrigger></FormControl>
+              <SelectContent><SelectItem value="Voluntary">Voluntary</SelectItem><SelectItem value="Mandatory">Mandatory</SelectItem></SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
         name="eventClassification"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Event Classification</FormLabel>
+            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Occurrence Class (ICAO)</FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue placeholder="Classify event" /></SelectTrigger></FormControl>
+              <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue placeholder="Select occurrence class" /></SelectTrigger></FormControl>
               <SelectContent>{eventClassifications.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent>
             </Select>
             <FormMessage />

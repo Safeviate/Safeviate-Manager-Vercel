@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { CARD_COMPACT_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
 
 const mitigationReviewSchema = z.object({
   hazardId: z.string(),
@@ -236,11 +237,13 @@ export function CorrectiveActionsForm({
 
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
-      <div className="shrink-0 border-b bg-muted/5 p-4">
-        <h3 className="text-lg font-black uppercase tracking-tight">Corrective Actions Review</h3>
-        <p className="mt-1 text-xs font-medium text-muted-foreground">
-          Review and close the mitigation actions already defined under Hazard & Risk Identification.
+      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+        <div className="min-w-0">
+        <h3 className="text-sm font-black uppercase tracking-tight">Action Tracking</h3>
+        <p className="text-[10px] font-medium text-muted-foreground">
+          Assign, track, close, and verify the controls defined during risk assessment.
         </p>
+        </div>
       </div>
       <div className={cn('flex-1 p-0 overflow-hidden flex flex-col', isStacked && 'overflow-visible h-auto')}>
         <Form {...form}>
@@ -258,7 +261,7 @@ export function CorrectiveActionsForm({
             )}
             {!isStacked && (
               <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
-                <Button type="submit" className="font-black uppercase text-xs h-10 px-8 shadow-md">
+                <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>
                   <Save className="mr-2 h-4 w-4" /> Save Corrective Actions Review
                 </Button>
               </div>
