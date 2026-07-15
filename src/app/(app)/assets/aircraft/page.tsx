@@ -7,15 +7,39 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AircraftList } from './aircraft-list';
 import type { Aircraft } from '@/types/aircraft';
+import type { QualityAudit } from '@/types/quality';
 import { CardControlHeader, HEADER_COMPACT_CONTROL_CLASS } from '@/components/page-header';
 import { AddAircraftDialog } from './add-aircraft-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
+const COMPLETED_AUDIT_STATUSES = new Set(['finalized', 'closed', 'archived']);
+
+function getLastAuditDates(audits: QualityAudit[]) {
+  const lastAuditDates: Record<string, string | null> = {};
+  const now = Date.now();
+
+  for (const audit of audits) {
+    if (!audit.assetId || !audit.auditDate) continue;
+    if (!COMPLETED_AUDIT_STATUSES.has(String(audit.status).toLowerCase())) continue;
+
+    const auditTime = new Date(audit.auditDate).getTime();
+    if (Number.isNaN(auditTime) || auditTime > now) continue;
+
+    const currentDate = lastAuditDates[audit.assetId];
+    if (!currentDate || auditTime > new Date(currentDate).getTime()) {
+      lastAuditDates[audit.assetId] = audit.auditDate;
+    }
+  }
+
+  return lastAuditDates;
+}
+
 export default function AircraftFleetPage() {
   const { hasPermission } = usePermissions();
   const { tenantId } = useUserProfile();
   const [aircrafts, setAircrafts] = useState<Aircraft[]>([]);
+  const [lastAuditDates, setLastAuditDates] = useState<Record<string, string | null>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [aircraftView, setAircraftView] = useState<'active' | 'archived'>('active');
 
@@ -24,12 +48,23 @@ export default function AircraftFleetPage() {
   const loadAircrafts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/aircraft${aircraftView === 'archived' ? '?view=archived' : ''}`, { cache: 'no-store' });
+      const [response, auditsResponse] = await Promise.all([
+        fetch(`/api/aircraft${aircraftView === 'archived' ? '?view=archived' : ''}`, { cache: 'no-store' }),
+        fetch('/api/quality-audits', { cache: 'no-store' }).catch(() => null),
+      ]);
       const payload = await response.json().catch(() => ({ aircraft: [] }));
+      const auditsPayload = auditsResponse?.ok
+        ? await auditsResponse.json().catch(() => ({}))
+        : {};
+
       setAircrafts(Array.isArray(payload.aircraft) ? payload.aircraft : []);
+      setLastAuditDates(
+        getLastAuditDates(Array.isArray(auditsPayload.audits) ? auditsPayload.audits : [])
+      );
     } catch (e) {
       console.error('Failed to load aircrafts', e);
       setAircrafts([]);
+      setLastAuditDates({});
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +121,13 @@ export default function AircraftFleetPage() {
           )}
         />
         <CardContent className="flex-1 p-0 overflow-hidden bg-background">
-          <AircraftList data={aircrafts || []} tenantId={tenantId || ''} canEdit={canManageAssets} archived={aircraftView === 'archived'} />
+          <AircraftList
+            data={aircrafts || []}
+            tenantId={tenantId || ''}
+            canEdit={canManageAssets}
+            archived={aircraftView === 'archived'}
+            lastAuditDates={lastAuditDates}
+          />
         </CardContent>
       </Card>
     </div>

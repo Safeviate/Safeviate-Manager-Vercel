@@ -2,6 +2,7 @@
 
 import { Plane } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
 import type { Aircraft } from '@/types/aircraft';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AircraftActions } from './aircraft-actions';
@@ -17,6 +18,14 @@ interface AircraftListProps {
   tenantId: string;
   canEdit: boolean;
   archived?: boolean;
+  lastAuditDates: Record<string, string | null>;
+}
+
+function formatLastAuditDate(value: string | null | undefined) {
+  if (!value) return 'No audit history';
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'No audit history' : format(date, 'dd MMM yyyy');
 }
 
 function getAircraftDocumentStatus(
@@ -70,7 +79,13 @@ function getAircraftDocumentStatus(
   };
 }
 
-export function AircraftList({ data, tenantId, canEdit, archived = false }: AircraftListProps) {
+export function AircraftList({
+  data,
+  tenantId,
+  canEdit,
+  archived = false,
+  lastAuditDates,
+}: AircraftListProps) {
   const [expirySettings, setExpirySettings] = useState<DocumentExpirySettingsLike | null>(null);
 
   useEffect(() => {
@@ -132,7 +147,7 @@ export function AircraftList({ data, tenantId, canEdit, archived = false }: Airc
             return (
               <div
                 key={ac.id}
-                className="grid gap-3 px-4 py-3 transition-colors hover:bg-muted/10 lg:grid-cols-[minmax(180px,1.2fr)_minmax(190px,1fr)_minmax(180px,1fr)_minmax(150px,0.8fr)_auto] lg:items-center"
+                className="grid gap-3 px-4 py-3 transition-colors hover:bg-muted/10 lg:grid-cols-[minmax(180px,1.2fr)_minmax(190px,1fr)_minmax(165px,1fr)_minmax(180px,1fr)_minmax(150px,0.8fr)_auto] lg:items-center"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -154,6 +169,13 @@ export function AircraftList({ data, tenantId, canEdit, archived = false }: Airc
                 <div className="min-w-0">
                   <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Document Status</p>
                   <p className="truncate text-xs font-semibold text-foreground">{documentStatus.summary}</p>
+                </div>
+
+                <div className="min-w-0">
+                  <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Last Audit</p>
+                  <p className="whitespace-nowrap text-xs font-semibold text-foreground">
+                    {formatLastAuditDate(lastAuditDates[ac.id])}
+                  </p>
                 </div>
 
                 <div className="min-w-0">
