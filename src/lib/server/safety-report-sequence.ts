@@ -60,13 +60,13 @@ export async function loadSafetyReportSequenceSettings(tenantId: string) {
     select: { data: true },
   });
 
-  const existingSettings = getSafetyReportSequenceSettings(configRow?.data);
-  if (existingSettings) return existingSettings;
-
   const highestReportNumber = await getHighestSafetyReportNumber(tenantId);
   return {
     id: 'safety-report-sequence' as const,
-    nextReportNumber: Math.max(highestReportNumber + 1, SAFETY_REPORT_SEQUENCE_DEFAULT_NEXT),
+    nextReportNumber: Math.max(
+      getSafetyReportSequenceSettings(configRow?.data)?.nextReportNumber ?? SAFETY_REPORT_SEQUENCE_DEFAULT_NEXT,
+      highestReportNumber + 1,
+    ),
   };
 }
 
@@ -79,7 +79,18 @@ export async function allocateNextSafetyReportNumber(tx: Prisma.TransactionClien
   });
 
   const currentSettings = getSafetyReportSequenceSettings(existingRow?.data);
-  const nextReportNumber = currentSettings?.nextReportNumber ?? SAFETY_REPORT_SEQUENCE_DEFAULT_NEXT;
+  const existingReports = await tx.safetyReport.findMany({
+    where: { tenantId },
+    select: { data: true },
+  });
+  const highestReportNumber = existingReports.reduce((highest, row) => {
+    const candidate = extractTrailingSequenceNumber((row.data as Record<string, unknown> | null)?.reportNumber);
+    return Math.max(highest, candidate);
+  }, 0);
+  const nextReportNumber = Math.max(
+    currentSettings?.nextReportNumber ?? SAFETY_REPORT_SEQUENCE_DEFAULT_NEXT,
+    highestReportNumber + 1,
+  );
   const nextSettings: SafetyReportSequenceSettings = {
     id: 'safety-report-sequence',
     nextReportNumber: nextReportNumber + 1,

@@ -1,5 +1,25 @@
 import type { RiskAssessment } from './safety-report';
 
+export type TrainingClassificationStatus = 'Unclassified' | 'Proposed' | 'Active';
+export type TrainingAudience = 'Instructors' | 'Students' | 'Both' | 'All Personnel';
+
+export interface RiskSourceOccurrence {
+    reportId: string;
+    reportNumber: string;
+    hazardId: string;
+    riskId: string;
+    linkedAt: string;
+}
+
+export interface RiskTrainingClassification {
+    status: TrainingClassificationStatus;
+    audience: TrainingAudience;
+    trainingArea: string;
+    learningObjective: string;
+    notes: string;
+    updatedAt?: string;
+}
+
 export interface Mitigation {
     id: string;
     description: string;
@@ -13,6 +33,12 @@ export interface RiskItem {
     description: string;
     initialRiskAssessment?: RiskAssessment;
     mitigations: Mitigation[];
+    sourceOccurrences?: RiskSourceOccurrence[];
+    trainingClassification?: RiskTrainingClassification;
+    sourceSafetyReportId?: string | null;
+    sourceSafetyReportNumber?: string | null;
+    sourceHazardId?: string | null;
+    sourceRiskId?: string | null;
 }
 
 export type Risk = { // This is the top-level document, which is a Hazard
@@ -22,6 +48,11 @@ export type Risk = { // This is the top-level document, which is a Hazard
     status: 'Open' | 'Closed' | 'Archived';
     risks: RiskItem[];
     organizationId?: string | null; // Associated external company ID
+    canonicalKey?: string;
+    sourceOccurrences?: RiskSourceOccurrence[];
+    sourceSafetyReportId?: string | null;
+    sourceSafetyReportNumber?: string | null;
+    sourceHazardId?: string | null;
 };
 
 export interface RiskMatrixSettings {

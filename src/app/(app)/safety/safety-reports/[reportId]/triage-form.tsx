@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { CARD_COMPACT_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS } from '@/components/page-header';
+import { getInitialNarrative } from '@/lib/safety-report-text';
 
 const isEmailLike = (value?: string | null) => Boolean(value && /\S+@\S+\.\S+/.test(value));
 
@@ -94,6 +96,7 @@ const ICAO_CATEGORIES = [
 const triageSchema = z.object({
   title: z.string().trim().max(180).optional(),
   status: z.string().min(1),
+  departmentId: z.string().optional(),
   reportingChannel: z.enum(['Mandatory', 'Voluntary']).optional(),
   occurrenceCategory: z.string().optional(),
   eventClassification: z.string().optional(),
@@ -111,13 +114,33 @@ interface TriageFormProps {
 export function TriageForm({ report, tenantId, isStacked = false, onReportSaved }: TriageFormProps) {
   const { toast } = useToast();
   const { userProfile } = useUserProfile();
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const reporterLabel = resolveReporterLabel(report, userProfile?.email);
+  const initialNarrative = getInitialNarrative(report.description, report.immediateAction);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadDepartments = async () => {
+      try {
+        const response = await fetch('/api/departments', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ departments: [] }));
+        if (!cancelled) setDepartments(Array.isArray(payload?.departments) ? payload.departments : []);
+      } catch {
+        if (!cancelled) setDepartments([]);
+      }
+    };
+    void loadDepartments();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const form = useForm<TriageFormValues>({
     resolver: zodResolver(triageSchema),
     defaultValues: {
       title: report.title || report.initialHazards?.[0]?.description || '',
       status: report.status || 'Open',
+      departmentId: report.departmentId || '',
       reportingChannel: report.reportingChannel || 'Voluntary',
       occurrenceCategory: report.occurrenceCategory || '',
       eventClassification: report.eventClassification || '',
@@ -126,10 +149,18 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
 
   const onSubmit = async (values: TriageFormValues) => {
     try {
+      const department = departments.find((entry) => entry.id === values.departmentId);
       const response = await fetch(`/api/safety-reports/${report.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report: { ...report, ...values } }),
+        body: JSON.stringify({
+          report: {
+            ...report,
+            ...values,
+            departmentId: department?.id || null,
+            departmentName: department?.name || null,
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -179,14 +210,18 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
                             </FormItem>
                           )}
                         />
-                        <div className="rounded-lg border border-card-border bg-primary/5 px-4 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-80">Initial Narrative</p>
-                            <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{report.description}</p>
+                        <div>
+                            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-primary opacity-80">Initial Narrative</p>
+                            <div className="rounded-lg border border-card-border bg-primary/5 px-4 py-3">
+                                <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{initialNarrative || 'No narrative recorded.'}</p>
+                            </div>
                         </div>
                         {report.immediateAction ? (
-                          <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Immediate Action</p>
-                            <p className="mt-1.5 whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{report.immediateAction}</p>
+                          <div>
+                            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Immediate Action</p>
+                            <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3">
+                              <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{report.immediateAction}</p>
+                            </div>
                           </div>
                         ) : null}
                         </div>
@@ -198,7 +233,7 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
                           <p className="text-sm font-black uppercase tracking-tight">Classification &amp; Management</p>
                         </div>
                         <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
-                            <TriageFields form={form} />
+                            <TriageFields form={form} departments={departments} />
                         </div>
                     </section>
                         {!isStacked && (
@@ -216,7 +251,7 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
   );
 }
 
-function TriageFields({ form }: { form: any }) {
+function TriageFields({ form, departments }: { form: any; departments: { id: string; name: string }[] }) {
   return (
     <>
       <FormField
@@ -243,6 +278,26 @@ function TriageFields({ form }: { form: any }) {
               <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue /></SelectTrigger></FormControl>
               <SelectContent><SelectItem value="Voluntary">Voluntary</SelectItem><SelectItem value="Mandatory">Mandatory</SelectItem></SelectContent>
             </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="departmentId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Assigned Department</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || undefined}>
+              <FormControl><SelectTrigger className="h-10 bg-background font-bold text-xs"><SelectValue placeholder="Not assigned" /></SelectTrigger></FormControl>
+              <SelectContent>
+                <SelectItem value="unassigned">Not assigned</SelectItem>
+                {departments.map((department) => (
+                  <SelectItem key={department.id} value={department.id}>{department.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] font-medium text-muted-foreground">Assign ownership for routing and reporting.</p>
             <FormMessage />
           </FormItem>
         )}

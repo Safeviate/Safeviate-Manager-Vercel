@@ -185,6 +185,7 @@ export interface SafetyReport {
     submittedByName: string;
     submittedOnBehalfOf?: string | null;
     submittedAt: string; // ISO String
+    createdAt?: string; // Database creation time used for report ordering
     closedDate?: string; // ISO String
     isAnonymous: boolean;
     reportingChannel?: SafetyReportingChannel;
@@ -198,7 +199,8 @@ export interface SafetyReport {
     phaseOfFlight?: string;
     systemOrComponent?: string;
     // Triage Fields
-    departmentId?: string;
+    departmentId?: string | null;
+    departmentName?: string | null;
     occurrenceCategory?: string;
     eventClassification?: EventClassification;
     // Investigation Fields

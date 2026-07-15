@@ -33,6 +33,7 @@ import {
 } from '@/components/page-header';
 import { usePageLayout } from '@/hooks/use-page-layout';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { getInitialNarrative } from '@/lib/safety-report-text';
 
 const isEmailLike = (value?: string | null) => Boolean(value && /\S+@\S+\.\S+/.test(value));
 
@@ -274,6 +275,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     const investigationTasks = report.investigationTasks || [];
     const correctiveActions = report.correctiveActions || [];
     const signatures = report.signatures || [];
+    const initialNarrative = getInitialNarrative(report.description, report.immediateAction);
 
     return (
       <div className="space-y-4 p-4 md:p-6">
@@ -309,7 +311,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
           </div>
           <div className="border-t px-4 py-4">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">Initial narrative</p>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{report.description || 'No narrative recorded.'}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{initialNarrative || 'No narrative recorded.'}</p>
           </div>
           {report.immediateAction ? (
             <div className="border-t bg-amber-50/50 px-4 py-4">
@@ -618,7 +620,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
             </CardHeader>
             <CardContent className="p-0 border-t pt-4">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Original Description</h4>
-                <p className="text-sm whitespace-pre-wrap">{report.description}</p>
+                <p className="text-sm whitespace-pre-wrap">{getInitialNarrative(report.description, report.immediateAction) || 'No narrative recorded.'}</p>
             </CardContent>
           </Card>
           <div className="flex flex-col gap-10">

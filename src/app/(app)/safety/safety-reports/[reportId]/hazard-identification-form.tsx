@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { CorrectiveAction, ReportHazard, SafetyReport } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, Save, AlertTriangle, ShieldCheck, CalendarIcon } from 'lucide-react';
+import { PlusCircle, Trash2, Save, AlertTriangle, ShieldCheck, CalendarIcon, BookPlus, CheckCircle2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CARD_COMPACT_HEADER_BAND_CLASS, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from '@/components/page-header';
+import { usePermissions } from '@/hooks/use-permissions';
 
 // --- Helper Functions ---
 const getRiskLevel = (score: number): 'Low' | 'Medium' | 'High' | 'Critical' => {
@@ -403,32 +404,98 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
     );
 };
 
-const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; riskMatrixColors?: Record<string, string> }) => {
-    const { control } = useFormContext<FormValues>();
+const RisksArray = ({ report, hazardIndex, riskMatrixColors }: { report: SafetyReport; hazardIndex: number; riskMatrixColors?: Record<string, string> }) => {
+    const { control, getValues } = useFormContext<FormValues>();
+    const { hasPermission } = usePermissions();
+    const { toast } = useToast();
+    const [registeringRiskId, setRegisteringRiskId] = React.useState<string | null>(null);
+    const [registeredRiskIds, setRegisteredRiskIds] = React.useState<Set<string>>(new Set());
     const { fields, append, remove } = useFieldArray({
         control,
         name: `initialHazards.${hazardIndex}.risks`,
     });
 
+    const addToRiskRegister = async (riskIndex: number) => {
+        const hazard = getValues().initialHazards[hazardIndex];
+        const risk = hazard?.risks?.[riskIndex];
+        if (!hazard || !risk || registeringRiskId) return;
+
+        setRegisteringRiskId(risk.id);
+        try {
+            const response = await fetch('/api/risk-register/from-safety-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ report, hazard, risk }),
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(payload?.error || 'Unable to add this risk to the risk register.');
+
+            setRegisteredRiskIds((current) => new Set(current).add(risk.id));
+            toast({
+                title: payload?.alreadyLinked
+                    ? 'Already in Risk Register'
+                    : payload?.linkedExisting
+                        ? 'Linked to Risk Register'
+                        : 'Added to Risk Register',
+                description: payload?.alreadyLinked
+                    ? 'This report occurrence is already linked to the register.'
+                    : payload?.linkedExisting
+                        ? 'This matching hazard was linked to the existing register entry without creating a duplicate.'
+                        : 'The hazard and risk are now available in the Risk Register.',
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Risk Register update failed',
+                description: error instanceof Error ? error.message : 'Unable to add this risk to the risk register.',
+            });
+        } finally {
+            setRegisteringRiskId(null);
+        }
+    };
+
     return (
         <div className="space-y-3">
-            {fields.map((field, riskIndex) => (
-                <div key={field.id} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
+            {fields.map((field, riskIndex) => {
+                const riskId = getValues().initialHazards[hazardIndex]?.risks?.[riskIndex]?.id || field.id;
+                return (
+                    <div key={field.id} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
                     <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
                         <div className="flex min-w-0 items-center gap-2">
                             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risk Assessment {riskIndex + 1}</p>
                         </div>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => remove(riskIndex)}
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive no-print"
-                            aria-label={`Remove risk ${riskIndex + 1}`}
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-1.5 no-print">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => remove(riskIndex)}
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                aria-label={`Remove risk ${riskIndex + 1}`}
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                            {hasPermission('risk-register-manage-definitions') && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => void addToRiskRegister(riskIndex)}
+                                    disabled={registeringRiskId !== null}
+                                    className="h-7 gap-1.5 px-2 text-[9px] font-black uppercase tracking-widest"
+                                >
+                                    {registeringRiskId === riskId || registeredRiskIds.has(riskId) ? (
+                                        <CheckCircle2 className="h-3 w-3" />
+                                    ) : (
+                                        <BookPlus className="h-3 w-3" />
+                                    )}
+                                    <span className="hidden sm:inline">
+                                        {registeringRiskId === riskId ? 'Adding...' : registeredRiskIds.has(riskId) ? 'In Register' : 'Add to Register'}
+                                    </span>
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <div className="space-y-4 p-4">
                         <div className="grid gap-3 md:grid-cols-2">
@@ -483,8 +550,9 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                             compact
                         />
                     </div>
-                </div>
-            ))}
+                    </div>
+                );
+            })}
             <Button 
                 type="button" 
                 variant="outline" 
@@ -630,12 +698,12 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
               ) : null}
               {isStacked ? (
                 <div className="p-4">
-                  <HazardFields hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
+                  <HazardFields report={report} hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
                 </div>
               ) : (
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
-                    <HazardFields hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
+                    <HazardFields report={report} hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
                   </div>
                 </ScrollArea>
               )}
@@ -654,13 +722,13 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
   );
 }
 
-function HazardFields({ hazardFields, riskMatrixColors }: { hazardFields: Array<{ id: string }>; riskMatrixColors?: Record<string, string> }) {
+function HazardFields({ report, hazardFields, riskMatrixColors }: { report: SafetyReport; hazardFields: Array<{ id: string }>; riskMatrixColors?: Record<string, string> }) {
   return (
     <>
       {hazardFields.map((field, index) => {
         return (
           <div key={field.id} className="space-y-3">
-              <RisksArray hazardIndex={index} riskMatrixColors={riskMatrixColors} />
+              <RisksArray report={report} hazardIndex={index} riskMatrixColors={riskMatrixColors} />
           </div>
       )})}
       {hazardFields.length === 0 && (

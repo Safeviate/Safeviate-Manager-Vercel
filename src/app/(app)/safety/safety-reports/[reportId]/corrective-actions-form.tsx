@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { DeleteActionButton } from '@/components/record-action-buttons';
 import { useToast } from '@/hooks/use-toast';
 import type {
   CorrectiveAction,
@@ -160,6 +161,7 @@ export function CorrectiveActionsForm({
   onReportSaved,
 }: CorrectiveActionsFormProps) {
   const { toast } = useToast();
+  const [deletingActionId, setDeletingActionId] = useState<string | null>(null);
   const mitigationItems = useMemo(
     () => flattenMitigations(report.initialHazards || [], report.correctiveActions || []),
     [report.initialHazards, report.correctiveActions]
@@ -277,6 +279,52 @@ export function CorrectiveActionsForm({
     }
   };
 
+  const deleteCorrectiveAction = async (item: FlattenedMitigation) => {
+    if (deletingActionId) return;
+
+    setDeletingActionId(item.mitigationId);
+
+    const nextReport: SafetyReport = {
+      ...report,
+      initialHazards: (report.initialHazards || []).map((hazard) => ({
+        ...hazard,
+        risks: (hazard.risks || []).map((risk) => ({
+          ...risk,
+          mitigations: (risk.mitigations || []).filter((mitigation) => mitigation.id !== item.mitigationId),
+        })),
+      })),
+      correctiveActions: (report.correctiveActions || []).filter((action) => action.id !== item.mitigationId),
+    };
+
+    try {
+      const response = await fetch(`/api/safety-reports/${report.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: nextReport }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Unable to delete corrective action.');
+      }
+
+      const payload = await response.json().catch(() => null);
+      if (payload?.report) {
+        onReportSaved?.(payload.report as SafetyReport);
+      }
+
+      toast({ title: 'Corrective action deleted' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete failed',
+        description: error instanceof Error ? error.message : 'Unable to delete corrective action.',
+      });
+    } finally {
+      setDeletingActionId(null);
+    }
+  };
+
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
       <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
@@ -292,12 +340,24 @@ export function CorrectiveActionsForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
             {isStacked ? (
               <div className="p-6 space-y-4">
-                <ReviewFields items={mitigationItems} form={form} personnel={personnel} riskMatrixColors={riskMatrixColors} />
+                <ReviewFields
+                  items={mitigationItems}
+                  form={form}
+                  personnel={personnel}
+                  riskMatrixColors={riskMatrixColors}
+                  onDeleteAction={deleteCorrectiveAction}
+                />
               </div>
             ) : (
               <ScrollArea className="flex-1 p-6">
                 <div className="space-y-4">
-                  <ReviewFields items={mitigationItems} form={form} personnel={personnel} riskMatrixColors={riskMatrixColors} />
+                  <ReviewFields
+                    items={mitigationItems}
+                    form={form}
+                    personnel={personnel}
+                    riskMatrixColors={riskMatrixColors}
+                    onDeleteAction={deleteCorrectiveAction}
+                  />
                 </div>
               </ScrollArea>
             )}
@@ -320,11 +380,13 @@ function ReviewFields({
   form,
   personnel,
   riskMatrixColors,
+  onDeleteAction,
 }: {
   items: FlattenedMitigation[];
   form: ReturnType<typeof useForm<ReviewFormValues>>;
   personnel: Personnel[];
   riskMatrixColors?: Record<string, string>;
+  onDeleteAction: (item: FlattenedMitigation) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -341,11 +403,21 @@ function ReviewFields({
       {items.map((item, index) => (
         <div key={item.mitigationId} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
           <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
-            <div className="flex min-w-0 items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                Corrective Action {index + 1}
-              </p>
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                  Corrective Action {index + 1}
+                </p>
+              </div>
+              <div className="no-print">
+                <DeleteActionButton
+                  title="Delete corrective action?"
+                  description="This will remove the corrective action and its linked mitigation from this safety report. This cannot be undone."
+                  srLabel={`Delete corrective action ${index + 1}`}
+                  onDelete={() => onDeleteAction(item)}
+                />
+              </div>
             </div>
           </div>
 

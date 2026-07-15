@@ -130,8 +130,14 @@ interface QuickSafetyInboxProps {
     reports: QuickSafetyReport[];
     canManage: boolean;
     classifyingReportId: string | null;
-    onClassify: (report: QuickSafetyReport) => Promise<void>;
+    departments: DepartmentOption[];
+    onClassify: (report: QuickSafetyReport, department: DepartmentOption) => Promise<boolean>;
     onDelete: (report: QuickSafetyReport) => Promise<void>;
+}
+
+interface DepartmentOption {
+    id: string;
+    name: string;
 }
 
 function RecallReportButton({ reportId, reportNumber }: { reportId: string; reportNumber: string }) {
@@ -155,9 +161,23 @@ interface TechnicalIntakeProps {
 
 type ReportSortOrder = 'newest' | 'oldest';
 
+const normalizeSafetyReportGroup = (value: string) => {
+    const normalized = value.trim();
+    return /^(flight|ground) operations$/i.test(normalized) ? 'Operations' : normalized;
+};
+
+const getSafetyReportGroup = (report: SafetyReport) => {
+    const reportType = report.reportType?.trim() || '';
+    if (reportType.toLowerCase() === 'preliminary safety report' && report.sourceQuickReportId) {
+        return report.departmentName?.trim() ? normalizeSafetyReportGroup(report.departmentName) : 'Unassigned Safety Reports';
+    }
+    if (report.departmentName?.trim()) return normalizeSafetyReportGroup(report.departmentName);
+    return reportType ? normalizeSafetyReportGroup(reportType) : 'Unclassified';
+};
+
 function ReportsTable({ reports, tenantId, canManage, currentUserEmail }: ReportsTableProps) {
     const groupedReports = reports.reduce<Record<string, SafetyReport[]>>((groups, report) => {
-        const group = report.reportType?.trim() || 'Unclassified';
+        const group = getSafetyReportGroup(report);
         (groups[group] ??= []).push(report);
         return groups;
     }, {});
@@ -180,6 +200,7 @@ function ReportsTable({ reports, tenantId, canManage, currentUserEmail }: Report
                                     </div>
                                     <p className="mt-1 truncate text-sm font-bold text-foreground">{report.description || report.reportType}</p>
                                     <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Filed by: {resolveReporterLabel(report, currentUserEmail)}</p>
+                                    {report.sourceQuickReportId ? <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Department: {report.departmentName || 'Not assigned'}</p> : null}
                                 </div>
                                 <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Date</p><p className="truncate text-xs font-semibold">{format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}</p></div>
                                 <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Location</p><p className="truncate text-xs font-semibold">{report.location}</p></div>
@@ -198,7 +219,89 @@ function ReportsTable({ reports, tenantId, canManage, currentUserEmail }: Report
     );
 }
 
-function QuickSafetyInbox({ reports, canManage, classifyingReportId, onClassify, onDelete }: QuickSafetyInboxProps) {
+function ClassifySafetyReportDialog({
+    report,
+    departments,
+    isClassifying,
+    onClassify,
+}: {
+    report: QuickSafetyReport;
+    departments: DepartmentOption[];
+    isClassifying: boolean;
+    onClassify: (report: QuickSafetyReport, department: DepartmentOption) => Promise<boolean>;
+}) {
+    const [open, setOpen] = useState(false);
+    const [departmentId, setDepartmentId] = useState('');
+    const selectedDepartment = departments.find((department) => department.id === departmentId);
+
+    const handleOpenChange = (nextOpen: boolean) => {
+        if (!isClassifying) setOpen(nextOpen);
+        if (!nextOpen) setDepartmentId('');
+    };
+
+    const handleClassify = async () => {
+        if (!selectedDepartment) return;
+        const classified = await onClassify(report, selectedDepartment);
+        if (classified) {
+            setOpen(false);
+            setDepartmentId('');
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogTrigger asChild>
+                <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 flex-1 justify-between px-3 text-[10px] font-black uppercase"
+                    disabled={isClassifying}
+                >
+                    {isClassifying ? 'Classifying...' : 'Classify into Safety'}
+                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[460px]">
+                <DialogHeader>
+                    <DialogTitle className="font-black uppercase tracking-wide">Classify Safety Report</DialogTitle>
+                    <DialogDescription>
+                        Assign this preliminary quick report to the responsible department before it enters the formal safety register.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 py-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Department</p>
+                    <Select value={departmentId} onValueChange={setDepartmentId}>
+                        <SelectTrigger className="h-10 bg-background text-xs font-bold">
+                            <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {departments.map((department) => (
+                                <SelectItem key={department.id} value={department.id} className="text-xs">
+                                    {department.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {departments.length === 0 ? (
+                        <p className="text-xs text-destructive">No departments are configured for this organization yet.</p>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">The report will appear in this department after classification.</p>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isClassifying}>
+                        Cancel
+                    </Button>
+                    <Button type="button" onClick={() => void handleClassify()} disabled={!selectedDepartment || isClassifying} className="font-black uppercase text-xs">
+                        {isClassifying ? 'Classifying...' : 'Confirm Classification'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function QuickSafetyInbox({ reports, canManage, classifyingReportId, departments, onClassify, onDelete }: QuickSafetyInboxProps) {
     return (
         <div className="border-b bg-muted/5 p-4">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -277,16 +380,12 @@ function QuickSafetyInbox({ reports, canManage, classifyingReportId, onClassify,
                                     </Button>
                                 ) : canManage ? (
                                     <div className="flex flex-1 flex-wrap gap-2">
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            className="h-8 flex-1 justify-between px-3 text-[10px] font-black uppercase"
-                                            disabled={classifyingReportId === report.id}
-                                            onClick={() => void onClassify(report)}
-                                        >
-                                            {classifyingReportId === report.id ? 'Classifying...' : 'Classify into Safety'}
-                                            <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                                        </Button>
+                                        <ClassifySafetyReportDialog
+                                            report={report}
+                                            departments={departments}
+                                            isClassifying={classifyingReportId === report.id}
+                                            onClassify={onClassify}
+                                        />
                                         <ArchiveActionButton
                                             description={`Preliminary safety report #${report.reportNumber} will be archived and can be recalled later.`}
                                             onArchive={() => void onDelete(report)}
@@ -466,6 +565,7 @@ export default function SafetyReportsPage() {
   const [quickSafetyReports, setQuickSafetyReports] = useState<QuickSafetyReport[]>([]);
   const [technicalReports, setTechnicalReports] = useState<TechnicalQuickReport[]>([]);
   const [organizations, setOrganizations] = useState<ExternalOrganization[]>([]);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [isLoadingReports, setIsLoadingReports] = useState(true);
   const [classifyingQuickReportId, setClassifyingQuickReportId] = useState<string | null>(null);
   const [reportSortOrder, setReportSortOrder] = useState<ReportSortOrder>('newest');
@@ -506,6 +606,38 @@ export default function SafetyReportsPage() {
     };
 
     void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDepartments = async () => {
+      if (!tenantId) {
+        setDepartments([]);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/departments', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ departments: [] }));
+        if (!cancelled) {
+          setDepartments(
+            Array.isArray(payload?.departments)
+              ? payload.departments
+                  .filter((department: { id?: unknown; name?: unknown }) => typeof department.id === 'string' && typeof department.name === 'string')
+                  .map((department: { id: string; name: string }) => ({ id: department.id, name: department.name }))
+              : []
+          );
+        }
+      } catch {
+        if (!cancelled) setDepartments([]);
+      }
+    };
+
+    void loadDepartments();
     return () => {
       cancelled = true;
     };
@@ -581,7 +713,7 @@ export default function SafetyReportsPage() {
     );
   }
 
-  const handleClassifyQuickReport = async (report: QuickSafetyReport) => {
+  const handleClassifyQuickReport = async (report: QuickSafetyReport, department: DepartmentOption) => {
     setClassifyingQuickReportId(report.id);
     try {
       const eventClassification =
@@ -598,6 +730,8 @@ export default function SafetyReportsPage() {
         body: JSON.stringify({
           report: {
             reportType: report.reportType,
+            departmentId: department.id,
+            departmentName: department.name,
             status: 'Open',
             submittedBy: report.submittedByEmail || report.submittedById || 'quick-safety-report',
             submittedByEmail: report.submittedByEmail || null,
@@ -666,12 +800,14 @@ export default function SafetyReportsPage() {
         title: 'Quick Safety Report Classified',
         description: `${report.reportNumber} is now linked to formal safety report ${newSafetyReportNumber}.`,
       });
+      return true;
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Classification Failed',
         description: error instanceof Error ? error.message : 'Failed to classify the quick safety report.',
       });
+      return false;
     } finally {
       setClassifyingQuickReportId(null);
     }
@@ -709,9 +845,13 @@ export default function SafetyReportsPage() {
         (orgId === 'internal' ? !r.organizationId : r.organizationId === orgId) &&
         (reportView === 'archived' ? r.status === 'Archived' : r.status !== 'Archived')
     ))].sort((left, right) => {
-        const leftDate = parseLocalDate(left.eventDate).getTime();
-        const rightDate = parseLocalDate(right.eventDate).getTime();
-        return reportSortOrder === 'oldest' ? leftDate - rightDate : rightDate - leftDate;
+        const leftDate = left.createdAt ? Date.parse(left.createdAt) : Number.NaN;
+        const rightDate = right.createdAt ? Date.parse(right.createdAt) : Number.NaN;
+        const normalizedLeftDate = Number.isFinite(leftDate) ? leftDate : parseLocalDate(left.eventDate).getTime();
+        const normalizedRightDate = Number.isFinite(rightDate) ? rightDate : parseLocalDate(right.eventDate).getTime();
+        return reportSortOrder === 'oldest'
+          ? normalizedLeftDate - normalizedRightDate
+          : normalizedRightDate - normalizedLeftDate;
     });
     const internalQuickSafetyReports = (quickSafetyReports || []).filter((report) => !report.linkedSafetyReportId);
     const headerBandBorderStyle = { borderBottomColor: 'hsl(var(--card-border))' };
@@ -798,6 +938,7 @@ export default function SafetyReportsPage() {
                             reports={internalQuickSafetyReports}
                             canManage={canManageAll}
                             classifyingReportId={classifyingQuickReportId}
+                            departments={departments}
                             onClassify={handleClassifyQuickReport}
                             onDelete={handleDeleteQuickReport}
                         />

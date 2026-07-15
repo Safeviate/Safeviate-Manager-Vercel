@@ -28,7 +28,16 @@ export type {
   QualityRiskPlanEntry,
   QualityRiskPlanSignoff,
 } from './quality';
-export type { Risk, RiskItem, Mitigation, RiskMatrixSettings } from './risk';
+export type {
+  Risk,
+  RiskItem,
+  Mitigation,
+  RiskMatrixSettings,
+  RiskSourceOccurrence,
+  RiskTrainingClassification,
+  TrainingAudience,
+  TrainingClassificationStatus,
+} from './risk';
 export type {
   SafetyReport,
   ReportStatus,

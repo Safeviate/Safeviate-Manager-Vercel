@@ -21,8 +21,8 @@ export async function GET(request: Request) {
     if (!tenantId) return NextResponse.json({ reports: [] }, { status: 200 });
     await ensureSafetyReportsSchema();
 
-    const rows = await prisma.$queryRawUnsafe<{ data: unknown }[]>(
-      `SELECT data FROM safety_reports WHERE tenant_id = $1 ORDER BY created_at ASC`,
+    const rows = await prisma.$queryRawUnsafe<{ data: unknown; created_at: Date }[]>(
+      `SELECT data, created_at FROM safety_reports WHERE tenant_id = $1 ORDER BY created_at ASC`,
       tenantId
     );
 
@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       {
         reports: rows.map((row) => ({
           ...(row.data as Record<string, unknown>),
+          createdAt: row.created_at.toISOString(),
           tenantId,
         })),
       },
@@ -68,7 +69,16 @@ export async function POST(request: Request) {
     const incoming = body?.report ?? {};
     const data = await prisma.$transaction(async (tx) => {
       const id = incoming.id || randomUUID();
-      const reportNumber = incoming.reportNumber || (await allocateNextSafetyReportNumber(tx, tenantId!)).reportNumber;
+      const existingRows = await tx.$queryRawUnsafe<{ data: Record<string, unknown> }[]>(
+        `SELECT data FROM safety_reports WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
+        id,
+        tenantId,
+      );
+      const existingReportNumber = existingRows[0]?.data?.reportNumber;
+      const reportNumber =
+        typeof existingReportNumber === 'string' && existingReportNumber.trim().length > 0
+          ? existingReportNumber.trim()
+          : (await allocateNextSafetyReportNumber(tx, tenantId!)).reportNumber;
       const nextData = { ...incoming, id, reportNumber };
 
       await tx.$executeRawUnsafe(
