@@ -206,7 +206,11 @@ function ReportsTable({ reports, tenantId, canManage, currentUserEmail }: Report
                                 <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Location</p><p className="truncate text-xs font-semibold">{report.location}</p></div>
                                 <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Source</p><p className="truncate text-xs font-semibold">{report.sourceQuickReportNumber || 'Direct report'}</p></div>
                                 <div className="flex items-center justify-start gap-1 md:justify-end">
-                                    <Button asChild variant="outline" size="sm" className="h-8 px-2 text-[9px] font-black uppercase"><Link href={`/safety/safety-reports/${report.id}`}>Open<ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+                                    <ViewActionButton
+                                        href={`/safety/safety-reports/${report.id}`}
+                                        label={`View safety report ${report.reportNumber}`}
+                                        iconOnly
+                                    />
                                     {canManage && <><EditReportDialog report={report} tenantId={tenantId} />{report.status === 'Archived' ? <RecallReportButton reportId={report.id} reportNumber={report.reportNumber} /> : <ArchiveReportButton reportId={report.id} reportNumber={report.reportNumber} />}</>}
                                 </div>
                             </div>
@@ -457,7 +461,11 @@ function TechnicalIntake({ reports }: TechnicalIntakeProps) {
                                         <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Date</p><p className="truncate text-xs font-semibold">{format(parseLocalDate(report.eventDate), 'dd MMM yyyy')}</p></div>
                                         <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Location</p><p className="truncate text-xs font-semibold">{report.location}</p></div>
                                         <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Aircraft</p><p className="truncate text-xs font-semibold">{report.aircraftLabel || 'Not specified'}</p></div>
-                                        <Button asChild variant="outline" size="sm" className="h-8 justify-start px-2 text-[9px] font-black uppercase md:justify-center"><Link href={`/quick-reports/technical-report/${report.id}`}>Open<ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+                                        <ViewActionButton
+                                            href={`/quick-reports/technical-report/${report.id}`}
+                                            label={`View technical report ${report.reportNumber}`}
+                                            iconOnly
+                                        />
                                     </div>
                                 ))}
                             </div>
