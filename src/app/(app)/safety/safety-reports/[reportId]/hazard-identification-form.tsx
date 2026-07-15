@@ -249,7 +249,7 @@ const RiskAssessmentEditor = ({
                         render={({ field }) => (
                             <FormItem className="min-w-0">
                                 <FormLabel className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">
-                                    {label} Likelihood
+                                    Likelihood
                                 </FormLabel>
                                 <Select
                                     onValueChange={(value) => field.onChange(Number(value))}
@@ -277,7 +277,7 @@ const RiskAssessmentEditor = ({
                         render={({ field }) => (
                             <FormItem className="min-w-0">
                                 <FormLabel className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">
-                                    {label} Severity
+                                    Severity
                                 </FormLabel>
                                 <Select
                                     onValueChange={(value) => field.onChange(Number(value))}

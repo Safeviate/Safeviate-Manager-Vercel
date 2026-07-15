@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -44,6 +44,8 @@ const mitigationReviewSchema = z.object({
   responsiblePersonId: z.string().optional(),
   completionDate: z.date().nullable().optional(),
   status: z.enum(['Open', 'In Progress', 'Closed', 'Cancelled']),
+  residualLikelihood: z.number().min(1).max(5),
+  residualSeverity: z.number().min(1).max(5),
 });
 
 const reviewSchema = z.object({
@@ -173,6 +175,8 @@ export function CorrectiveActionsForm({
         responsiblePersonId: item.reviewAction?.responsiblePersonId || '',
         completionDate: parseLocalDate(item.reviewAction?.deadline),
         status: item.reviewAction?.status || 'Open',
+        residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
+        residualSeverity: item.mitigationResidualRiskAssessment.severity,
       })),
     },
   });
@@ -186,6 +190,8 @@ export function CorrectiveActionsForm({
         responsiblePersonId: item.reviewAction?.responsiblePersonId || '',
         completionDate: parseLocalDate(item.reviewAction?.deadline),
         status: item.reviewAction?.status || 'Open',
+        residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
+        residualSeverity: item.mitigationResidualRiskAssessment.severity,
       })),
     });
   }, [form, mitigationItems]);
@@ -202,8 +208,14 @@ export function CorrectiveActionsForm({
         mitigations: (risk.mitigations || []).map((mitigation) => {
           const review = reviewMap.get(`${hazard.id}:${risk.id}:${mitigation.id}`);
           if (!review) return mitigation;
+          const residualRiskAssessment = normalizeRiskAssessment({
+            ...mitigation.residualRiskAssessment,
+            likelihood: review.residualLikelihood,
+            severity: review.residualSeverity,
+          });
           return {
             ...mitigation,
+            residualRiskAssessment,
             responsiblePersonId: review.responsiblePersonId || undefined,
             completionDate: toNoonUtcIso(review.completionDate),
             status: review.status as CorrectiveActionStatus,
@@ -217,7 +229,10 @@ export function CorrectiveActionsForm({
       initialHazards: nextHazards,
       correctiveActions: values.mitigationReviews.map((review) => {
         const item = mitigationItems.find((entry) => entry.mitigationId === review.mitigationId);
-        const residual = item?.mitigationResidualRiskAssessment;
+        const residual = normalizeRiskAssessment({
+          likelihood: review.residualLikelihood,
+          severity: review.residualSeverity,
+        });
         return {
           id: review.mitigationId,
           description: item?.mitigationDescription || '',
@@ -324,37 +339,47 @@ function ReviewFields({
   return (
     <>
       {items.map((item, index) => (
-        <div key={item.mitigationId} className="rounded-lg border bg-muted/10 p-4 space-y-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-slate-500" />
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-              Corrective Action {index + 1}
-            </p>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <InfoCard label="Hazard" value={item.hazardDescription} />
-            <InfoCard label="Risk" value={item.riskDescription} />
-          </div>
-
-          <div className="rounded-lg border bg-background px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Mitigation / Control</p>
-            <p className="mt-2 text-sm font-medium text-foreground whitespace-pre-wrap">
-              {item.mitigationDescription || 'No mitigation description entered.'}
-            </p>
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-stretch">
-            <RiskSummaryCard title="Initial Risk" assessment={item.riskAssessment} riskMatrixColors={riskMatrixColors} />
-            <div className="hidden lg:flex items-center justify-center px-1">
-              <Badge variant="outline" className="text-[9px] font-black uppercase">
-                Reduced To
-              </Badge>
+        <div key={item.mitigationId} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
+          <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+            <div className="flex min-w-0 items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                Corrective Action {index + 1}
+              </p>
             </div>
-            <RiskSummaryCard title="Residual Risk" assessment={item.mitigationResidualRiskAssessment} riskMatrixColors={riskMatrixColors} />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="space-y-4 p-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <InfoCard label="Hazard" value={item.hazardDescription} />
+              <InfoCard label="Risk" value={item.riskDescription} />
+            </div>
+
+            <div className="rounded-lg border border-card-border bg-background px-3 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Mitigation / Control</p>
+              <p className="mt-2 text-sm font-medium text-foreground whitespace-pre-wrap">
+                {item.mitigationDescription || 'No mitigation description entered.'}
+              </p>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-stretch">
+              <RiskSummaryCard title="Initial Risk" assessment={item.riskAssessment} riskMatrixColors={riskMatrixColors} />
+              <div className="hidden lg:flex items-center justify-center px-1">
+                <Badge variant="outline" className="text-[9px] font-black uppercase">
+                  Reduced To
+                </Badge>
+              </div>
+              <RiskSummaryCard
+                title="Residual Risk"
+                assessment={item.mitigationResidualRiskAssessment}
+                riskMatrixColors={riskMatrixColors}
+                form={form}
+                index={index}
+                editable
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <FormField
               control={form.control}
               name={`mitigationReviews.${index}.responsiblePersonId`}
@@ -429,6 +454,7 @@ function ReviewFields({
                 </FormItem>
               )}
             />
+            </div>
           </div>
         </div>
       ))}
@@ -438,35 +464,112 @@ function ReviewFields({
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-background px-3 py-3">
+    <div className="rounded-lg border border-card-border bg-background px-3 py-3">
       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
       <p className="mt-2 text-sm font-medium text-foreground">{value || '-'}</p>
     </div>
   );
 }
 
-function RiskSummaryCard({ title, assessment, riskMatrixColors }: { title: string; assessment: RiskAssessment; riskMatrixColors?: Record<string, string> }) {
-  const riskColor = getRiskScoreColor(assessment.likelihood, assessment.severity, riskMatrixColors);
-  const severity = severityLabels[assessment.severity] || severityLabels[1];
-  const riskIndicator = `${assessment.likelihood}${severity.letter} - ${assessment.riskLevel}`;
+function RiskSummaryCard({
+  title,
+  assessment,
+  riskMatrixColors,
+  form,
+  index,
+  editable = false,
+}: {
+  title: string;
+  assessment: RiskAssessment;
+  riskMatrixColors?: Record<string, string>;
+  form?: ReturnType<typeof useForm<ReviewFormValues>>;
+  index?: number;
+  editable?: boolean;
+}) {
+  const reviews = useWatch({ name: 'mitigationReviews' }) as ReviewFormValues['mitigationReviews'] | undefined;
+  const selectedReview = editable && index !== undefined ? reviews?.[index] : undefined;
+  const currentAssessment = normalizeRiskAssessment(editable ? {
+    likelihood: selectedReview?.residualLikelihood ?? assessment.likelihood,
+    severity: selectedReview?.residualSeverity ?? assessment.severity,
+  } : assessment);
+  const riskColor = getRiskScoreColor(currentAssessment.likelihood, currentAssessment.severity, riskMatrixColors);
+  const severity = severityLabels[currentAssessment.severity] || severityLabels[1];
+  const riskIndicator = `${currentAssessment.likelihood}${severity.letter} - ${currentAssessment.riskLevel}`;
+  const fieldPrefix = index === undefined ? '' : `mitigationReviews.${index}`;
 
   return (
-    <div className="rounded-lg border border-card-border bg-muted/10 px-3 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-80">{title}</p>
+    <div className="rounded-md border border-card-border bg-muted/30 px-3 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="rounded-md border bg-muted/10 px-2 py-2 text-center">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Likelihood</p>
-          <p className="mt-1 text-xs font-black text-foreground">{assessment.likelihood} - {likelihoodLabels[assessment.likelihood]}</p>
+      <div className="mt-3 grid min-w-0 items-end gap-3 md:grid-cols-3">
+        <div className="min-w-0">
+          <p className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">Likelihood</p>
+          {editable && form && index !== undefined ? (
+            <FormField
+              control={form.control}
+              name={`${fieldPrefix}.residualLikelihood` as `mitigationReviews.${number}.residualLikelihood`}
+              render={({ field }) => (
+                <FormItem className="min-w-0 space-y-0">
+                  <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                    <FormControl>
+                      <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <SelectItem key={value} value={String(value)} className="text-xs">
+                          {value} - {likelihoodLabels[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          ) : (
+            <div className="flex h-9 w-full items-center rounded-md border border-card-border bg-background px-3 text-xs font-bold">
+              {currentAssessment.likelihood} - {likelihoodLabels[currentAssessment.likelihood]}
+            </div>
+          )}
         </div>
-        <div className="rounded-md border bg-muted/10 px-2 py-2 text-center">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Severity</p>
-          <p className="mt-1 text-xs font-black text-foreground">{severity.letter} - {severity.name}</p>
+        <div className="min-w-0">
+          <p className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">Severity</p>
+          {editable && form && index !== undefined ? (
+            <FormField
+              control={form.control}
+              name={`${fieldPrefix}.residualSeverity` as `mitigationReviews.${number}.residualSeverity`}
+              render={({ field }) => (
+                <FormItem className="min-w-0 space-y-0">
+                  <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                    <FormControl>
+                      <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {[5, 4, 3, 2, 1].map((value) => (
+                        <SelectItem key={value} value={String(value)} className="text-xs">
+                          {severityLabels[value].letter} - {severityLabels[value].name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          ) : (
+            <div className="flex h-9 w-full items-center rounded-md border border-card-border bg-background px-3 text-xs font-bold">
+              {severity.letter} - {severity.name}
+            </div>
+          )}
         </div>
-        <div className="rounded-md border border-card-border px-2 py-2 text-center" style={riskColor}>
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] opacity-80">Risk Indicator</p>
-          <p className="mt-1 text-xs font-black">{riskIndicator}</p>
+        <div className="min-w-0">
+          <p className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">Risk Indicator</p>
+          <div className="flex h-9 min-w-0 w-full items-center whitespace-nowrap rounded-md border border-card-border px-3 text-xs font-black" style={riskColor}>
+            {riskIndicator}
+          </div>
         </div>
       </div>
     </div>
