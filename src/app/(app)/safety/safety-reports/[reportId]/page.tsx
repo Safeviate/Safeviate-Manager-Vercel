@@ -255,7 +255,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     },
     {
       tab: 'cap',
-      label: 'Action Tracking',
+      label: 'Corrective Actions',
       complete: riskCount === 0 || ((report.correctiveActions || []).length > 0 && openActionCount === 0),
       detail: openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
     },
@@ -430,7 +430,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       case 'investigation':
         return <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} />;
       case 'cap':
-        return <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} />;
+        return <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} />;
       case 'review':
         return <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} />;
       case 'discussion':
@@ -592,7 +592,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                   <TabsContent value="triage" className="m-0 h-full outline-none overflow-hidden h-full"><TriageForm report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="hazards" className="m-0 h-full outline-none overflow-hidden h-full"><HazardIdentificationForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="investigation" className="m-0 h-full outline-none overflow-hidden h-full"><InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="cap" className="m-0 h-full outline-none overflow-hidden h-full"><CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="cap" className="m-0 h-full outline-none overflow-hidden h-full"><CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="review" className="m-0 h-full outline-none overflow-hidden h-full"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="discussion" className="m-0 h-full outline-none overflow-hidden h-full"><ReportForum report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
                 </>
@@ -625,7 +625,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               <TriageForm report={report} tenantId={tenantId} isStacked onReportSaved={handleReportSaved} />
               <HazardIdentificationForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} isStacked onReportSaved={handleReportSaved} />
               <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} isStacked />
-              <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} isStacked onReportSaved={handleReportSaved} />
+              <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} isStacked onReportSaved={handleReportSaved} />
               <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} isStacked onReportSaved={handleReportSaved} />
           </div>
       </div>

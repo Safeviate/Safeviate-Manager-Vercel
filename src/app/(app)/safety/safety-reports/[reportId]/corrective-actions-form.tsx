@@ -25,7 +25,6 @@ import type {
   CorrectiveActionStatus,
   ReportHazard,
   RiskAssessment,
-  RiskLevel,
   SafetyReport,
 } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -78,24 +77,50 @@ const parseLocalDate = (value?: string | null) => {
 const toNoonUtcIso = (date?: Date | null) =>
   date ? new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString() : null;
 
-const getRiskLevel = (score: number): RiskLevel => {
-  if (score <= 4) return 'Low';
-  if (score <= 9) return 'Medium';
-  if (score <= 16) return 'High';
-  return 'Critical';
+const getRiskScoreColor = (
+  likelihood: number,
+  severity: number,
+  colors?: Record<string, string>,
+): { backgroundColor: string; color: string } => {
+  const severityToLetter: Record<number, string> = { 5: 'A', 4: 'B', 3: 'C', 2: 'D', 1: 'E' };
+  const configuredColor = colors?.[`${likelihood}${severityToLetter[severity] || 'E'}`];
+  const score = likelihood * severity;
+  const backgroundColor = configuredColor || (score > 9 ? '#ef4444' : score > 4 ? '#f59e0b' : '#10b981');
+  const hex = backgroundColor.replace('#', '');
+  const red = parseInt(hex.substring(0, 2), 16);
+  const green = parseInt(hex.substring(2, 4), 16);
+  const blue = parseInt(hex.substring(4, 6), 16);
+  const yiq = ((red * 299) + (green * 587) + (blue * 114)) / 1000;
+
+  return {
+    backgroundColor,
+    color: yiq >= 128 ? '#000000' : '#ffffff',
+  };
 };
 
-const getRiskLevelTone = (level: RiskLevel) => {
-  switch (level) {
-    case 'Critical':
-      return 'border-red-300 bg-red-50 text-red-800';
-    case 'High':
-      return 'border-orange-300 bg-orange-50 text-orange-800';
-    case 'Medium':
-      return 'border-amber-300 bg-amber-50 text-amber-800';
-    default:
-      return 'border-emerald-300 bg-emerald-50 text-emerald-800';
-  }
+const normalizeRiskAssessment = (assessment?: Partial<RiskAssessment> | null): RiskAssessment => {
+  const likelihood = Number(assessment?.likelihood) || 1;
+  const severity = Number(assessment?.severity) || 1;
+  const riskScore = likelihood * severity;
+  const riskLevel = riskScore <= 4 ? 'Low' : riskScore <= 9 ? 'Medium' : riskScore <= 16 ? 'High' : 'Critical';
+
+  return { likelihood, severity, riskScore, riskLevel };
+};
+
+const likelihoodLabels: Record<number, string> = {
+  5: 'Frequent',
+  4: 'Occasional',
+  3: 'Remote',
+  2: 'Improbable',
+  1: 'Ext. Improbable',
+};
+
+const severityLabels: Record<number, { letter: string; name: string }> = {
+  5: { letter: 'A', name: 'Catastrophic' },
+  4: { letter: 'B', name: 'Hazardous' },
+  3: { letter: 'C', name: 'Major' },
+  2: { letter: 'D', name: 'Minor' },
+  1: { letter: 'E', name: 'Negligible' },
 };
 
 const flattenMitigations = (hazards: ReportHazard[] = [], correctiveActions: CorrectiveAction[] = []): FlattenedMitigation[] =>
@@ -106,10 +131,10 @@ const flattenMitigations = (hazards: ReportHazard[] = [], correctiveActions: Cor
         hazardDescription: hazard.description,
         riskId: risk.id,
         riskDescription: risk.description,
-        riskAssessment: risk.riskAssessment,
+        riskAssessment: normalizeRiskAssessment(risk.riskAssessment),
         mitigationId: mitigation.id,
         mitigationDescription: mitigation.description,
-        mitigationResidualRiskAssessment: mitigation.residualRiskAssessment,
+        mitigationResidualRiskAssessment: normalizeRiskAssessment(mitigation.residualRiskAssessment),
         reviewAction: correctiveActions.find((action) => action.id === mitigation.id),
       }))
     )
@@ -119,6 +144,7 @@ interface CorrectiveActionsFormProps {
   report: SafetyReport;
   tenantId: string;
   personnel: Personnel[];
+  riskMatrixColors?: Record<string, string>;
   isStacked?: boolean;
   onReportSaved?: (report: SafetyReport) => void;
 }
@@ -127,6 +153,7 @@ export function CorrectiveActionsForm({
   report,
   tenantId,
   personnel,
+  riskMatrixColors,
   isStacked = false,
   onReportSaved,
 }: CorrectiveActionsFormProps) {
@@ -239,7 +266,7 @@ export function CorrectiveActionsForm({
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
       <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
         <div className="min-w-0">
-        <h3 className="text-sm font-black uppercase tracking-tight">Action Tracking</h3>
+        <h3 className="text-sm font-black uppercase tracking-tight">Corrective Actions</h3>
         <p className="text-[10px] font-medium text-muted-foreground">
           Assign, track, close, and verify the controls defined during risk assessment.
         </p>
@@ -250,12 +277,12 @@ export function CorrectiveActionsForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
             {isStacked ? (
               <div className="p-6 space-y-4">
-                <ReviewFields items={mitigationItems} form={form} personnel={personnel} />
+                <ReviewFields items={mitigationItems} form={form} personnel={personnel} riskMatrixColors={riskMatrixColors} />
               </div>
             ) : (
               <ScrollArea className="flex-1 p-6">
                 <div className="space-y-4">
-                  <ReviewFields items={mitigationItems} form={form} personnel={personnel} />
+                  <ReviewFields items={mitigationItems} form={form} personnel={personnel} riskMatrixColors={riskMatrixColors} />
                 </div>
               </ScrollArea>
             )}
@@ -277,10 +304,12 @@ function ReviewFields({
   items,
   form,
   personnel,
+  riskMatrixColors,
 }: {
   items: FlattenedMitigation[];
   form: ReturnType<typeof useForm<ReviewFormValues>>;
   personnel: Personnel[];
+  riskMatrixColors?: Record<string, string>;
 }) {
   if (items.length === 0) {
     return (
@@ -316,13 +345,13 @@ function ReviewFields({
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-stretch">
-            <RiskSummaryCard title="Initial Risk" assessment={item.riskAssessment} />
+            <RiskSummaryCard title="Initial Risk" assessment={item.riskAssessment} riskMatrixColors={riskMatrixColors} />
             <div className="hidden lg:flex items-center justify-center px-1">
               <Badge variant="outline" className="text-[9px] font-black uppercase">
                 Reduced To
               </Badge>
             </div>
-            <RiskSummaryCard title="Residual Risk" assessment={item.mitigationResidualRiskAssessment} />
+            <RiskSummaryCard title="Residual Risk" assessment={item.mitigationResidualRiskAssessment} riskMatrixColors={riskMatrixColors} />
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -416,27 +445,28 @@ function InfoCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RiskSummaryCard({ title, assessment }: { title: string; assessment: RiskAssessment }) {
+function RiskSummaryCard({ title, assessment, riskMatrixColors }: { title: string; assessment: RiskAssessment; riskMatrixColors?: Record<string, string> }) {
+  const riskColor = getRiskScoreColor(assessment.likelihood, assessment.severity, riskMatrixColors);
+  const severity = severityLabels[assessment.severity] || severityLabels[1];
+  const riskIndicator = `${assessment.likelihood}${severity.letter} - ${assessment.riskLevel}`;
+
   return (
-    <div className="rounded-lg border bg-background px-3 py-3">
+    <div className="rounded-lg border border-card-border bg-muted/10 px-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
-        <Badge className={cn('text-[9px] font-black uppercase border', getRiskLevelTone(assessment.riskLevel))}>
-          {assessment.riskLevel}
-        </Badge>
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-80">{title}</p>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
         <div className="rounded-md border bg-muted/10 px-2 py-2 text-center">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Score</p>
-          <p className="mt-1 text-sm font-black text-foreground">{assessment.riskScore}</p>
-        </div>
-        <div className="rounded-md border bg-muted/10 px-2 py-2 text-center">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Likelihood</p>
-          <p className="mt-1 text-sm font-black text-foreground">{assessment.likelihood}</p>
+          <p className="mt-1 text-xs font-black text-foreground">{assessment.likelihood} - {likelihoodLabels[assessment.likelihood]}</p>
         </div>
         <div className="rounded-md border bg-muted/10 px-2 py-2 text-center">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Severity</p>
-          <p className="mt-1 text-sm font-black text-foreground">{assessment.severity}</p>
+          <p className="mt-1 text-xs font-black text-foreground">{severity.letter} - {severity.name}</p>
+        </div>
+        <div className="rounded-md border border-card-border px-2 py-2 text-center" style={riskColor}>
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] opacity-80">Risk Indicator</p>
+          <p className="mt-1 text-xs font-black">{riskIndicator}</p>
         </div>
       </div>
     </div>

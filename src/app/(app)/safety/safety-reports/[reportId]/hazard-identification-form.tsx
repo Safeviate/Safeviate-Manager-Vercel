@@ -238,24 +238,17 @@ const RiskAssessmentEditor = ({
 
     if (compact) {
         return (
-            <div className="mt-3 rounded-md bg-muted/30 px-3 py-3">
+            <div className="mt-3 rounded-md border border-card-border bg-muted/30 px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-                    <Badge
-                        variant="outline"
-                        className="h-6 shrink-0 border-transparent text-[10px] font-black text-white"
-                        style={{ backgroundColor: riskColors.backgroundColor }}
-                    >
-                        {likelihood}{severityLabels[(severity as number) || 1]?.letter} - {riskLevel}
-                    </Badge>
                 </div>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-3 grid min-w-0 items-end gap-3 md:grid-cols-3">
                     <FormField
                         control={control}
                         name={likelihoodPath}
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                            <FormItem className="min-w-0">
+                                <FormLabel className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">
                                     {label} Likelihood
                                 </FormLabel>
                                 <Select
@@ -263,7 +256,7 @@ const RiskAssessmentEditor = ({
                                     value={field.value ? String(field.value) : '1'}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="h-9 border-card-border bg-background text-xs font-bold">
+                                        <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
                                     </FormControl>
@@ -282,8 +275,8 @@ const RiskAssessmentEditor = ({
                         control={control}
                         name={severityPath}
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                            <FormItem className="min-w-0">
+                                <FormLabel className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">
                                     {label} Severity
                                 </FormLabel>
                                 <Select
@@ -291,7 +284,7 @@ const RiskAssessmentEditor = ({
                                     value={field.value ? String(field.value) : '1'}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="h-9 border-card-border bg-background text-xs font-bold">
+                                        <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
                                     </FormControl>
@@ -306,6 +299,15 @@ const RiskAssessmentEditor = ({
                             </FormItem>
                         )}
                     />
+                    <div className="flex min-w-0 flex-col gap-2">
+                        <p className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">Risk Indicator</p>
+                        <div
+                            className="flex h-9 min-w-0 w-full items-center whitespace-nowrap rounded-md border border-card-border px-3 text-xs font-black"
+                            style={{ backgroundColor: riskColors.backgroundColor, color: riskColors.color }}
+                        >
+                            {likelihood}{severityLabels[(severity as number) || 1]?.letter} - {riskLevel}
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -450,7 +452,24 @@ const RisksArray = ({ hazardIndex, riskMatrixColors }: { hazardIndex: number; ri
                                     <FormItem className="rounded-lg border border-card-border bg-background px-3 py-3">
                                         <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risk</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Describe the risk or outcome" {...field} className="mt-2 h-8 border-0 bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-1 focus-visible:ring-primary" />
+                                            <textarea
+                                                rows={1}
+                                                placeholder="Describe the risk or outcome"
+                                                {...field}
+                                                ref={(element) => {
+                                                    field.ref(element);
+                                                    if (element) {
+                                                        element.style.height = 'auto';
+                                                        element.style.height = `${element.scrollHeight}px`;
+                                                    }
+                                                }}
+                                                onChange={(event) => {
+                                                    field.onChange(event);
+                                                    event.currentTarget.style.height = 'auto';
+                                                    event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+                                                }}
+                                                className="mt-2 min-h-8 w-full resize-none overflow-hidden border-0 bg-transparent px-0 text-sm font-medium leading-5 shadow-none outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
