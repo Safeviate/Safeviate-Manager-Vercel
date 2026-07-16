@@ -873,12 +873,12 @@ export default function SafetyReportsPage() {
             ? cn(
                 HEADER_SECONDARY_BUTTON_CLASS,
                 HEADER_COMPACT_CONTROL_CLASS,
-                'w-full justify-center px-2 text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
+                'h-[25px] min-h-[25px] w-full justify-center px-2 text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
               )
             : cn(
                 HEADER_SECONDARY_BUTTON_CLASS,
                 HEADER_COMPACT_CONTROL_CLASS,
-                'w-full sm:w-auto justify-center text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
+                'h-[25px] min-h-[25px] w-full sm:w-auto justify-center text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
               )
         }
       >
@@ -901,12 +901,19 @@ export default function SafetyReportsPage() {
                                     activeTab={activeOrgTab}
                                     onTabChange={setActiveOrgTab}
                                     className="border-0 bg-transparent px-0 py-0 shrink-0"
+                                    controlClassName="h-[25px] min-h-[25px]"
                                 />
                             ) : (
                                 <div className="min-h-8" />
                             )}
                         </div>
                         <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                            <Button asChild variant="outline" size="sm" className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'h-[25px] min-h-[25px] w-full sm:w-auto')}>
+                                <Link href="/safety/safety-reports/monitoring" aria-label="Open post-closure monitoring">
+                                    <Clock className="mr-1.5 h-3.5 w-3.5" />
+                                    Monitoring
+                                </Link>
+                            </Button>
                             <Select value={reportView} onValueChange={(value: 'active' | 'archived') => setReportView(value)}>
                                 <SelectTrigger className={cn(HEADER_COMPACT_CONTROL_CLASS, 'h-[25px] min-h-[25px] w-full border-slate-200 bg-white px-2 text-[10px] font-black uppercase tracking-[0.08em] text-slate-900 sm:w-[120px]')} aria-label="Filter archived safety reports">
                                     <SelectValue />

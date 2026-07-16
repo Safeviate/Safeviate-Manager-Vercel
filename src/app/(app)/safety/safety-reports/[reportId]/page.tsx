@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -72,6 +73,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const { isPageEnabled, isSectionEnabled, isTabEnabled } = usePageLayout('safety-reports');
   const resolvedParams = use(params);
   const reportId = resolvedParams.reportId;
+  const searchParams = useSearchParams();
   const [report, setReport] = useState<SafetyReport | null>(null);
   const [allReports, setAllReports] = useState<SafetyReport[]>([]);
   const [relatedReportReason, setRelatedReportReason] = useState('Same hazard or contributing factor');
@@ -82,6 +84,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const [isLoadingRiskMatrix, setIsLoadingRiskMatrix] = useState(true);
   const [activeTab, setActiveTab] = useState('triage');
   const showReportViews = isSectionEnabled('report-views');
+  const requestedTab = searchParams?.get('tab');
 
   useEffect(() => {
     let cancelled = false;
@@ -149,6 +152,12 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     ];
     return tabs.filter((tab) => isTabEnabled(tab.value));
   }, [isTabEnabled, myMentionsCount]);
+
+  useEffect(() => {
+    if (showReportViews && requestedTab && visibleReportTabs.some((tab) => tab.value === requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab, showReportViews, visibleReportTabs]);
 
   useEffect(() => {
     if (!showReportViews || visibleReportTabs.length === 0) return;

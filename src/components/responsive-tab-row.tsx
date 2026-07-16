@@ -141,6 +141,7 @@ type OrganizationTabsRowProps = {
   flatTabs?: boolean;
   buttonLikeTabs?: boolean;
   centerTabs?: boolean;
+  controlClassName?: string;
 };
 
 export function OrganizationTabsRow({
@@ -151,6 +152,7 @@ export function OrganizationTabsRow({
   flatTabs = false,
   buttonLikeTabs = false,
   centerTabs = false,
+  controlClassName,
 }: OrganizationTabsRowProps) {
   const isMobile = useIsMobile();
   const activeOrganizationLabel =
@@ -171,7 +173,8 @@ export function OrganizationTabsRow({
                 HEADER_COMPACT_CONTROL_CLASS,
                 isMobile ? 'w-full min-w-0 justify-between' : 'min-w-[220px] max-w-full justify-between',
                 flatTabs && 'bg-transparent',
-                buttonLikeTabs && 'font-black'
+                buttonLikeTabs && 'font-black',
+                controlClassName,
               )}
             >
               <span className="flex min-w-0 items-center gap-2">

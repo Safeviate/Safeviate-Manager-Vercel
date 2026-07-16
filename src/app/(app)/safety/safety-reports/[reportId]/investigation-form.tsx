@@ -119,7 +119,7 @@ const investigationSchema = z.object({
 type FormValues = z.infer<typeof investigationSchema>;
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon: React.ElementType }) => (
-  <div className="mb-4 flex items-center gap-2">
+  <div className="flex items-center gap-2">
     <Icon className="h-3.5 w-3.5 text-muted-foreground" />
     <h3 className="text-sm font-black uppercase tracking-tight">{title}</h3>
   </div>
@@ -130,8 +130,6 @@ const Label = ({ children, className }: { children: React.ReactNode; className?:
     {children}
   </label>
 );
-
-const LocalSeparator = () => <div className="my-6 h-px w-full bg-card-border" />;
 
 interface InvestigationFormProps {
   report: SafetyReport;
@@ -574,8 +572,8 @@ function InvestigationFields({
 }) {
   return (
     <>
-      <section>
-        <div className="flex justify-between items-center mb-4">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
           <SectionHeader title="Investigation Team" icon={Users} />
           <Button
             type="button"
@@ -650,10 +648,8 @@ function InvestigationFields({
         </div>
       </section>
 
-      <LocalSeparator />
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
           <SectionHeader title="Investigation Documents" icon={FileText} />
           <DocumentUploader
             defaultFileName={`investigation-document-${report.reportNumber}`}
@@ -718,10 +714,8 @@ function InvestigationFields({
         </div>
       </section>
 
-      <LocalSeparator />
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
           <SectionHeader title="Witness & Involved Person Interviews" icon={ClipboardList} />
           <Button
             type="button"
@@ -758,10 +752,8 @@ function InvestigationFields({
         </div>
       </section>
 
-      <LocalSeparator />
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
           <SectionHeader title="Investigation Tasks" icon={CheckCircle2} />
           <Button
             type="button"
@@ -787,10 +779,8 @@ function InvestigationFields({
         </div>
       </section>
 
-      <LocalSeparator />
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
           <SectionHeader title="Investigation Evidence Photos" icon={Camera} />
           <DocumentUploader
             defaultFileName={`investigation-evidence-${report.reportNumber}`}
@@ -851,10 +841,8 @@ function InvestigationFields({
         </div>
       </section>
 
-      <LocalSeparator />
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
           <SectionHeader title="Root Cause Analyses" icon={SearchCheck} />
           <Button
             type="button"
@@ -960,15 +948,16 @@ function InvestigationFields({
         </div>
       </section>
 
-      <LocalSeparator />
-
-      <section>
-        <FormField
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="border-b border-card-border bg-muted/30 px-4 py-3">
+          <SectionHeader title="Investigation Summary" icon={AlertTriangle} />
+        </div>
+        <div className="p-4">
+          <FormField
           control={form.control}
           name="investigationNotes"
           render={({ field }) => (
             <FormItem>
-              <SectionHeader title="Investigation Summary" icon={AlertTriangle} />
               <FormControl>
                 <Textarea
                   placeholder="Summarize the final investigation findings, conclusions, and overall outcome..."
@@ -979,7 +968,8 @@ function InvestigationFields({
               <FormMessage />
             </FormItem>
           )}
-        />
+          />
+        </div>
       </section>
     </>
   );

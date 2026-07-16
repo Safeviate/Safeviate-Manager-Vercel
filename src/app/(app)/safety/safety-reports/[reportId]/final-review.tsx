@@ -325,12 +325,12 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
 
   return (
     <>
-      <section>
-        <div className="flex items-center gap-2 mb-6">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center gap-2 border-b border-card-border bg-muted/30 px-4 py-3">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Users className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Interview Review</h3>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 p-4">
           {report.investigationInterviews && report.investigationInterviews.length > 0 ? (
             report.investigationInterviews.map((interview, index) => (
               <div key={interview.id} className="p-4 border rounded-xl bg-muted/5 space-y-3">
@@ -381,12 +381,12 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
 
       <Separator className="bg-slate-200/60" />
 
-      <section>
-        <div className="flex items-center gap-2 mb-6">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center gap-2 border-b border-card-border bg-muted/30 px-4 py-3">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><SearchCheck className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Root Cause Review</h3>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 p-4">
           {report.rootCauseAnalyses && report.rootCauseAnalyses.length > 0 ? (
             report.rootCauseAnalyses.map((cause, index) => (
               <div key={cause.id} className="p-4 border rounded-xl bg-muted/5 space-y-3">
@@ -420,14 +420,12 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
         </div>
       </section>
 
-      <Separator className="bg-slate-200/60" />
-
-      <section>
-        <div className="flex items-center gap-2 mb-6">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center gap-2 border-b border-card-border bg-muted/30 px-4 py-3">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><ShieldCheck className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Residual Risk Review</h3>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 p-4">
           {riskFields.map((field, index) => (
             <div key={field.id} className="p-4 border rounded-xl bg-muted/5">
               <div className="flex justify-between items-start gap-4 mb-4">
@@ -465,10 +463,8 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
         </div>
       </section>
 
-      <Separator className="bg-slate-200/60" />
-
-      <section>
-        <div className="flex justify-between items-center mb-6">
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
             <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Signature className="h-4 w-4" /></div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Authorization & Sign-off</h3>
@@ -477,8 +473,8 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
               Sign Report
             </Button>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4 p-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {signatures.map((sig, idx) => (
             <div key={idx} className="p-4 border rounded-xl bg-background shadow-sm flex flex-col gap-4">
               <div className="flex justify-between items-start border-b pb-3">
@@ -499,14 +495,13 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Awaiting Sign-off</p>
               </div>
           )}
-        </div>
-        <div className="mt-6 rounded-xl border bg-muted/10 p-4 space-y-3 no-print">
+          </div>
+          <div className="rounded-lg border border-card-border bg-muted/10 p-4 space-y-3 no-print">
           <Label className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Your Signature</Label>
           <SignaturePad onSignatureEnd={onSignatureChange} initialDataUrl={signatureDataUrl} height={140} />
+          </div>
         </div>
       </section>
-
-      <Separator className="bg-slate-200/60" />
 
       <ClosureMonitoringPanel report={report} onReportSaved={onReportSaved} />
     </>
@@ -595,11 +590,13 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
   };
 
   return (
-    <section className="space-y-4 rounded-xl border border-slate-200 bg-muted/5 p-4 no-print">
-      <div>
+    <section className="overflow-hidden rounded-lg border border-card-border bg-card no-print">
+      <div className="border-b border-card-border bg-muted/30 px-4 py-3">
         <p className="text-sm font-black uppercase tracking-tight">Closure and Effectiveness Monitoring</p>
         <p className="mt-1 text-xs text-muted-foreground">Complete the closure decision, then verify that the controls continue to work in normal operations.</p>
       </div>
+
+      <div className="space-y-4 p-4">
 
       <div className="grid gap-3 md:grid-cols-3">
         <ChecklistItem label="Corrective actions" complete={openActions.length === 0} detail={openActions.length === 0 ? 'All actions are closed or cancelled.' : `${openActions.length} action${openActions.length === 1 ? '' : 's'} still open.`} />
@@ -656,7 +653,8 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
         </div>
       ) : null}
 
-      <div className="flex justify-end"><Button type="button" onClick={saveLifecycle} disabled={isSaving} className="h-9 px-5 text-xs font-black uppercase">{isSaving ? 'Saving...' : 'Save Lifecycle Review'}</Button></div>
+        <div className="flex justify-end"><Button type="button" onClick={saveLifecycle} disabled={isSaving} className="h-9 px-5 text-xs font-black uppercase">{isSaving ? 'Saving...' : 'Save Lifecycle Review'}</Button></div>
+      </div>
     </section>
   );
 }

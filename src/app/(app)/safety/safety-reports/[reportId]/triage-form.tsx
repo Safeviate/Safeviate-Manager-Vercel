@@ -205,14 +205,14 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Report Heading</FormLabel>
-                              <FormControl><Input className="h-9 border-card-border bg-background text-sm font-bold" placeholder="Summarise the reported safety concern" {...field} /></FormControl>
+                              <FormControl><Input className="h-9 border-input bg-background text-sm font-bold" placeholder="Summarise the reported safety concern" {...field} /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                         <div>
                             <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-primary opacity-80">Initial Narrative</p>
-                            <div className="rounded-lg border border-card-border bg-primary/5 px-4 py-3">
+                            <div className="rounded-lg border border-input bg-primary/5 px-4 py-3">
                                 <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-foreground">{initialNarrative || 'No narrative recorded.'}</p>
                             </div>
                         </div>
