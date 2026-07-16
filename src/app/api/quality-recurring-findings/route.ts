@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@/generated/prisma/client';
+import { isQualityFinding } from '@/types/quality';
 import type { QualityAudit, RecurringFindingGroup } from '@/types/quality';
 
 const CONFIG_KEY = 'quality-recurring-findings';
@@ -31,7 +32,7 @@ async function loadMatchingGroup(tenantId: string, auditId: string, findingId: s
     .map((row) => row.data as unknown as QualityAudit)
     .filter((item) => item.templateId === audit.templateId)
     .flatMap((item) => (item.findings || [])
-      .filter((candidate) => candidate.checklistItemId === findingId && candidate.finding === 'Non Compliant')
+      .filter((candidate) => candidate.checklistItemId === findingId && isQualityFinding(candidate))
       .map((candidate) => ({ auditId: item.id, auditNumber: item.auditNumber, findingId, observation: candidate.comment?.trim() || 'No observation recorded.', level: candidate.level, status: item.status, auditDate: item.auditDate })));
   return { audit, finding, occurrences };
 }

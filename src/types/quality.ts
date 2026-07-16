@@ -99,6 +99,10 @@ export interface QualityFinding {
     }[];
 }
 
+export const isQualityFinding = (finding?: QualityFinding | null) =>
+    finding?.finding === 'Non Compliant'
+    || (finding?.finding === 'Compliant' && finding.level?.trim().toLowerCase() === 'observation');
+
 export interface QualityAuditSignoff {
     signedById: string;
     signedByName: string;

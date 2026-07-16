@@ -26,6 +26,7 @@ import { OfflineCacheButton } from '@/components/offline-cache-button';
 
 import type { ManagementOfChange } from '@/types/moc';
 import type { SafetyReport } from '@/types/safety-report';
+import { isQualityFinding } from '@/types/quality';
 import type { CorrectiveActionPlan, QualityAudit, QualityFinding, ExternalOrganization } from '@/types/quality';
 import type { Aircraft } from '@/types/aircraft';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
@@ -279,7 +280,7 @@ export default function TaskTrackerPage() {
       .filter((audit) => (audit as { analysisType?: string } | undefined)?.analysisType !== 'gap-analysis')
       .flatMap((audit) => (
         Array.isArray(audit.findings) ? audit.findings : []
-      ).filter((finding) => finding.finding === 'Non Compliant').map((finding) => {
+      ).filter(isQualityFinding).map((finding) => {
         const key = `${audit.id}::${finding.checklistItemId}`;
         const linkedCaps = [...(capsByFindingKey.get(key) || [])].sort((left, right) =>
           String(right.updatedAt || '').localeCompare(String(left.updatedAt || ''))
@@ -452,7 +453,7 @@ export default function TaskTrackerPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Audit Corrective Actions</p>
-                <p className="text-sm font-medium text-muted-foreground">Review non-compliant audit observations and open the corrective action page when needed.</p>
+                <p className="text-sm font-medium text-muted-foreground">Review audit findings and observations, then open corrective actions when needed.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 md:justify-end">
                 <Button
@@ -499,7 +500,7 @@ export default function TaskTrackerPage() {
                     const audit = groupEntries[0].audit;
                     const openCount = groupEntries.filter((entry) => {
                       const primaryCap = entry.caps[0];
-                      return !primaryCap || (primaryCap.status !== 'Closed' && primaryCap.status !== 'Cancelled');
+                      return primaryCap && primaryCap.status !== 'Closed' && primaryCap.status !== 'Cancelled';
                     }).length;
                     const auditScope = audit.scope?.trim() || 'General';
                     const auditTarget = audit.targetName?.trim() || 'Internal Company';
@@ -513,7 +514,7 @@ export default function TaskTrackerPage() {
                             <div className="min-w-0">
                               <p className="text-sm font-black uppercase tracking-tight">Audit #{audit.auditNumber}</p>
                               <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                {groupEntries.length} observation{groupEntries.length === 1 ? '' : 's'} · {openCount} open
+                                {groupEntries.length} finding{groupEntries.length === 1 ? '' : 's'} · {openCount} open CAP{openCount === 1 ? '' : 's'}
                               </p>
                               <div className="mt-2 flex flex-wrap items-center gap-4">
                                 <div className="px-0 py-1">
