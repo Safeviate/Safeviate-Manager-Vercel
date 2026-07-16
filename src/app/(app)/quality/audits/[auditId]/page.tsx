@@ -177,22 +177,22 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
       <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
         <div className="no-print flex flex-1 flex-col overflow-hidden">
           <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-            <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
-              <div className="space-y-1">
+            <CardHeader className="sticky top-0 z-30 shrink-0 border-b bg-muted/5 flex min-h-10 flex-row items-center justify-between gap-2 px-3 py-1.5">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-2xl font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
                 </div>
-                <CardDescription className="text-sm font-medium">
+                <CardDescription className="hidden truncate text-xs font-medium xl:block">
                   Planned for {format(parseLocalDate(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge> • Asset: <span className="font-semibold text-foreground">{assetLabel || 'No linked asset'}</span>
                 </CardDescription>
               </div>
 
-              <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
-                <BackNavButton href="/quality/audits" text="Back to Audits" />
-                <OfflineCacheButton urls={offlineUrls} className="h-9 px-3 text-[10px] font-black uppercase tracking-[0.08em]" cachedLabel="Offline Ready" />
-                <Button onClick={handleStartAudit} disabled={isStartingAudit} className="h-9">
-                  <PlayCircle className="mr-2 h-4 w-4" />
+              <div className="flex shrink-0 items-center gap-1.5">
+                <BackNavButton href="/quality/audits" text="Back" />
+                <OfflineCacheButton urls={offlineUrls} className="h-7 px-2 text-[9px] font-black uppercase tracking-[0.08em]" cachedLabel="Offline Ready" />
+                <Button onClick={handleStartAudit} disabled={isStartingAudit} className="h-7 px-2 text-[10px]">
+                  <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
                   {isStartingAudit ? 'Starting Audit...' : 'Start Audit'}
                 </Button>
               </div>
@@ -245,35 +245,31 @@ export default function AuditDetailPage({ params }: AuditDetailPageProps) {
     <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
       <div className="no-print flex flex-1 flex-col overflow-hidden">
         <Card className="flex-1 flex flex-col overflow-hidden shadow-none border rounded-xl">
-          <CardHeader className="shrink-0 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
-            <div className="space-y-1">
+          <CardHeader className="sticky top-0 z-30 shrink-0 border-b bg-muted/5 flex min-h-10 flex-row items-center justify-between gap-2 px-3 py-1.5">
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <CardTitle className="text-2xl font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-black uppercase truncate">Audit {audit.auditNumber}: {audit.title}</CardTitle>
               </div>
-              <CardDescription className="text-sm font-medium">
+              <CardDescription className="hidden truncate text-xs font-medium xl:block">
                 Performed on {format(parseLocalDate(audit.auditDate), 'PPP')} • Status: <Badge variant="outline" className="text-[10px] h-5 py-0 uppercase font-black border-primary/20 bg-primary/5 text-primary">{audit.status}</Badge> • Asset: <span className="font-semibold text-foreground">{assetLabel || 'No linked asset'}</span>
               </CardDescription>
             </div>
 
-            <div className="flex w-full flex-col items-start gap-4 md:w-auto md:items-end">
-              <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
-                <OfflineCacheButton urls={offlineUrls} className="no-print h-9 px-3 text-[10px] font-black uppercase tracking-[0.08em]" cachedLabel="Offline Ready" />
-                <Button asChild variant="outline" size="sm" className="no-print h-9">
+            <div className="flex shrink-0 items-center gap-1.5">
+                <OfflineCacheButton urls={offlineUrls} className="no-print h-7 px-2 text-[9px] font-black uppercase tracking-[0.08em]" cachedLabel="Offline Ready" />
+                <Button asChild variant="outline" size="sm" className="no-print h-7 px-2 text-[10px]">
                   <Link href={`/print/quality-audits/${audit.id}`}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Open Document
+                    <FileText className="mr-1.5 h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Open Document</span>
                   </Link>
                 </Button>
-                <PrintButton label="Print Audit" className="no-print w-full md:w-auto" />
-              </div>
+                <PrintButton label="Print Audit" className="no-print h-7 px-2 text-[10px]" />
               {typeof audit.complianceScore === 'number' && (
-                <div className="text-left md:text-right min-w-[200px]">
-                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Compliance Score</p>
-                  <div className="flex items-center gap-3 justify-start md:justify-end">
-                    <span className="text-3xl font-black text-primary">{audit.complianceScore}%</span>
-                    <Progress value={audit.complianceScore} className="w-24 h-2" indicatorClassName={scoreColor} />
-                  </div>
+                <div className="ml-1 hidden items-center gap-1.5 border-l pl-2 text-right sm:flex">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Score</span>
+                  <span className="text-sm font-black text-primary">{audit.complianceScore}%</span>
+                  <Progress value={audit.complianceScore} className="h-1.5 w-12" indicatorClassName={scoreColor} />
                 </div>
               )}
             </div>
