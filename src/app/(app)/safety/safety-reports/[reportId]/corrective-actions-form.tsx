@@ -42,6 +42,7 @@ const mitigationReviewSchema = z.object({
   hazardId: z.string(),
   riskId: z.string(),
   mitigationId: z.string(),
+  mitigationDescription: z.string().default(''),
   responsiblePersonId: z.string().optional(),
   completionDate: z.date().nullable().optional(),
   status: z.enum(['Open', 'In Progress', 'Closed', 'Cancelled']),
@@ -65,6 +66,7 @@ type FlattenedMitigation = {
   mitigationDescription: string;
   mitigationResidualRiskAssessment: RiskAssessment;
   reviewAction?: CorrectiveAction;
+  isRiskFallback?: boolean;
 };
 
 const parseLocalDate = (value?: string | null) => {
@@ -128,19 +130,41 @@ const severityLabels: Record<number, { letter: string; name: string }> = {
 
 const flattenMitigations = (hazards: ReportHazard[] = [], correctiveActions: CorrectiveAction[] = []): FlattenedMitigation[] =>
   hazards.flatMap((hazard) =>
-    (hazard.risks || []).flatMap((risk) =>
-      (risk.mitigations || []).map((mitigation) => ({
+    (hazard.risks || []).flatMap<FlattenedMitigation>((risk) => {
+      const mitigations = risk.mitigations || [];
+      if (mitigations.length > 0) {
+        return mitigations.map((mitigation) => ({
+          hazardId: hazard.id,
+          hazardDescription: hazard.description,
+          riskId: risk.id,
+          riskDescription: risk.description,
+          riskAssessment: normalizeRiskAssessment(risk.riskAssessment),
+          mitigationId: mitigation.id,
+          mitigationDescription: mitigation.description,
+          mitigationResidualRiskAssessment: normalizeRiskAssessment(mitigation.residualRiskAssessment),
+          reviewAction: correctiveActions.find((action) => action.id === mitigation.id),
+          isRiskFallback: false,
+        }));
+      }
+
+      const reviewAction = correctiveActions.find(
+        (action) => action.hazardId === hazard.id && action.riskId === risk.id,
+      );
+      const fallbackResidual = normalizeRiskAssessment(risk.riskAssessment);
+
+      return [{
         hazardId: hazard.id,
         hazardDescription: hazard.description,
         riskId: risk.id,
         riskDescription: risk.description,
         riskAssessment: normalizeRiskAssessment(risk.riskAssessment),
-        mitigationId: mitigation.id,
-        mitigationDescription: mitigation.description,
-        mitigationResidualRiskAssessment: normalizeRiskAssessment(mitigation.residualRiskAssessment),
-        reviewAction: correctiveActions.find((action) => action.id === mitigation.id),
-      }))
-    )
+        mitigationId: reviewAction?.id || risk.id,
+        mitigationDescription: reviewAction?.description || risk.description,
+        mitigationResidualRiskAssessment: fallbackResidual,
+        reviewAction,
+        isRiskFallback: true,
+      }];
+    })
   );
 
 interface CorrectiveActionsFormProps {
@@ -174,6 +198,7 @@ export function CorrectiveActionsForm({
         hazardId: item.hazardId,
         riskId: item.riskId,
         mitigationId: item.mitigationId,
+        mitigationDescription: item.mitigationDescription,
         responsiblePersonId: item.reviewAction?.responsiblePersonId || '',
         completionDate: parseLocalDate(item.reviewAction?.deadline),
         status: item.reviewAction?.status || 'Open',
@@ -189,6 +214,7 @@ export function CorrectiveActionsForm({
         hazardId: item.hazardId,
         riskId: item.riskId,
         mitigationId: item.mitigationId,
+        mitigationDescription: item.mitigationDescription,
         responsiblePersonId: item.reviewAction?.responsiblePersonId || '',
         completionDate: parseLocalDate(item.reviewAction?.deadline),
         status: item.reviewAction?.status || 'Open',
@@ -217,6 +243,7 @@ export function CorrectiveActionsForm({
           });
           return {
             ...mitigation,
+            description: review.mitigationDescription.trim(),
             residualRiskAssessment,
             responsiblePersonId: review.responsiblePersonId || undefined,
             completionDate: toNoonUtcIso(review.completionDate),
@@ -226,18 +253,41 @@ export function CorrectiveActionsForm({
       })),
     }));
 
+    const nextHazardsWithFallbackDescriptions = nextHazards.map((hazard) => ({
+      ...hazard,
+      risks: (hazard.risks || []).map((risk) => {
+        const reviewsForRisk = values.mitigationReviews.filter(
+          (review) => review.hazardId === hazard.id && review.riskId === risk.id,
+        );
+        if ((risk.mitigations || []).length > 0 || reviewsForRisk.length === 0) {
+          return risk;
+        }
+
+        return {
+          ...risk,
+          mitigations: reviewsForRisk.map((review) => ({
+            id: review.mitigationId,
+            description: review.mitigationDescription.trim(),
+            residualRiskAssessment: normalizeRiskAssessment({
+              likelihood: review.residualLikelihood,
+              severity: review.residualSeverity,
+            }),
+          })),
+        };
+      }),
+    }));
+
     const nextReport: SafetyReport = {
       ...report,
-      initialHazards: nextHazards,
+      initialHazards: nextHazardsWithFallbackDescriptions,
       correctiveActions: values.mitigationReviews.map((review) => {
-        const item = mitigationItems.find((entry) => entry.mitigationId === review.mitigationId);
         const residual = normalizeRiskAssessment({
           likelihood: review.residualLikelihood,
           severity: review.residualSeverity,
         });
         return {
           id: review.mitigationId,
-          description: item?.mitigationDescription || '',
+          description: review.mitigationDescription.trim(),
           responsiblePersonId: review.responsiblePersonId || '',
           hazardId: review.hazardId,
           riskId: review.riskId,
@@ -427,12 +477,37 @@ function ReviewFields({
               <InfoCard label="Risk" value={item.riskDescription} />
             </div>
 
-            <div className="rounded-lg border border-card-border bg-background px-3 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Mitigation / Control</p>
-              <p className="mt-2 text-sm font-medium text-foreground whitespace-pre-wrap">
-                {item.mitigationDescription || 'No mitigation description entered.'}
-              </p>
-            </div>
+            <FormField
+              control={form.control}
+              name={`mitigationReviews.${index}.mitigationDescription`}
+              render={({ field }) => (
+                <FormItem className="rounded-lg border border-card-border bg-background px-3 py-3">
+                  <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                    Mitigation / Control
+                  </FormLabel>
+                  <FormControl>
+                    <textarea
+                      {...field}
+                      rows={1}
+                      placeholder="Describe the mitigation or control..."
+                      ref={(element) => {
+                        field.ref(element);
+                        if (element) {
+                          element.style.height = 'auto';
+                          element.style.height = `${element.scrollHeight}px`;
+                        }
+                      }}
+                      onChange={(event) => {
+                        field.onChange(event);
+                        event.currentTarget.style.height = 'auto';
+                        event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+                      }}
+                      className="mt-2 min-h-10 w-full resize-none overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm font-medium leading-5 text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-stretch">
               <RiskSummaryCard title="Initial Risk" assessment={item.riskAssessment} riskMatrixColors={riskMatrixColors} />

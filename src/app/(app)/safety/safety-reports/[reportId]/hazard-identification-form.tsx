@@ -70,26 +70,47 @@ const deriveCorrectiveActionsFromHazards = (
     existingActions: CorrectiveAction[] = [],
 ): CorrectiveAction[] =>
     hazards.flatMap((hazard) =>
-        (hazard.risks || []).flatMap((risk) =>
-            (risk.mitigations || []).map((mitigation) => {
-                const existingAction = existingActions.find((action) => action.id === mitigation.id);
-                const residual = mitigation.residualRiskAssessment;
-                return {
-                    id: mitigation.id,
-                    description: mitigation.description,
-                    responsiblePersonId: existingAction?.responsiblePersonId || '',
-                    hazardId: hazard.id,
-                    riskId: risk.id,
-                    riskAssessmentView: 'Residual',
-                    residualLikelihood: residual.likelihood,
-                    residualSeverity: residual.severity,
-                    residualRiskScore: residual.riskScore,
-                    residualRiskLevel: residual.riskLevel,
-                    deadline: existingAction?.deadline || new Date().toISOString(),
-                    status: existingAction?.status || 'Open',
-                } satisfies CorrectiveAction;
-            }),
-        ),
+        (hazard.risks || []).flatMap<CorrectiveAction>((risk) => {
+            const mitigations = risk.mitigations || [];
+            if (mitigations.length > 0) {
+                return mitigations.map((mitigation) => {
+                    const existingAction = existingActions.find((action) => action.id === mitigation.id);
+                    const residual = mitigation.residualRiskAssessment;
+                    return {
+                        id: mitigation.id,
+                        description: mitigation.description,
+                        responsiblePersonId: existingAction?.responsiblePersonId || '',
+                        hazardId: hazard.id,
+                        riskId: risk.id,
+                        riskAssessmentView: 'Residual',
+                        residualLikelihood: residual.likelihood,
+                        residualSeverity: residual.severity,
+                        residualRiskScore: residual.riskScore,
+                        residualRiskLevel: residual.riskLevel,
+                        deadline: existingAction?.deadline || new Date().toISOString(),
+                        status: existingAction?.status || 'Open',
+                    } satisfies CorrectiveAction;
+                });
+            }
+
+            const existingRiskAction = existingActions.find(
+                (action) => action.hazardId === hazard.id && action.riskId === risk.id,
+            );
+            return [{
+                id: existingRiskAction?.id || risk.id,
+                description: existingRiskAction?.description || risk.description,
+                responsiblePersonId: existingRiskAction?.responsiblePersonId || '',
+                hazardId: hazard.id,
+                riskId: risk.id,
+                riskAssessmentView: 'Initial',
+                residualLikelihood: risk.riskAssessment.likelihood,
+                residualSeverity: risk.riskAssessment.severity,
+                residualRiskScore: risk.riskAssessment.riskScore,
+                residualRiskLevel: risk.riskAssessment.riskLevel,
+                deadline: existingRiskAction?.deadline || new Date().toISOString(),
+                status: existingRiskAction?.status || 'Open',
+            } satisfies CorrectiveAction];
+        }),
     );
 
 // --- Form Schemas ---
@@ -239,7 +260,7 @@ const RiskAssessmentEditor = ({
 
     if (compact) {
         return (
-            <div className="mt-3 rounded-md border border-card-border bg-muted/30 px-3 py-3">
+            <div className="mt-3 rounded-md border border-input bg-muted/30 px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
                 </div>
@@ -257,7 +278,7 @@ const RiskAssessmentEditor = ({
                                     value={field.value ? String(field.value) : '1'}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
+                                        <SelectTrigger className="h-9 w-full min-w-0 border-input bg-background text-xs font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
                                     </FormControl>
@@ -285,7 +306,7 @@ const RiskAssessmentEditor = ({
                                     value={field.value ? String(field.value) : '1'}
                                 >
                                     <FormControl>
-                                        <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
+                                        <SelectTrigger className="h-9 w-full min-w-0 border-input bg-background text-xs font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
                                     </FormControl>
@@ -303,7 +324,7 @@ const RiskAssessmentEditor = ({
                     <div className="flex min-w-0 flex-col gap-2">
                         <p className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">Risk Indicator</p>
                         <div
-                            className="flex h-9 min-w-0 w-full items-center whitespace-nowrap rounded-md border border-card-border px-3 text-xs font-black"
+                            className="flex h-9 min-w-0 w-full items-center whitespace-nowrap rounded-md border border-input px-3 text-xs font-black"
                             style={{ backgroundColor: riskColors.backgroundColor, color: riskColors.color }}
                         >
                             {likelihood}{severityLabels[(severity as number) || 1]?.letter} - {riskLevel}
@@ -316,7 +337,7 @@ const RiskAssessmentEditor = ({
 
     return (
         <div 
-            className="border border-slate-200 rounded-xl p-4 mb-4 transition-colors"
+            className="mb-4 rounded-xl border border-card-border p-4 transition-colors"
             style={{ backgroundColor: riskColors.backgroundColor, color: riskColors.color }}
         >
             <div className="flex items-center justify-between mb-4">
@@ -363,7 +384,7 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
                 </Button>
             </div>
             {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="mt-3 border-t border-card-border pt-3 first:mt-0 first:border-t-0 first:pt-0">
+                <div key={field.id} className="mt-3 border-t border-input pt-3 first:mt-0 first:border-t-0 first:pt-0">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="h-3.5 w-3.5 text-slate-500" />
@@ -384,7 +405,7 @@ const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
                                     <textarea
                                         placeholder="Describe the mitigation action to reduce this risk..."
                                         {...field}
-                                        className="min-h-[56px] w-full rounded-md border border-card-border bg-background p-3 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary"
+                                        className="min-h-[56px] w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary"
                                     />
                                 </FormControl>
                                 <FormMessage />
@@ -503,7 +524,7 @@ const RisksArray = ({ report, hazardIndex, riskMatrixColors }: { report: SafetyR
                                 control={control}
                                 name={`initialHazards.${hazardIndex}.description`}
                                 render={({ field }) => (
-                                    <FormItem className="rounded-lg border border-card-border bg-background px-3 py-3">
+                                    <FormItem className="rounded-lg border border-input bg-background px-3 py-3">
                                         <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Hazard</FormLabel>
                                         <FormControl>
                                             <Input placeholder="Name this hazard" {...field} className="mt-2 h-8 border-0 bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-1 focus-visible:ring-primary" />
@@ -516,7 +537,7 @@ const RisksArray = ({ report, hazardIndex, riskMatrixColors }: { report: SafetyR
                                 control={control}
                                 name={`initialHazards.${hazardIndex}.risks.${riskIndex}.description`}
                                 render={({ field }) => (
-                                    <FormItem className="rounded-lg border border-card-border bg-background px-3 py-3">
+                                    <FormItem className="rounded-lg border border-input bg-background px-3 py-3">
                                         <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risk</FormLabel>
                                         <FormControl>
                                             <textarea
@@ -548,6 +569,11 @@ const RisksArray = ({ report, hazardIndex, riskMatrixColors }: { report: SafetyR
                             label="Initial Risk"
                             riskMatrixColors={riskMatrixColors}
                             compact
+                        />
+                        <MitigationsArray
+                            hazardIndex={hazardIndex}
+                            riskIndex={riskIndex}
+                            riskMatrixColors={riskMatrixColors}
                         />
                     </div>
                     </div>
