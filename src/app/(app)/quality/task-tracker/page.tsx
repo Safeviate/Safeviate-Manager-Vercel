@@ -564,7 +564,7 @@ export default function TaskTrackerPage() {
                                   : 'text-muted-foreground';
 
                               return (
-                                <div key={entry.id} className="overflow-hidden rounded-lg border border-card-border bg-background">
+                                <div key={entry.id} className="overflow-hidden rounded-lg border border-input bg-background shadow-none">
                                   <div className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
                                     <div className="flex min-w-0 items-start">
                                       <div className="min-w-0 space-y-2">
