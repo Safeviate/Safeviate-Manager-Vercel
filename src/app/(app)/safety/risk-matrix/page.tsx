@@ -44,7 +44,9 @@ const defaultColors: Record<string, string> = {
 export default function RiskMatrixPage() {
   const isMobile = useIsMobile();
   const { hasPermission } = usePermissions();
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingConfigurationRef = useRef<RiskMatrixSettings | null>(null);
+  const saveInFlightRef = useRef<Promise<void> | null>(null);
   const canManage = hasPermission('risk-matrix-manage-definitions');
   const canEditColors = hasPermission('risk-matrix-edit-colors');
 
@@ -56,24 +58,49 @@ export default function RiskMatrixPage() {
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
 
+  const persistConfiguration = async (configuration: RiskMatrixSettings) => {
+    const response = await fetch('/api/risk-matrix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configuration }),
+      keepalive: true,
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error((payload as { error?: string })?.error || 'Failed to save risk matrix settings.');
+    }
+  };
+
+  const flushQueuedSave = () => {
+    const configuration = pendingConfigurationRef.current;
+    if (!configuration) return;
+
+    pendingConfigurationRef.current = null;
+    const previousSave = saveInFlightRef.current ?? Promise.resolve();
+    const nextSave = previousSave
+      .catch(() => undefined)
+      .then(() => persistConfiguration(configuration));
+
+    saveInFlightRef.current = nextSave;
+    void nextSave.then(
+      () => {
+        if (saveInFlightRef.current !== nextSave) return;
+        saveInFlightRef.current = null;
+      },
+      (error) => {
+        console.error('[risk-matrix] failed to persist configuration:', error);
+        if (saveInFlightRef.current !== nextSave) return;
+        saveInFlightRef.current = null;
+      }
+    );
+  };
+
   const queueSave = (configuration: RiskMatrixSettings) => {
+    pendingConfigurationRef.current = configuration;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      void (async () => {
-        try {
-          const response = await fetch('/api/risk-matrix', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ configuration }),
-          });
-          if (!response.ok) {
-            const payload = await response.json().catch(() => ({}));
-            throw new Error((payload as { error?: string })?.error || 'Failed to save risk matrix settings.');
-          }
-        } catch (error) {
-          console.error('[risk-matrix] failed to persist configuration:', error);
-        }
-      })();
+      saveTimeoutRef.current = null;
+      flushQueuedSave();
     }, 250);
   };
 
@@ -94,9 +121,16 @@ export default function RiskMatrixPage() {
       }
     };
     void load();
+    const handlePageHide = () => flushQueuedSave();
+    window.addEventListener('pagehide', handlePageHide);
     return () => {
       cancelled = true;
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      window.removeEventListener('pagehide', handlePageHide);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      flushQueuedSave();
     };
   }, []);
 
@@ -164,6 +198,27 @@ export default function RiskMatrixPage() {
         <CardContent className="flex-1 overflow-y-auto bg-background p-0">
           <div className="space-y-10 p-4 pb-24 sm:p-6">
             <div className="overflow-hidden rounded-xl border bg-muted/5 shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b bg-background px-4 py-2">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Impact headers</p>
+                  <p className="text-[10px] text-muted-foreground">Rename the severity labels used across the matrix.</p>
+                </div>
+                {canManage && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 shrink-0 px-2 text-[10px] font-black uppercase tracking-tight"
+                    aria-pressed={isEditingSeverity}
+                    onClick={() => {
+                      if (isEditingSeverity) flushQueuedSave();
+                      setIsEditingSeverity(!isEditingSeverity);
+                    }}
+                  >
+                    {isEditingSeverity ? <><Check className="mr-1.5 h-3 w-3 text-green-600" /> Done</> : <><Pencil className="mr-1.5 h-3 w-3" /> Edit headers</>}
+                  </Button>
+                )}
+              </div>
               <div className="w-full overflow-x-auto overflow-y-hidden [scrollbar-gutter:stable] touch-pan-x custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div className="min-w-[760px] px-4 py-4 sm:px-6 sm:py-6">
                   <div className="grid grid-cols-[140px_repeat(5,110px)] gap-2">
@@ -172,7 +227,16 @@ export default function RiskMatrixPage() {
                     </div>
                     {severities.map((s) => (
                       <div key={s.value} className="flex flex-col items-center justify-center p-2 bg-background rounded-lg border border-slate-200 text-center shadow-sm">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80 mb-1">{s.name}</span>
+                        {isEditingSeverity ? (
+                          <Input
+                            value={s.name}
+                            aria-label={`Rename severity ${s.value}`}
+                            onChange={(e) => handleSeverityChange(severities.findIndex((severity) => severity.value === s.value), 'name', e.target.value)}
+                            className="mb-1 h-7 min-w-0 px-1 text-center text-[10px] font-black uppercase tracking-widest"
+                          />
+                        ) : (
+                          <span className="mb-1 text-[10px] font-black uppercase tracking-widest text-foreground/80">{s.name}</span>
+                        )}
                         <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center font-black text-[10px] border-primary/20 text-primary bg-primary/5">
                           {s.value}
                         </Badge>
