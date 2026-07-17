@@ -276,9 +276,9 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
       <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-        <div className="min-w-0">
-        <h2 className="text-sm font-black uppercase tracking-tight">{showReview && showClosure ? 'Final Review & Closure' : showReview ? 'Final Review' : showClosure ? 'Closure' : 'Monitoring'}</h2>
-        <p className="text-[10px] text-muted-foreground">{showReview && showClosure ? 'Review the monitoring evidence, complete sign-off, and record the closure decision.' : showReview ? 'Review the evidence, residual risk, and report sign-off before closure.' : showClosure ? 'Record the closure decision before monitoring begins.' : 'Schedule and record ongoing operational feedback.'}</p>
+        <div className="flex min-w-0 items-center gap-2">
+        <h2 className="shrink-0 text-sm font-black uppercase tracking-tight">{showReview && showClosure ? 'Final Review & Closure' : showReview ? 'Final Review' : showClosure ? 'Closure' : 'Monitoring'}</h2>
+        <p className="truncate text-[10px] text-muted-foreground">{showReview && showClosure ? 'Review the monitoring evidence, complete sign-off, and record the closure decision.' : showReview ? 'Review the evidence, residual risk, and report sign-off before closure.' : showClosure ? 'Record the closure decision before monitoring begins.' : 'Schedule and record ongoing operational feedback.'}</p>
         </div>
       </div>
       <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
@@ -521,9 +521,11 @@ function MonitoringSummary({ report }: { report: SafetyReport }) {
 
   return (
     <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-      <div className="border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-4 py-3">
-        <p className="text-sm font-black uppercase tracking-tight">Monitoring Summary</p>
-        <p className="mt-1 text-xs text-muted-foreground">Use the recorded feedback to confirm whether the controls are effective before closing the report.</p>
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="shrink-0 text-sm font-black uppercase tracking-tight">Monitoring Summary</p>
+          <p className="truncate text-[10px] text-muted-foreground">Use the recorded feedback to confirm whether the controls are effective before closing the report.</p>
+        </div>
       </div>
       <div className="p-4">
         {plan ? (

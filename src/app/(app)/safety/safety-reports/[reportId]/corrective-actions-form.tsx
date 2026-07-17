@@ -378,9 +378,9 @@ export function CorrectiveActionsForm({
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
       <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-        <div className="min-w-0">
-        <h3 className="text-sm font-black uppercase tracking-tight">Corrective Actions</h3>
-        <p className="text-[10px] font-medium text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-2">
+        <h3 className="shrink-0 text-sm font-black uppercase tracking-tight">Corrective Actions</h3>
+        <p className="truncate text-[10px] font-medium text-muted-foreground">
           Assign, track, close, and verify the controls defined during risk assessment.
         </p>
         </div>

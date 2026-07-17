@@ -704,9 +704,9 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
       <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-        <div>
-          <h3 className="text-sm font-black uppercase tracking-tight">Risk Assessment</h3>
-          <p className="text-[10px] text-muted-foreground">Record each hazard, its associated risk, and the initial risk level.</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="shrink-0 text-sm font-black uppercase tracking-tight">Risk Assessment</h3>
+          <p className="truncate text-[10px] text-muted-foreground">Record each hazard, its associated risk, and the initial risk level.</p>
         </div>
         <Button type="button" size="sm" onClick={() => appendHazard({ id: uuidv4(), description: '', risks: [{ id: uuidv4(), description: '', riskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' }, mitigations: [] }] })} className={`${HEADER_SECONDARY_BUTTON_CLASS} no-print`}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add Hazard

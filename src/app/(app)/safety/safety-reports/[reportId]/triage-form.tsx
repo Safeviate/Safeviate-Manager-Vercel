@@ -195,14 +195,11 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
                     {/* --- INTEGRATED REPORT SUMMARY --- */}
                     <section className="overflow-hidden rounded-lg border border-card-border bg-card">
                         <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-                          <div className="min-w-0">
-                            <p className="text-sm font-black uppercase tracking-tight">Report Summary</p>
-                            <p className="text-[10px] font-medium text-muted-foreground">Filed {format(new Date(report.submittedAt), 'PPP')} by {reporterLabel}</p>
-                            {report.submittedOnBehalfOf ? (
-                              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                                On behalf of {report.submittedOnBehalfOf}
-                              </p>
-                            ) : null}
+                          <div className="flex min-w-0 items-center gap-2">
+                            <p className="shrink-0 text-sm font-black uppercase tracking-tight">Report Summary</p>
+                            <p className="truncate text-[10px] font-medium text-muted-foreground">
+                              Filed {format(new Date(report.submittedAt), 'PPP')} by {reporterLabel}{report.submittedOnBehalfOf ? ` on behalf of ${report.submittedOnBehalfOf}` : ''}
+                            </p>
                           </div>
                         </div>
                         <div className="space-y-3 p-4">
