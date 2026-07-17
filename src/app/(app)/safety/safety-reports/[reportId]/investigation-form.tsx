@@ -448,7 +448,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
 
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
-      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
         <h3 className="text-sm font-black uppercase tracking-tight">Investigation Management</h3>
       </div>
       <div className={cn('flex-1 p-0 overflow-hidden flex flex-col', isStacked && 'overflow-visible h-auto')}>
@@ -573,7 +573,7 @@ function InvestigationFields({
   return (
     <>
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
           <SectionHeader title="Investigation Team" icon={Users} />
           <Button
             type="button"
@@ -649,7 +649,7 @@ function InvestigationFields({
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
           <SectionHeader title="Investigation Documents" icon={FileText} />
           <DocumentUploader
             defaultFileName={`investigation-document-${report.reportNumber}`}
@@ -715,7 +715,7 @@ function InvestigationFields({
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
           <SectionHeader title="Witness & Involved Person Interviews" icon={ClipboardList} />
           <Button
             type="button"
@@ -753,7 +753,7 @@ function InvestigationFields({
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
           <SectionHeader title="Investigation Tasks" icon={CheckCircle2} />
           <Button
             type="button"
@@ -780,7 +780,7 @@ function InvestigationFields({
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
           <SectionHeader title="Investigation Evidence Photos" icon={Camera} />
           <DocumentUploader
             defaultFileName={`investigation-evidence-${report.reportNumber}`}
@@ -842,7 +842,7 @@ function InvestigationFields({
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
           <SectionHeader title="Root Cause Analyses" icon={SearchCheck} />
           <Button
             type="button"
@@ -949,7 +949,7 @@ function InvestigationFields({
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
           <SectionHeader title="Investigation Summary" icon={AlertTriangle} />
         </div>
         <div className="p-4">

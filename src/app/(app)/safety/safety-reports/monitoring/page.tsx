@@ -82,6 +82,7 @@ function MonitoringRow({ report }: { report: SafetyReport }) {
   const plan = report.monitoringPlan;
   const state = getMonitoringState(report);
   const result = plan?.reviewResult || 'Pending';
+  const latestFeedback = plan?.reviews?.[plan.reviews.length - 1];
 
   return (
     <div className="border-t border-card-border px-4 py-4 first:border-t-0 sm:px-5">
@@ -102,50 +103,33 @@ function MonitoringRow({ report }: { report: SafetyReport }) {
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'shrink-0 self-start')}>
-          <Link href={`/safety/safety-reports/${report.id}?tab=review`}>
+          <Link href={`/safety/safety-reports/${report.id}?tab=monitoring`}>
             <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
             Open monitoring
           </Link>
         </Button>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
         <div className="rounded-md border border-card-border bg-background px-3 py-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Indicator</p>
-          <p className="mt-1 break-words text-xs font-semibold">{plan?.indicatorName || 'Not defined'}</p>
-        </div>
-        <div className="rounded-md border border-card-border bg-background px-3 py-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Baseline</p>
-          <p className="mt-1 break-words text-xs font-semibold">{plan?.baseline || 'Not recorded'}</p>
-        </div>
-        <div className="rounded-md border border-card-border bg-background px-3 py-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Target</p>
-          <p className="mt-1 break-words text-xs font-semibold">{plan?.target || 'Not recorded'}</p>
-        </div>
-        <div className="rounded-md border border-card-border bg-background px-3 py-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Review date</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Next feedback</p>
           <p className="mt-1 text-xs font-semibold">{formatMonitoringDate(plan?.reviewDate)}</p>
         </div>
         <div className="rounded-md border border-card-border bg-background px-3 py-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Outcome</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Latest outcome</p>
           <p className="mt-1 break-words text-xs font-semibold">{result}</p>
+        </div>
+        <div className="rounded-md border border-card-border bg-background px-3 py-2">
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Feedback entries</p>
+          <p className="mt-1 break-words text-xs font-semibold">{plan?.reviews?.length || 0} recorded</p>
         </div>
       </div>
 
-      {(plan?.monitoringPeriod || plan?.reviewNotes) && (
-        <div className="mt-3 grid gap-2 border-t border-card-border pt-3 sm:grid-cols-2">
-          {plan.monitoringPeriod ? (
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Monitoring period</p>
-              <p className="mt-1 text-xs font-semibold">{plan.monitoringPeriod}</p>
-            </div>
-          ) : null}
-          {plan.reviewNotes ? (
-            <div className="sm:col-span-1">
-              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Evidence and follow-up</p>
-              <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed">{plan.reviewNotes}</p>
-            </div>
-          ) : null}
+      {latestFeedback && (
+        <div className="mt-3 border-t border-card-border pt-3">
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Latest feedback</p>
+          <p className="mt-1 text-xs font-semibold">{latestFeedback.summary}</p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">{latestFeedback.observations}</p>
         </div>
       )}
     </div>
@@ -173,7 +157,9 @@ export default function SafetyReportMonitoringPage() {
         const response = await fetch('/api/safety-reports', { cache: 'no-store' });
         const payload = await response.json().catch(() => ({ reports: [] }));
         if (!cancelled) {
-          setReports(Array.isArray(payload?.reports) ? payload.reports.filter((report: SafetyReport) => Boolean(report.monitoringPlan)) : []);
+          setReports(Array.isArray(payload?.reports)
+            ? payload.reports.filter((report: SafetyReport) => Boolean(report.monitoringPlan) && ['Closed - Monitoring', 'Closed - Effective'].includes(report.status))
+            : []);
         }
       } catch {
         if (!cancelled) setReports([]);
@@ -292,7 +278,7 @@ export default function SafetyReportMonitoringPage() {
             ) : (
               <div className="px-5 py-12 text-center">
                 <p className="text-sm font-black uppercase tracking-tight">No monitoring actions recorded</p>
-                <p className="mt-2 text-sm text-muted-foreground">Monitoring plans saved in a report&apos;s Closure &amp; Monitoring step will appear here.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Monitoring plans saved in a report&apos;s Monitoring step will appear here.</p>
               </div>
             )}
           </Card>

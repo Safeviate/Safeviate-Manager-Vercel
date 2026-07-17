@@ -481,7 +481,7 @@ const RisksArray = ({ report, hazardIndex, riskMatrixColors }: { report: SafetyR
                 const riskId = getValues().initialHazards[hazardIndex]?.risks?.[riskIndex]?.id || field.id;
                 return (
                     <div key={field.id} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
-                    <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+                    <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
                         <div className="flex min-w-0 items-center gap-2">
                             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Risk Assessment {riskIndex + 1}</p>
@@ -703,7 +703,7 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
 
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
-      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
         <div>
           <h3 className="text-sm font-black uppercase tracking-tight">Risk Assessment</h3>
           <p className="text-[10px] text-muted-foreground">Record each hazard, its associated risk, and the initial risk level.</p>

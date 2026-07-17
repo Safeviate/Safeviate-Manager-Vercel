@@ -147,7 +147,8 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       { value: 'hazards', label: 'Hazard & Risk ID' },
       { value: 'investigation', label: 'Investigation & Root Cause' },
       { value: 'cap', label: 'Actions & Controls' },
-      { value: 'review', label: 'Closure & Monitoring' },
+      { value: 'monitoring', label: 'Monitoring' },
+      { value: 'review', label: 'Final Review & Closure' },
       { value: 'discussion', label: myMentionsCount > 0 ? `Diary (${myMentionsCount})` : 'Diary' },
     ];
     return tabs.filter((tab) => isTabEnabled(tab.value));
@@ -270,10 +271,16 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       detail: openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
     },
     {
-      tab: 'review',
-      label: 'Closure & Monitoring',
+      tab: 'monitoring',
+      label: 'Monitoring',
       complete: report.status === 'Closed - Effective',
-      detail: report.status === 'Closed - Effective' ? 'Effectiveness verified' : isInMonitoring ? 'Monitoring in progress' : 'Closure review needed',
+      detail: report.status === 'Closed - Effective' ? 'Effectiveness verified' : isInMonitoring ? 'Feedback monitoring in progress' : 'Feedback date needed',
+    },
+    {
+      tab: 'review',
+      label: 'Final Review & Closure',
+      complete: Boolean(report.closure?.rationale?.trim() && isInMonitoring),
+      detail: report.closure?.rationale?.trim() ? isInMonitoring ? 'Final review and closure recorded' : 'Closure awaiting monitoring' : 'Final review and closure needed',
     },
   ];
   const visibleWorkflowSteps = workflowSteps.filter((step) => visibleReportTabs.some((tab) => tab.value === step.tab));
@@ -289,7 +296,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     return (
       <div className="space-y-4 p-4 md:p-6">
         <section className="overflow-hidden rounded-lg border">
-          <div className="border-b bg-muted/30 px-4 py-3">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Report Summary</h2>
           </div>
           <div className="grid gap-x-6 gap-y-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -331,7 +338,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </section>
 
         <section className="overflow-hidden rounded-lg border">
-          <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Hazards and Risk Assessment</h2>
             <Badge variant="secondary">{risks.length} recorded</Badge>
           </div>
@@ -353,7 +360,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </section>
 
         <section className="overflow-hidden rounded-lg border">
-          <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Investigation Summary</h2>
             <Badge variant="secondary">{investigationTasks.filter((task) => task.status !== 'Completed').length} open tasks</Badge>
           </div>
@@ -367,7 +374,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </section>
 
         <section className="overflow-hidden rounded-lg border">
-          <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Root Cause Analysis</h2>
             <Badge variant="secondary">{report.rootCauseAnalyses?.length || 0} recorded</Badge>
           </div>
@@ -384,7 +391,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </section>
 
         <section className="overflow-hidden rounded-lg border">
-          <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Corrective Action Summary</h2>
             <Badge variant="secondary">{correctiveActions.length} recorded</Badge>
           </div>
@@ -402,7 +409,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </section>
 
         <section className="overflow-hidden rounded-lg border">
-          <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Closure Record</h2>
             <Badge variant="secondary">{signatures.length} signatures</Badge>
           </div>
@@ -413,7 +420,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         </section>
 
         <section className="overflow-hidden rounded-lg border">
-          <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Closure and Monitoring</h2>
             <Badge variant="secondary">{report.status}</Badge>
           </div>
@@ -443,7 +450,9 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       case 'cap':
         return <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} />;
       case 'review':
-        return <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} />;
+        return <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showMonitoring={false} onReportSaved={handleReportSaved} />;
+      case 'monitoring':
+        return <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showReview={false} showClosure={false} onReportSaved={handleReportSaved} />;
       case 'discussion':
         return <ReportForum report={report} tenantId={tenantId} onReportSaved={handleReportSaved} />;
       default:
@@ -559,7 +568,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               </div>
 
               <div className={`${CARD_HEADER_BAND_CLASS} bg-slate-50/70 px-4 py-1.5 md:px-5`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-col gap-2">
                   <div className={`${HEADER_TAB_LIST_CLASS} max-w-full overflow-x-auto no-scrollbar`} aria-label="Safety case workflow">
                     {visibleWorkflowSteps.map((step, index) => {
                       const isActive = activeTab === step.tab;
@@ -577,10 +586,10 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                       );
                     })}
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="flex shrink-0 items-center justify-end gap-1.5 border-t border-slate-200/80 pt-2">
                     <p className="text-[10px] font-semibold text-slate-500">{visibleWorkflowSteps.filter((step) => step.complete).length}/{visibleWorkflowSteps.length} complete</p>
-                    <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} h-[35px] px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('full')}>Full Report</Button>
-                    <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} h-[35px] px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
+                    <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('full')}>Full Report</Button>
+                    <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
                   </div>
                 </div>
               </div>
@@ -604,7 +613,8 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                   <TabsContent value="hazards" className="m-0 h-full outline-none overflow-hidden h-full"><HazardIdentificationForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="investigation" className="m-0 h-full outline-none overflow-hidden h-full"><InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="cap" className="m-0 h-full outline-none overflow-hidden h-full"><CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="review" className="m-0 h-full outline-none overflow-hidden h-full"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="review" className="m-0 h-full outline-none overflow-hidden h-full"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showMonitoring={false} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="monitoring" className="m-0 h-full outline-none overflow-hidden h-full"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showReview={false} showClosure={false} onReportSaved={handleReportSaved} /></TabsContent>
                   <TabsContent value="discussion" className="m-0 h-full outline-none overflow-hidden h-full"><ReportForum report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
                 </>
               )}

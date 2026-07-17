@@ -59,7 +59,14 @@ const resolveReporterLabel = (
 };
 
 const reportStatuses = ['Open', 'Under Review', 'Awaiting Action', 'Pending Closure Review', 'Closed - Monitoring', 'Closed - Effective', 'Reopened'];
-const eventClassifications = ['Accident', 'Serious Incident', 'Incident', 'Not Determined'] as const;
+const eventClassifications = [
+  'Accident',
+  'Serious Incident',
+  'Incident',
+  'Minor Incident',
+  'Hazard',
+  'Not Determined',
+] as const;
 
 const ICAO_CATEGORIES = [
   { code: 'ADRM', description: 'Aerodrome' },
@@ -187,7 +194,7 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     {/* --- INTEGRATED REPORT SUMMARY --- */}
                     <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-                        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-[hsl(var(--card-header-band-background))]`}>
+                        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
                           <div className="min-w-0">
                             <p className="text-sm font-black uppercase tracking-tight">Report Summary</p>
                             <p className="text-[10px] font-medium text-muted-foreground">Filed {format(new Date(report.submittedAt), 'PPP')} by {reporterLabel}</p>
@@ -229,7 +236,7 @@ export function TriageForm({ report, tenantId, isStacked = false, onReportSaved 
 
                     {/* --- TRIAGE CONTROLS --- */}
                     <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-                        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-[hsl(var(--card-header-band-background))]`}>
+                        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
                           <p className="text-sm font-black uppercase tracking-tight">Classification &amp; Management</p>
                         </div>
                         <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">

@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { SafetyReport } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
 import { Signature, Save, ShieldCheck, Trash2, SearchCheck, AlertTriangle, Users } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -174,10 +173,13 @@ interface FinalReviewProps {
   personnel: Personnel[];
   riskMatrixColors?: Record<string, string>;
   isStacked?: boolean;
+  showReview?: boolean;
+  showClosure?: boolean;
+  showMonitoring?: boolean;
   onReportSaved?: (updatedReport: SafetyReport) => void;
 }
 
-export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isStacked = false, onReportSaved }: FinalReviewProps) {
+export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isStacked = false, showReview = true, showClosure = true, showMonitoring = true, onReportSaved }: FinalReviewProps) {
   const { toast } = useToast();
   const { userProfile } = useUserProfile();
   const [signatureDataUrl, setSignatureDataUrl] = React.useState('');
@@ -273,10 +275,10 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
 
   return (
     <div className={cn("flex flex-col h-full", !isStacked && "overflow-hidden")}>
-      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
         <div className="min-w-0">
-        <h2 className="text-sm font-black uppercase tracking-tight">Closure and Monitoring</h2>
-        <p className="text-[10px] text-muted-foreground">Review the evidence, record approval, and verify that controls remain effective in operation.</p>
+        <h2 className="text-sm font-black uppercase tracking-tight">{showReview && showClosure ? 'Final Review & Closure' : showReview ? 'Final Review' : showClosure ? 'Closure' : 'Monitoring'}</h2>
+        <p className="text-[10px] text-muted-foreground">{showReview && showClosure ? 'Review the monitoring evidence, complete sign-off, and record the closure decision.' : showReview ? 'Review the evidence, residual risk, and report sign-off before closure.' : showClosure ? 'Record the closure decision before monitoring begins.' : 'Schedule and record ongoing operational feedback.'}</p>
         </div>
       </div>
       <div className={cn("flex-1 p-0 overflow-hidden flex flex-col", isStacked && "overflow-visible h-auto")}>
@@ -285,16 +287,22 @@ export function FinalReview({ report, tenantId, personnel, riskMatrixColors, isS
             <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
               {isStacked ? (
                 <div className="p-6 space-y-10">
-                    <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} onReportSaved={onReportSaved} />
+                    {showReview ? <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} /> : null}
+                    {showReview && showClosure ? <MonitoringSummary report={report} /> : null}
+                    {showClosure || showMonitoring ? <ClosureMonitoringPanel report={report} showClosure={showClosure} showMonitoring={showMonitoring} onReportSaved={onReportSaved} /> : null}
+                    {showReview ? <SignatureSection form={form} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} /> : null}
                 </div>
               ) : (
                 <ScrollArea className="flex-1 p-6">
                   <div className="space-y-10">
-                    <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} onReportSaved={onReportSaved} />
+                    {showReview ? <ReviewFields report={report} form={form} riskFields={riskFields} riskMatrixColors={riskMatrixColors} /> : null}
+                    {showReview && showClosure ? <MonitoringSummary report={report} /> : null}
+                    {showClosure || showMonitoring ? <ClosureMonitoringPanel report={report} showClosure={showClosure} showMonitoring={showMonitoring} onReportSaved={onReportSaved} /> : null}
+                    {showReview ? <SignatureSection form={form} handleSignReport={handleSignReport} signatureDataUrl={signatureDataUrl} onSignatureChange={setSignatureDataUrl} /> : null}
                   </div>
                 </ScrollArea>
               )}
-              {!isStacked && (
+              {!isStacked && showReview && (
                   <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
                       <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>
                           <Save className="mr-2 h-4 w-4" /> Save Final Review
@@ -314,19 +322,14 @@ type ReviewFieldsProps = {
   form: UseFormReturn<FormValues>;
   riskFields: FieldArrayWithId<FormValues, 'risks', 'id'>[];
   riskMatrixColors?: Record<string, string>;
-  handleSignReport: () => void | Promise<void>;
-  signatureDataUrl: string;
-  onSignatureChange: (value: string) => void;
-  onReportSaved?: (updatedReport: SafetyReport) => void;
 };
 
-function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignReport, signatureDataUrl, onSignatureChange, onReportSaved }: ReviewFieldsProps) {
-  const signatures = form.watch('signatures') ?? [];
+function ReviewFields({ report, form, riskFields, riskMatrixColors }: ReviewFieldsProps) {
 
   return (
     <>
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center gap-2 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Users className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Interview Review</h3>
         </div>
@@ -379,10 +382,8 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
         </div>
       </section>
 
-      <Separator className="bg-slate-200/60" />
-
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center gap-2 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><SearchCheck className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Root Cause Review</h3>
         </div>
@@ -421,7 +422,7 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
       </section>
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center gap-2 border-b border-card-border bg-muted/30 px-4 py-3">
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><ShieldCheck className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Residual Risk Review</h3>
         </div>
@@ -463,57 +464,86 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors, handleSignRe
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-card-border bg-muted/30 px-4 py-3">
-            <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Signature className="h-4 w-4" /></div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Authorization & Sign-off</h3>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={handleSignReport} className="h-9 px-6 text-xs font-black uppercase border-slate-300 shadow-sm no-print">
-              Sign Report
-            </Button>
-        </div>
-        <div className="space-y-4 p-4">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {signatures.map((sig, idx) => (
-            <div key={idx} className="p-4 border rounded-xl bg-background shadow-sm flex flex-col gap-4">
-              <div className="flex justify-between items-start border-b pb-3">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-tight text-foreground">{sig.userName}</p>
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{sig.role}</p>
-                </div>
-                <p className="text-[10px] font-medium text-muted-foreground">{format(new Date(sig.signedAt), 'PPP')}</p>
-              </div>
-              <div className="bg-muted/10 rounded-lg p-4 flex items-center justify-center border-2 border-dashed h-24">
-                <img src={sig.signatureUrl} alt="Signature" className="max-h-16 grayscale opacity-80" />
-              </div>
-            </div>
-          ))}
-          {signatures.length === 0 && (
-              <div className="md:col-span-2 py-10 flex flex-col items-center justify-center border-2 border-dashed rounded-xl opacity-40">
-                  <Signature className="h-10 w-10 mb-2" />
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Awaiting Sign-off</p>
-              </div>
-          )}
-          </div>
-          <div className="rounded-lg border border-card-border bg-muted/10 p-4 space-y-3 no-print">
-          <Label className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Your Signature</Label>
-          <SignaturePad onSignatureEnd={onSignatureChange} initialDataUrl={signatureDataUrl} height={140} />
-          </div>
-        </div>
-      </section>
-
-      <ClosureMonitoringPanel report={report} onReportSaved={onReportSaved} />
     </>
   );
 }
 
+function SignatureSection({ form, handleSignReport, signatureDataUrl, onSignatureChange }: {
+  form: UseFormReturn<FormValues>;
+  handleSignReport: () => void | Promise<void>;
+  signatureDataUrl: string;
+  onSignatureChange: (value: string) => void;
+}) {
+  const signatures = form.watch('signatures') ?? [];
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Signature className="h-4 w-4" /></div>
+          <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Authorization & Sign-off</h3>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={handleSignReport} className="h-9 px-6 text-xs font-black uppercase border-slate-300 shadow-sm no-print">
+          Sign Report
+        </Button>
+      </div>
+      <div className="space-y-4 p-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {signatures.map((sig, idx) => (
+            <div key={idx} className="p-4 border rounded-xl bg-background shadow-sm flex flex-col gap-4">
+              <div className="flex justify-between items-start border-b pb-3">
+                <div><p className="text-sm font-black uppercase tracking-tight text-foreground">{sig.userName}</p><p className="text-[10px] font-bold text-primary uppercase tracking-widest">{sig.role}</p></div>
+                <p className="text-[10px] font-medium text-muted-foreground">{format(new Date(sig.signedAt), 'PPP')}</p>
+              </div>
+              <div className="bg-muted/10 rounded-lg p-4 flex items-center justify-center border-2 border-dashed h-24"><img src={sig.signatureUrl} alt="Signature" className="max-h-16 grayscale opacity-80" /></div>
+            </div>
+          ))}
+          {signatures.length === 0 ? <div className="md:col-span-2 py-10 flex flex-col items-center justify-center border-2 border-dashed rounded-xl opacity-40"><Signature className="h-10 w-10 mb-2" /><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Awaiting Sign-off</p></div> : null}
+        </div>
+        <div className="rounded-lg border border-input bg-muted/5 p-4 space-y-3 no-print">
+          <Label className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Your Signature</Label>
+          <SignaturePad onSignatureEnd={onSignatureChange} initialDataUrl={signatureDataUrl} height={140} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const monitoringStatuses: ControlEffectivenessStatus[] = ['Pending', 'Effective', 'Partially Effective', 'Ineffective'];
-const closureStatuses: ReportStatus[] = ['Pending Closure Review', 'Closed - Monitoring', 'Closed - Effective', 'Reopened'];
+const closureStatuses: ReportStatus[] = ['Pending Closure Review', 'Closed - Monitoring', 'Reopened'];
 
 const toDateInputValue = (value?: string | null) => value ? value.slice(0, 10) : '';
+const toNoonIsoString = (value: string) => new Date(`${value}T12:00:00`).toISOString();
 
-function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyReport; onReportSaved?: (updatedReport: SafetyReport) => void }) {
+function MonitoringSummary({ report }: { report: SafetyReport }) {
+  const plan = report.monitoringPlan;
+  const latestFeedback = plan?.reviews?.[plan.reviews.length - 1];
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+      <div className="border-b border-card-border bg-[hsl(var(--card-header-band-background))] px-4 py-3">
+        <p className="text-sm font-black uppercase tracking-tight">Monitoring Summary</p>
+        <p className="mt-1 text-xs text-muted-foreground">Use the recorded feedback to confirm whether the controls are effective before closing the report.</p>
+      </div>
+      <div className="p-4">
+        {plan ? (
+          <>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="rounded-md border border-input bg-muted/5 px-3 py-2"><p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Next feedback</p><p className="mt-1 text-xs font-semibold">{plan.reviewDate ? format(new Date(plan.reviewDate), 'dd MMM yyyy') : 'Not scheduled'}</p></div>
+              <div className="rounded-md border border-input bg-muted/5 px-3 py-2"><p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Latest outcome</p><p className="mt-1 text-xs font-semibold">{plan.reviewResult || 'Pending'}</p></div>
+              <div className="rounded-md border border-input bg-muted/5 px-3 py-2"><p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Feedback entries</p><p className="mt-1 text-xs font-semibold">{plan.reviews?.length || 0} recorded</p></div>
+            </div>
+            {latestFeedback ? <div className="mt-3 rounded-md border border-input bg-background px-3 py-3"><p className="text-xs font-semibold">{latestFeedback.summary}</p><p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{latestFeedback.observations}</p></div> : null}
+          </>
+        ) : (
+          <p className="rounded-md border border-dashed border-input bg-muted/5 px-3 py-4 text-sm text-muted-foreground">No monitoring feedback has been scheduled or recorded yet.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = true, onReportSaved }: { report: SafetyReport; showClosure?: boolean; showMonitoring?: boolean; onReportSaved?: (updatedReport: SafetyReport) => void }) {
   const { toast } = useToast();
   const { userProfile } = useUserProfile();
   const [isSaving, setIsSaving] = React.useState(false);
@@ -529,7 +559,13 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
     reviewCompletedAt: report.monitoringPlan?.reviewCompletedAt || '',
     reviewResult: report.monitoringPlan?.reviewResult || 'Pending',
     reviewNotes: report.monitoringPlan?.reviewNotes || '',
+    reviews: report.monitoringPlan?.reviews || [],
   });
+  const [evaluationDate, setEvaluationDate] = React.useState(toDateInputValue(new Date().toISOString()));
+  const [evaluationSummary, setEvaluationSummary] = React.useState('');
+  const [evaluationObservations, setEvaluationObservations] = React.useState('');
+  const [evaluationOutcome, setEvaluationOutcome] = React.useState<ControlEffectivenessStatus>('Effective');
+  const [nextEvaluationDate, setNextEvaluationDate] = React.useState(toDateInputValue(report.monitoringPlan?.reviewDate));
   const [actionNotes, setActionNotes] = React.useState<Record<string, string>>(() =>
     Object.fromEntries((report.correctiveActions || []).map((action) => [action.id, action.effectivenessEvidence || ''])),
   );
@@ -537,6 +573,10 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
   const actorName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : 'Safety Manager';
   const openActions = (report.correctiveActions || []).filter((action) => !['Closed', 'Cancelled'].includes(action.status));
   const requiresRootCause = ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
+  const isInMonitoring = ['Closed - Monitoring', 'Closed - Effective'].includes(nextStatus);
+  const availableClosureStatuses = ['Closed - Monitoring', 'Closed - Effective'].includes(report.status)
+    ? [...closureStatuses.slice(0, 2), 'Closed - Effective' as const, 'Reopened' as const]
+    : closureStatuses;
 
   const saveReport = async (nextReport: SafetyReport, successTitle: string) => {
     setIsSaving(true);
@@ -557,11 +597,16 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
     }
   };
 
-  const saveLifecycle = () => {
+  const buildLifecycleReport = (monitoringPlan = plan): SafetyReport => {
     const approvedAt = report.closure?.approvedAt || new Date().toISOString();
-    void saveReport({
+    const correctiveActions = (report.correctiveActions || []).map((action) => ({
+      ...action,
+      effectivenessEvidence: actionNotes[action.id] || null,
+    }));
+    return {
       ...report,
       status: nextStatus,
+      correctiveActions,
       closure: {
         rationale: closureRationale,
         approvedBy: report.closure?.approvedBy || actorName,
@@ -570,11 +615,64 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
         reopenReason: reopenReason || null,
       },
       monitoringPlan: {
+        ...monitoringPlan,
+        reviewDate: monitoringPlan.reviewDate || null,
+        reviewCompletedAt: monitoringPlan.reviewCompletedAt || null,
+      },
+    };
+  };
+
+  const saveLifecycle = () => {
+    void saveReport(buildLifecycleReport(), nextStatus === 'Reopened' ? 'Report Reopened' : 'Lifecycle Review Saved');
+  };
+
+  const saveFeedbackSchedule = () => {
+    const scheduledDate = plan.reviewDate ? new Date(plan.reviewDate) : null;
+    if (!scheduledDate || Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
+      toast({ variant: 'destructive', title: 'Future feedback date required', description: 'Choose a future date before saving the feedback schedule.' });
+      return;
+    }
+    void saveReport({
+      ...report,
+      monitoringPlan: {
         ...plan,
-        reviewDate: plan.reviewDate || null,
+        reviewDate: plan.reviewDate,
         reviewCompletedAt: plan.reviewCompletedAt || null,
       },
-    }, nextStatus === 'Reopened' ? 'Report Reopened' : 'Lifecycle Review Saved');
+    }, 'Feedback date saved');
+  };
+
+  const recordMonitoringEvaluation = () => {
+    if (!evaluationSummary.trim() || !evaluationObservations.trim() || !evaluationDate) {
+      toast({ variant: 'destructive', title: 'Evaluation details required', description: 'Add the evaluation date, work summary, and observations before recording the entry.' });
+      return;
+    }
+
+    const nextPlan: SafetyMonitoringPlan = {
+      ...plan,
+      reviewDate: nextEvaluationDate ? toNoonIsoString(nextEvaluationDate) : plan.reviewDate || null,
+      reviewCompletedAt: toNoonIsoString(evaluationDate),
+      reviewResult: evaluationOutcome,
+      reviewNotes: evaluationObservations.trim(),
+      reviews: [
+        ...(plan.reviews || []),
+        {
+          id: `monitoring-review-${Date.now()}`,
+          evaluatedAt: toNoonIsoString(evaluationDate),
+          summary: evaluationSummary.trim(),
+          observations: evaluationObservations.trim(),
+          outcome: evaluationOutcome,
+          nextReviewDate: nextEvaluationDate ? toNoonIsoString(nextEvaluationDate) : null,
+          recordedBy: actorName,
+        },
+      ],
+    };
+
+    setPlan(nextPlan);
+    setEvaluationSummary('');
+    setEvaluationObservations('');
+    setNextEvaluationDate(toDateInputValue(nextPlan.reviewDate));
+    void saveReport(buildLifecycleReport(nextPlan), 'Monitoring evaluation recorded');
   };
 
   const saveActionEffectiveness = (actionId: string, effectivenessStatus: ControlEffectivenessStatus) => {
@@ -591,13 +689,17 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
 
   return (
     <section className="overflow-hidden rounded-lg border border-card-border bg-card no-print">
-      <div className="border-b border-card-border bg-muted/30 px-4 py-3">
-        <p className="text-sm font-black uppercase tracking-tight">Closure and Effectiveness Monitoring</p>
-        <p className="mt-1 text-xs text-muted-foreground">Complete the closure decision, then verify that the controls continue to work in normal operations.</p>
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="shrink-0 text-sm font-black uppercase tracking-tight">{showClosure ? 'Closure decision' : 'Effectiveness monitoring'}</p>
+          <p className="truncate text-[10px] text-muted-foreground">{showClosure ? 'Record the closure rationale and lifecycle decision.' : 'Schedule future feedback and record whether the controls continue to work.'}</p>
+        </div>
       </div>
 
       <div className="space-y-4 p-4">
 
+      {showClosure ? (
+        <>
       <div className="grid gap-3 md:grid-cols-3">
         <ChecklistItem label="Corrective actions" complete={openActions.length === 0} detail={openActions.length === 0 ? 'All actions are closed or cancelled.' : `${openActions.length} action${openActions.length === 1 ? '' : 's'} still open.`} />
         <ChecklistItem label="Root cause analysis" complete={!requiresRootCause || (report.rootCauseAnalyses || []).length > 0} detail={requiresRootCause ? `${report.rootCauseAnalyses?.length || 0} root cause record(s).` : 'Recommended for this report type.'} />
@@ -613,7 +715,7 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
           <div className="space-y-2">
             <Label>Lifecycle status</Label>
             <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as ReportStatus)} className="h-10 w-full rounded-md border bg-background px-3 text-sm font-medium">
-              {closureStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+              {availableClosureStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
             </select>
           </div>
           {nextStatus === 'Reopened' ? (
@@ -624,23 +726,59 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
           ) : null}
         </div>
       </div>
+        </>
+      ) : null}
 
-      <div className="rounded-lg border bg-background p-4">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Post-closure monitoring plan</p>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1.5"><Label>Indicator</Label><Input value={plan.indicatorName} onChange={(event) => setPlan({ ...plan, indicatorName: event.target.value })} placeholder="e.g. repeat event rate" /></div>
-          <div className="space-y-1.5"><Label>Baseline</Label><Input value={plan.baseline || ''} onChange={(event) => setPlan({ ...plan, baseline: event.target.value })} placeholder="Current value" /></div>
-          <div className="space-y-1.5"><Label>Target</Label><Input value={plan.target || ''} onChange={(event) => setPlan({ ...plan, target: event.target.value })} placeholder="Expected result" /></div>
-          <div className="space-y-1.5"><Label>Review date</Label><Input type="date" value={toDateInputValue(plan.reviewDate)} onChange={(event) => setPlan({ ...plan, reviewDate: event.target.value ? new Date(`${event.target.value}T12:00:00`).toISOString() : null })} /></div>
+      {showMonitoring ? (
+      <div className="rounded-lg border border-input bg-muted/5 p-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Feedback diary</p>
+            <p className="mt-1 text-xs text-muted-foreground">Schedule the next feedback date, then record what was done and observed when that feedback is due.</p>
+          </div>
+          <Badge variant="outline">{plan.reviews?.length || 0} recorded</Badge>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <div className="space-y-1.5"><Label>Monitoring period</Label><Input value={plan.monitoringPeriod || ''} onChange={(event) => setPlan({ ...plan, monitoringPeriod: event.target.value })} placeholder="e.g. 90 days / 100 flights" /></div>
-          <div className="space-y-1.5"><Label>Review outcome</Label><select value={plan.reviewResult || 'Pending'} onChange={(event) => setPlan({ ...plan, reviewResult: event.target.value as ControlEffectivenessStatus, reviewCompletedAt: event.target.value === 'Pending' ? null : new Date().toISOString() })} className="h-10 w-full rounded-md border bg-background px-3 text-sm font-medium">{monitoringStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+        <div className="mt-4 max-w-sm space-y-1.5">
+          <Label>{isInMonitoring ? 'Next feedback date' : 'First feedback date'}</Label>
+          <Input
+            type="date"
+            value={nextEvaluationDate}
+            onChange={(event) => {
+              const value = event.target.value;
+              setNextEvaluationDate(value);
+              setPlan({ ...plan, reviewDate: value ? toNoonIsoString(value) : null });
+            }}
+          />
         </div>
-        <div className="mt-3 space-y-1.5"><Label>Monitoring evidence and outcome</Label><Textarea value={plan.reviewNotes || ''} onChange={(event) => setPlan({ ...plan, reviewNotes: event.target.value })} placeholder="Record the operational evidence reviewed and any follow-up decision." className="min-h-20" /></div>
+        {isInMonitoring ? (
+          <div className="mt-4 border-t border-input pt-4">
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="space-y-1.5"><Label>Evaluation date</Label><Input type="date" value={evaluationDate} onChange={(event) => setEvaluationDate(event.target.value)} /></div>
+              <div className="space-y-1.5"><Label>End goal</Label><select value={evaluationOutcome} onChange={(event) => setEvaluationOutcome(event.target.value as ControlEffectivenessStatus)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium"><option value="Effective">Working</option><option value="Partially Effective">Partially working</option><option value="Ineffective">Not working</option></select></div>
+              <div className="space-y-1.5"><Label>Next evaluation date</Label><Input type="date" value={nextEvaluationDate} onChange={(event) => setNextEvaluationDate(event.target.value)} /></div>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5"><Label>Work completed</Label><Textarea value={evaluationSummary} onChange={(event) => setEvaluationSummary(event.target.value)} placeholder="Summarise what was done since the previous review." className="min-h-20 bg-background" /></div>
+              <div className="space-y-1.5"><Label>Observations</Label><Textarea value={evaluationObservations} onChange={(event) => setEvaluationObservations(event.target.value)} placeholder="Record what was observed in operation." className="min-h-20 bg-background" /></div>
+            </div>
+            <div className="mt-3 flex justify-end"><Button type="button" variant="outline" onClick={recordMonitoringEvaluation} disabled={isSaving} className="h-9 px-4 text-xs font-black uppercase">Record evaluation</Button></div>
+            {(plan.reviews || []).length > 0 ? (
+              <div className="mt-4 space-y-2 border-t border-input pt-4">
+                {[...(plan.reviews || [])].reverse().map((review) => (
+                  <div key={review.id} className="rounded-md border border-input bg-background px-3 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-black">{format(new Date(review.evaluatedAt), 'dd MMM yyyy')}</p><Badge variant={review.outcome === 'Effective' ? 'secondary' : 'outline'}>{review.outcome === 'Effective' ? 'Working' : review.outcome === 'Partially Effective' ? 'Partially working' : 'Not working'}</Badge></div>
+                    <p className="mt-2 text-xs font-semibold">{review.summary}</p><p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{review.observations}</p>
+                    {review.nextReviewDate ? <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Next evaluation {format(new Date(review.nextReviewDate), 'dd MMM yyyy')}</p> : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+      ) : null}
 
-      {(report.correctiveActions || []).length > 0 ? (
+      {showMonitoring && (report.correctiveActions || []).length > 0 ? (
         <div className="space-y-2">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Control effectiveness records</p>
           {(report.correctiveActions || []).map((action) => (
@@ -653,7 +791,10 @@ function ClosureMonitoringPanel({ report, onReportSaved }: { report: SafetyRepor
         </div>
       ) : null}
 
-        <div className="flex justify-end"><Button type="button" onClick={saveLifecycle} disabled={isSaving} className="h-9 px-5 text-xs font-black uppercase">{isSaving ? 'Saving...' : 'Save Lifecycle Review'}</Button></div>
+        <div className="flex justify-end gap-2">
+          {showMonitoring ? <Button type="button" variant="outline" onClick={saveFeedbackSchedule} disabled={isSaving} className="h-9 px-5 text-xs font-black uppercase">{isSaving ? 'Saving...' : 'Save Feedback Date'}</Button> : null}
+          {showClosure ? <Button type="button" onClick={saveLifecycle} disabled={isSaving} className="h-9 px-5 text-xs font-black uppercase">{isSaving ? 'Saving...' : 'Save Closure Decision'}</Button> : null}
+        </div>
       </div>
     </section>
   );

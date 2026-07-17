@@ -150,6 +150,17 @@ export interface SafetyMonitoringPlan {
     reviewCompletedAt?: string | null;
     reviewResult?: ControlEffectivenessStatus;
     reviewNotes?: string | null;
+    reviews?: SafetyMonitoringReview[];
+}
+
+export interface SafetyMonitoringReview {
+    id: string;
+    evaluatedAt: string;
+    summary: string;
+    observations: string;
+    outcome: ControlEffectivenessStatus;
+    nextReviewDate?: string | null;
+    recordedBy?: string | null;
 }
 
 export interface SafetyReportClosure {

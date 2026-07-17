@@ -13,7 +13,7 @@ async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
 }
 
-function validateLifecycleUpdate(report: SafetyReport) {
+function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyReport) {
   const status = report.status;
   const actions = report.correctiveActions || [];
   const hasOpenActions = actions.some((action) => !['Closed', 'Cancelled'].includes(action.status));
@@ -23,10 +23,8 @@ function validateLifecycleUpdate(report: SafetyReport) {
     && report.closure?.approvedBy?.trim()
     && report.closure?.approvedAt,
   );
-  const hasMonitoringPlan = Boolean(
-    report.monitoringPlan?.indicatorName?.trim()
-    && report.monitoringPlan?.reviewDate,
-  );
+  const nextFeedbackDate = report.monitoringPlan?.reviewDate ? new Date(report.monitoringPlan.reviewDate) : null;
+  const hasFutureFeedbackDate = Boolean(nextFeedbackDate && !Number.isNaN(nextFeedbackDate.getTime()) && nextFeedbackDate.getTime() > Date.now());
 
   if (status === 'Reopened' && !report.closure?.reopenReason?.trim()) {
     return 'A reason is required before reopening a safety report.';
@@ -39,9 +37,12 @@ function validateLifecycleUpdate(report: SafetyReport) {
   }
   if (!hasClosureApproval) return 'Closure rationale and approver details are required before closing the report.';
   if (!(report.signatures || []).length) return 'At least one report sign-off is required before closing the report.';
-  if (!hasMonitoringPlan) return 'A safety monitoring indicator and review date are required before closing the report.';
+  if (!hasFutureFeedbackDate) return 'Schedule a future feedback date before entering closure monitoring.';
 
   if (status === 'Closed - Effective') {
+    if (existingReport.status !== 'Closed - Monitoring' && existingReport.status !== 'Closed - Effective') {
+      return 'The report must enter closure monitoring before it can be marked closed and effective.';
+    }
     if (report.monitoringPlan?.reviewResult !== 'Effective' || !report.monitoringPlan.reviewCompletedAt) {
       return 'The monitoring review must be recorded as effective before the report can be fully closed.';
     }
@@ -78,7 +79,7 @@ export async function PUT(request: Request, context: { params: Promise<{ reportI
   const nextReport: SafetyReport = ['Closed - Monitoring', 'Closed - Effective'].includes(incomingReport.status)
     ? { ...incomingReport, closedDate: incomingReport.closedDate || new Date().toISOString() }
     : incomingReport;
-  const lifecycleError = validateLifecycleUpdate(nextReport);
+  const lifecycleError = validateLifecycleUpdate(existingReport, nextReport);
   if (lifecycleError) {
     return NextResponse.json({ error: lifecycleError }, { status: 422 });
   }

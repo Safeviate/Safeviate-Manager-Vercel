@@ -893,7 +893,7 @@ export default function SafetyReportsPage() {
         <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border shadow-none">
             <div className="flex flex-col bg-muted/5">
                 <div className={CARD_HEADER_BAND_CLASS} style={headerBandBorderStyle}>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="flex min-h-[30px] flex-col items-center gap-3 sm:flex-row sm:items-center">
                         <div className="min-w-0 flex-1">
                             {shouldShowOrganizationTabs ? (
                                 <OrganizationTabsRow
@@ -907,7 +907,7 @@ export default function SafetyReportsPage() {
                                 <div className="min-h-8" />
                             )}
                         </div>
-                        <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex flex-col items-center gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
                             <Button asChild variant="outline" size="sm" className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'h-[25px] min-h-[25px] w-full sm:w-auto')}>
                                 <Link href="/safety/safety-reports/monitoring" aria-label="Open post-closure monitoring">
                                     <Clock className="mr-1.5 h-3.5 w-3.5" />

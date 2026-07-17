@@ -377,7 +377,7 @@ export function CorrectiveActionsForm({
 
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
-      <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
         <div className="min-w-0">
         <h3 className="text-sm font-black uppercase tracking-tight">Corrective Actions</h3>
         <p className="text-[10px] font-medium text-muted-foreground">
@@ -452,7 +452,7 @@ function ReviewFields({
     <>
       {items.map((item, index) => (
         <div key={item.mitigationId} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
-          <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-muted/5`}>
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <div className="flex min-w-0 items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-muted-foreground" />
@@ -481,7 +481,7 @@ function ReviewFields({
               control={form.control}
               name={`mitigationReviews.${index}.mitigationDescription`}
               render={({ field }) => (
-                <FormItem className="rounded-lg border border-card-border bg-background px-3 py-3">
+            <FormItem className="rounded-lg border border-input bg-background px-3 py-3">
                   <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
                     Mitigation / Control
                   </FormLabel>
@@ -611,7 +611,7 @@ function ReviewFields({
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-card-border bg-background px-3 py-3">
+    <div className="rounded-lg border border-input bg-background px-3 py-3">
       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
       <p className="mt-2 text-sm font-medium text-foreground">{value || '-'}</p>
     </div>
@@ -645,7 +645,7 @@ function RiskSummaryCard({
   const fieldPrefix = index === undefined ? '' : `mitigationReviews.${index}`;
 
   return (
-    <div className="rounded-md border border-card-border bg-muted/30 px-3 py-3">
+    <div className="rounded-md border border-input bg-muted/20 px-3 py-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
       </div>
@@ -660,7 +660,7 @@ function RiskSummaryCard({
                 <FormItem className="min-w-0 space-y-0">
                   <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
                     <FormControl>
-                      <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
+                      <SelectTrigger className="h-9 w-full min-w-0 border-input bg-background text-xs font-bold">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -676,7 +676,7 @@ function RiskSummaryCard({
               )}
             />
           ) : (
-            <div className="flex h-9 w-full items-center rounded-md border border-card-border bg-background px-3 text-xs font-bold">
+            <div className="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 text-xs font-bold">
               {currentAssessment.likelihood} - {likelihoodLabels[currentAssessment.likelihood]}
             </div>
           )}
@@ -691,7 +691,7 @@ function RiskSummaryCard({
                 <FormItem className="min-w-0 space-y-0">
                   <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
                     <FormControl>
-                      <SelectTrigger className="h-9 w-full min-w-0 border-card-border bg-background text-xs font-bold">
+                      <SelectTrigger className="h-9 w-full min-w-0 border-input bg-background text-xs font-bold">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -707,14 +707,14 @@ function RiskSummaryCard({
               )}
             />
           ) : (
-            <div className="flex h-9 w-full items-center rounded-md border border-card-border bg-background px-3 text-xs font-bold">
+            <div className="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 text-xs font-bold">
               {severity.letter} - {severity.name}
             </div>
           )}
         </div>
         <div className="min-w-0">
           <p className="min-h-4 text-[10px] font-black uppercase leading-4 tracking-widest text-muted-foreground">Risk Indicator</p>
-          <div className="flex h-9 min-w-0 w-full items-center whitespace-nowrap rounded-md border border-card-border px-3 text-xs font-black" style={riskColor}>
+          <div className="flex h-9 min-w-0 w-full items-center whitespace-nowrap rounded-md border border-input px-3 text-xs font-black" style={riskColor}>
             {riskIndicator}
           </div>
         </div>
