@@ -95,6 +95,7 @@ function buildUserContent(input: SummarizeDocumentInput) {
     'Create one requirement per visible Part, Subpart, regulation heading, or technical-standard heading, not one requirement per clause or paragraph.',
     'Keep each heading together with every clause, subclause, note, bullet, or paragraph that belongs to that heading.',
     'Do not split numbered or lettered clauses into separate requirements.',
+    'Exception for this import workflow: when the selected parent is already a sub-regulation and the pasted source is a heading followed by top-level parenthetical numbered paragraphs such as (1), (2), and (3), create one child paragraph card per top-level number. Reconstruct the child codes from the selected parent, for example selected parent 141.01.15 with paragraph (1) becomes 141.01.15.1. Keep lettered and roman-numeral clauses such as (a), (b), (i), and (ii) inside that paragraph card as body text.',
     'Recognize SACAA CAR/CATS layout patterns:',
     '- A contents page line like "Part 43  General Maintenance Rules" is a top-level heading row only. Use regulationCode "Part 43", regulationStatement "General Maintenance Rules", empty technicalStandardLines, and parentRegulationCode from the selected parent if supplied.',
     '- A part title page line like "Part 43" followed by "General Maintenance Rules" is the same top-level heading row. Ignore amendment notes such as "[As substituted by ...]" unless the user explicitly asks to extract amendment history.',
@@ -175,8 +176,9 @@ function parseFallbackTextRequirements(input: SummarizeDocumentInput) {
 
   if (!lines.length) return [];
 
-  const documentHeading = lines[0].match(/^(\d+(?:\.\d+)+)\s+(.+)$/)?.[2]?.trim() || '';
+  const documentHeading = lines[0].match(/^(\d+(?:\.\d+)+)\s+(.+)$/)?.[2]?.trim() || lines[0];
   const sectionPattern = /^(\d+)\.\s+(.+)$/;
+  const parentheticalSectionPattern = /^\((\d+)\)\s*(.*)$/;
   const requirements: Array<{
     regulationCode: string;
     documentHeading: string;
@@ -221,6 +223,52 @@ function parseFallbackTextRequirements(input: SummarizeDocumentInput) {
       documentHeading,
       regulationStatement: currentSection.title,
       technicalStandard: currentSection.body.join('\n'),
+      companyReference: 'Ops Manual, Sec TBD',
+      parentRegulationCode: parentCode,
+    });
+  }
+
+  if (requirements.length > 0) {
+    return requirements;
+  }
+
+  // Pasted regulation text often uses (1), (2), and so on as the only visible
+  // child structure. Convert those top-level paragraphs into matrix cards while
+  // preserving nested (a)/(i) clauses in the paragraph body.
+  let currentParagraph: { number: string; body: string[] } | null = null;
+
+  for (const line of lines) {
+    const paragraphMatch = line.match(parentheticalSectionPattern);
+    if (paragraphMatch) {
+      if (currentParagraph) {
+        requirements.push({
+          regulationCode: `${parentCode}.${currentParagraph.number}`,
+          documentHeading,
+          regulationStatement: `Paragraph (${currentParagraph.number})`,
+          technicalStandard: currentParagraph.body.join('\n'),
+          companyReference: 'Ops Manual, Sec TBD',
+          parentRegulationCode: parentCode,
+        });
+      }
+
+      currentParagraph = {
+        number: paragraphMatch[1],
+        body: paragraphMatch[2] ? [paragraphMatch[2]] : [],
+      };
+      continue;
+    }
+
+    if (currentParagraph) {
+      currentParagraph.body.push(line);
+    }
+  }
+
+  if (currentParagraph) {
+    requirements.push({
+      regulationCode: `${parentCode}.${currentParagraph.number}`,
+      documentHeading,
+      regulationStatement: `Paragraph (${currentParagraph.number})`,
+      technicalStandard: currentParagraph.body.join('\n'),
       companyReference: 'Ops Manual, Sec TBD',
       parentRegulationCode: parentCode,
     });
