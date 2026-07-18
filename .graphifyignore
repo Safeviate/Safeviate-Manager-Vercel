@@ -1,0 +1,25 @@
+# Index the maintained application architecture, not generated or tenant data.
+*
+!src/
+!src/**
+!prisma/
+!prisma/schema.prisma
+!docs/
+!docs/**
+!README.md
+!AGENTS.md
+!package.json
+!tsconfig.json
+!next.config.*
+!tailwind.config.*
+
+# Keep credentials, generated code, build output, and user artifacts out.
+.env*
+node_modules/
+.next/
+src/generated/
+graphify-out/
+*.tsbuildinfo
+*.docx
+*.pdf
+tmp_*

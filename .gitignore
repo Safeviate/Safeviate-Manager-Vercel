@@ -43,3 +43,8 @@ coverage/
 playwright-report/
 test-results/
 .vercel
+
+# Local Graphify hook, cache, and incremental scan state
+.codex/hooks.json
+graphify-out/cache/
+graphify-out/manifest.json
