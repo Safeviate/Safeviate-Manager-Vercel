@@ -1,29 +1,16 @@
 'use client';
 
-import {
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Archive, FileText, Pencil, PlayCircle, MoreHorizontal, ChevronsUpDown } from 'lucide-react';
+import { Archive, ChevronsUpDown, FileText, MoreHorizontal, Pencil, PlayCircle } from 'lucide-react';
 import { StartAuditDialog } from './start-audit-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { QualityAuditChecklistTemplate } from '@/types/quality';
 import type { Department } from '../../admin/department/page';
 import type { Personnel } from '../../users/personnel/page';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { CARD_HEADER_BAND_CLASS, CARD_HEADER_ACTION_ZONE_CLASS } from '@/components/page-header';
+import { CARD_HEADER_ACTION_ZONE_CLASS } from '@/components/page-header';
 import { PAGE_FORMAT_HEADER_COMPACT_DROPDOWN_BUTTON_CLASS } from '@/lib/page-format-buttons';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface ChecklistTemplateCardProps {
   category: string;
@@ -45,13 +32,12 @@ export function ChecklistTemplateCard({
   onEditTemplate,
 }: ChecklistTemplateCardProps) {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
 
   const handleArchive = async (templateId: string, templateTitle: string) => {
     try {
       const response = await fetch(
         `/api/quality-audit-templates?id=${encodeURIComponent(templateId)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE' },
       );
       if (!response.ok) throw new Error('Failed to archive template');
       window.dispatchEvent(new Event('safeviate-quality-templates-updated'));
@@ -62,157 +48,85 @@ export function ChecklistTemplateCard({
   };
 
   return (
-    <AccordionItem value={category}>
-      <AccordionTrigger className="text-xl font-semibold">{category}</AccordionTrigger>
-      <AccordionContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {templates.map((template) => (
-          <Card key={template.id} className="flex flex-col overflow-hidden border border-card-border shadow-none">
-            <CardHeader className={cn(CARD_HEADER_BAND_CLASS, 'space-y-2')}>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <CardTitle className="flex min-w-0 flex-1 items-start gap-2 text-sm font-black tracking-tight">
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="line-clamp-2 break-words">{template.title}</span>
-                </CardTitle>
-                <div className={cn(CARD_HEADER_ACTION_ZONE_CLASS, 'shrink-0 self-start sm:self-auto gap-1')}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={PAGE_FORMAT_HEADER_COMPACT_DROPDOWN_BUTTON_CLASS}
-                      >
-                        <span className="flex items-center gap-2">
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                          Actions
-                        </span>
-                        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]"
-                    >
-                      <StartAuditDialog
-                        template={template}
-                        tenantId={tenantId}
-                        personnel={personnel}
-                        departments={departments}
-                        organizations={organizations}
-                        trigger={
-                          <DropdownMenuItem className="cursor-pointer">
-                            <PlayCircle className="mr-2 h-3.5 w-3.5" /> Create Audit
-                          </DropdownMenuItem>
-                        }
-                      />
-                      <DropdownMenuItem className="cursor-pointer" onSelect={() => onEditTemplate(template)}>
-                        <Pencil className="mr-2 h-3.5 w-3.5" /> Edit Template
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="cursor-pointer text-amber-700"
-                        onClick={() => handleArchive(template.id, template.title)}
-                      >
-                        <Archive className="mr-2 h-3.5 w-3.5" /> Archive Template
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+    <section className="overflow-hidden rounded-lg border bg-background shadow-none">
+      <div className="flex items-center justify-between border-b bg-muted/20 px-4 py-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">{category}</p>
+          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            {templates.length} checklist{templates.length === 1 ? '' : 's'}
+          </p>
+        </div>
+      </div>
+      <div className="divide-y">
+        {templates.map((template) => {
+          const itemCount = template.sections.reduce((total, section) => total + section.items.length, 0);
+
+          return (
+            <div
+              key={template.id}
+              className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(220px,1.6fr)_minmax(90px,0.7fr)_minmax(90px,0.7fr)_140px] md:items-center"
+            >
+              <div className="flex min-w-0 items-start gap-2">
+                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-foreground">{template.title}</p>
+                  <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                    Audit checklist template
+                  </p>
                 </div>
               </div>
-              <CardDescription className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                {template.sections.reduce((acc, section) => acc + section.items.length, 0)} items •{' '}
-                {template.sections.length} sections
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-4">
-              <div className="flex items-center gap-2 flex-wrap">
-                {!isMobile ? (
-                  <>
-                    <StartAuditDialog
-                      template={template}
-                      tenantId={tenantId}
-                      personnel={personnel}
-                      departments={departments}
-                      organizations={organizations}
-                      trigger={
-                        <Button size="sm" className="h-8 flex-1 gap-1.5 text-[9px] font-black uppercase tracking-[0.08em]">
-                          <PlayCircle className="h-3.5 w-3.5" /> Create Audit
-                        </Button>
-                      }
-                    />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 shrink-0 border-[hsl(var(--header-button-border))] bg-[hsl(var(--header-button-background))] p-0 shadow-none"
-                        >
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="cursor-pointer" onSelect={() => onEditTemplate(template)}>
-                          <Pencil className="mr-2 h-3.5 w-3.5" /> Edit Template
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="cursor-pointer text-amber-700"
-                          onClick={() => handleArchive(template.id, template.title)}
-                        >
-                          <Archive className="mr-2 h-3.5 w-3.5" /> Archive Template
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                ) : null}
-                {isMobile ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={PAGE_FORMAT_HEADER_COMPACT_DROPDOWN_BUTTON_CLASS}
-                      >
-                        <span className="flex items-center gap-2">
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                          Actions
-                        </span>
-                        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]"
-                    >
-                      <StartAuditDialog
-                        template={template}
-                        tenantId={tenantId}
-                        personnel={personnel}
-                        departments={departments}
-                        organizations={organizations}
-                        trigger={
-                          <DropdownMenuItem className="cursor-pointer">
-                            <PlayCircle className="mr-2 h-3.5 w-3.5" /> Create Audit
-                          </DropdownMenuItem>
-                        }
-                      />
-                      <DropdownMenuItem className="cursor-pointer" onSelect={() => onEditTemplate(template)}>
-                        <Pencil className="mr-2 h-3.5 w-3.5" /> Edit Template
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="cursor-pointer text-amber-700"
-                        onClick={() => handleArchive(template.id, template.title)}
-                      >
-                        <Archive className="mr-2 h-3.5 w-3.5" /> Archive Template
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
+              <div className="min-w-0 text-xs">
+                <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Items</span>
+                <span className="block truncate font-semibold">{itemCount}</span>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </AccordionContent>
-    </AccordionItem>
+              <div className="min-w-0 text-xs">
+                <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Sections</span>
+                <span className="block truncate font-semibold">{template.sections.length}</span>
+              </div>
+              <div className={cn(CARD_HEADER_ACTION_ZONE_CLASS, 'flex items-center justify-end gap-1')}>
+                <StartAuditDialog
+                  template={template}
+                  tenantId={tenantId}
+                  personnel={personnel}
+                  departments={departments}
+                  organizations={organizations}
+                  trigger={
+                    <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2 text-[9px] font-black uppercase">
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Create Audit</span>
+                    </Button>
+                  }
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label={`Actions for ${template.title}`}
+                      className={cn(PAGE_FORMAT_HEADER_COMPACT_DROPDOWN_BUTTON_CLASS, 'h-8 w-8 p-0')}
+                    >
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                      <ChevronsUpDown className="sr-only" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem className="cursor-pointer" onSelect={() => onEditTemplate(template)}>
+                      <Pencil className="mr-2 h-3.5 w-3.5" /> Edit Template
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer text-amber-700"
+                      onClick={() => void handleArchive(template.id, template.title)}
+                    >
+                      <Archive className="mr-2 h-3.5 w-3.5" /> Archive Template
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

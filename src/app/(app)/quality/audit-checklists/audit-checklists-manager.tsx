@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { NewChecklistDialog } from './new-checklist-dialog';
 import { ChecklistTemplateCard } from './checklist-template-card';
-import { Accordion } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -156,7 +155,7 @@ export default function AuditChecklistsManager() {
           <ScrollArea className={cn(isMobile ? "h-auto" : "h-full")}>
             <div className="p-4 md:p-6 pb-20">
               {Object.keys(groupedTemplates).length > 0 ? (
-                  <Accordion type="multiple" defaultValue={Object.keys(groupedTemplates)} className="w-full space-y-6">
+                  <div className="w-full space-y-4">
                     {Object.entries(groupedTemplates).map(([category, categoryTemplates]) => (
                         templateView === 'active' ? (
                           <ChecklistTemplateCard
@@ -187,7 +186,7 @@ export default function AuditChecklistsManager() {
                           </div>
                         )
                     ))}
-                  </Accordion>
+                  </div>
               ) : (
                 <div className="text-center py-20 text-muted-foreground italic uppercase font-bold text-[10px] tracking-widest bg-background rounded-2xl border-2 border-dashed shadow-sm">
                     No {templateView === 'archived' ? 'archived ' : ''}checklist templates found.
