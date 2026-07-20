@@ -39,16 +39,17 @@ interface TakeExamDialogProps {
   personnel: (Personnel | PilotProfile)[];
   tenantId: string;
   isMockOnly?: boolean;
+  lockedStudentId?: string;
 }
 
 type ExamState = 'setup' | 'taking' | 'finished';
 
-export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tenantId, isMockOnly = false }: TakeExamDialogProps) {
+export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tenantId, isMockOnly = false, lockedStudentId }: TakeExamDialogProps) {
   const { userProfile } = useUserProfile();
   const { toast } = useSafeToast();
 
   const [state, setState] = useState<ExamState>('setup');
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(userProfile?.id || '');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(lockedStudentId || userProfile?.id || '');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ExamResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +63,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
     setState('setup');
     setAnswers({});
     setResult(null);
-    setSelectedStudentId(userProfile?.id || '');
+    setSelectedStudentId(lockedStudentId || userProfile?.id || '');
   };
 
   const handleStart = () => {
@@ -185,6 +186,11 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
                             <p className="text-[11px] font-bold uppercase tracking-widest text-amber-800">Performance data will be verified locally but no persistent training record will be generated.</p>
                         </div>
                     </div>
+                ) : lockedStudentId ? (
+                  <div className="rounded-xl border bg-muted/20 p-4 text-left">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Official mandatory assessment</p>
+                    <p className="mt-1 text-sm font-bold">This assessment is assigned to your personnel profile and will be recorded officially.</p>
+                  </div>
                 ) : (
                   <div className="space-y-3 pt-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-left block">Authorized Student Personnel</Label>

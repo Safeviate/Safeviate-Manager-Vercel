@@ -66,6 +66,10 @@ export async function POST(request: Request) {
     if (!student) {
       return NextResponse.json({ error: 'The selected student is unavailable.' }, { status: 404 });
     }
+    const publication = template.publication || { mode: 'mandatory', assigneeIds: [] };
+    if (publication.mode !== 'mandatory' || !publication.assigneeIds.includes(studentId)) {
+      return NextResponse.json({ error: 'This official exam has not been assigned to the selected user.' }, { status: 403 });
+    }
 
     const correctCount = template.questions.reduce(
       (total, question) => total + (body.answers[question.id] === question.correctOptionId ? 1 : 0),

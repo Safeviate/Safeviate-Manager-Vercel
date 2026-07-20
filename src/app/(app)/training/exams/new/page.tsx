@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { ExamForm, type ExamFormValues } from '../exam-form';
@@ -12,15 +12,29 @@ export default function NewExamPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [assignees, setAssignees] = useState<Array<{ id: string; firstName: string; lastName: string; userType?: string }>>([]);
+
+  useEffect(() => {
+    fetch('/api/users', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload) => setAssignees(Array.isArray(payload?.personnel) ? payload.personnel : []))
+      .catch(() => setAssignees([]));
+  }, []);
 
   const handleCreate = async (values: ExamFormValues) => {
     setIsSubmitting(true);
 
     try {
+      const { publicationMode, assigneeIds, dueDate, ...templateValues } = values;
       const data = {
-        ...values,
+        ...templateValues,
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
+        publication: {
+          mode: publicationMode,
+          assigneeIds: publicationMode === 'mandatory' ? assigneeIds : [],
+          ...(publicationMode === 'mandatory' && dueDate ? { dueDate } : {}),
+        },
       };
 
       const response = await fetch('/api/exams', {
@@ -54,6 +68,7 @@ export default function NewExamPage() {
           onSubmit={handleCreate}
           onCancel={() => router.push('/training/exams')}
           isSubmitting={isSubmitting}
+          assignees={assignees}
         />
       </Card>
     </div>

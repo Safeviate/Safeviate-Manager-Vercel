@@ -22,6 +22,7 @@ export default function EditExamPage({ params }: EditExamPageProps) {
   const examId = resolvedParams.examId;
 
   const [exam, setExam] = useState<ExamTemplate | null>(null);
+  const [assignees, setAssignees] = useState<Array<{ id: string; firstName: string; lastName: string; userType?: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -29,12 +30,19 @@ export default function EditExamPage({ params }: EditExamPageProps) {
 
     const load = async () => {
       try {
-        const response = await fetch('/api/exams', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({}));
+        const [response, usersResponse] = await Promise.all([
+          fetch('/api/exams', { cache: 'no-store' }),
+          fetch('/api/users', { cache: 'no-store' }),
+        ]);
+        const [payload, usersPayload] = await Promise.all([
+          response.json().catch(() => ({})),
+          usersResponse.json().catch(() => ({})),
+        ]);
         const templates = Array.isArray(payload?.templates) ? payload.templates : [];
         const found = templates.find((e: any) => e.id === examId);
         if (!cancelled) {
           setExam(found || null);
+          setAssignees(Array.isArray(usersPayload?.personnel) ? usersPayload.personnel : []);
         }
       } catch (e) {
         console.error('Failed to load exam', e);
@@ -54,10 +62,21 @@ export default function EditExamPage({ params }: EditExamPageProps) {
     setIsSubmitting(true);
 
     try {
+      const { publicationMode, assigneeIds, dueDate, ...templateValues } = values;
       const response = await fetch('/api/exams', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: { ...exam, ...values } }),
+        body: JSON.stringify({
+          template: {
+            ...exam,
+            ...templateValues,
+            publication: {
+              mode: publicationMode,
+              assigneeIds: publicationMode === 'mandatory' ? assigneeIds : [],
+              ...(publicationMode === 'mandatory' && dueDate ? { dueDate } : {}),
+            },
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -96,10 +115,16 @@ export default function EditExamPage({ params }: EditExamPageProps) {
         </div>
         <div className="flex-1 overflow-hidden">
             <ExamForm 
-                initialValues={exam}
+                initialValues={{
+                  ...exam,
+                  publicationMode: exam.publication?.mode || 'mandatory',
+                  assigneeIds: exam.publication?.assigneeIds || [],
+                  dueDate: exam.publication?.dueDate || '',
+                }}
                 onSubmit={handleUpdate}
                 onCancel={() => router.push('/training/exams')}
                 isSubmitting={isSubmitting}
+                assignees={assignees}
             />
         </div>
       </Card>

@@ -45,7 +45,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function ExamsPage() {
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
-  const { tenantId } = useUserProfile();
+  const { tenantId, userProfile } = useUserProfile();
   const { tenant } = useTenantConfig();
   const isMobile = useIsMobile();
 
@@ -129,6 +129,14 @@ export default function ExamsPage() {
       t.subject.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [templates, searchQuery]);
+  const mandatoryTemplates = useMemo(() => filteredTemplates.filter((template) => {
+    const publication = template.publication || { mode: 'mandatory', assigneeIds: [] };
+    return publication.mode === 'mandatory' && (canManage || publication.assigneeIds.includes(userProfile?.id || ''));
+  }), [canManage, filteredTemplates, userProfile?.id]);
+  const mockTemplates = useMemo(
+    () => templates.filter((template) => template.publication?.mode === 'mock'),
+    [templates],
+  );
 
   const handleDelete = async (id: string) => {
     try {
@@ -264,9 +272,9 @@ export default function ExamsPage() {
                     <div>
                       <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-primary/20 pb-1 w-fit">
                         <ClipboardCheck className="h-3.5 w-3.5" />
-                        Available {isAviation ? 'Exam' : 'Assessment'} Templates
+                        Mandatory {isAviation ? 'Exams' : 'Assessments'}
                       </h2>
-                      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-foreground/75">Conduct a certified assessment. Results are permanently recorded.</p>
+                      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-foreground/75">Complete the official assessments assigned to you. Results are permanently recorded.</p>
                     </div>
                     <div className="relative w-full sm:w-80 group">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -281,7 +289,7 @@ export default function ExamsPage() {
 
                   <div className="rounded-xl border overflow-hidden bg-card">
                     <ResponsiveCardGrid
-                      items={filteredTemplates}
+                      items={mandatoryTemplates}
                       isLoading={isLoadingTemplates}
                       loadingCount={3}
                       className="p-3"
@@ -296,16 +304,21 @@ export default function ExamsPage() {
                             <Badge variant="outline" className="text-[10px] font-black text-primary uppercase">
                               PASS {template.passingScore}%
                             </Badge>
+                            {template.publication?.dueDate ? <p className="text-[10px] font-bold uppercase text-muted-foreground">Due {format(new Date(`${template.publication.dueDate}T12:00:00`), 'dd MMM yyyy')}</p> : null}
                             <div className="flex items-center gap-1 sm:justify-end">
-                              <Button
-                                variant="default"
-                                size="compact"
-                                className="w-full sm:w-auto"
-                                onClick={() => setTakingExam({ template, isMock: false })}
-                              >
-                                <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
-                                Start
-                              </Button>
+                              {template.publication?.assigneeIds.includes(userProfile?.id || '') ? (
+                                <Button
+                                  variant="default"
+                                  size="compact"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => setTakingExam({ template, isMock: false })}
+                                >
+                                  <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
+                                  Start
+                                </Button>
+                              ) : (
+                                <Badge variant="secondary" className="text-[9px] font-black uppercase">{template.publication?.assigneeIds.length || 0} assigned</Badge>
+                              )}
                               {canManage && (
                                 <>
                                   <Button asChild variant="ghost" size="icon" className="h-8 w-8">
@@ -327,7 +340,7 @@ export default function ExamsPage() {
                       renderLoadingItem={(index) => <Skeleton key={index} className="h-24 w-full rounded-lg" />}
                       emptyState={(
                         <div className="text-center py-12 bg-muted/5">
-                          <p className="text-sm font-bold uppercase tracking-widest text-foreground/70">No templates available.</p>
+                          <p className="text-sm font-bold uppercase tracking-widest text-foreground/70">No mandatory exams are assigned to you.</p>
                         </div>
                       )}
                     />
@@ -478,7 +491,7 @@ export default function ExamsPage() {
                         </h2>
                         <div className="rounded-xl border overflow-hidden bg-card">
                           <ResponsiveCardGrid
-                            items={templates || []}
+                            items={mockTemplates}
                             isLoading={isLoadingTemplates}
                             loadingCount={3}
                             className="p-3"
@@ -522,6 +535,7 @@ export default function ExamsPage() {
             personnel={allPeople}
             tenantId={tenantId || ''}
             isMockOnly={takingExam.isMock}
+            lockedStudentId={takingExam.isMock ? undefined : userProfile?.id}
           />
       )}
     </div>

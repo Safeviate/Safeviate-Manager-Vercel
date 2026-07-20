@@ -97,6 +97,14 @@ export interface QuestionBankItem extends ExamQuestion {
     createdAt: string;
 }
 
+export type ExamPublicationMode = 'mandatory' | 'mock';
+
+export interface ExamPublication {
+    mode: ExamPublicationMode;
+    assigneeIds: string[];
+    dueDate?: string;
+}
+
 export interface ExamTemplate {
     id: string;
     title: string;
@@ -105,6 +113,7 @@ export interface ExamTemplate {
     passingScore: number; // percentage
     questions: ExamQuestion[];
     createdAt: string;
+    publication?: ExamPublication;
 }
 
 export interface ExamResult {

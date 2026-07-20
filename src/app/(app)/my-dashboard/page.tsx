@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { usePageLayout } from '@/hooks/use-page-layout';
-import type { ExamResult } from '@/types/training';
+import type { ExamResult, ExamTemplate } from '@/types/training';
 
 const parseLocalDate = (value: string) => {
     const [year, month, day] = value.split('-').map(Number);
@@ -35,6 +35,7 @@ export default function MyDashboardPage() {
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState('tasks');
     const [myExamResults, setMyExamResults] = useState<ExamResult[]>([]);
+    const [myMandatoryExams, setMyMandatoryExams] = useState<ExamTemplate[]>([]);
     const [isLoadingExamResults, setIsLoadingExamResults] = useState(true);
     
     const hiddenMenus = useMemo(() => new Set(userProfile?.accessOverrides?.hiddenMenus || []), [userProfile]);
@@ -68,12 +69,26 @@ export default function MyDashboardPage() {
 
             setIsLoadingExamResults(true);
             try {
-                const response = await fetch(`/api/exam-attempts?studentId=${encodeURIComponent(userProfile.id)}`, { cache: 'no-store' });
-                const payload = await response.json().catch(() => ({}));
-                if (!cancelled) setMyExamResults(Array.isArray(payload?.results) ? payload.results : []);
+                const [response, templatesResponse] = await Promise.all([
+                    fetch(`/api/exam-attempts?studentId=${encodeURIComponent(userProfile.id)}`, { cache: 'no-store' }),
+                    fetch('/api/exams', { cache: 'no-store' }),
+                ]);
+                const [payload, templatesPayload] = await Promise.all([
+                    response.json().catch(() => ({})),
+                    templatesResponse.json().catch(() => ({})),
+                ]);
+                if (!cancelled) {
+                    setMyExamResults(Array.isArray(payload?.results) ? payload.results : []);
+                    setMyMandatoryExams(
+                        (Array.isArray(templatesPayload?.templates) ? templatesPayload.templates : []).filter((exam: ExamTemplate) => (
+                            exam.publication?.mode === 'mandatory' && exam.publication.assigneeIds.includes(userProfile.id)
+                        )),
+                    );
+                }
             } catch (error) {
                 console.error('Failed to load personal exam results', error);
                 if (!cancelled) setMyExamResults([]);
+                if (!cancelled) setMyMandatoryExams([]);
             } finally {
                 if (!cancelled) setIsLoadingExamResults(false);
             }
@@ -313,6 +328,19 @@ export default function MyDashboardPage() {
                             <CardDescription>Official assessment results recorded against your personnel profile.</CardDescription>
                         </CardHeader>
                         <CardContent>
+                            {myMandatoryExams.length > 0 ? (
+                                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-tight text-amber-950">Mandatory exams awaiting completion</p>
+                                            <p className="mt-1 text-xs text-amber-800">{myMandatoryExams.map((exam) => exam.title).join(', ')}</p>
+                                        </div>
+                                        <Button asChild size="sm" className="h-8 w-fit text-[10px] font-black uppercase">
+                                            <Link href="/training/exams">Open exams</Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : null}
                             {isLoadingExamResults ? (
                                 <div className="space-y-3">
                                     <Skeleton className="h-16 w-full" />

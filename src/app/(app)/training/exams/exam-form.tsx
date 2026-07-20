@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,13 @@ const examFormSchema = z.object({
   description: z.string().optional(),
   passingScore: z.coerce.number().min(0).max(100),
   questions: z.array(questionSchema).min(1, 'At least one question is required'),
+  publicationMode: z.enum(['mandatory', 'mock']),
+  assigneeIds: z.array(z.string()),
+  dueDate: z.string().optional(),
+}).superRefine((values, context) => {
+  if (values.publicationMode === 'mandatory' && values.assigneeIds.length === 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['assigneeIds'], message: 'Select at least one required user.' });
+  }
 });
 
 export type ExamFormValues = z.infer<typeof examFormSchema>;
@@ -62,9 +70,10 @@ interface ExamFormProps {
   onSubmit: (values: ExamFormValues) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  assignees: Array<{ id: string; firstName: string; lastName: string; userType?: string }>;
 }
 
-export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: ExamFormProps) {
+export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting, assignees }: ExamFormProps) {
   const form = useForm<ExamFormValues>({
     resolver: zodResolver(examFormSchema),
     defaultValues: {
@@ -72,6 +81,9 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
       subject: initialValues?.subject || '',
       description: initialValues?.description || '',
       passingScore: initialValues?.passingScore || 75,
+      publicationMode: initialValues?.publicationMode || 'mandatory',
+      assigneeIds: initialValues?.assigneeIds || [],
+      dueDate: initialValues?.dueDate || '',
       questions: initialValues?.questions || [
         {
           id: uuidv4(),
@@ -90,6 +102,16 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
     control: form.control,
     name: 'questions',
   });
+  const publicationMode = form.watch('publicationMode');
+  const assignedUserIds = form.watch('assigneeIds');
+
+  const toggleAssignee = (personId: string, checked: boolean) => {
+    form.setValue(
+      'assigneeIds',
+      checked ? [...assignedUserIds, personId] : assignedUserIds.filter((id) => id !== personId),
+      { shouldValidate: true },
+    );
+  };
 
   const handleGeneratedQuestions = (questions: ExamFormValues['questions']) => {
       // Filter out initial empty question if present
@@ -168,6 +190,60 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="publicationMode"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2 rounded-xl border bg-muted/5 p-4">
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Publishing Mode</FormLabel>
+                    <FormControl>
+                      <RadioGroup value={field.value} onValueChange={field.onChange} className="grid gap-3 md:grid-cols-2">
+                        <Label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-background p-3">
+                          <RadioGroupItem value="mandatory" className="mt-0.5" />
+                          <span><span className="block text-sm font-bold">Mandatory assessment</span><span className="block text-xs text-muted-foreground">Assign selected users and record their official completion.</span></span>
+                        </Label>
+                        <Label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-background p-3">
+                          <RadioGroupItem value="mock" className="mt-0.5" />
+                          <span><span className="block text-sm font-bold">Open mock exam</span><span className="block text-xs text-muted-foreground">Anyone may practise; attempts are not saved officially.</span></span>
+                        </Label>
+                      </RadioGroup>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              {publicationMode === 'mandatory' ? (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Completion Due Date</FormLabel>
+                        <FormControl><Input type="date" {...field} className="h-12" /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="assigneeIds"
+                    render={() => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Required Users</FormLabel>
+                        <div className="grid max-h-48 gap-2 overflow-y-auto rounded-xl border bg-muted/5 p-3 sm:grid-cols-2">
+                          {assignees.map((person) => (
+                            <Label key={person.id} className="flex cursor-pointer items-center gap-3 rounded-lg border bg-background p-3 text-sm font-medium">
+                              <Checkbox checked={assignedUserIds.includes(person.id)} onCheckedChange={(checked) => toggleAssignee(person.id, checked === true)} />
+                              <span>{person.firstName} {person.lastName}</span>
+                            </Label>
+                          ))}
+                          {assignees.length === 0 ? <p className="text-sm text-muted-foreground">No personnel are available to assign.</p> : null}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              ) : null}
             </div>
 
             <Separator />
