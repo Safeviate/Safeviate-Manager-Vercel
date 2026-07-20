@@ -187,7 +187,7 @@ export function AiExamGenerator({ onGenerated, trigger }: AiExamGeneratorProps) 
                 ) : (
                   <div className="text-center group-hover:text-primary transition-colors">
                     <ClipboardPaste className="mx-auto h-10 w-10 mb-2 opacity-50" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Axiom Vision Ingestion</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Image Text Extraction</p>
                     <p className="text-[9px] font-bold opacity-30 mt-1">Focus and Paste (Ctrl+V)</p>
                   </div>
                 )}

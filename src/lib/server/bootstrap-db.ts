@@ -30,6 +30,7 @@ type TableName =
   | 'management_of_change'
   | 'erp_state'
   | 'simulation_route_metrics'
+  | 'exam_attempts'
   | 'activity_logs'
   | 'recovery_archives';
 
@@ -561,6 +562,30 @@ export async function ensureSimulationRouteMetricsSchema() {
     ON simulation_route_metrics (tenant_id, run_id)
   `);
   tableCache.set('simulation_route_metrics', true);
+}
+
+export async function ensureExamAttemptsSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('exam_attempts')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS exam_attempts (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      student_id VARCHAR(128) NOT NULL,
+      template_id VARCHAR(128) NOT NULL,
+      data JSONB NOT NULL,
+      completed_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS exam_attempts_student_completed_idx
+    ON exam_attempts (tenant_id, student_id, completed_at DESC)
+  `);
+  tableCache.set('exam_attempts', true);
 }
 
 export async function ensureActivityLogsSchema() {

@@ -533,10 +533,10 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
         { value: 'access', label: 'Module Access', icon: ShieldCheck },
         { value: 'permissions', label: 'Granular Permissions', icon: ShieldAlert },
     ];
-    if (isStudent) tabs.push({ value: 'training', label: 'Training Records', icon: ClipboardCheck });
+    tabs.push({ value: 'training', label: 'Training Records', icon: ClipboardCheck });
     if (isAnyPilot) tabs.push({ value: 'logbook', label: 'Logbook', icon: ClipboardCheck });
     return tabs;
-  }, [isStudent, isAnyPilot]);
+  }, [isAnyPilot]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -858,7 +858,7 @@ export function ViewPersonnelDetails({ user, role, department, actions }: ViewPe
                                 </div>
                             </TabsContent>
                             
-                            {isStudent && <TabsContent value="training" className="m-0"><TrainingRecords studentId={user.id} tenantId={tenantId!} /></TabsContent>}
+                            <TabsContent value="training" className="m-0"><TrainingRecords studentId={user.id} tenantId={tenantId!} /></TabsContent>
                             {isAnyPilot && <TabsContent value="logbook" className="m-0"><PilotLogbook userId={user.id} tenantId={tenantId!} role={user.userType === 'Instructor' ? 'instructor' : user.userType === 'Student' ? 'student' : 'private'} /></TabsContent>}
                         </div>
                     </ScrollArea>

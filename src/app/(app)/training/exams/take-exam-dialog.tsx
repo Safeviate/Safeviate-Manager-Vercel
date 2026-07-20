@@ -51,6 +51,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
   const [selectedStudentId, setSelectedStudentId] = useState<string>(userProfile?.id || '');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ExamResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const students = useMemo(() => 
     personnel.filter(p => p.userType === 'Student' || p.userType === 'Private Pilot'),
@@ -84,49 +85,58 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
 
     const score = Math.round((correctCount / totalQuestions) * 100);
     const passed = score >= template.passingScore;
-    const selectedStudent = personnel.find(p => p.id === selectedStudentId);
-
-    const examResult: ExamResult = {
-      id: '', // Will be set by LocalStorage
-      templateId: template.id,
-      templateTitle: template.title,
-      studentId: selectedStudentId,
-      studentName: selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : 'Anonymous',
-      date: new Date().toISOString(),
-      score,
-      passingScore: template.passingScore,
-      passed,
-      isMock: isMockOnly,
-    };
-
     if (!isMockOnly) {
+      setIsSubmitting(true);
       try {
-        const finalResult = { ...examResult, id: crypto.randomUUID() };
-        const response = await fetch('/api/exams', {
-          method: 'PUT',
+        const response = await fetch('/api/exam-attempts', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ result: finalResult }),
+          body: JSON.stringify({ templateId: template.id, studentId: selectedStudentId, answers }),
         });
-
+        const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error('Failed to save exam result');
+          throw new Error(payload?.error || 'Failed to save exam result');
         }
-        
+
+        const savedResult = payload?.result as ExamResult | undefined;
+        if (!savedResult?.id) {
+          throw new Error('The server did not return a saved exam result.');
+        }
+
         toast({ 
           title: 'Official Result Recorded', 
           description: 'This result has been added to the student training file.' 
         });
-        setResult(finalResult);
+        window.dispatchEvent(new Event('safeviate-exam-attempts-updated'));
+        setResult(savedResult);
+        setState('finished');
       } catch (e) {
         console.error('Failed to save exam result', e);
-        setResult(examResult);
+        toast({
+          variant: 'destructive',
+          title: 'Result Not Recorded',
+          description: e instanceof Error ? e.message : 'The official result could not be saved. Please try again.',
+        });
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
+      const examResult: ExamResult = {
+        id: '',
+        templateId: template.id,
+        templateTitle: template.title,
+        studentId: selectedStudentId,
+        studentName: 'Practice candidate',
+        date: new Date().toISOString(),
+        score,
+        passingScore: template.passingScore,
+        passed,
+        isMock: true,
+      };
       toast({ title: 'Practice Run Complete' });
       setResult(examResult);
+      setState('finished');
     }
-
-    setState('finished');
   };
 
   const progress = (Object.keys(answers).length / template.questions.length) * 100;
@@ -139,7 +149,7 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
             <div className="space-y-4 text-left">
               <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/30 bg-primary/5 px-4 h-7">
                 <GraduationCap className="h-3.5 w-3.5 mr-2" />
-                Axiom Assessment Center
+                Assessment Centre
               </Badge>
               <div>
                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter leading-none sm:text-3xl">
@@ -302,10 +312,10 @@ export function TakeExamDialog({ template, isOpen, onOpenChange, personnel, tena
             {state === 'taking' ? (
                 <Button 
                     onClick={handleSubmit} 
-                    disabled={Object.keys(answers).length < template.questions.length}
+                    disabled={isSubmitting || Object.keys(answers).length < template.questions.length}
                     className="w-full h-14 text-base font-black uppercase tracking-widest shadow-xl rounded-2xl sm:text-lg"
                 >
-                Submit Full Examination
+                {isSubmitting ? 'Recording Official Result...' : 'Submit Full Examination'}
                 </Button>
             ) : state === 'finished' ? (
                 <Button onClick={() => onOpenChange(false)} className="w-full h-14 text-base font-black uppercase tracking-widest shadow-xl rounded-2xl sm:text-lg">Return to Overview</Button>

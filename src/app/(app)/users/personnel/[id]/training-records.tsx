@@ -14,13 +14,13 @@ const parseLocalDate = (value: string) => {
   return new Date(year, month - 1, day, 12);
 };
 const round1 = (value: number) => parseFloat(value.toFixed(1));
-import type { StudentProgressReport, StudentMilestoneSettings } from '@/types/training';
+import type { ExamResult, StudentProgressReport, StudentMilestoneSettings } from '@/types/training';
 import type { InstructorAssignmentRecord, PilotProfile } from '../personnel-directory-page';
 import type { Booking } from '@/types/booking';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, History, CheckCircle2 } from 'lucide-react';
+import { Trophy, History, CheckCircle2, GraduationCap } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Star, TrendingDown, Target } from 'lucide-react';
@@ -423,24 +423,28 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
     const [instructors, setInstructors] = useState<PilotProfile[]>([]);
     const [milestoneSettings, setMilestoneSettings] = useState<StudentMilestoneSettings | null>(null);
     const [student, setStudent] = useState<PilotProfile | null>(null);
+    const [examResults, setExamResults] = useState<ExamResult[]>([]);
 
     const [isLoadingReports, setIsLoadingReports] = useState(true);
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [isLoadingInstructors, setIsLoadingInstructors] = useState(true);
+    const [isLoadingExamResults, setIsLoadingExamResults] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
 
         const load = async () => {
             try {
-                const [summaryResponse, trainingResponse] = await Promise.all([
+                const [summaryResponse, trainingResponse, examResponse] = await Promise.all([
                     fetch('/api/dashboard-summary', { cache: 'no-store' }),
                     fetch('/api/student-training', { cache: 'no-store' }),
+                    fetch(`/api/exam-attempts?studentId=${encodeURIComponent(studentId)}`, { cache: 'no-store' }),
                 ]);
 
-                const [summaryPayload, trainingPayload] = await Promise.all([
+                const [summaryPayload, trainingPayload, examPayload] = await Promise.all([
                     summaryResponse.json().catch(() => ({})),
                     trainingResponse.json().catch(() => ({})),
+                    examResponse.json().catch(() => ({})),
                 ]);
 
                 if (cancelled) return;
@@ -456,6 +460,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                 setBookings(summaryBookings.filter((b: Booking) => b.studentId === studentId && b.status === 'Completed'));
                 setReports((Array.isArray(trainingPayload?.reports) ? trainingPayload.reports : []).filter((r: StudentProgressReport) => r.studentId === studentId));
                 setMilestoneSettings(trainingPayload?.milestones || null);
+                setExamResults(Array.isArray(examPayload?.results) ? examPayload.results : []);
             } catch (error) {
                 console.error('Failed to load training records', error);
             } finally {
@@ -463,6 +468,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                     setIsLoadingInstructors(false);
                     setIsLoadingReports(false);
                     setIsLoadingBookings(false);
+                    setIsLoadingExamResults(false);
                 }
             }
         };
@@ -473,7 +479,7 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         };
     }, [studentId]);
 
-    const isLoading = isLoadingReports || isLoadingInstructors || isLoadingBookings;
+    const isLoading = isLoadingReports || isLoadingInstructors || isLoadingBookings || isLoadingExamResults;
 
     const instructorsMap = useMemo(() => {
         if (!instructors) return new Map();
@@ -503,6 +509,10 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
         if (!reports) return [];
         return [...reports].sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
     }, [reports]);
+    const sortedExamResults = useMemo(
+        () => [...examResults].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime()),
+        [examResults],
+    );
 
     const exerciseSummaries = useMemo(
         () => buildExerciseProgressSummary(reports, TRAINING_EXERCISE_TEMPLATES),
@@ -560,6 +570,41 @@ export function TrainingRecords({ studentId, tenantId }: TrainingRecordsProps) {
                             reports={reports}
                             instructorsMap={instructorsMap}
                         />
+
+                        <Separator />
+
+                        <section>
+                            <SectionHeader title="Official Exam Results" icon={GraduationCap} />
+                            {sortedExamResults.length > 0 ? (
+                                <div className="overflow-hidden rounded-xl border bg-background divide-y">
+                                    {sortedExamResults.map((exam) => (
+                                        <div key={exam.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-bold">{exam.templateTitle}</p>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    {exam.subject ? `${exam.subject} - ` : ''}{format(new Date(exam.date), 'PPP')}
+                                                    {exam.recordedBy ? ` - Recorded by ${exam.recordedBy}` : ''}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-3 sm:text-right">
+                                                <div>
+                                                    <p className="text-sm font-black">{exam.score}%</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Pass mark {exam.passingScore}%</p>
+                                                </div>
+                                                <Badge className={cn('min-w-16 justify-center', exam.passed ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white')}>
+                                                    {exam.passed ? 'Passed' : 'Not passed'}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-12 text-muted-foreground">
+                                    <GraduationCap className="mb-2 h-8 w-8 opacity-20" />
+                                    <p className="text-sm">No official exam results recorded yet.</p>
+                                </div>
+                            )}
+                        </section>
 
                         <Separator />
 

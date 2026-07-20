@@ -111,7 +111,7 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting }: Ex
                   <FormItem>
                     <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <BookOpen className="h-3.5 w-3.5" />
-                        Axiom Assessment Title
+                        Assessment Title
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., PPL Air Law & Operational Procedures" {...field} className="h-12 font-bold bg-muted/5 border-2 border-slate-200 focus-visible:ring-primary/20 rounded-xl" />

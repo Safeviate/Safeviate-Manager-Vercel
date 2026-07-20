@@ -1,11 +1,10 @@
-import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { EXAM_RESULT_CONFIG_KEY, listExamResults } from '@/lib/server/exam-attempts';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
-import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
 const TEMPLATE_KEY = 'exam-templates';
-const RESULT_KEY = 'student-exam-results';
+const RESULT_KEY = EXAM_RESULT_CONFIG_KEY;
 const TOPIC_KEY = 'exam-topics';
 const POOL_KEY = 'question-pool';
 
@@ -38,11 +37,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ templates: [], results: [], topics: [], poolItems: [] }, { status: 200 });
     }
 
-    const config = await readConfig(tenantId);
+    const [config, results] = await Promise.all([readConfig(tenantId), listExamResults(tenantId)]);
     return NextResponse.json(
       {
         templates: Array.isArray(config[TEMPLATE_KEY]) ? config[TEMPLATE_KEY] : [],
-        results: Array.isArray(config[RESULT_KEY]) ? config[RESULT_KEY] : [],
+        results,
         topics: Array.isArray(config[TOPIC_KEY]) ? config[TOPIC_KEY] : [],
         poolItems: Array.isArray(config[POOL_KEY]) ? config[POOL_KEY] : [],
       },

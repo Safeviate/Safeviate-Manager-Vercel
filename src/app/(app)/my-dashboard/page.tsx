@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Eye, LayoutDashboard } from 'lucide-react';
+import { Eye, GraduationCap, LayoutDashboard } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ResponsiveTabRow } from '@/components/responsive-tab-row';
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
 import { usePageLayout } from '@/hooks/use-page-layout';
+import type { ExamResult } from '@/types/training';
 
 const parseLocalDate = (value: string) => {
     const [year, month, day] = value.split('-').map(Number);
@@ -33,6 +34,8 @@ export default function MyDashboardPage() {
     const { isSectionEnabled } = usePageLayout('my-dashboard');
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState('tasks');
+    const [myExamResults, setMyExamResults] = useState<ExamResult[]>([]);
+    const [isLoadingExamResults, setIsLoadingExamResults] = useState(true);
     
     const hiddenMenus = useMemo(() => new Set(userProfile?.accessOverrides?.hiddenMenus || []), [userProfile]);
     
@@ -47,8 +50,40 @@ export default function MyDashboardPage() {
             { id: 'tasks', label: 'Tasks', href: '/my-dashboard/tasks' },
             { id: 'messages', label: 'Messages', href: '/my-dashboard/messages', showBadge: true },
             { id: 'logbook', label: 'My Logbook', href: '/my-dashboard/logbook' },
-        ].filter(tab => !isHidden(tab.href) && isSectionEnabled(tab.id));
+            { id: 'exams', label: 'My Exams', href: '/my-dashboard/exams' },
+        ].filter(tab => tab.id === 'exams' || (!isHidden(tab.href) && isSectionEnabled(tab.id)));
     }, [isSectionEnabled, userProfile, tenant]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadExamResults = async () => {
+            if (!userProfile?.id) {
+                if (!cancelled) {
+                    setMyExamResults([]);
+                    setIsLoadingExamResults(false);
+                }
+                return;
+            }
+
+            setIsLoadingExamResults(true);
+            try {
+                const response = await fetch(`/api/exam-attempts?studentId=${encodeURIComponent(userProfile.id)}`, { cache: 'no-store' });
+                const payload = await response.json().catch(() => ({}));
+                if (!cancelled) setMyExamResults(Array.isArray(payload?.results) ? payload.results : []);
+            } catch (error) {
+                console.error('Failed to load personal exam results', error);
+                if (!cancelled) setMyExamResults([]);
+            } finally {
+                if (!cancelled) setIsLoadingExamResults(false);
+            }
+        };
+
+        void loadExamResults();
+        return () => {
+            cancelled = true;
+        };
+    }, [userProfile?.id]);
 
     useEffect(() => {
         if (availableTabs.length > 0 && !availableTabs.find(t => t.id === activeTab)) {
@@ -267,6 +302,50 @@ export default function MyDashboardPage() {
                                     <Link href="/development/table-builder">Go to Table Builder</Link>
                                 </Button>
                             </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="exams" className="mt-0">
+                    <Card className="shadow-none border">
+                        <CardHeader>
+                            <CardTitle>My Exam Results</CardTitle>
+                            <CardDescription>Official assessment results recorded against your personnel profile.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingExamResults ? (
+                                <div className="space-y-3">
+                                    <Skeleton className="h-16 w-full" />
+                                    <Skeleton className="h-16 w-full" />
+                                </div>
+                            ) : myExamResults.length > 0 ? (
+                                <div className="overflow-hidden rounded-xl border divide-y">
+                                    {myExamResults.map((exam) => (
+                                        <div key={exam.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-bold">{exam.templateTitle}</p>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    {exam.subject ? `${exam.subject} - ` : ''}{format(new Date(exam.date), 'PPP')}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-right">
+                                                    <p className="text-sm font-black">{exam.score}%</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Pass mark {exam.passingScore}%</p>
+                                                </div>
+                                                <Badge className={exam.passed ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}>
+                                                    {exam.passed ? 'Passed' : 'Not passed'}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-12 text-center text-muted-foreground">
+                                    <GraduationCap className="mb-2 h-8 w-8 opacity-20" />
+                                    <p className="text-sm">No official exam results have been recorded yet.</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

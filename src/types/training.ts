@@ -118,4 +118,7 @@ export interface ExamResult {
     passingScore: number;
     passed: boolean;
     isMock: boolean;
+    subject?: string;
+    questionCount?: number;
+    recordedBy?: string;
 }
