@@ -299,12 +299,13 @@ export function TemplateEditorDialog({
         })),
       };
 
+      const category = departmentOptions.find((d) => d.id === values.departmentId)?.name || 'General';
       const template = existingTemplate
-        ? { ...existingTemplate, ...dataToSave }
+        ? { ...existingTemplate, ...dataToSave, category }
         : {
             ...dataToSave,
             id: crypto.randomUUID(),
-            category: departmentOptions.find((d) => d.id === values.departmentId)?.name || 'General',
+            category,
           };
 
       const response = await fetch(saveEndpoint, {

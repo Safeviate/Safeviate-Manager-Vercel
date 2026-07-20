@@ -2260,7 +2260,7 @@ export default function DashboardPage() {
                     {tabs.filter((tab) => tab.value !== 'overview').map((tab) => (
                       <TabsContent key={tab.value} value={tab.value} className="m-0">
                         {tab.value === 'instructors' ? (
-                          <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} summary={summary} />
+                          <InstructorOverviewCard modern={isModern} metrics={instructorMetrics} />
                         ) : tab.value === 'students' ? (
                           <StudentOverviewCard modern={isModern} metrics={studentMetrics} summary={summary} />
                         ) : tab.value === 'safety' ? (
@@ -2479,17 +2479,11 @@ function StageCard({ tabLabel, modern }: { tabLabel: string; modern: boolean }) 
 function InstructorOverviewCard({
   modern,
   metrics,
-  summary,
 }: {
   modern: boolean;
   metrics: InstructorMetrics;
-  summary: SummaryPayload;
 }) {
   const topRows = metrics.rows.slice(0, 5);
-  const technicalNotifications = (Array.isArray(summary.technicalReports) ? summary.technicalReports : [])
-    .filter((report) => (report.status || 'Open') !== 'Closed')
-    .sort((left, right) => `${right.eventDate}T${right.eventTime}`.localeCompare(`${left.eventDate}T${left.eventTime}`))
-    .slice(0, 4);
 
   return (
     <Card className={cn(DASHBOARD_SHELL_CLASS, 'min-h-[calc(100vh-18rem)]', modern && 'border-slate-200/80 bg-white/95')}>
@@ -2569,46 +2563,6 @@ function InstructorOverviewCard({
           </div>
         </div>
 
-        <div className="rounded-md border bg-background min-h-[261px]">
-          <div className="flex items-center justify-between gap-3 border-b bg-muted/5 px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-black uppercase tracking-tight">Preliminary Technical Report Notifications</p>
-            </div>
-            <Badge variant="outline" className="text-[10px] font-black uppercase">
-              {technicalNotifications.length} open
-            </Badge>
-          </div>
-          <div className="divide-y">
-            {technicalNotifications.length > 0 ? (
-              technicalNotifications.map((report) => (
-                <div key={report.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,0.95fr))] md:items-stretch">
-                  <div className="min-w-0">
-                    <Link href={`/quick-reports/technical-report/${report.id}`} className="block truncate text-sm font-black uppercase tracking-tight hover:text-primary hover:underline">
-                      {report.reportNumber} / {report.title || report.summary}
-                    </Link>
-                    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      {report.aircraftLabel || 'Aircraft not set'} / {report.location || 'Unknown location'}
-                    </p>
-                  </div>
-                  <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                    <Badge variant={report.status === 'Closed' ? 'default' : 'destructive'} className="mt-2 text-[10px] font-black uppercase">
-                      {report.status}
-                    </Badge>
-                  </div>
-                  <div className="flex h-full flex-col rounded-md border bg-background px-3 py-2.5 min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Filed</p>
-                    <p className="mt-1 text-sm font-black">{format(parseLocalDate(report.eventDate) || new Date(report.eventDate), 'dd MMM yyyy')}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                No open preliminary technical reports right now.
-              </div>
-            )}
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
