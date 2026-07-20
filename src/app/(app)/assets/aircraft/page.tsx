@@ -17,14 +17,18 @@ const COMPLETED_AUDIT_STATUSES = new Set(['finalized', 'closed', 'archived']);
 
 function getLastAuditDates(audits: QualityAudit[]) {
   const lastAuditDates: Record<string, string | null> = {};
-  const now = Date.now();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   for (const audit of audits) {
     if (!audit.assetId || !audit.auditDate) continue;
     if (!COMPLETED_AUDIT_STATUSES.has(String(audit.status).toLowerCase())) continue;
 
     const auditTime = new Date(audit.auditDate).getTime();
-    if (Number.isNaN(auditTime) || auditTime > now) continue;
+    if (Number.isNaN(auditTime)) continue;
+    const auditDay = new Date(auditTime);
+    auditDay.setHours(0, 0, 0, 0);
+    if (auditDay > today) continue;
 
     const currentDate = lastAuditDates[audit.assetId];
     if (!currentDate || auditTime > new Date(currentDate).getTime()) {
@@ -73,7 +77,11 @@ export default function AircraftFleetPage() {
   useEffect(() => {
     void loadAircrafts();
     window.addEventListener('safeviate-aircrafts-updated', loadAircrafts);
-    return () => window.removeEventListener('safeviate-aircrafts-updated', loadAircrafts);
+    window.addEventListener('safeviate-quality-updated', loadAircrafts);
+    return () => {
+      window.removeEventListener('safeviate-aircrafts-updated', loadAircrafts);
+      window.removeEventListener('safeviate-quality-updated', loadAircrafts);
+    };
   }, [loadAircrafts]);
 
   if (isLoading) {
