@@ -43,10 +43,6 @@ const examFormSchema = z.object({
   publicationMode: z.enum(['mandatory', 'mock']),
   assigneeIds: z.array(z.string()),
   dueDate: z.string().optional(),
-}).superRefine((values, context) => {
-  if (values.publicationMode === 'mandatory' && values.assigneeIds.length === 0) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['assigneeIds'], message: 'Select at least one required user.' });
-  }
 });
 
 export type ExamFormValues = z.infer<typeof examFormSchema>;
@@ -160,7 +156,7 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting, assi
                       <RadioGroup value={field.value} onValueChange={field.onChange} className="grid gap-3 md:grid-cols-2">
                         <Label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-background p-3">
                           <RadioGroupItem value="mandatory" className="mt-0.5" />
-                          <span><span className="block text-sm font-bold">Mandatory assessment</span><span className="block text-xs text-muted-foreground">Assign selected users and record their official completion.</span></span>
+                          <span><span className="block text-sm font-bold">Mandatory assessment</span><span className="block text-xs text-muted-foreground">Assign users now or save it unassigned for later.</span></span>
                         </Label>
                         <Label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-background p-3">
                           <RadioGroupItem value="mock" className="mt-0.5" />
@@ -188,7 +184,7 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting, assi
                     name="assigneeIds"
                     render={() => (
                       <FormItem className="md:col-span-2">
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Required Users</FormLabel>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-primary">Assign Users (Optional)</FormLabel>
                         <div className="grid max-h-48 gap-2 overflow-y-auto rounded-xl border bg-muted/5 p-3 sm:grid-cols-2">
                           {assignees.map((person) => (
                             <Label key={person.id} className="flex cursor-pointer items-center gap-3 rounded-lg border bg-background p-3 text-sm font-medium">
@@ -198,6 +194,7 @@ export function ExamForm({ initialValues, onSubmit, onCancel, isSubmitting, assi
                           ))}
                           {assignees.length === 0 ? <p className="text-sm text-muted-foreground">No personnel are available to assign.</p> : null}
                         </div>
+                        <p className="text-xs text-muted-foreground">An unassigned mandatory exam remains unavailable to users until you return and assign them.</p>
                         <FormMessage />
                       </FormItem>
                     )}

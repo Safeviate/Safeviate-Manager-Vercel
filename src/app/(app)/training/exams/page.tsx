@@ -10,7 +10,7 @@ import {
   CARD_COMPACT_HEADER_BAND_CLASS,
   MainPageHeader,
 } from "@/components/page-header";
-import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal, ChevronDown, QrCode } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal, ChevronDown, QrCode, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -351,6 +351,12 @@ export default function ExamsPage() {
                       gridClassName="sm:grid-cols-2 xl:grid-cols-3"
                       renderItem={(template) => (
                         <Card key={template.id} className="rounded-lg border bg-background p-3 shadow-sm">
+                          {(() => {
+                            const assigneeCount = template.publication?.assigneeIds.length || 0;
+                            const isUnassigned = assigneeCount === 0;
+
+                            return (
+                              <>
                           <div className="space-y-1">
                             <p className="text-sm font-bold leading-tight">{template.title}</p>
                             <p className="text-xs text-muted-foreground">{template.subject}</p>
@@ -372,10 +378,18 @@ export default function ExamsPage() {
                                   Start
                                 </Button>
                               ) : (
-                                <Badge variant="secondary" className="text-[9px] font-black uppercase">{template.publication?.assigneeIds.length || 0} assigned</Badge>
+                                <Badge variant={isUnassigned ? 'outline' : 'secondary'} className="text-[9px] font-black uppercase">{isUnassigned ? 'Unassigned' : `${assigneeCount} assigned`}</Badge>
                               )}
                               {canManage && (
                                 <>
+                                  {isUnassigned && (
+                                    <Button asChild variant="outline" size="compact" className="w-full sm:w-auto">
+                                      <Link href={`/training/exams/${template.id}/edit`}>
+                                        <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                                        Assign users
+                                      </Link>
+                                    </Button>
+                                  )}
                                   <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="View or print QR code">
                                     <Link href={`/training/exams/${template.id}/qr-code`}>
                                       <QrCode className="h-3.5 w-3.5" />
@@ -396,6 +410,9 @@ export default function ExamsPage() {
                               )}
                             </div>
                           </div>
+                              </>
+                            );
+                          })()}
                         </Card>
                       )}
                       renderLoadingItem={(index) => <Skeleton key={index} className="h-24 w-full rounded-lg" />}
