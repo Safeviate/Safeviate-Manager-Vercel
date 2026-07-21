@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     await Promise.all([ensurePersonnelSchema(), ensureTenantConfigSchema()]);
     const [template, student, session] = await Promise.all([
       loadTemplate(tenantId, templateId),
-      prisma.personnel.findFirst({ where: { id: studentId, tenantId }, select: { firstName: true, lastName: true } }),
+      prisma.personnel.findFirst({ where: { id: studentId, tenantId }, select: { firstName: true, lastName: true, email: true } }),
       getServerSession(authOptions),
     ]);
     if (!template || !Array.isArray(template.questions) || template.questions.length === 0) {
@@ -65,6 +65,10 @@ export async function POST(request: Request) {
     }
     if (!student) {
       return NextResponse.json({ error: 'The selected student is unavailable.' }, { status: 404 });
+    }
+    const sessionEmail = session?.user?.email?.trim().toLowerCase();
+    if (!sessionEmail || student.email.trim().toLowerCase() !== sessionEmail) {
+      return NextResponse.json({ error: 'Official exam results can only be submitted for your own personnel profile.' }, { status: 403 });
     }
     const publication = template.publication || { mode: 'mandatory', assigneeIds: [] };
     if (publication.mode !== 'mandatory' || !publication.assigneeIds.includes(studentId)) {

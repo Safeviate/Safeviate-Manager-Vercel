@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   HEADER_ACTION_BUTTON_CLASS,
@@ -10,7 +10,7 @@ import {
   CARD_COMPACT_HEADER_BAND_CLASS,
   MainPageHeader,
 } from "@/components/page-header";
-import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal, ChevronDown, QrCode } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import type { Personnel, PilotProfile } from '../../users/personnel/page';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -49,6 +50,8 @@ export default function ExamsPage() {
   const { tenantId, userProfile } = useUserProfile();
   const { tenant } = useTenantConfig();
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const handledLaunchId = useRef<string | null>(null);
 
   const isAviation = tenant?.industry?.startsWith('Aviation') ?? true;
 
@@ -69,6 +72,7 @@ export default function ExamsPage() {
 
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [isLoadingResults, setIsLoadingResults] = useState(true);
+  const [isLoadingPeople, setIsLoadingPeople] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +105,7 @@ export default function ExamsPage() {
         if (!cancelled) {
           setIsLoadingTemplates(false);
           setIsLoadingResults(false);
+          setIsLoadingPeople(false);
         }
       }
     };
@@ -130,14 +135,50 @@ export default function ExamsPage() {
       t.subject.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [templates, searchQuery]);
+  const currentPersonnelId = useMemo(() => {
+    const email = userProfile?.email?.trim().toLowerCase();
+    return allPeople.find((person) => person.email?.trim().toLowerCase() === email)?.id || userProfile?.id || '';
+  }, [allPeople, userProfile?.email, userProfile?.id]);
   const mandatoryTemplates = useMemo(() => filteredTemplates.filter((template) => {
     const publication = template.publication || { mode: 'mandatory', assigneeIds: [] };
-    return publication.mode === 'mandatory' && (canManage || publication.assigneeIds.includes(userProfile?.id || ''));
-  }), [canManage, filteredTemplates, userProfile?.id]);
+    return publication.mode === 'mandatory' && (canManage || publication.assigneeIds.includes(currentPersonnelId));
+  }), [canManage, currentPersonnelId, filteredTemplates]);
   const mockTemplates = useMemo(
     () => templates.filter((template) => template.publication?.mode === 'mock'),
     [templates],
   );
+
+  useEffect(() => {
+    const launchId = searchParams?.get('launch')?.trim();
+    if (!launchId || isLoadingTemplates || isLoadingPeople || handledLaunchId.current === launchId) return;
+
+    const template = templates.find((candidate) => candidate.id === launchId);
+    if (!template) {
+      handledLaunchId.current = launchId;
+      toast({
+        variant: 'destructive',
+        title: 'Exam Unavailable',
+        description: 'This exam link is no longer available in your organisation.',
+      });
+      return;
+    }
+
+    const publication = template.publication || { mode: 'mandatory', assigneeIds: [] };
+    if (publication.mode === 'mandatory' && !publication.assigneeIds.includes(currentPersonnelId)) {
+      handledLaunchId.current = launchId;
+      toast({
+        variant: 'destructive',
+        title: 'Exam Not Assigned',
+        description: 'This mandatory exam is not assigned to your personnel profile.',
+      });
+      return;
+    }
+
+    handledLaunchId.current = launchId;
+    setActiveTab(publication.mode === 'mock' ? 'mock' : 'mandatory');
+    setTakingExam({ template, isMock: publication.mode === 'mock' });
+  }, [currentPersonnelId, isLoadingPeople, isLoadingTemplates, searchParams, templates, toast]);
+
   const officialResults = useMemo(() => results.filter((result) => !result.isMock), [results]);
   const completedExamGroups = useMemo(() => {
     const groups = new Map<string, { templateTitle: string; results: ExamResult[] }>();
@@ -320,7 +361,7 @@ export default function ExamsPage() {
                             </Badge>
                             {template.publication?.dueDate ? <p className="text-[10px] font-bold uppercase text-muted-foreground">Due {format(new Date(`${template.publication.dueDate}T12:00:00`), 'dd MMM yyyy')}</p> : null}
                             <div className="flex items-center gap-1 sm:justify-end">
-                              {template.publication?.assigneeIds.includes(userProfile?.id || '') ? (
+                              {template.publication?.assigneeIds.includes(currentPersonnelId) ? (
                                 <Button
                                   variant="default"
                                   size="compact"
@@ -335,6 +376,12 @@ export default function ExamsPage() {
                               )}
                               {canManage && (
                                 <>
+                                  <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="View or print QR code">
+                                    <Link href={`/training/exams/${template.id}/qr-code`}>
+                                      <QrCode className="h-3.5 w-3.5" />
+                                      <span className="sr-only">View or print QR code for {template.title}</span>
+                                    </Link>
+                                  </Button>
                                   <Button asChild variant="ghost" size="icon" className="h-8 w-8">
                                     <Link href={`/training/exams/${template.id}/edit`}>
                                       <Pencil className="h-3.5 w-3.5" />
@@ -572,14 +619,24 @@ export default function ExamsPage() {
                                   <p className="text-sm font-bold leading-tight">{template.title}</p>
                                   <p className="text-xs text-muted-foreground">{template.subject}</p>
                                 </div>
-                                <Button
-                                  variant="outline"
-                                  size="compact"
-                                  className="mt-3 w-full bg-primary/5 hover:bg-primary/10 border-primary/20"
-                                  onClick={() => setTakingExam({ template, isMock: true })}
-                                >
-                                  <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
-                                </Button>
+                                <div className="mt-3 flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="compact"
+                                    className="flex-1 bg-primary/5 hover:bg-primary/10 border-primary/20"
+                                    onClick={() => setTakingExam({ template, isMock: true })}
+                                  >
+                                    <PlayCircle className="h-3.5 w-3.5" /> Start Practice Run
+                                  </Button>
+                                  {canManage && (
+                                    <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="View or print QR code">
+                                      <Link href={`/training/exams/${template.id}/qr-code`}>
+                                        <QrCode className="h-3.5 w-3.5" />
+                                        <span className="sr-only">View or print QR code for {template.title}</span>
+                                      </Link>
+                                    </Button>
+                                  )}
+                                </div>
                               </Card>
                             )}
                             renderLoadingItem={(index) => <Skeleton key={index} className="h-24 w-full rounded-lg" />}
@@ -605,7 +662,7 @@ export default function ExamsPage() {
             personnel={allPeople}
             tenantId={tenantId || ''}
             isMockOnly={takingExam.isMock}
-            lockedStudentId={takingExam.isMock ? undefined : userProfile?.id}
+            lockedStudentId={takingExam.isMock ? undefined : currentPersonnelId}
           />
       )}
     </div>

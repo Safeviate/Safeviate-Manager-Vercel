@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
@@ -348,6 +348,7 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
     const [options, setOptions] = useState<{ id: string; text: string }[]>([]);
     const [correctId, setCorrectId] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const questionTextRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -365,6 +366,14 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
             }
         }
     }, [isOpen, editingItem]);
+
+    useEffect(() => {
+        const textarea = questionTextRef.current;
+        if (!textarea) return;
+
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    }, [text]);
 
     const handleSave = async () => {
         if (!text.trim()) {
@@ -429,10 +438,12 @@ function UpsertQuestionDialog({ isOpen, onOpenChange, tenantId, topic, editingIt
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Question Text</Label>
                             <Textarea 
+                                ref={questionTextRef}
                                 value={text} 
                                 onChange={(e) => setText(e.target.value)} 
                                 placeholder="Enter the technical question..." 
-                                className="min-h-[120px] bg-muted/5 font-medium text-sm leading-relaxed" 
+                                rows={1}
+                                className="h-9 min-h-9 resize-y overflow-hidden bg-muted/5 py-2 font-medium text-sm leading-5"
                             />
                         </div>
                         
