@@ -1315,8 +1315,8 @@
     "semantic_hash": ""
   },
   "src/app/(app)/training/exams/exam-form.tsx": {
-    "mtime": 1784612001.5958335,
-    "ast_hash": "0e507b188dff18315d2fe1da7049bfd8",
+    "mtime": 1784612267.5509326,
+    "ast_hash": "7e087100a8e7e79556efa43258105599",
     "semantic_hash": ""
   },
   "src/app/(app)/training/exams/new/page.tsx": {
@@ -1350,9 +1350,9 @@
     "semantic_hash": "ad953f456eff88a74cad9348eaf994a7"
   },
   "src/app/(app)/training/question-bank/page.tsx": {
-    "mtime": 1779728556.940241,
-    "ast_hash": "424d14708a371fb98b68d1ce9674ef45",
-    "semantic_hash": "424d14708a371fb98b68d1ce9674ef45"
+    "mtime": 1784613148.8205261,
+    "ast_hash": "e3476e751aebd76a9cee41dafa025219",
+    "semantic_hash": ""
   },
   "src/app/(app)/training/student-debriefs/new/page.tsx": {
     "mtime": 1779439925.8881109,

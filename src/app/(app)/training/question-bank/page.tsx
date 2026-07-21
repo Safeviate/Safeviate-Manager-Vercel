@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ResponsiveCardGrid } from '@/components/responsive-card-grid';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -254,47 +253,48 @@ export default function QuestionBankPage() {
           <ScrollArea className="h-full">
             <div className="p-0">
                 <div className="p-4">
-                    <ResponsiveCardGrid
-                        items={filteredItems}
-                        isLoading={false}
-                        gridClassName="sm:grid-cols-2 xl:grid-cols-3"
-                        renderItem={(item) => (
-                            <Card key={item.id} className="overflow-hidden border shadow-none transition-shadow hover:shadow-sm">
-                                <div className="border-b bg-muted/5 px-4 py-3 flex flex-row items-center justify-between space-y-0">
-                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{selectedTopic}</span>
-                                    <Badge variant="outline" className="text-[9px] font-black uppercase">{item.options.length} OPTIONS</Badge>
-                                </div>
-                                <CardContent className="space-y-4 px-4 py-4">
-                                    <p className="text-sm font-bold text-foreground line-clamp-3 leading-relaxed">&quot;{item.text}&quot;</p>
-                                    <div className="grid gap-3 sm:grid-cols-2">
-                                        <div className="rounded-lg border bg-background px-3 py-3">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Options</p>
-                                            <p className="mt-1 text-sm font-semibold text-foreground">{item.options.length} stored</p>
-                                        </div>
-                                        <div className="rounded-lg border bg-background px-3 py-3">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</p>
-                                            <p className="mt-1 text-sm font-semibold text-foreground">Active Bank Item</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button variant="outline" size="sm" className="h-8 w-8 text-primary border-slate-300" onClick={() => setEditingItem(item)}>
-                                            <Pencil className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} poolItems={poolItems} topicsData={topicsData} />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                        emptyState={(
-                            <div className="h-64 text-center text-muted-foreground italic flex flex-col items-center justify-center gap-4 opacity-20">
-                                <Library className="h-16 w-16" />
-                                <div className="space-y-1">
-                                    <p className="text-lg font-black uppercase tracking-tighter">Empty Topic Database</p>
-                                    <p className="text-sm font-medium">No questions found in {selectedTopic || 'this topic'}.</p>
-                                </div>
+                    {filteredItems.length > 0 ? (
+                        <div className="overflow-hidden rounded-md border">
+                            <div className="hidden border-b bg-muted/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground md:grid md:grid-cols-[minmax(0,1fr)_100px_140px_88px] md:items-center md:gap-4">
+                                <span>Question</span>
+                                <span>Options</span>
+                                <span>Status</span>
+                                <span className="text-right">Actions</span>
                             </div>
-                        )}
-                    />
+                            <div className="divide-y">
+                                {filteredItems.map((item, index) => (
+                                    <div key={item.id} className="grid gap-3 p-4 transition-colors hover:bg-muted/5 md:grid-cols-[minmax(0,1fr)_100px_140px_88px] md:items-center md:gap-4">
+                                        <div className="flex min-w-0 items-start gap-3">
+                                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-background text-[10px] font-black text-muted-foreground">{index + 1}</span>
+                                            <p className="min-w-0 text-sm font-bold leading-relaxed text-foreground">{item.text}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 md:block">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground md:hidden">Options</span>
+                                            <Badge variant="outline" className="text-[9px] font-black uppercase">{item.options.length} options</Badge>
+                                        </div>
+                                        <div className="flex items-center gap-2 md:block">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground md:hidden">Status</span>
+                                            <span className="text-xs font-semibold text-foreground">Active bank item</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 md:justify-end">
+                                            <Button variant="outline" size="sm" className="h-8 w-8 text-primary border-slate-300" onClick={() => setEditingItem(item)}>
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <DeleteQuestionButton item={item} tenantId={tenantId!} selectedTopic={selectedTopic} poolItems={poolItems} topicsData={topicsData} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-64 text-center text-muted-foreground italic flex flex-col items-center justify-center gap-4 opacity-20">
+                            <Library className="h-16 w-16" />
+                            <div className="space-y-1">
+                                <p className="text-lg font-black uppercase tracking-tighter">Empty Topic Database</p>
+                                <p className="text-sm font-medium">No questions found in {selectedTopic || 'this topic'}.</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {filteredItems.length === 0 && !isLoading && (

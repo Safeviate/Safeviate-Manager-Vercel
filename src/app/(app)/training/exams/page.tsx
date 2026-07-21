@@ -7,6 +7,7 @@ import {
   HEADER_MOBILE_ACTION_BUTTON_CLASS,
   HEADER_TAB_LIST_CLASS,
   HEADER_TAB_TRIGGER_CLASS,
+  CARD_COMPACT_HEADER_BAND_CLASS,
   MainPageHeader,
 } from "@/components/page-header";
 import { Search, PlusCircle, Pencil, Trash2, ClipboardCheck, PlayCircle, ShieldCheck, Microscope, Database, MoreHorizontal, ChevronDown } from 'lucide-react';
@@ -137,6 +138,23 @@ export default function ExamsPage() {
     () => templates.filter((template) => template.publication?.mode === 'mock'),
     [templates],
   );
+  const officialResults = useMemo(() => results.filter((result) => !result.isMock), [results]);
+  const completedExamGroups = useMemo(() => {
+    const groups = new Map<string, { templateTitle: string; results: ExamResult[] }>();
+
+    officialResults.forEach((result) => {
+      const group = groups.get(result.templateId) || { templateTitle: result.templateTitle, results: [] };
+      group.results.push(result);
+      groups.set(result.templateId, group);
+    });
+
+    return [...groups.values()]
+      .map((group) => ({
+        ...group,
+        results: group.results.sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime()),
+      }))
+      .sort((left, right) => new Date(right.results[0]?.date || 0).getTime() - new Date(left.results[0]?.date || 0).getTime());
+  }, [officialResults]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -341,6 +359,62 @@ export default function ExamsPage() {
                       )}
                     />
                   </div>
+                </section>
+
+                <Separator />
+
+                <section className="space-y-4">
+                  <div className="space-y-2">
+                    <h2 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 border-b border-primary/20 pb-1 w-fit">
+                      <ClipboardCheck className="h-3.5 w-3.5" />
+                      Completed Exams
+                    </h2>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/75">Official results grouped by assessment, including each candidate&apos;s pass mark.</p>
+                  </div>
+
+                  {isLoadingResults ? (
+                    <div className="space-y-3">
+                      {[1, 2].map((index) => <Skeleton key={index} className="h-28 w-full rounded-lg" />)}
+                    </div>
+                  ) : completedExamGroups.length ? (
+                    <div className="space-y-4">
+                      {completedExamGroups.map((group) => (
+                        <Card key={group.results[0].templateId} className="overflow-hidden border shadow-none">
+                          <CardHeader className={CARD_COMPACT_HEADER_BAND_CLASS}>
+                            <CardTitle className="min-w-0 truncate text-[13px] font-bold">{group.templateTitle}</CardTitle>
+                            <Badge variant="outline" className="shrink-0 text-[9px] font-black uppercase">{group.results.length} completed</Badge>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            <div className="divide-y">
+                              {group.results.map((result) => (
+                                <div key={result.id} className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_155px_135px_132px] sm:items-center sm:gap-4">
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground sm:hidden">Personnel</p>
+                                    <p className="truncate text-sm font-bold">{result.studentName}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground sm:hidden">Completed</p>
+                                    <p className="text-xs font-medium text-foreground">{format(new Date(result.date), 'dd MMM yyyy HH:mm')}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground sm:hidden">Score / pass mark</p>
+                                    <p className="text-sm font-black">{result.score}% <span className="text-xs font-semibold text-muted-foreground">/ {result.passingScore}% pass</span></p>
+                                  </div>
+                                  <div className="sm:text-right">
+                                    <Badge variant={result.passed ? 'default' : 'destructive'} className={cn('text-[9px] font-black uppercase', result.passed ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200')}>
+                                      {result.passed ? 'Passed' : 'Failed'}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed p-8 text-center text-sm font-medium text-muted-foreground">No official exams have been completed yet.</div>
+                  )}
                 </section>
 
                 <Separator />
