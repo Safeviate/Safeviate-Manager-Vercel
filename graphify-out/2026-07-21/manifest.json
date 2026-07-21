@@ -1330,8 +1330,8 @@
     "semantic_hash": "1edaec524efd2b9ae08653f2364a5807"
   },
   "src/app/(app)/training/exams/page.tsx": {
-    "mtime": 1784610819.8168328,
-    "ast_hash": "3d3fba723c77b1734d11be458e073510",
+    "mtime": 1784613777.3293653,
+    "ast_hash": "7311157bf97c179557b6a8965643ad9e",
     "semantic_hash": ""
   },
   "src/app/(app)/training/exams/take-exam-dialog.tsx": {
@@ -1350,8 +1350,8 @@
     "semantic_hash": "ad953f456eff88a74cad9348eaf994a7"
   },
   "src/app/(app)/training/question-bank/page.tsx": {
-    "mtime": 1784613148.8205261,
-    "ast_hash": "e3476e751aebd76a9cee41dafa025219",
+    "mtime": 1784614342.9486704,
+    "ast_hash": "b92a018c6ab6dbe9e1ba2757ce56684b",
     "semantic_hash": ""
   },
   "src/app/(app)/training/student-debriefs/new/page.tsx": {
@@ -1370,9 +1370,9 @@
     "semantic_hash": "1a6a4359a1cff340b7caf4b8a186a3bc"
   },
   "src/app/(app)/training/student-progress/page.tsx": {
-    "mtime": 1782147442.8538766,
-    "ast_hash": "a399a5d44c466363383cdc6c26857a24",
-    "semantic_hash": "a399a5d44c466363383cdc6c26857a24"
+    "mtime": 1784614734.556881,
+    "ast_hash": "d69de69d575871107c158314c8f27c18",
+    "semantic_hash": ""
   },
   "src/app/(app)/users/access-overview/page.tsx": {
     "mtime": 1782134872.0034826,

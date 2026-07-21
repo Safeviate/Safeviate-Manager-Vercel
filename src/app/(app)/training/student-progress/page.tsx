@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { GraduationCap, ArrowRight, Clock3, CalendarDays } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { GraduationCap, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MainPageHeader } from '@/components/page-header';
@@ -368,8 +368,15 @@ export default function StudentProgressPage() {
               </div>
 
               {studentRows.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  {studentRows.map((student) => {
+                <section className="overflow-hidden rounded-lg border bg-background shadow-none">
+                  <div className="flex items-center justify-between border-b bg-muted/20 px-4 py-3">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">Students</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{studentRows.length} student{studentRows.length === 1 ? '' : 's'} in the current period</p>
+                    </div>
+                  </div>
+                  <div className="divide-y">
+                    {studentRows.map((student) => {
                     const studentProfile = students.find((entry) => entry.id === student.id);
                     const reports = Array.isArray(summary.studentProgressReports)
                       ? summary.studentProgressReports.filter((report) => report.studentId === student.id)
@@ -389,129 +396,66 @@ export default function StudentProgressPage() {
                     const selectedInstructorValue = instructorDrafts[student.id] ?? student.primaryInstructorId ?? 'unassigned';
 
                     return (
-                        <Card key={student.id} className="h-full overflow-hidden border shadow-none transition-colors hover:bg-muted/40">
-                          <CardHeader className="border-b bg-muted/5 px-4 py-2.5">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <CardTitle className="truncate text-sm font-black uppercase tracking-tight">{student.name}</CardTitle>
-                                <CardDescription className="truncate text-[10px] font-bold uppercase tracking-[0.16em]">
-                                  {student.email || 'No email on file'}
-                                </CardDescription>
-                              </div>
-                              <Badge variant={student.status === 'over' ? 'destructive' : student.status === 'watch' ? 'secondary' : 'outline'} className="text-[10px] font-black uppercase">
-                                {student.status === 'over' ? 'At risk' : student.status === 'watch' ? 'Watch' : 'Safe'}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-2.5 p-3.5">
-                            <div className="grid gap-2.5 sm:grid-cols-2">
-                              <InfoPill icon={<Clock3 className="h-3.5 w-3.5" />} label="Last Flight" value={lastFlight ? formatDateLabel(lastFlight) : 'None'} />
-                              <InfoPill icon={<CalendarDays className="h-3.5 w-3.5" />} label="Days Since Flight" value={formatDaysSince(student.daysSinceFlight)} />
-                            </div>
-
-                            <div className="rounded-xl border bg-background px-3 py-2">
-                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Assigned Instructor</p>
-                              <p className="mt-0.5 text-sm font-semibold leading-tight">
-                                {student.primaryInstructorId ? (instructorNameMap.get(student.primaryInstructorId) || student.primaryInstructorId) : 'Unassigned'}
-                              </p>
-                              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                Current profile assignment
-                              </p>
-                              {canManageStudentInstructors ? (
-                                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                                  <Select
-                                    value={selectedInstructorValue}
-                                    onValueChange={(value) =>
-                                      setInstructorDrafts((current) => ({
-                                        ...current,
-                                        [student.id]: value,
-                                      }))
-                                    }
-                                  >
-                                    <SelectTrigger className="h-9 text-xs font-bold">
-                                      <SelectValue placeholder="Assign instructor" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                                      {(Array.isArray(summary.instructors) ? summary.instructors : []).map((instructor) => (
-                                        <SelectItem key={instructor.id} value={instructor.id}>
-                                          {`${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.id}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      className="h-8.5 text-[10px] font-black uppercase"
-                                      disabled={
-                                        !studentProfile ||
-                                        savingStudentId === student.id ||
-                                        selectedInstructorValue === (student.primaryInstructorId ?? 'unassigned')
-                                      }
-                                      onClick={() => {
-                                        if (studentProfile) {
-                                          void updateStudentInstructor(studentProfile);
-                                        }
-                                      }}
-                                    >
-                                      {savingStudentId === student.id ? 'Saving...' : 'Change Instructor'}
-                                    </Button>
-                                </div>
-                              ) : null}
-                            </div>
-
-                            <div className="grid gap-2.5 md:grid-cols-2">
-                              <div className="rounded-xl border bg-background px-3 py-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Hours Flown</p>
-                                <p className="mt-0.5 text-sm font-black leading-tight">{formatHours(student.totalFlightHours)}</p>
-                                <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                  {student.recentFlightHours > 0 ? `${formatHours(student.recentFlightHours)} in this period` : 'No hours flown in this period'}
-                                </p>
-                              </div>
-                              <div className="rounded-xl border bg-background px-3 py-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Hour Milestone</p>
-                                <p className="mt-0.5 text-sm font-black leading-tight">
-                                  {student.milestoneHours !== null ? `${student.milestoneHours.toFixed(0)}h next` : 'Milestones complete'}
-                                </p>
-                                <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                  {student.warningHours !== null ? `Warning from ${student.warningHours.toFixed(0)}h` : 'No further milestone configured'}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className={cn('rounded-xl border px-3 py-2', statusClass)}>
-                              <p className="text-[10px] font-black uppercase tracking-[0.16em]">Action</p>
-                              <p className="mt-0.5 text-sm font-black leading-tight">{student.recommendedAction}</p>
-                            </div>
-
-                            {readinessHeadline ? (
-                              <div className="rounded-xl border bg-muted/20 px-3 py-2">
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Readiness Signal</p>
-                                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-[0.14em]">
-                                    {readinessHeadline.signal === 'blocked' ? 'Blocked' : readinessHeadline.signal === 'watch' ? 'Watch' : 'Ready'}
-                                  </Badge>
-                                </div>
-                                <p className="mt-1 text-sm font-black">{readinessHeadline.label}</p>
-                                <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                  {readinessHeadline.detail}
-                                </p>
-                              </div>
-                            ) : null}
-                          </CardContent>
-                          <div className="border-t bg-muted/5 p-2">
-                            <Button asChild variant="ghost" size="sm" className="h-8 w-full justify-between px-3 text-[10px] font-black uppercase">
-                              <Link href={`/training/student-progress/${student.id}`}>
-                                Open Student Progress
-                                <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                              </Link>
-                            </Button>
+                      <div key={student.id} className="grid gap-3 px-4 py-3 transition-colors hover:bg-muted/5 md:grid-cols-[minmax(200px,1.4fr)_minmax(100px,0.8fr)_minmax(150px,1fr)_minmax(105px,0.75fr)_minmax(150px,1fr)_88px] md:items-center">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-black uppercase">{student.name}</p>
+                            <Badge variant={student.status === 'over' ? 'destructive' : student.status === 'watch' ? 'secondary' : 'outline'} className="shrink-0 text-[9px] font-black uppercase">
+                              {student.status === 'over' ? 'At risk' : student.status === 'watch' ? 'Watch' : 'Safe'}
+                            </Badge>
                           </div>
-                        </Card>
+                          <p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{student.email || 'No email on file'}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Last flight</p>
+                          <p className="mt-0.5 text-xs font-semibold">{lastFlight ? formatDateLabel(lastFlight) : 'None'}</p>
+                          <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{formatDaysSince(student.daysSinceFlight)}</p>
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Assigned instructor</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold">{student.primaryInstructorId ? (instructorNameMap.get(student.primaryInstructorId) || student.primaryInstructorId) : 'Unassigned'}</p>
+                          {canManageStudentInstructors ? (
+                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                              <Select value={selectedInstructorValue} onValueChange={(value) => setInstructorDrafts((current) => ({ ...current, [student.id]: value }))}>
+                                <SelectTrigger className="h-8 min-w-0 text-xs font-bold"><SelectValue placeholder="Assign instructor" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {(Array.isArray(summary.instructors) ? summary.instructors : []).map((instructor) => (
+                                    <SelectItem key={instructor.id} value={instructor.id}>{`${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.id}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button type="button" size="sm" className="h-8 text-[10px] font-black uppercase" disabled={!studentProfile || savingStudentId === student.id || selectedInstructorValue === (student.primaryInstructorId ?? 'unassigned')} onClick={() => studentProfile && void updateStudentInstructor(studentProfile)}>
+                                {savingStudentId === student.id ? 'Saving...' : 'Save'}
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">Flight progress</p>
+                          <p className="mt-0.5 text-xs font-semibold">{formatHours(student.totalFlightHours)}</p>
+                          <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{student.recentFlightHours > 0 ? `${formatHours(student.recentFlightHours)} this period` : 'No hours this period'}</p>
+                        </div>
+
+                        <div className={cn('min-w-0 rounded-lg border px-3 py-2', statusClass)}>
+                          <p className="text-[9px] font-black uppercase tracking-[0.12em]">Action / readiness</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold">{student.recommendedAction}</p>
+                          <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.12em] opacity-80">{readinessHeadline ? readinessHeadline.label : student.milestoneHours !== null ? `${student.milestoneHours.toFixed(0)}h next` : 'Milestones complete'}</p>
+                        </div>
+
+                        <Button asChild variant="outline" size="sm" className="h-8 w-full text-[10px] font-black uppercase xl:w-auto">
+                          <Link href={`/training/student-progress/${student.id}`}>
+                            Open <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      </div>
                     );
-                  })}
-                </div>
+                    })}
+                  </div>
+                </section>
               ) : (
                 <Card className="flex items-center justify-center h-64 shadow-none border bg-muted/5">
                   <div className="text-center space-y-4">
@@ -537,18 +481,6 @@ function StatTile({ label, value, hint }: { label: string; value: string; hint: 
       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
       <p className="mt-2 text-xl font-black leading-none">{value}</p>
       <p className="mt-1.5 text-[10px] font-medium uppercase leading-snug text-muted-foreground">{hint}</p>
-    </div>
-  );
-}
-
-function InfoPill({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-xl border bg-muted/5 px-3 py-3">
-      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-1 text-sm font-black">{value}</p>
     </div>
   );
 }

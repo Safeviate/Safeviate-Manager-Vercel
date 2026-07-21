@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS, HEADER_SECONDARY_BUTTON_CLASS } from "@/components/page-header";
+import { MainPageHeader, HEADER_ACTION_BUTTON_CLASS } from "@/components/page-header";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, MoreHorizontal, WandSparkles, ChevronDown } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Library, Pencil, Database, CheckCircle2, AlertCircle, Loader2, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,6 @@ import { cn } from '@/lib/utils';
 import type { QuestionBankItem } from '@/types/training';
 import type { ExamTopicsSettings } from '../../admin/exam-topics/page';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { AiExamGenerator } from '../exams/ai-exam-generator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PAGE_FORMAT_MOBILE_MUTED_BUTTON_CLASS } from '@/lib/page-format-buttons';
@@ -108,33 +107,6 @@ export default function QuestionBankPage() {
     });
   }, [poolItems, searchQuery, selectedTopic]);
 
-  const handleAiGenerated = async (questions: Array<Pick<QuestionBankItem, 'text' | 'options' | 'correctOptionId'>>) => {
-    const targetTopic = selectedTopic;
-    try {
-        const newItems = questions.map(q => ({
-            ...q,
-            id: crypto.randomUUID(),
-            topic: targetTopic,
-            createdAt: new Date().toISOString()
-        }));
-        const nextPool = [...newItems, ...poolItems];
-        await fetch('/api/exams', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ poolItems: nextPool, topics: topicsData?.topics || [] }),
-        });
-        setPoolItems(nextPool);
-        
-        window.dispatchEvent(new Event('safeviate-question-bank-updated'));
-        toast({ 
-            title: 'Bank Populated', 
-            description: `${questions.length} questions added to the ${targetTopic} database.` 
-        });
-    } catch (e) {
-        toast({ variant: 'destructive', title: 'Populate Failed' });
-    }
-  };
-
   if (isPermissionsLoading || isLoadingTopics || (isLoading && !poolItems)) {
     return (
       <div className="lg:max-w-[1100px] mx-auto w-full p-8 pt-4 space-y-6">
@@ -178,14 +150,6 @@ export default function QuestionBankPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
-                  <AiExamGenerator 
-                    onGenerated={handleAiGenerated} 
-                    trigger={
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
-                        <WandSparkles className="mr-2 h-4 w-4" /> AI Generate
-                      </DropdownMenuItem>
-                    }
-                  />
                   <DropdownMenuItem onClick={() => setIsAddOpen(true)} disabled={!selectedTopic} className="cursor-pointer">
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Question
                   </DropdownMenuItem>
@@ -193,15 +157,6 @@ export default function QuestionBankPage() {
               </DropdownMenu>
             ) : (
               <div className="flex gap-2 w-full sm:w-auto">
-                  <AiExamGenerator
-                    onGenerated={handleAiGenerated}
-                    trigger={
-                      <Button variant="outline" className={HEADER_SECONDARY_BUTTON_CLASS}>
-                        <WandSparkles className="h-4 w-4" />
-                        Synthesize with AI
-                      </Button>
-                    }
-                  />
                   <Button className={HEADER_ACTION_BUTTON_CLASS} onClick={() => setIsAddOpen(true)} disabled={!selectedTopic}>
                       <PlusCircle className="h-4 w-4" /> Add Question
                   </Button>
