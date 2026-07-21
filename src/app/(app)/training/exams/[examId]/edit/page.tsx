@@ -7,7 +7,7 @@ import { ExamForm, type ExamFormValues } from '../../exam-form';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { ExamTemplate } from '@/types/training';
+import type { ExamTemplate, QuestionBankItem } from '@/types/training';
 import { MainPageHeader } from '@/components/page-header';
 
 interface EditExamPageProps {
@@ -23,6 +23,7 @@ export default function EditExamPage({ params }: EditExamPageProps) {
 
   const [exam, setExam] = useState<ExamTemplate | null>(null);
   const [assignees, setAssignees] = useState<Array<{ id: string; firstName: string; lastName: string; userType?: string }>>([]);
+  const [questionBankItems, setQuestionBankItems] = useState<QuestionBankItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function EditExamPage({ params }: EditExamPageProps) {
         if (!cancelled) {
           setExam(found || null);
           setAssignees(Array.isArray(usersPayload?.personnel) ? usersPayload.personnel : []);
+          setQuestionBankItems(Array.isArray(payload?.poolItems) ? payload.poolItems : []);
         }
       } catch (e) {
         console.error('Failed to load exam', e);
@@ -110,7 +112,7 @@ export default function EditExamPage({ params }: EditExamPageProps) {
         <div className="sticky top-0 z-30 bg-card">
             <MainPageHeader 
                 title={`Edit Exam: ${exam.title}`}
-                description="Modify questions, subject matter, or passing criteria."
+                description="Adjust the Question Bank selection, questions, publishing, or passing criteria."
             />
         </div>
         <div className="flex-1 overflow-hidden">
@@ -125,6 +127,7 @@ export default function EditExamPage({ params }: EditExamPageProps) {
                 onCancel={() => router.push('/training/exams')}
                 isSubmitting={isSubmitting}
                 assignees={assignees}
+                questionBankItems={questionBankItems}
             />
         </div>
       </Card>

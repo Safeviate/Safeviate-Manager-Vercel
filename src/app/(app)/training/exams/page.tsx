@@ -56,7 +56,7 @@ export default function ExamsPage() {
 
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<string>('10');
-  const [activeTab, setActiveTab] = useState('internal');
+  const [activeTab, setActiveTab] = useState('mandatory');
 
   const canManage = hasPermission('training-exams-manage');
 
@@ -187,17 +187,13 @@ export default function ExamsPage() {
     setTakingExam({ template: transientTemplate, isMock: true });
   };
 
-  const examTabs = [
-    { value: 'internal', label: 'Internal Exams', icon: ShieldCheck },
-    { value: 'mock', label: 'Mock Exams', icon: Microscope },
-  ];
-
   return (
     <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col gap-6 h-full overflow-hidden px-1 pt-4">
       <Card className="flex-1 flex flex-col shadow-none border overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <MainPageHeader 
             title={isAviation ? "Examinations" : "Knowledge Assessments"}
+            description="Complete assigned mandatory exams or take an open mock exam for practice."
             actions={
               isMobile ? (
                 <DropdownMenu>
@@ -215,8 +211,8 @@ export default function ExamsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]">
-                    <DropdownMenuItem onClick={() => setActiveTab('internal')}>
-                      <ShieldCheck className="mr-2 h-4 w-4" /> View Internal
+                    <DropdownMenuItem onClick={() => setActiveTab('mandatory')}>
+                      <ShieldCheck className="mr-2 h-4 w-4" /> Mandatory Exams
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setActiveTab('mock')}>
                       <Microscope className="mr-2 h-4 w-4" /> View Mocks
@@ -226,7 +222,7 @@ export default function ExamsPage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                           <Link href="/training/exams/new">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Create Template
+                            <PlusCircle className="mr-2 h-4 w-4" /> Create & Publish Exam
                           </Link>
                         </DropdownMenuItem>
                       </>
@@ -237,11 +233,11 @@ export default function ExamsPage() {
                 <>
                   <TabsList className={HEADER_TAB_LIST_CLASS}>
                     <TabsTrigger 
-                      value="internal" 
+                      value="mandatory"
                       className={HEADER_TAB_TRIGGER_CLASS}
                     >
                       <ShieldCheck className="h-4 w-4" /> 
-                      {isAviation ? 'Internal Exams' : 'Internal Assessments'}
+                      Mandatory Exams
                     </TabsTrigger>
                     <TabsTrigger 
                       value="mock" 
@@ -254,7 +250,7 @@ export default function ExamsPage() {
                   {canManage && (
                     <Button asChild size="sm" className={HEADER_ACTION_BUTTON_CLASS}>
                       <Link href="/training/exams/new">
-                        <PlusCircle className="h-5 w-5" /> New Template
+                        <PlusCircle className="h-5 w-5" /> Create & Publish Exam
                       </Link>
                     </Button>
                   )}
@@ -263,7 +259,7 @@ export default function ExamsPage() {
             }
           />
 
-          <TabsContent value="internal" className="flex-1 min-h-0 overflow-hidden m-0">
+          <TabsContent value="mandatory" className="flex-1 min-h-0 overflow-hidden m-0">
             <ScrollArea className="h-full">
               <div className="flex flex-col gap-8 p-4 pb-16 sm:gap-10 sm:p-6 sm:pb-20">
                 

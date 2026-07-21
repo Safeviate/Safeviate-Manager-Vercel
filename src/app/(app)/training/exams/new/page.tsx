@@ -7,18 +7,26 @@ import { ExamForm, type ExamFormValues } from '../exam-form';
 import { Card } from '@/components/ui/card';
 import { BackNavButton } from '@/components/back-nav-button';
 import { MainPageHeader } from '@/components/page-header';
+import type { QuestionBankItem } from '@/types/training';
 
 export default function NewExamPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignees, setAssignees] = useState<Array<{ id: string; firstName: string; lastName: string; userType?: string }>>([]);
+  const [questionBankItems, setQuestionBankItems] = useState<QuestionBankItem[]>([]);
 
   useEffect(() => {
-    fetch('/api/users', { cache: 'no-store' })
-      .then((response) => response.json())
-      .then((payload) => setAssignees(Array.isArray(payload?.personnel) ? payload.personnel : []))
-      .catch(() => setAssignees([]));
+    Promise.all([fetch('/api/users', { cache: 'no-store' }), fetch('/api/exams', { cache: 'no-store' })])
+      .then(async ([usersResponse, examsResponse]) => [await usersResponse.json(), await examsResponse.json()])
+      .then(([usersPayload, examsPayload]) => {
+        setAssignees(Array.isArray(usersPayload?.personnel) ? usersPayload.personnel : []);
+        setQuestionBankItems(Array.isArray(examsPayload?.poolItems) ? examsPayload.poolItems : []);
+      })
+      .catch(() => {
+        setAssignees([]);
+        setQuestionBankItems([]);
+      });
   }, []);
 
   const handleCreate = async (values: ExamFormValues) => {
@@ -59,7 +67,7 @@ export default function NewExamPage() {
     <div className="lg:max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden gap-4 pt-4">
       <MainPageHeader
         title="New Exam Template"
-        description="Define questions and subject matter for official or mock assessments."
+        description="Select a Question Bank topic, set the pass mark, then publish the assessment."
         actions={<BackNavButton href="/training/exams" text="Back to Exams" />}
       />
 
@@ -69,6 +77,7 @@ export default function NewExamPage() {
           onCancel={() => router.push('/training/exams')}
           isSubmitting={isSubmitting}
           assignees={assignees}
+          questionBankItems={questionBankItems}
         />
       </Card>
     </div>
