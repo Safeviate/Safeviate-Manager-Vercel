@@ -54,8 +54,7 @@ export async function sendWelcomeEmail({ email, name, setupLink, variant = 'welc
     console.warn(`[MAIL] Skipping dispatch to ${email}. RESEND_API_KEY is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
     return {
-      success: true,
-      deliveryMode: 'manual-link',
+      success: false,
       error: 'RESEND_API_KEY missing',
       diagnostics: { fromEmail, hasApiKey: false, provider: 'resend' },
     };
@@ -65,8 +64,7 @@ export async function sendWelcomeEmail({ email, name, setupLink, variant = 'welc
     console.warn(`[MAIL] Skipping dispatch to ${email}. MAIL_FROM is not configured.`);
     console.info(`[MAIL] Manual link for ${name}: ${setupLink}`);
     return {
-      success: true,
-      deliveryMode: 'manual-link',
+      success: false,
       error: 'Sender email missing (set MAIL_FROM or RESEND_FROM)',
       diagnostics: { hasApiKey: true, provider: 'resend' },
     };
@@ -251,8 +249,7 @@ export async function sendMeetingEmail({
   if (!apiKey) {
     console.warn(`[MAIL] Skipping meeting email to ${email}. RESEND_API_KEY is not configured.`);
     return {
-      success: true,
-      deliveryMode: 'manual-link',
+      success: false,
       error: 'RESEND_API_KEY missing',
       diagnostics: { fromEmail, hasApiKey: false, provider: 'resend' },
     };
