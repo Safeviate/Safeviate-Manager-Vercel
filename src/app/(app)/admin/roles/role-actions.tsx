@@ -28,7 +28,7 @@ export function RoleActions({ tenantId, role }: RoleActionsProps) {
   const { hasPermission } = usePermissions();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const canManage = hasPermission('admin-roles-manage');
+  const canManage = hasPermission('admin-permissions-edit');
 
   const handleDelete = () => {
     fetch(`/api/roles/${role.id}`, { method: 'DELETE' })

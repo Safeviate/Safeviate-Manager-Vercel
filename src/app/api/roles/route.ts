@@ -72,36 +72,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Role name is required.' }, { status: 400 });
   }
 
-  const role = await prisma.role.upsert({
-    where: { id },
-    update: {
-      tenantId,
-      name,
-      permissions,
-      requiredDocuments,
-      updatedAt: new Date(),
-    },
-    create: {
+  const hiddenMenus = Array.isArray(body.accessOverrides?.hiddenMenus)
+    ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string')
+    : [];
+
+  const role = await prisma.$transaction(async (transaction) => {
+    const savedRole = await transaction.role.upsert({
+      where: { id },
+      update: {
+        tenantId,
+        name,
+        permissions,
+        requiredDocuments,
+        updatedAt: new Date(),
+      },
+      create: {
+        id,
+        tenantId,
+        name,
+        permissions,
+        requiredDocuments,
+      },
+    });
+
+    await transaction.$executeRawUnsafe(
+      `UPDATE roles
+       SET access_overrides = $4::jsonb,
+           updated_at = NOW()
+       WHERE id = $1 AND tenant_id = $2`,
       id,
       tenantId,
       name,
-      permissions,
-      requiredDocuments,
-    },
-  });
+      JSON.stringify({ hiddenMenus }),
+    );
 
-  await prisma.$executeRawUnsafe(
-    `UPDATE roles
-     SET access_overrides = $4::jsonb,
-         updated_at = NOW()
-     WHERE id = $1 AND tenant_id = $2`,
-    id,
-    tenantId,
-    name,
-    JSON.stringify({ hiddenMenus: Array.isArray(body.accessOverrides?.hiddenMenus) ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string') : [] }),
-  ).catch(() => null);
+    return savedRole;
+  });
 
   invalidatePersonnelDirectoryCaches(tenantId);
 
-  return NextResponse.json({ role: { ...role, accessOverrides: { hiddenMenus: Array.isArray(body.accessOverrides?.hiddenMenus) ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string') : [] } } }, { status: 200 });
+  return NextResponse.json({ role: { ...role, accessOverrides: { hiddenMenus } } }, { status: 200 });
 }

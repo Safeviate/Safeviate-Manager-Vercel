@@ -13,7 +13,9 @@ import Link from 'next/link';
 import { MainPageHeader } from '@/components/page-header';
 import { TenantLayoutDisabledState } from '@/components/tenant-layout-disabled-state';
 import { useTenantRouteAccess } from '@/hooks/use-tenant-route-access';
-import { hasHierarchicalPermission } from '@/lib/permission-model';
+import { hasHierarchicalPermission, normalizePermissionIds } from '@/lib/permission-model';
+import { MASTER_TENANT_EMAILS, MASTER_TENANT_ID } from '@/lib/tenant-constants';
+import type { Personnel } from '../personnel/personnel-directory-page';
 
 type AccessRow = {
   href: string;
@@ -69,6 +71,8 @@ export default function AccessOverviewPage() {
   const { isAllowed } = useTenantRouteAccess({ href: '/users/access-overview' });
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -94,12 +98,82 @@ export default function AccessOverviewPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPersonnel = async () => {
+      try {
+        const response = await fetch('/api/personnel', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!cancelled) {
+          const nextPersonnel = Array.isArray(payload.personnel) ? payload.personnel : [];
+          setPersonnel(nextPersonnel);
+          setSelectedPersonnelId((current) => current || nextPersonnel[0]?.id || '');
+        }
+      } catch {
+        if (!cancelled) setPersonnel([]);
+      }
+    };
+
+    void loadPersonnel();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const isLoading = isLoadingTenant || isLoadingRoles;
 
   const menuGroups = useMemo(() => buildAccessGroups(menuConfig), []);
 
+  const selectedPersonnel = useMemo(
+    () => personnel.find((person) => person.id === selectedPersonnelId) || null,
+    [personnel, selectedPersonnelId],
+  );
+
+  const selectedRole = useMemo(
+    () => roles.find((role) => role.id === selectedPersonnel?.role) || null,
+    [roles, selectedPersonnel?.role],
+  );
+
+  const directPermissionGrants = useMemo(
+    () => normalizePermissionIds((selectedPersonnel?.permissions || []).filter((permission) => !permission.startsWith('!'))),
+    [selectedPersonnel],
+  );
+
+  const directPermissionDenials = useMemo(
+    () => new Set(normalizePermissionIds((selectedPersonnel?.permissions || [])
+      .filter((permission) => permission.startsWith('!'))
+      .map((permission) => permission.slice(1)))),
+    [selectedPersonnel],
+  );
+
+  const selectedRolePermissions = useMemo(
+    () => normalizePermissionIds(selectedRole?.permissions || []),
+    [selectedRole],
+  );
+
+  const hiddenMenusForSelectedUser = useMemo(
+    () => new Set([
+      ...(selectedRole?.accessOverrides?.hiddenMenus || []),
+      ...(selectedPersonnel?.accessOverrides?.hiddenMenus || []),
+    ]),
+    [selectedPersonnel, selectedRole],
+  );
+
+  const selectedUserHasPermission = (permissionId?: string) => {
+    if (!permissionId) return true;
+    const grants = new Set([...selectedRolePermissions, ...directPermissionGrants]);
+    return grants.has('*') || hasHierarchicalPermission(grants, permissionId, directPermissionDenials);
+  };
+
+  const isSelectedMasterSuperUser = Boolean(
+    tenant?.id === MASTER_TENANT_ID &&
+    selectedPersonnel?.email &&
+    MASTER_TENANT_EMAILS.includes(selectedPersonnel.email.trim().toLowerCase()),
+  );
+
   const isModuleEnabled = (href: string) =>
-    !tenant?.enabledMenus || tenant.enabledMenus.includes(href);
+    href === '/dashboard' || !tenant?.enabledMenus || tenant.enabledMenus.includes(href);
 
   if (!isLoading && !isAllowed) {
     return <TenantLayoutDisabledState />;
@@ -289,11 +363,73 @@ export default function AccessOverviewPage() {
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary">Visibility Logic</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0 text-[10px] text-muted-foreground font-medium leading-relaxed">
-                For a user to see a menu item or submenu, two conditions must be met:
+                For a user to see a menu item or submenu, all of these conditions must be met:
                 <ol className="list-decimal pl-4 mt-2 space-y-1">
-                  <li>The module must be enabled globally in <Link href="/admin/page-format" className="text-primary hover:underline">Page Format</Link>.</li>
-                  <li>The user&apos;s Role must have the corresponding permission tier for that menu row.</li>
+                  <li>The tenant module must be enabled in <Link href="/admin/page-format" className="text-primary hover:underline">Page Format</Link>.</li>
+                  <li>The role or a direct user grant must allow the permission.</li>
+                  <li>The role and user must not hide the menu, and a direct denial must not block the permission.</li>
                 </ol>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-none border overflow-hidden">
+              <CardHeader className="bg-muted/5 border-b p-4">
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
+                  <Shield className="h-3.5 w-3.5 text-primary" />
+                  Effective User Access
+                </CardTitle>
+                <CardDescription className="text-[10px] leading-relaxed">
+                  Review the combined result of a role, direct user overrides, and tenant module settings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                <select
+                  value={selectedPersonnelId}
+                  onChange={(event) => setSelectedPersonnelId(event.target.value)}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-xs font-semibold"
+                  aria-label="Select a personnel user to review effective access"
+                >
+                  {personnel.length === 0 ? <option value="">No personnel users found</option> : null}
+                  {personnel.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.firstName} {person.lastName} - {person.email}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedPersonnel ? (
+                  <>
+                    <div className="rounded-md border bg-muted/20 p-3 text-[10px] font-medium leading-relaxed">
+                      <p><span className="font-black uppercase text-muted-foreground">Role:</span> {selectedRole?.name || 'No assigned role'}</p>
+                      <p><span className="font-black uppercase text-muted-foreground">Direct grants:</span> {directPermissionGrants.length}</p>
+                      <p><span className="font-black uppercase text-muted-foreground">Direct denials:</span> {directPermissionDenials.size}</p>
+                      <p><span className="font-black uppercase text-muted-foreground">Hidden menus:</span> {hiddenMenusForSelectedUser.size}</p>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto rounded-md border">
+                      {menuGroups.flatMap((group) => group.rows).map((row) => {
+                        const moduleEnabled = isModuleEnabled(row.href);
+                        const hidden = hiddenMenusForSelectedUser.has(row.href);
+                        const permitted = isSelectedMasterSuperUser || selectedUserHasPermission(row.permissionId);
+                        const isModuleRecoverySurface = row.href === '/admin/page-format' && permitted;
+                        const allowed = (moduleEnabled || isModuleRecoverySurface) && !hidden && permitted;
+
+                        return (
+                          <div key={row.href} className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0">
+                            <div className="min-w-0">
+                              <p className="truncate text-[11px] font-bold">{row.label}</p>
+                              <p className="truncate text-[9px] text-muted-foreground">{row.href}</p>
+                            </div>
+                            <Badge variant={allowed ? 'default' : 'outline'} className="shrink-0 text-[8px] font-black uppercase">
+                              {allowed
+                                ? isSelectedMasterSuperUser ? 'Master access' : isModuleRecoverySurface && !moduleEnabled ? 'Recovery access' : 'Visible'
+                                : hidden ? 'Hidden' : moduleEnabled ? 'No permission' : 'Module off'}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
               </CardContent>
             </Card>
           </div>

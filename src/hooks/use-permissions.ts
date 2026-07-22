@@ -100,6 +100,12 @@ export const usePermissions = () => {
 
       if (item.permissionId && !hasPermission(item.permissionId)) return false;
 
+      // This is the recovery surface for tenant module visibility. An authorized
+      // administrator must be able to re-enable modules that were turned off.
+      if (itemHref === '/admin/page-format' && hasPermission('admin-settings-edit')) {
+        return true;
+      }
+
       const isEnabledByTenant = !tenant?.enabledMenus || tenant.enabledMenus.includes(itemHref);
       if (!isEnabledByTenant) {
         if (item.subItems?.length) {

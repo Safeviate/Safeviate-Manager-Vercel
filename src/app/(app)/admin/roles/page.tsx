@@ -31,7 +31,7 @@ export default function RolesPage() {
   const { hasPermission } = usePermissions();
   const { isLoading: isAccessLoading, isAllowed } = useTenantRouteAccess({ href: '/admin/roles' });
   const { tenantId } = useUserProfile();
-  const canManage = hasPermission('admin-roles-manage');
+  const canManage = hasPermission('admin-permissions-edit');
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
