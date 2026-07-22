@@ -51,6 +51,11 @@ model User {
   email        String   @unique
   passwordHash String?  @map("password_hash")
   suspendedAt  DateTime? @map("suspended_at") @db.Timestamptz(6)
+  mfaSecretEncrypted        String?   @map("mfa_secret_encrypted") @db.Text
+  mfaPendingSecretEncrypted String?   @map("mfa_pending_secret_encrypted") @db.Text
+  mfaPendingExpiresAt       DateTime? @map("mfa_pending_expires_at") @db.Timestamptz(6)
+  mfaEnabledAt              DateTime? @map("mfa_enabled_at") @db.Timestamptz(6)
+  mfaRecoveryCodeHashes     String[]  @default([]) @map("mfa_recovery_code_hashes")
   firstName    String   @default("") @map("first_name")
   lastName     String   @default("") @map("last_name")
   role         String   @default("developer")

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { assertRequiredEnv } from '@/lib/server/env';
 import { enforceRateLimit } from '@/lib/server/request-security';
 import { MASTER_TENANT_EMAILS } from '@/lib/tenant-constants';
+import { decryptMfaSecret, verifyMfaCode } from '@/lib/server/mfa';
 
 assertRequiredEnv(['NEXTAUTH_SECRET'], 'authentication');
 
@@ -51,10 +52,12 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        mfaCode: { label: 'Authenticator or recovery code', type: 'text' },
       },
       async authorize(credentials, request) {
         const email = credentials?.email?.toString().toLowerCase().trim();
         const password = credentials?.password?.toString();
+        const mfaCode = credentials?.mfaCode?.toString() || '';
         const configuredSeedEmail = cleanEnvValue(process.env.AUTH_SEED_EMAIL).toLowerCase();
         const seedPasswordHash = cleanEnvValue(process.env.AUTH_SEED_PASSWORD_HASH);
         const seedPassword = cleanEnvValue(process.env.AUTH_SEED_PASSWORD);
@@ -150,6 +153,36 @@ export const authOptions: NextAuthOptions = {
           console.info('[AUTH] Database password compare result:', ok, { looksHashed });
 
           if (ok) {
+            if (dbUser.mfaEnabledAt && dbUser.mfaSecretEncrypted) {
+              try {
+                const verification = await verifyMfaCode(
+                  decryptMfaSecret(dbUser.mfaSecretEncrypted),
+                  mfaCode,
+                  dbUser.mfaRecoveryCodeHashes,
+                );
+
+                if (!verification.valid) {
+                  console.warn('[AUTH] MFA verification failed.', { email });
+                  return null;
+                }
+
+                if (verification.usedRecoveryCodeHash) {
+                  await prisma.user.update({
+                    where: { id: dbUser.id },
+                    data: {
+                      mfaRecoveryCodeHashes: dbUser.mfaRecoveryCodeHashes.filter(
+                        (codeHash) => codeHash !== verification.usedRecoveryCodeHash,
+                      ),
+                    },
+                  });
+                }
+              } catch (error) {
+                // Do not allow a configured MFA account to bypass MFA if its secret cannot be read.
+                console.error('[AUTH] MFA verification could not be completed.', { email, error });
+                return null;
+              }
+            }
+
             const personnelProfile = await prisma.personnel.findFirst({
               where: {
                 tenantId: dbUser.tenantId,

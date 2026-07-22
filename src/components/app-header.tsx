@@ -5,7 +5,7 @@ import { menuConfig } from '@/lib/menu-config';
 import type { MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Bell, Search, ChevronDown, LogOut, ArrowRightLeft, Check, AlertTriangle } from 'lucide-react';
+import { Bell, Search, ChevronDown, LogOut, ArrowRightLeft, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -495,6 +495,12 @@ export function AppHeader() {
               </>
             ) : null}
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/my-dashboard/security">
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                <span>Security & MFA</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>

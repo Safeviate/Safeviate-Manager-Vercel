@@ -8,6 +8,7 @@ For local development, copy `.env.local.example` to `.env.local` and set the req
 - `MAIL_FROM`
 - `NEXT_PUBLIC_APP_URL` if you want to override the deployment URL
 - `NEXTAUTH_SECRET`
+- `MFA_ENCRYPTION_KEY` (a stable base64-encoded 32-byte key used to encrypt authenticator secrets)
 - `NEXTAUTH_URL`
 - `AUTH_SEED_EMAIL`
 - `AUTH_SEED_PASSWORD` or `AUTH_SEED_PASSWORD_HASH`

@@ -30,6 +30,10 @@ export type UserMinAggregateOutputType = {
   email: string | null
   passwordHash: string | null
   suspendedAt: Date | null
+  mfaSecretEncrypted: string | null
+  mfaPendingSecretEncrypted: string | null
+  mfaPendingExpiresAt: Date | null
+  mfaEnabledAt: Date | null
   firstName: string | null
   lastName: string | null
   role: string | null
@@ -44,6 +48,10 @@ export type UserMaxAggregateOutputType = {
   email: string | null
   passwordHash: string | null
   suspendedAt: Date | null
+  mfaSecretEncrypted: string | null
+  mfaPendingSecretEncrypted: string | null
+  mfaPendingExpiresAt: Date | null
+  mfaEnabledAt: Date | null
   firstName: string | null
   lastName: string | null
   role: string | null
@@ -58,6 +66,11 @@ export type UserCountAggregateOutputType = {
   email: number
   passwordHash: number
   suspendedAt: number
+  mfaSecretEncrypted: number
+  mfaPendingSecretEncrypted: number
+  mfaPendingExpiresAt: number
+  mfaEnabledAt: number
+  mfaRecoveryCodeHashes: number
   firstName: number
   lastName: number
   role: number
@@ -74,6 +87,10 @@ export type UserMinAggregateInputType = {
   email?: true
   passwordHash?: true
   suspendedAt?: true
+  mfaSecretEncrypted?: true
+  mfaPendingSecretEncrypted?: true
+  mfaPendingExpiresAt?: true
+  mfaEnabledAt?: true
   firstName?: true
   lastName?: true
   role?: true
@@ -88,6 +105,10 @@ export type UserMaxAggregateInputType = {
   email?: true
   passwordHash?: true
   suspendedAt?: true
+  mfaSecretEncrypted?: true
+  mfaPendingSecretEncrypted?: true
+  mfaPendingExpiresAt?: true
+  mfaEnabledAt?: true
   firstName?: true
   lastName?: true
   role?: true
@@ -102,6 +123,11 @@ export type UserCountAggregateInputType = {
   email?: true
   passwordHash?: true
   suspendedAt?: true
+  mfaSecretEncrypted?: true
+  mfaPendingSecretEncrypted?: true
+  mfaPendingExpiresAt?: true
+  mfaEnabledAt?: true
+  mfaRecoveryCodeHashes?: true
   firstName?: true
   lastName?: true
   role?: true
@@ -189,6 +215,11 @@ export type UserGroupByOutputType = {
   email: string
   passwordHash: string | null
   suspendedAt: Date | null
+  mfaSecretEncrypted: string | null
+  mfaPendingSecretEncrypted: string | null
+  mfaPendingExpiresAt: Date | null
+  mfaEnabledAt: Date | null
+  mfaRecoveryCodeHashes: string[]
   firstName: string
   lastName: string
   role: string
@@ -224,6 +255,11 @@ export type UserWhereInput = {
   email?: Prisma.StringFilter<"User"> | string
   passwordHash?: Prisma.StringNullableFilter<"User"> | string | null
   suspendedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaSecretEncrypted?: Prisma.StringNullableFilter<"User"> | string | null
+  mfaPendingSecretEncrypted?: Prisma.StringNullableFilter<"User"> | string | null
+  mfaPendingExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaEnabledAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.StringNullableListFilter<"User">
   firstName?: Prisma.StringFilter<"User"> | string
   lastName?: Prisma.StringFilter<"User"> | string
   role?: Prisma.StringFilter<"User"> | string
@@ -240,6 +276,11 @@ export type UserOrderByWithRelationInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrderInput | Prisma.SortOrder
   suspendedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaSecretEncrypted?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaPendingSecretEncrypted?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaPendingExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaEnabledAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaRecoveryCodeHashes?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -259,6 +300,11 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   tenantId?: Prisma.StringFilter<"User"> | string
   passwordHash?: Prisma.StringNullableFilter<"User"> | string | null
   suspendedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaSecretEncrypted?: Prisma.StringNullableFilter<"User"> | string | null
+  mfaPendingSecretEncrypted?: Prisma.StringNullableFilter<"User"> | string | null
+  mfaPendingExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaEnabledAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.StringNullableListFilter<"User">
   firstName?: Prisma.StringFilter<"User"> | string
   lastName?: Prisma.StringFilter<"User"> | string
   role?: Prisma.StringFilter<"User"> | string
@@ -275,6 +321,11 @@ export type UserOrderByWithAggregationInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrderInput | Prisma.SortOrder
   suspendedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaSecretEncrypted?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaPendingSecretEncrypted?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaPendingExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaEnabledAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mfaRecoveryCodeHashes?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -295,6 +346,11 @@ export type UserScalarWhereWithAggregatesInput = {
   email?: Prisma.StringWithAggregatesFilter<"User"> | string
   passwordHash?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   suspendedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  mfaSecretEncrypted?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  mfaPendingSecretEncrypted?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  mfaPendingExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  mfaEnabledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.StringNullableListFilter<"User">
   firstName?: Prisma.StringWithAggregatesFilter<"User"> | string
   lastName?: Prisma.StringWithAggregatesFilter<"User"> | string
   role?: Prisma.StringWithAggregatesFilter<"User"> | string
@@ -308,6 +364,11 @@ export type UserCreateInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -324,6 +385,11 @@ export type UserUncheckedCreateInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -338,6 +404,11 @@ export type UserUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -354,6 +425,11 @@ export type UserUncheckedUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -369,6 +445,11 @@ export type UserCreateManyInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -382,6 +463,11 @@ export type UserUpdateManyMutationInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -396,6 +482,11 @@ export type UserUncheckedUpdateManyInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -414,12 +505,25 @@ export type UserOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type StringNullableListFilter<$PrismaModel = never> = {
+  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
+  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
+  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
+}
+
 export type UserCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   tenantId?: Prisma.SortOrder
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   suspendedAt?: Prisma.SortOrder
+  mfaSecretEncrypted?: Prisma.SortOrder
+  mfaPendingSecretEncrypted?: Prisma.SortOrder
+  mfaPendingExpiresAt?: Prisma.SortOrder
+  mfaEnabledAt?: Prisma.SortOrder
+  mfaRecoveryCodeHashes?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -434,6 +538,10 @@ export type UserMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   suspendedAt?: Prisma.SortOrder
+  mfaSecretEncrypted?: Prisma.SortOrder
+  mfaPendingSecretEncrypted?: Prisma.SortOrder
+  mfaPendingExpiresAt?: Prisma.SortOrder
+  mfaEnabledAt?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -448,6 +556,10 @@ export type UserMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   suspendedAt?: Prisma.SortOrder
+  mfaSecretEncrypted?: Prisma.SortOrder
+  mfaPendingSecretEncrypted?: Prisma.SortOrder
+  mfaPendingExpiresAt?: Prisma.SortOrder
+  mfaEnabledAt?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
   role?: Prisma.SortOrder
@@ -503,12 +615,21 @@ export type UserUncheckedUpdateManyWithoutTenantNestedInput = {
   deleteMany?: Prisma.UserScalarWhereInput | Prisma.UserScalarWhereInput[]
 }
 
+export type UserCreatemfaRecoveryCodeHashesInput = {
+  set: string[]
+}
+
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
 export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
+}
+
+export type UserUpdatemfaRecoveryCodeHashesInput = {
+  set?: string[]
+  push?: string | string[]
 }
 
 export type UserCreateNestedOneWithoutPasswordSetupInvitesInput = {
@@ -532,6 +653,11 @@ export type UserCreateWithoutTenantInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -546,6 +672,11 @@ export type UserUncheckedCreateWithoutTenantInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -590,6 +721,11 @@ export type UserScalarWhereInput = {
   email?: Prisma.StringFilter<"User"> | string
   passwordHash?: Prisma.StringNullableFilter<"User"> | string | null
   suspendedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaSecretEncrypted?: Prisma.StringNullableFilter<"User"> | string | null
+  mfaPendingSecretEncrypted?: Prisma.StringNullableFilter<"User"> | string | null
+  mfaPendingExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaEnabledAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.StringNullableListFilter<"User">
   firstName?: Prisma.StringFilter<"User"> | string
   lastName?: Prisma.StringFilter<"User"> | string
   role?: Prisma.StringFilter<"User"> | string
@@ -603,6 +739,11 @@ export type UserCreateWithoutPasswordSetupInvitesInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -618,6 +759,11 @@ export type UserUncheckedCreateWithoutPasswordSetupInvitesInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -647,6 +793,11 @@ export type UserUpdateWithoutPasswordSetupInvitesInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -662,6 +813,11 @@ export type UserUncheckedUpdateWithoutPasswordSetupInvitesInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -675,6 +831,11 @@ export type UserCreateManyTenantInput = {
   email: string
   passwordHash?: string | null
   suspendedAt?: Date | string | null
+  mfaSecretEncrypted?: string | null
+  mfaPendingSecretEncrypted?: string | null
+  mfaPendingExpiresAt?: Date | string | null
+  mfaEnabledAt?: Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserCreatemfaRecoveryCodeHashesInput | string[]
   firstName?: string
   lastName?: string
   role?: string
@@ -688,6 +849,11 @@ export type UserUpdateWithoutTenantInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -702,6 +868,11 @@ export type UserUncheckedUpdateWithoutTenantInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -716,6 +887,11 @@ export type UserUncheckedUpdateManyWithoutTenantInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   suspendedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingSecretEncrypted?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaPendingExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaEnabledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mfaRecoveryCodeHashes?: Prisma.UserUpdatemfaRecoveryCodeHashesInput | string[]
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
   lastName?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
@@ -761,6 +937,11 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   email?: boolean
   passwordHash?: boolean
   suspendedAt?: boolean
+  mfaSecretEncrypted?: boolean
+  mfaPendingSecretEncrypted?: boolean
+  mfaPendingExpiresAt?: boolean
+  mfaEnabledAt?: boolean
+  mfaRecoveryCodeHashes?: boolean
   firstName?: boolean
   lastName?: boolean
   role?: boolean
@@ -778,6 +959,11 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   passwordHash?: boolean
   suspendedAt?: boolean
+  mfaSecretEncrypted?: boolean
+  mfaPendingSecretEncrypted?: boolean
+  mfaPendingExpiresAt?: boolean
+  mfaEnabledAt?: boolean
+  mfaRecoveryCodeHashes?: boolean
   firstName?: boolean
   lastName?: boolean
   role?: boolean
@@ -793,6 +979,11 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   passwordHash?: boolean
   suspendedAt?: boolean
+  mfaSecretEncrypted?: boolean
+  mfaPendingSecretEncrypted?: boolean
+  mfaPendingExpiresAt?: boolean
+  mfaEnabledAt?: boolean
+  mfaRecoveryCodeHashes?: boolean
   firstName?: boolean
   lastName?: boolean
   role?: boolean
@@ -808,6 +999,11 @@ export type UserSelectScalar = {
   email?: boolean
   passwordHash?: boolean
   suspendedAt?: boolean
+  mfaSecretEncrypted?: boolean
+  mfaPendingSecretEncrypted?: boolean
+  mfaPendingExpiresAt?: boolean
+  mfaEnabledAt?: boolean
+  mfaRecoveryCodeHashes?: boolean
   firstName?: boolean
   lastName?: boolean
   role?: boolean
@@ -816,7 +1012,7 @@ export type UserSelectScalar = {
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "email" | "passwordHash" | "suspendedAt" | "firstName" | "lastName" | "role" | "profilePath" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tenantId" | "email" | "passwordHash" | "suspendedAt" | "mfaSecretEncrypted" | "mfaPendingSecretEncrypted" | "mfaPendingExpiresAt" | "mfaEnabledAt" | "mfaRecoveryCodeHashes" | "firstName" | "lastName" | "role" | "profilePath" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   tenant?: boolean | Prisma.TenantDefaultArgs<ExtArgs>
   passwordSetupInvites?: boolean | Prisma.User$passwordSetupInvitesArgs<ExtArgs>
@@ -841,6 +1037,11 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     email: string
     passwordHash: string | null
     suspendedAt: Date | null
+    mfaSecretEncrypted: string | null
+    mfaPendingSecretEncrypted: string | null
+    mfaPendingExpiresAt: Date | null
+    mfaEnabledAt: Date | null
+    mfaRecoveryCodeHashes: string[]
     firstName: string
     lastName: string
     role: string
@@ -1277,6 +1478,11 @@ export interface UserFieldRefs {
   readonly email: Prisma.FieldRef<"User", 'String'>
   readonly passwordHash: Prisma.FieldRef<"User", 'String'>
   readonly suspendedAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly mfaSecretEncrypted: Prisma.FieldRef<"User", 'String'>
+  readonly mfaPendingSecretEncrypted: Prisma.FieldRef<"User", 'String'>
+  readonly mfaPendingExpiresAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly mfaEnabledAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly mfaRecoveryCodeHashes: Prisma.FieldRef<"User", 'String[]'>
   readonly firstName: Prisma.FieldRef<"User", 'String'>
   readonly lastName: Prisma.FieldRef<"User", 'String'>
   readonly role: Prisma.FieldRef<"User", 'String'>

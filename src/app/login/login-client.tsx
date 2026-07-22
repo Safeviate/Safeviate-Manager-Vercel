@@ -258,6 +258,7 @@ export default function LoginClient() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -366,6 +367,7 @@ export default function LoginClient() {
       const result = await signIn('credentials', {
         email,
         password,
+        mfaCode,
         callbackUrl: '/dashboard',
         redirect: false,
       });
@@ -882,6 +884,26 @@ export default function LoginClient() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoginLoading}
                     autoComplete="current-password"
+                    className="h-12 border-white/10 bg-white/95 font-medium text-slate-950 placeholder:text-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="mfa-code"
+                    className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-300"
+                  >
+                    Authenticator Or Recovery Code <span className="normal-case tracking-normal text-slate-400">(if enabled)</span>
+                  </Label>
+                  <Input
+                    id="mfa-code"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="123456 or recovery code"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value)}
+                    disabled={isLoginLoading}
+                    autoComplete="one-time-code"
                     className="h-12 border-white/10 bg-white/95 font-medium text-slate-950 placeholder:text-slate-400"
                   />
                 </div>
