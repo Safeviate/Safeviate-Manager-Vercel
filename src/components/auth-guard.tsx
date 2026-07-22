@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { useSession } from 'next-auth/react';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -10,11 +10,16 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
+type MfaGateStatus = {
+  enrollmentRequired: boolean;
+};
+
 export function AuthGuard({ children }: AuthGuardProps) {
   const { data: session, status } = useSession();
   const { isLoading: isProfileLoading, userProfile, tenantId } = useUserProfile();
   const router = useRouter();
   const pathname = usePathname();
+  const [mfaGateStatus, setMfaGateStatus] = useState<MfaGateStatus | null>(null);
 
   const isLoading = status === 'loading' || isProfileLoading;
   const authUser = session?.user ?? null;
@@ -37,6 +42,42 @@ export function AuthGuard({ children }: AuthGuardProps) {
       router.push('/dashboard');
     }
   }, [authUser, bootstrapActive, isLoading, router, pathname]);
+
+  useEffect(() => {
+    if (isLoading || !authUser?.id) {
+      setMfaGateStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadMfaGateStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/mfa', { cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+        if (!cancelled && response.ok && payload) {
+          setMfaGateStatus({ enrollmentRequired: payload.enrollmentRequired === true });
+        }
+      } catch (error) {
+        console.error('[AuthGuard] MFA status check failed:', error);
+      }
+    };
+
+    void loadMfaGateStatus();
+    const refreshMfaGateStatus = () => void loadMfaGateStatus();
+    window.addEventListener('safeviate-mfa-status-updated', refreshMfaGateStatus);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('safeviate-mfa-status-updated', refreshMfaGateStatus);
+    };
+  }, [authUser?.id, isLoading, pathname]);
+
+  useEffect(() => {
+    const allowedDuringEnrollment = pathname === '/my-dashboard/security' || pathname === '/change-password';
+    if (!isLoading && mfaGateStatus?.enrollmentRequired && !allowedDuringEnrollment) {
+      router.replace('/my-dashboard/security');
+    }
+  }, [isLoading, mfaGateStatus?.enrollmentRequired, pathname, router]);
 
   useEffect(() => {
     if (isLoading || !authUser?.email || !tenantId) return;

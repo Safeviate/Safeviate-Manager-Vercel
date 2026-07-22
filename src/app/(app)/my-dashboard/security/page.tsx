@@ -9,12 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { MASTER_TENANT_EMAILS } from '@/lib/tenant-constants';
 
 type MfaStatus = {
   enabled: boolean;
   pendingEnrollment: boolean;
   recoveryCodesRemaining: number;
   configurationReady: boolean;
+  required: boolean;
+  enrollmentRequired: boolean;
 };
 
 type SetupPayload = {
@@ -36,7 +41,11 @@ const requestMfa = async (action: string, code?: string) => {
 
 export default function SecurityPage() {
   const { toast } = useToast();
+  const { hasPermission, isLoading: isPermissionsLoading } = usePermissions();
+  const { tenantId, userProfile } = useUserProfile();
   const [status, setStatus] = useState<MfaStatus | null>(null);
+  const [tenantMfaRequired, setTenantMfaRequired] = useState(false);
+  const [isPolicyLoading, setIsPolicyLoading] = useState(true);
   const [setup, setSetup] = useState<SetupPayload | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [currentCode, setCurrentCode] = useState('');
@@ -49,9 +58,75 @@ export default function SecurityPage() {
     if (response.ok && payload) setStatus(payload);
   };
 
+  const isSafeviateMasterAdministrator = MASTER_TENANT_EMAILS.includes(
+    userProfile?.email?.trim().toLowerCase() || ''
+  );
+  const canManageMfaPolicy = !isPermissionsLoading && (
+    isSafeviateMasterAdministrator
+    || hasPermission('admin-settings-edit')
+    || hasPermission('settings-edit')
+  );
+
+  const loadMfaPolicy = async () => {
+    if (!tenantId) {
+      setIsPolicyLoading(false);
+      return;
+    }
+
+    setIsPolicyLoading(true);
+    try {
+      const response = await fetch(`/api/tenant-config?tenantId=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
+      const payload = await response.json().catch(() => null);
+      const security = payload?.config?.security;
+      setTenantMfaRequired(security?.mfaRequired === true);
+    } finally {
+      setIsPolicyLoading(false);
+    }
+  };
+
   useEffect(() => {
     void loadStatus();
   }, []);
+
+  useEffect(() => {
+    if (canManageMfaPolicy) void loadMfaPolicy();
+  }, [canManageMfaPolicy, tenantId]);
+
+  const updateTenantMfaPolicy = async (required: boolean) => {
+    if (!tenantId) return;
+    if (required && !status?.configurationReady) {
+      toast({ variant: 'destructive', title: 'MFA key unavailable', description: 'The MFA encryption key must be available before MFA can be required.' });
+      return;
+    }
+
+    setIsWorking(true);
+    try {
+      const current = await fetch(`/api/tenant-config?tenantId=${encodeURIComponent(tenantId)}`, { cache: 'no-store' })
+        .then((response) => response.json());
+      const currentConfig = current?.config && typeof current.config === 'object' ? current.config : {};
+      const currentSecurity = currentConfig.security && typeof currentConfig.security === 'object' ? currentConfig.security : {};
+      const response = await fetch(`/api/tenant-config?tenantId=${encodeURIComponent(tenantId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: { security: { ...currentSecurity, mfaRequired: required } } }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Could not update the MFA policy.');
+
+      setTenantMfaRequired(required);
+      window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
+      toast({
+        title: required ? 'MFA is now required' : 'MFA is no longer required',
+        description: required
+          ? 'Users without MFA will be directed to enrol before using the app.'
+          : 'Users may manage MFA from their own Security & MFA page.',
+      });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'MFA policy unchanged', description: error instanceof Error ? error.message : 'Please try again.' });
+    } finally {
+      setIsWorking(false);
+    }
+  };
 
   const beginSetup = async () => {
     setIsWorking(true);
@@ -77,6 +152,7 @@ export default function SecurityPage() {
       setVerificationCode('');
       toast({ title: 'MFA enabled', description: 'Save the recovery codes before leaving this page.' });
       await loadStatus();
+      window.dispatchEvent(new Event('safeviate-mfa-status-updated'));
     } catch (error) {
       toast({ variant: 'destructive', title: 'Code not accepted', description: error instanceof Error ? error.message : 'Please try again.' });
     } finally {
@@ -134,6 +210,12 @@ export default function SecurityPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5 pt-5">
+          {status?.enrollmentRequired ? (
+            <div className="flex gap-3 rounded-lg border border-blue-300/50 bg-blue-50 p-4 text-sm text-blue-950">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>Your organization requires MFA. Complete the setup below to continue using Safeviate.</p>
+            </div>
+          ) : null}
           {status && !status.configurationReady ? (
             <div className="flex gap-3 rounded-lg border border-amber-300/50 bg-amber-50 p-4 text-sm text-amber-950">
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
@@ -178,7 +260,7 @@ export default function SecurityPage() {
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={beginSetup} disabled={isWorking}><Smartphone className="mr-2 h-4 w-4" />Replace authenticator</Button>
                 <Button variant="outline" onClick={regenerateCodes} disabled={isWorking || !currentCode}><RefreshCw className="mr-2 h-4 w-4" />Replace recovery codes</Button>
-                <Button variant="destructive" onClick={disableMfa} disabled={isWorking || !currentCode}>Disable MFA</Button>
+                <Button variant="destructive" onClick={disableMfa} disabled={isWorking || !currentCode || status.required}>Disable MFA</Button>
               </div>
             </div>
           ) : null}
@@ -192,6 +274,27 @@ export default function SecurityPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {canManageMfaPolicy ? (
+        <Card>
+          <CardHeader className="border-b border-border/70">
+            <CardTitle className="text-base">Organization MFA policy</CardTitle>
+            <CardDescription>Require each user in this tenant to enrol in MFA before accessing Safeviate.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {tenantMfaRequired ? 'MFA is mandatory for this tenant.' : 'MFA is currently optional for this tenant.'}
+            </p>
+            <Button
+              variant={tenantMfaRequired ? 'outline' : 'default'}
+              onClick={() => void updateTenantMfaPolicy(!tenantMfaRequired)}
+              disabled={isWorking || isPolicyLoading || (!tenantMfaRequired && !status?.configurationReady)}
+            >
+              {tenantMfaRequired ? 'Make MFA optional' : 'Require MFA for all users'}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

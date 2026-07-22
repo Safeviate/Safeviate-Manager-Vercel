@@ -15,6 +15,7 @@ import {
   verifyMfaCode,
   verifyTotp,
 } from '@/lib/server/mfa';
+import { isTenantMfaRequired } from '@/lib/server/mfa-policy';
 
 const PENDING_ENROLLMENT_DURATION_MS = 10 * 60 * 1000;
 
@@ -33,11 +34,16 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return getUnauthorizedResponse();
 
+  const required = await isTenantMfaRequired(user.tenantId);
+  const enabled = Boolean(user.mfaEnabledAt && user.mfaSecretEncrypted);
+
   return NextResponse.json({
-    enabled: Boolean(user.mfaEnabledAt && user.mfaSecretEncrypted),
+    enabled,
     pendingEnrollment: Boolean(user.mfaPendingSecretEncrypted && user.mfaPendingExpiresAt && user.mfaPendingExpiresAt > new Date()),
     recoveryCodesRemaining: user.mfaRecoveryCodeHashes.length,
     configurationReady: Boolean(process.env.MFA_ENCRYPTION_KEY?.trim()),
+    required,
+    enrollmentRequired: required && !enabled,
   });
 }
 
@@ -124,6 +130,9 @@ export async function POST(request: Request) {
     }
 
     if (action === 'disable') {
+      if (await isTenantMfaRequired(user.tenantId)) {
+        return NextResponse.json({ error: 'Your organization requires MFA. An administrator must remove the requirement before MFA can be disabled.' }, { status: 403 });
+      }
       if (!user.mfaSecretEncrypted) return NextResponse.json({ error: 'MFA is not enabled.' }, { status: 400 });
       const verification = await verifyMfaCode(
         decryptMfaSecret(user.mfaSecretEncrypted),
