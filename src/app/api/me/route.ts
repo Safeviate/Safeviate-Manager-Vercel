@@ -207,16 +207,20 @@ export async function GET(request: Request) {
         email,
       },
       select: {
+        role: true,
         permissions: true,
         accessOverrides: true,
       },
     }).catch(() => null);
+    // Personnel is the role assignment managed from the Users screen. Prefer it so
+    // older User records cannot leave a newly assigned role without its permissions.
+    const resolvedRole = personnelProfile?.role?.trim() || profile.role;
     const role = await prisma.role.findFirst({
       where: {
         tenantId: selectedTenantId,
         OR: [
-          { id: profile.role },
-          { name: profile.role },
+          { id: resolvedRole },
+          { name: resolvedRole },
         ],
       },
     }).catch(() => null);
@@ -226,6 +230,7 @@ export async function GET(request: Request) {
       {
         profile: {
           ...profile,
+          role: resolvedRole,
           permissions: Array.isArray(personnelProfile?.permissions) ? (personnelProfile.permissions as string[]) : [],
           accessOverrides: personnelProfile?.accessOverrides ?? {},
         },
