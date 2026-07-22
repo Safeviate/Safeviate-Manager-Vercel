@@ -42,74 +42,94 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authResult = await authenticateAiRequest(request);
-  if (!authResult.ok) {
-    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
-  }
-  if (
-    !hasHierarchicalPermission(authResult.effectivePermissions, 'admin-permissions-edit', authResult.deniedPermissions) &&
-    authResult.userProfile.role?.toLowerCase() !== 'developer'
-  ) {
-    return NextResponse.json({ error: 'You do not have permission to edit roles.' }, { status: 403 });
-  }
+  try {
+    const authResult = await authenticateAiRequest(request);
+    if (!authResult.ok) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+    if (
+      !hasHierarchicalPermission(authResult.effectivePermissions, 'admin-permissions-edit', authResult.deniedPermissions) &&
+      authResult.userProfile.role?.toLowerCase() !== 'developer'
+    ) {
+      return NextResponse.json({ error: 'You do not have permission to edit roles.' }, { status: 403 });
+    }
 
-  await ensureRolesSchema();
-  const tenantId = await getTenantId(request);
-  if (!tenantId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    await ensureRolesSchema();
+    const tenantId = await getTenantId(request);
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Your tenant could not be identified. Please sign in again.' }, { status: 401 });
+    }
 
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid role payload.' }, { status: 400 });
-  }
-  const id = body.id || crypto.randomUUID();
-  const name = String(body.name || '').trim();
-  const permissions = Array.isArray(body.permissions) ? body.permissions.filter((permission: unknown) => typeof permission === 'string') : [];
-  const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments.filter((document: unknown) => typeof document === 'string') : [];
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid role payload.' }, { status: 400 });
+    }
+    const id = body.id || crypto.randomUUID();
+    const name = String(body.name || '').trim();
+    const permissions = Array.isArray(body.permissions) ? body.permissions.filter((permission: unknown) => typeof permission === 'string') : [];
+    const requiredDocuments = Array.isArray(body.requiredDocuments) ? body.requiredDocuments.filter((document: unknown) => typeof document === 'string') : [];
 
-  if (!name) {
-    return NextResponse.json({ error: 'Role name is required.' }, { status: 400 });
-  }
+    if (!name) {
+      return NextResponse.json({ error: 'Role name is required.' }, { status: 400 });
+    }
 
-  const hiddenMenus = Array.isArray(body.accessOverrides?.hiddenMenus)
-    ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string')
-    : [];
-
-  const role = await prisma.$transaction(async (transaction) => {
-    const savedRole = await transaction.role.upsert({
-      where: { id },
-      update: {
+    const duplicateRole = await prisma.role.findFirst({
+      where: {
         tenantId,
-        name,
-        permissions,
-        requiredDocuments,
-        updatedAt: new Date(),
+        name: { equals: name, mode: 'insensitive' },
+        NOT: { id },
       },
-      create: {
+      select: { id: true },
+    });
+    if (duplicateRole) {
+      return NextResponse.json({ error: `A role named "${name}" already exists in this tenant.` }, { status: 409 });
+    }
+
+    const hiddenMenus = Array.isArray(body.accessOverrides?.hiddenMenus)
+      ? body.accessOverrides.hiddenMenus.filter((value: unknown) => typeof value === 'string')
+      : [];
+
+    const role = await prisma.$transaction(async (transaction) => {
+      const savedRole = await transaction.role.upsert({
+        where: { id },
+        update: {
+          tenantId,
+          name,
+          permissions,
+          requiredDocuments,
+          updatedAt: new Date(),
+        },
+        create: {
+          id,
+          tenantId,
+          name,
+          permissions,
+          requiredDocuments,
+        },
+      });
+
+      // Keep role-level sidebar visibility with the role record in the same transaction.
+      await transaction.$executeRawUnsafe(
+        `UPDATE roles
+         SET access_overrides = $3::jsonb,
+             updated_at = NOW()
+         WHERE id = $1 AND tenant_id = $2`,
         id,
         tenantId,
-        name,
-        permissions,
-        requiredDocuments,
-      },
+        JSON.stringify({ hiddenMenus }),
+      );
+
+      return savedRole;
     });
 
-    await transaction.$executeRawUnsafe(
-      `UPDATE roles
-       SET access_overrides = $4::jsonb,
-           updated_at = NOW()
-       WHERE id = $1 AND tenant_id = $2`,
-      id,
-      tenantId,
-      name,
-      JSON.stringify({ hiddenMenus }),
+    invalidatePersonnelDirectoryCaches(tenantId);
+
+    return NextResponse.json({ role: { ...role, accessOverrides: { hiddenMenus } } }, { status: 200 });
+  } catch (error) {
+    console.error('[roles] failed to save role:', error);
+    return NextResponse.json(
+      { error: 'The role could not be saved because the server could not complete the request. Please try again.' },
+      { status: 500 }
     );
-
-    return savedRole;
-  });
-
-  invalidatePersonnelDirectoryCaches(tenantId);
-
-  return NextResponse.json({ role: { ...role, accessOverrides: { hiddenMenus } } }, { status: 200 });
+  }
 }

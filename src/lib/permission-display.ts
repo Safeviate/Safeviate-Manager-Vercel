@@ -1,6 +1,6 @@
 import type { PermissionAction } from '@/lib/permissions-config';
 
-export type PermissionDisplayLabel = 'View' | 'Create' | 'Edit' | 'Delete' | 'Archive' | 'Approve' | 'Sign' | 'Export';
+export type PermissionDisplayLabel = 'View' | 'Create' | 'Edit' | 'Delete' | 'Archive' | 'Approve' | 'Sign' | 'Export' | 'Reset MFA';
 
 export function getPermissionDisplayLabel(action: PermissionAction): PermissionDisplayLabel {
   switch (action) {
@@ -12,5 +12,6 @@ export function getPermissionDisplayLabel(action: PermissionAction): PermissionD
     case 'approve': return 'Approve';
     case 'sign': return 'Sign';
     case 'export': return 'Export';
+    case 'reset-mfa': return 'Reset MFA';
   }
 }

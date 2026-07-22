@@ -13,7 +13,7 @@ type ActivityLogRow = {
   id: string;
   tenantId: string;
   scope: string;
-  action: 'created' | 'updated' | 'deleted' | 'archived' | 'restored' | 'submitted' | 'approved' | 'rejected' | 'published' | 'overridden';
+  action: 'created' | 'updated' | 'deleted' | 'archived' | 'restored' | 'submitted' | 'approved' | 'rejected' | 'published' | 'overridden' | 'mfa_reset';
   entityType: string;
   entityId: string;
   entityLabel: string;
@@ -42,6 +42,12 @@ function formatLogTime(value: string) {
 }
 
 function describeChange(details: Record<string, unknown> | null, action: ActivityLogRow['action']) {
+  if (action === 'mfa_reset') {
+    const outcome = typeof details?.outcome === 'string' ? details.outcome : 'completed';
+    const sourceIp = typeof details?.sourceIp === 'string' ? details.sourceIp : 'unknown';
+    return `MFA reset ${outcome}. Source IP: ${sourceIp}. No authentication secrets are stored.`;
+  }
+
   if (!details) return action === 'updated' ? 'Updated without payload details.' : 'No additional details.';
 
   const stringOrEmpty = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : '');
@@ -57,7 +63,7 @@ function describeChange(details: Record<string, unknown> | null, action: Activit
     if (area) parts.push(area);
     if (month || year) parts.push(`${month} ${year}`.trim());
     if (status) parts.push(`Status: ${status}`);
-    return parts.filter(Boolean).join(' • ') || 'No additional details.';
+    return parts.filter(Boolean).join(' - ') || 'No additional details.';
   }
 
   const before = details.before as Record<string, unknown> | undefined;
@@ -68,7 +74,7 @@ function describeChange(details: Record<string, unknown> | null, action: Activit
   const afterText = after
     ? [stringOrEmpty(after.area), stringOrEmpty(after.month), numberOrEmpty(after.year)].filter(Boolean).join(' ')
     : '';
-  return [beforeText ? `From ${beforeText}` : null, afterText ? `To ${afterText}` : null].filter(Boolean).join(' • ');
+  return [beforeText ? `From ${beforeText}` : null, afterText ? `To ${afterText}` : null].filter(Boolean).join(' - ');
 }
 
 export default function ActivityTrackerPage() {
@@ -111,7 +117,7 @@ export default function ActivityTrackerPage() {
         acc[log.action] += 1;
         return acc;
       },
-      { created: 0, updated: 0, deleted: 0, archived: 0, restored: 0, submitted: 0, approved: 0, rejected: 0, published: 0, overridden: 0 }
+      { created: 0, updated: 0, deleted: 0, archived: 0, restored: 0, submitted: 0, approved: 0, rejected: 0, published: 0, overridden: 0, mfa_reset: 0 }
     );
   }, [logs]);
 
@@ -132,7 +138,7 @@ export default function ActivityTrackerPage() {
     <div className="mx-auto w-full max-w-[1200px] space-y-6 px-1">
       <MainPageHeader
         title="Activity Tracker"
-        description="Barry-only audit schedule history for created, updated, archived, and restored items."
+        description="Master-tenant audit history for operational changes and security-sensitive account actions."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -156,8 +162,8 @@ export default function ActivityTrackerPage() {
         </Card>
         <Card className="border shadow-none">
           <CardHeader className="space-y-1 pb-3">
-            <CardDescription className="text-[10px] font-black uppercase tracking-widest">Restored</CardDescription>
-            <CardTitle className="text-2xl font-black">{groupedCounts.restored}</CardTitle>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest">MFA Resets</CardDescription>
+            <CardTitle className="text-2xl font-black">{groupedCounts.mfa_reset}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -166,9 +172,9 @@ export default function ActivityTrackerPage() {
         <CardHeader className="border-b bg-muted/5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <CardTitle className="text-sm font-black uppercase tracking-[-0.01em]">Audit Schedule Changes</CardTitle>
+              <CardTitle className="text-sm font-black uppercase tracking-[-0.01em]">Activity History</CardTitle>
               <CardDescription className="text-[10px] font-bold uppercase tracking-widest italic">
-                Records written when audit areas or schedule items are created, updated, archived, or restored.
+                Records written for audit schedules and sensitive account actions, including MFA resets.
               </CardDescription>
             </div>
             <Badge variant="outline" className="h-6 rounded-full px-2 text-[10px] font-black uppercase">
@@ -183,7 +189,7 @@ export default function ActivityTrackerPage() {
                 <div className="space-y-2">
                   <Search className="mx-auto h-10 w-10 text-muted-foreground/60" />
                   <p className="text-sm font-semibold text-foreground">No activity logs found.</p>
-                  <p className="text-xs text-muted-foreground">Once audit schedule changes are saved, they will appear here.</p>
+                  <p className="text-xs text-muted-foreground">Audit schedule changes and sensitive account actions will appear here.</p>
                 </div>
               </div>
             ) : (

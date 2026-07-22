@@ -1,4 +1,4 @@
-export type PermissionTier = 'view' | 'create' | 'edit' | 'delete' | 'archive' | 'approve' | 'sign' | 'export' | 'manage';
+export type PermissionTier = 'view' | 'create' | 'edit' | 'delete' | 'archive' | 'approve' | 'sign' | 'export' | 'reset-mfa' | 'manage';
 
 export type CanonicalPermission = {
   resource: string;
@@ -77,6 +77,7 @@ const LEGACY_TO_CANONICAL: Record<string, CanonicalPermission> = {
   'users-create': { resource: 'users', tier: 'create' },
   'users-edit': { resource: 'users', tier: 'edit' },
   'users-delete': { resource: 'users', tier: 'delete' },
+  'users-reset-mfa': { resource: 'users', tier: 'reset-mfa' },
 };
 
 const CANONICAL_PERMISSION_PATTERN = /^(.*)-(view|create|edit|delete|archive|approve|sign|export|manage)$/;

@@ -186,11 +186,11 @@ export function RoleForm({ tenantId, existingRole, trigger, mode = 'dialog' }: R
       } else {
         setIsOpen(false);
       }
-    } catch {
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'The role could not be saved. Please try again.',
+        description: error instanceof Error ? error.message : 'The role could not be saved. Please try again.',
       });
     }
   };

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { ensureActivityLogsSchema } from '@/lib/server/bootstrap-db';
 
-export type ActivityLogAction = 'created' | 'updated' | 'deleted' | 'archived' | 'restored' | 'submitted' | 'approved' | 'rejected' | 'published' | 'overridden';
+export type ActivityLogAction = 'created' | 'updated' | 'deleted' | 'archived' | 'restored' | 'submitted' | 'approved' | 'rejected' | 'published' | 'overridden' | 'mfa_reset';
 
 export type ActivityLogEntry = {
   tenantId: string;

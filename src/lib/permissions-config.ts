@@ -1,4 +1,4 @@
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'archive' | 'approve' | 'sign' | 'export';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'archive' | 'approve' | 'sign' | 'export' | 'reset-mfa';
 
 export type PermissionResource = {
   id: string;
@@ -61,7 +61,7 @@ export const permissionsConfig: PermissionResource[] = [
   { id: 'maintenance-defects', name: 'Defect Reports', actions: CRUD_ACTIONS },
   { id: 'maintenance-schedule', name: 'Maintenance Schedule', actions: CRUD_ACTIONS },
 
-  { id: 'users', name: 'Users', actions: CRUD_ACTIONS },
+  { id: 'users', name: 'Users', actions: [...CRUD_ACTIONS, 'reset-mfa'] },
 
   { id: 'admin', name: 'Admin', actions: ['view'] },
   { id: 'admin-roles', name: 'Roles', actions: CRUD_ACTIONS },

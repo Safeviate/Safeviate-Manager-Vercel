@@ -1,19 +1,13 @@
 import { authOptions } from '@/auth';
 import { listActivityLogs } from '@/lib/server/activity-log';
 import { getTenantIdFromSession } from '@/lib/server/session-tenant';
-import { MASTER_TENANT_EMAILS, MASTER_TENANT_ID } from '@/lib/tenant-constants';
+import { MASTER_TENANT_EMAILS } from '@/lib/tenant-constants';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
-const ACTIVITY_SCOPE = 'audit-schedule';
-
-function isBarryMasterUser(email?: string | null, tenantId?: string | null) {
+function isBarryMasterUser(email?: string | null) {
   const normalizedEmail = email?.trim().toLowerCase();
-  return Boolean(
-    normalizedEmail &&
-      tenantId === MASTER_TENANT_ID &&
-      MASTER_TENANT_EMAILS.includes(normalizedEmail)
-  );
+  return Boolean(normalizedEmail && MASTER_TENANT_EMAILS.includes(normalizedEmail));
 }
 
 export async function GET(request: Request) {
@@ -22,15 +16,12 @@ export async function GET(request: Request) {
     const email = session?.user?.email?.trim().toLowerCase() || null;
     const tenantId = (await getTenantIdFromSession(request)) || session?.user?.tenantId?.trim() || null;
 
-    if (!isBarryMasterUser(email, tenantId)) {
+    if (!isBarryMasterUser(email) || !tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const limit = Number(new URL(request.url).searchParams.get('limit') || '100');
-    const logs = await listActivityLogs(tenantId!, {
-      scope: ACTIVITY_SCOPE,
-      limit: Number.isFinite(limit) ? limit : 100,
-    });
+    const logs = await listActivityLogs(tenantId, { limit: Number.isFinite(limit) ? limit : 100 });
 
     return NextResponse.json(
       {

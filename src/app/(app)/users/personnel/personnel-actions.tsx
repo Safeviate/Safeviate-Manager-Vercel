@@ -12,7 +12,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Check, Copy, Eye, Trash2, Mail, Loader2, KeyRound, UserCheck, UserX } from 'lucide-react';
+import { Check, Copy, Eye, Trash2, Mail, Loader2, KeyRound, ShieldOff, UserCheck, UserX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Personnel, PilotProfile } from './personnel-directory-page';
 import Link from 'next/link';
@@ -46,12 +46,15 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isMfaResetDialogOpen, setIsMfaResetDialogOpen] = useState(false);
+  const [isResettingMfa, setIsResettingMfa] = useState(false);
   const [isUpdatingSuspension, setIsUpdatingSuspension] = useState(false);
   const [resetLink, setResetLink] = useState('');
   const [copiedResetLink, setCopiedResetLink] = useState(false);
 
   const canDelete = hasPermission('users-delete');
   const canEdit = hasPermission('users-edit');
+  const canResetMfa = hasPermission('users-reset-mfa');
 
   const handleDeleteUser = async () => {
     try {
@@ -210,6 +213,35 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
     }
   };
 
+  const handleResetMfa = async () => {
+    setIsResettingMfa(true);
+    try {
+      const response = await fetch('/api/admin/reset-user-mfa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, tenantId }),
+      });
+      const payload = (await parseJsonResponse<{ error?: string; message?: string }>(response)) ?? {};
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not reset MFA.');
+      }
+
+      toast({
+        title: 'MFA Reset',
+        description: payload.message || `${user.firstName} ${user.lastName} must set up MFA again at their next sign-in.`,
+      });
+    } catch (error: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'MFA Reset Failed',
+        description: error instanceof Error ? error.message : 'Could not reset MFA.',
+      });
+    } finally {
+      setIsResettingMfa(false);
+      setIsMfaResetDialogOpen(false);
+    }
+  };
+
   const handleCopyResetLink = async () => {
     if (!resetLink) return;
     try {
@@ -271,6 +303,19 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
           </>
         )}
 
+        {canResetMfa ? (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 border-amber-400/60 text-amber-700 hover:bg-amber-50"
+            onClick={() => setIsMfaResetDialogOpen(true)}
+            disabled={isSendingEmail || isResettingPassword || isUpdatingSuspension || isResettingMfa}
+            title="Reset MFA"
+          >
+            {isResettingMfa ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldOff className="h-4 w-4" />}
+          </Button>
+        ) : null}
+
         <Button asChild variant="outline" size="sm" className="h-8 gap-2 border-slate-300">
           <Link href={`/users/personnel/${user.id}?type=${user.userType}`}>
             <Eye className="h-4 w-4" />
@@ -326,7 +371,28 @@ export function PersonnelActions({ tenantId, user }: PersonnelActionsProps) {
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
-    </AlertDialog>
+      </AlertDialog>
+
+      <AlertDialog open={isMfaResetDialogOpen} onOpenChange={setIsMfaResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset MFA for {user.firstName} {user.lastName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the current authenticator setup and all recovery codes. The user must enroll MFA again at their next sign-in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResettingMfa}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetMfa}
+              disabled={isResettingMfa}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              {isResettingMfa ? 'Resetting...' : 'Reset MFA'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
   </>
   );
 }
