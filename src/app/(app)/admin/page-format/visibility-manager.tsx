@@ -58,6 +58,10 @@ export function VisibilityManager() {
         if (!response.ok) {
           throw new Error('Failed to save module settings.');
         }
+
+        // Refresh this browser from the persisted tenant configuration so the
+        // checkboxes cannot continue showing an outdated menu state.
+        window.dispatchEvent(new Event('safeviate-tenant-config-updated'));
         
         toast({ title: 'Module Access Updated', description: 'Sidebar navigation settings have been saved.' });
     } catch (e) {

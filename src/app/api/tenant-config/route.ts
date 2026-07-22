@@ -147,7 +147,7 @@ export async function PUT(request: Request) {
 
     invalidateRouteCache(`tenant-config:${resolvedTenantId}`);
 
-    return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json({ ok: true, config: mergedData }, { status: 200 });
   } catch (error) {
     console.error('[tenant-config] failed to save config:', error);
     return NextResponse.json(
