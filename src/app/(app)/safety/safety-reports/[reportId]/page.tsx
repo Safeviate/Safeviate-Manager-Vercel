@@ -532,7 +532,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                       {report.reportingChannel || 'Voluntary'}
                     </span>
                   </div>
-                  <div className="hidden flex-wrap items-center justify-end gap-1.5 sm:flex sm:min-h-10 sm:w-full sm:bg-slate-50/70 sm:px-4 md:px-5">
+                  <div className="hidden flex-wrap items-center justify-center gap-1.5 sm:flex sm:min-h-10 sm:w-full sm:bg-slate-50/70 sm:px-4 md:px-5">
                   <EditReportDialog 
                     report={report} 
                     tenantId={tenantId} 
