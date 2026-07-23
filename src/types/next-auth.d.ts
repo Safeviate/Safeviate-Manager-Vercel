@@ -10,6 +10,7 @@ declare module 'next-auth' {
       image?: string | null;
       role?: string;
       mustChangeManualPassword?: boolean;
+      sessionId?: string;
     };
   }
 
@@ -21,6 +22,7 @@ declare module 'next-auth' {
     image?: string | null;
     role?: string;
     mustChangeManualPassword?: boolean;
+    sessionId?: string;
   }
 }
 
@@ -30,5 +32,6 @@ declare module 'next-auth/jwt' {
     tenantId?: string;
     role?: string;
     mustChangeManualPassword?: boolean;
+    sessionId?: string;
   }
 }

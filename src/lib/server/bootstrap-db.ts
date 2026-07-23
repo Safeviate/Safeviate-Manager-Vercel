@@ -32,6 +32,7 @@ type TableName =
   | 'simulation_route_metrics'
   | 'exam_attempts'
   | 'activity_logs'
+  | 'user_sessions'
   | 'recovery_archives';
 
 const tableCache = new Map<TableName, boolean>();
@@ -619,6 +620,39 @@ export async function ensureActivityLogsSchema() {
     ON activity_logs (tenant_id, action, created_at DESC)
   `);
   tableCache.set('activity_logs', true);
+}
+
+export async function ensureUserSessionsSchema() {
+  if (!(await isDatabaseAvailable())) return;
+  if (await hasTable('user_sessions')) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id VARCHAR(128) PRIMARY KEY,
+      tenant_id VARCHAR(128) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      user_id VARCHAR(128) NOT NULL,
+      email TEXT NOT NULL,
+      role_at_login TEXT NOT NULL,
+      user_agent TEXT,
+      ip_address VARCHAR(128),
+      created_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      last_seen_at TIMESTAMPTZ(6) NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ(6) NOT NULL,
+      revoked_at TIMESTAMPTZ(6),
+      revoked_reason TEXT
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS user_sessions_active_user_idx
+    ON user_sessions (tenant_id, user_id, revoked_at, last_seen_at DESC)
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS user_sessions_expiry_idx
+    ON user_sessions (expires_at)
+  `);
+  tableCache.set('user_sessions', true);
 }
 
 export async function ensureRecoveryArchivesSchema() {

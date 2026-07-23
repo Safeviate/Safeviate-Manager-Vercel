@@ -203,6 +203,7 @@ export type TenantWhereInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordListRelationFilter
   alerts?: Prisma.AlertRecordListRelationFilter
   passwordSetupInvites?: Prisma.PasswordSetupInviteListRelationFilter
+  userSessions?: Prisma.UserSessionListRelationFilter
 }
 
 export type TenantOrderByWithRelationInput = {
@@ -239,6 +240,7 @@ export type TenantOrderByWithRelationInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordOrderByRelationAggregateInput
   alerts?: Prisma.AlertRecordOrderByRelationAggregateInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteOrderByRelationAggregateInput
+  userSessions?: Prisma.UserSessionOrderByRelationAggregateInput
 }
 
 export type TenantWhereUniqueInput = Prisma.AtLeast<{
@@ -278,6 +280,7 @@ export type TenantWhereUniqueInput = Prisma.AtLeast<{
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordListRelationFilter
   alerts?: Prisma.AlertRecordListRelationFilter
   passwordSetupInvites?: Prisma.PasswordSetupInviteListRelationFilter
+  userSessions?: Prisma.UserSessionListRelationFilter
 }, "id">
 
 export type TenantOrderByWithAggregationInput = {
@@ -334,6 +337,7 @@ export type TenantCreateInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateInput = {
@@ -370,6 +374,7 @@ export type TenantUncheckedCreateInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUpdateInput = {
@@ -406,6 +411,7 @@ export type TenantUpdateInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateInput = {
@@ -442,6 +448,7 @@ export type TenantUncheckedUpdateInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateManyInput = {
@@ -877,6 +884,20 @@ export type TenantUpdateOneRequiredWithoutActiveFlightSessionBlocksNestedInput =
   update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutActiveFlightSessionBlocksInput, Prisma.TenantUpdateWithoutActiveFlightSessionBlocksInput>, Prisma.TenantUncheckedUpdateWithoutActiveFlightSessionBlocksInput>
 }
 
+export type TenantCreateNestedOneWithoutUserSessionsInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutUserSessionsInput, Prisma.TenantUncheckedCreateWithoutUserSessionsInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutUserSessionsInput
+  connect?: Prisma.TenantWhereUniqueInput
+}
+
+export type TenantUpdateOneRequiredWithoutUserSessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutUserSessionsInput, Prisma.TenantUncheckedCreateWithoutUserSessionsInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutUserSessionsInput
+  upsert?: Prisma.TenantUpsertWithoutUserSessionsInput
+  connect?: Prisma.TenantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutUserSessionsInput, Prisma.TenantUpdateWithoutUserSessionsInput>, Prisma.TenantUncheckedUpdateWithoutUserSessionsInput>
+}
+
 export type TenantCreateNestedOneWithoutActiveFlightTrackPointsInput = {
   create?: Prisma.XOR<Prisma.TenantCreateWithoutActiveFlightTrackPointsInput, Prisma.TenantUncheckedCreateWithoutActiveFlightTrackPointsInput>
   connectOrCreate?: Prisma.TenantCreateOrConnectWithoutActiveFlightTrackPointsInput
@@ -938,6 +959,7 @@ export type TenantCreateWithoutUsersInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutUsersInput = {
@@ -973,6 +995,7 @@ export type TenantUncheckedCreateWithoutUsersInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutUsersInput = {
@@ -1024,6 +1047,7 @@ export type TenantUpdateWithoutUsersInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutUsersInput = {
@@ -1059,6 +1083,7 @@ export type TenantUncheckedUpdateWithoutUsersInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutPasswordSetupInvitesInput = {
@@ -1094,6 +1119,7 @@ export type TenantCreateWithoutPasswordSetupInvitesInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutPasswordSetupInvitesInput = {
@@ -1129,6 +1155,7 @@ export type TenantUncheckedCreateWithoutPasswordSetupInvitesInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutPasswordSetupInvitesInput = {
@@ -1180,6 +1207,7 @@ export type TenantUpdateWithoutPasswordSetupInvitesInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutPasswordSetupInvitesInput = {
@@ -1215,6 +1243,7 @@ export type TenantUncheckedUpdateWithoutPasswordSetupInvitesInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutBetaNdaAcceptancesInput = {
@@ -1250,6 +1279,7 @@ export type TenantCreateWithoutBetaNdaAcceptancesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutBetaNdaAcceptancesInput = {
@@ -1285,6 +1315,7 @@ export type TenantUncheckedCreateWithoutBetaNdaAcceptancesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutBetaNdaAcceptancesInput = {
@@ -1336,6 +1367,7 @@ export type TenantUpdateWithoutBetaNdaAcceptancesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutBetaNdaAcceptancesInput = {
@@ -1371,6 +1403,7 @@ export type TenantUncheckedUpdateWithoutBetaNdaAcceptancesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutRolesInput = {
@@ -1406,6 +1439,7 @@ export type TenantCreateWithoutRolesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutRolesInput = {
@@ -1441,6 +1475,7 @@ export type TenantUncheckedCreateWithoutRolesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutRolesInput = {
@@ -1492,6 +1527,7 @@ export type TenantUpdateWithoutRolesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutRolesInput = {
@@ -1527,6 +1563,7 @@ export type TenantUncheckedUpdateWithoutRolesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutDepartmentsInput = {
@@ -1562,6 +1599,7 @@ export type TenantCreateWithoutDepartmentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutDepartmentsInput = {
@@ -1597,6 +1635,7 @@ export type TenantUncheckedCreateWithoutDepartmentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutDepartmentsInput = {
@@ -1648,6 +1687,7 @@ export type TenantUpdateWithoutDepartmentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutDepartmentsInput = {
@@ -1683,6 +1723,7 @@ export type TenantUncheckedUpdateWithoutDepartmentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutPersonnelInput = {
@@ -1718,6 +1759,7 @@ export type TenantCreateWithoutPersonnelInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutPersonnelInput = {
@@ -1753,6 +1795,7 @@ export type TenantUncheckedCreateWithoutPersonnelInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutPersonnelInput = {
@@ -1804,6 +1847,7 @@ export type TenantUpdateWithoutPersonnelInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutPersonnelInput = {
@@ -1839,6 +1883,7 @@ export type TenantUncheckedUpdateWithoutPersonnelInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutTenantConfigsInput = {
@@ -1874,6 +1919,7 @@ export type TenantCreateWithoutTenantConfigsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutTenantConfigsInput = {
@@ -1909,6 +1955,7 @@ export type TenantUncheckedCreateWithoutTenantConfigsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutTenantConfigsInput = {
@@ -1960,6 +2007,7 @@ export type TenantUpdateWithoutTenantConfigsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutTenantConfigsInput = {
@@ -1995,6 +2043,7 @@ export type TenantUncheckedUpdateWithoutTenantConfigsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutManagementOfChangesInput = {
@@ -2030,6 +2079,7 @@ export type TenantCreateWithoutManagementOfChangesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutManagementOfChangesInput = {
@@ -2065,6 +2115,7 @@ export type TenantUncheckedCreateWithoutManagementOfChangesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutManagementOfChangesInput = {
@@ -2116,6 +2167,7 @@ export type TenantUpdateWithoutManagementOfChangesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutManagementOfChangesInput = {
@@ -2151,6 +2203,7 @@ export type TenantUncheckedUpdateWithoutManagementOfChangesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutQualityAuditsInput = {
@@ -2186,6 +2239,7 @@ export type TenantCreateWithoutQualityAuditsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutQualityAuditsInput = {
@@ -2221,6 +2275,7 @@ export type TenantUncheckedCreateWithoutQualityAuditsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutQualityAuditsInput = {
@@ -2272,6 +2327,7 @@ export type TenantUpdateWithoutQualityAuditsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutQualityAuditsInput = {
@@ -2307,6 +2363,7 @@ export type TenantUncheckedUpdateWithoutQualityAuditsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutSafetyReportsInput = {
@@ -2342,6 +2399,7 @@ export type TenantCreateWithoutSafetyReportsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutSafetyReportsInput = {
@@ -2377,6 +2435,7 @@ export type TenantUncheckedCreateWithoutSafetyReportsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutSafetyReportsInput = {
@@ -2428,6 +2487,7 @@ export type TenantUpdateWithoutSafetyReportsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutSafetyReportsInput = {
@@ -2463,6 +2523,7 @@ export type TenantUncheckedUpdateWithoutSafetyReportsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutCorrectiveActionPlansInput = {
@@ -2498,6 +2559,7 @@ export type TenantCreateWithoutCorrectiveActionPlansInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutCorrectiveActionPlansInput = {
@@ -2533,6 +2595,7 @@ export type TenantUncheckedCreateWithoutCorrectiveActionPlansInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutCorrectiveActionPlansInput = {
@@ -2584,6 +2647,7 @@ export type TenantUpdateWithoutCorrectiveActionPlansInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutCorrectiveActionPlansInput = {
@@ -2619,6 +2683,7 @@ export type TenantUncheckedUpdateWithoutCorrectiveActionPlansInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutRisksInput = {
@@ -2654,6 +2719,7 @@ export type TenantCreateWithoutRisksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutRisksInput = {
@@ -2689,6 +2755,7 @@ export type TenantUncheckedCreateWithoutRisksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutRisksInput = {
@@ -2740,6 +2807,7 @@ export type TenantUpdateWithoutRisksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutRisksInput = {
@@ -2775,6 +2843,7 @@ export type TenantUncheckedUpdateWithoutRisksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutAircraftsInput = {
@@ -2810,6 +2879,7 @@ export type TenantCreateWithoutAircraftsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutAircraftsInput = {
@@ -2845,6 +2915,7 @@ export type TenantUncheckedCreateWithoutAircraftsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutAircraftsInput = {
@@ -2896,6 +2967,7 @@ export type TenantUpdateWithoutAircraftsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutAircraftsInput = {
@@ -2931,6 +3003,7 @@ export type TenantUncheckedUpdateWithoutAircraftsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutVehiclesInput = {
@@ -2966,6 +3039,7 @@ export type TenantCreateWithoutVehiclesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutVehiclesInput = {
@@ -3001,6 +3075,7 @@ export type TenantUncheckedCreateWithoutVehiclesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutVehiclesInput = {
@@ -3052,6 +3127,7 @@ export type TenantUpdateWithoutVehiclesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutVehiclesInput = {
@@ -3087,6 +3163,7 @@ export type TenantUncheckedUpdateWithoutVehiclesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutVehicleUsageRecordsInput = {
@@ -3122,6 +3199,7 @@ export type TenantCreateWithoutVehicleUsageRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutVehicleUsageRecordsInput = {
@@ -3157,6 +3235,7 @@ export type TenantUncheckedCreateWithoutVehicleUsageRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutVehicleUsageRecordsInput = {
@@ -3208,6 +3287,7 @@ export type TenantUpdateWithoutVehicleUsageRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutVehicleUsageRecordsInput = {
@@ -3243,6 +3323,7 @@ export type TenantUncheckedUpdateWithoutVehicleUsageRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutBookingsInput = {
@@ -3278,6 +3359,7 @@ export type TenantCreateWithoutBookingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutBookingsInput = {
@@ -3313,6 +3395,7 @@ export type TenantUncheckedCreateWithoutBookingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutBookingsInput = {
@@ -3364,6 +3447,7 @@ export type TenantUpdateWithoutBookingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutBookingsInput = {
@@ -3399,6 +3483,7 @@ export type TenantUncheckedUpdateWithoutBookingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutAttendanceRecordsInput = {
@@ -3434,6 +3519,7 @@ export type TenantCreateWithoutAttendanceRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutAttendanceRecordsInput = {
@@ -3469,6 +3555,7 @@ export type TenantUncheckedCreateWithoutAttendanceRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutAttendanceRecordsInput = {
@@ -3520,6 +3607,7 @@ export type TenantUpdateWithoutAttendanceRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutAttendanceRecordsInput = {
@@ -3555,6 +3643,7 @@ export type TenantUncheckedUpdateWithoutAttendanceRecordsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutTrainingRoutesInput = {
@@ -3590,6 +3679,7 @@ export type TenantCreateWithoutTrainingRoutesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutTrainingRoutesInput = {
@@ -3625,6 +3715,7 @@ export type TenantUncheckedCreateWithoutTrainingRoutesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutTrainingRoutesInput = {
@@ -3676,6 +3767,7 @@ export type TenantUpdateWithoutTrainingRoutesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutTrainingRoutesInput = {
@@ -3711,6 +3803,7 @@ export type TenantUncheckedUpdateWithoutTrainingRoutesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutMeetingsInput = {
@@ -3746,6 +3839,7 @@ export type TenantCreateWithoutMeetingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutMeetingsInput = {
@@ -3781,6 +3875,7 @@ export type TenantUncheckedCreateWithoutMeetingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutMeetingsInput = {
@@ -3832,6 +3927,7 @@ export type TenantUpdateWithoutMeetingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutMeetingsInput = {
@@ -3867,6 +3963,7 @@ export type TenantUncheckedUpdateWithoutMeetingsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutCompanyDocumentsInput = {
@@ -3902,6 +3999,7 @@ export type TenantCreateWithoutCompanyDocumentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutCompanyDocumentsInput = {
@@ -3937,6 +4035,7 @@ export type TenantUncheckedCreateWithoutCompanyDocumentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutCompanyDocumentsInput = {
@@ -3988,6 +4087,7 @@ export type TenantUpdateWithoutCompanyDocumentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutCompanyDocumentsInput = {
@@ -4023,6 +4123,7 @@ export type TenantUncheckedUpdateWithoutCompanyDocumentsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutExternalOrganizationsInput = {
@@ -4058,6 +4159,7 @@ export type TenantCreateWithoutExternalOrganizationsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutExternalOrganizationsInput = {
@@ -4093,6 +4195,7 @@ export type TenantUncheckedCreateWithoutExternalOrganizationsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutExternalOrganizationsInput = {
@@ -4144,6 +4247,7 @@ export type TenantUpdateWithoutExternalOrganizationsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutExternalOrganizationsInput = {
@@ -4179,6 +4283,7 @@ export type TenantUncheckedUpdateWithoutExternalOrganizationsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutErpStatesInput = {
@@ -4214,6 +4319,7 @@ export type TenantCreateWithoutErpStatesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutErpStatesInput = {
@@ -4249,6 +4355,7 @@ export type TenantUncheckedCreateWithoutErpStatesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutErpStatesInput = {
@@ -4300,6 +4407,7 @@ export type TenantUpdateWithoutErpStatesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutErpStatesInput = {
@@ -4335,6 +4443,7 @@ export type TenantUncheckedUpdateWithoutErpStatesInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutWorkpacksInput = {
@@ -4370,6 +4479,7 @@ export type TenantCreateWithoutWorkpacksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutWorkpacksInput = {
@@ -4405,6 +4515,7 @@ export type TenantUncheckedCreateWithoutWorkpacksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutWorkpacksInput = {
@@ -4456,6 +4567,7 @@ export type TenantUpdateWithoutWorkpacksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutWorkpacksInput = {
@@ -4491,6 +4603,7 @@ export type TenantUncheckedUpdateWithoutWorkpacksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutMaintenanceTaskCardsInput = {
@@ -4526,6 +4639,7 @@ export type TenantCreateWithoutMaintenanceTaskCardsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutMaintenanceTaskCardsInput = {
@@ -4561,6 +4675,7 @@ export type TenantUncheckedCreateWithoutMaintenanceTaskCardsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutMaintenanceTaskCardsInput = {
@@ -4612,6 +4727,7 @@ export type TenantUpdateWithoutMaintenanceTaskCardsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutMaintenanceTaskCardsInput = {
@@ -4647,6 +4763,7 @@ export type TenantUncheckedUpdateWithoutMaintenanceTaskCardsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutToolsInput = {
@@ -4682,6 +4799,7 @@ export type TenantCreateWithoutToolsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutToolsInput = {
@@ -4717,6 +4835,7 @@ export type TenantUncheckedCreateWithoutToolsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutToolsInput = {
@@ -4768,6 +4887,7 @@ export type TenantUpdateWithoutToolsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutToolsInput = {
@@ -4803,6 +4923,7 @@ export type TenantUncheckedUpdateWithoutToolsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutActiveFlightSessionsInput = {
@@ -4838,6 +4959,7 @@ export type TenantCreateWithoutActiveFlightSessionsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutActiveFlightSessionsInput = {
@@ -4873,6 +4995,7 @@ export type TenantUncheckedCreateWithoutActiveFlightSessionsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutActiveFlightSessionsInput = {
@@ -4924,6 +5047,7 @@ export type TenantUpdateWithoutActiveFlightSessionsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutActiveFlightSessionsInput = {
@@ -4959,6 +5083,7 @@ export type TenantUncheckedUpdateWithoutActiveFlightSessionsInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutActiveFlightSessionBlocksInput = {
@@ -4994,6 +5119,7 @@ export type TenantCreateWithoutActiveFlightSessionBlocksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutActiveFlightSessionBlocksInput = {
@@ -5029,6 +5155,7 @@ export type TenantUncheckedCreateWithoutActiveFlightSessionBlocksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutActiveFlightSessionBlocksInput = {
@@ -5080,6 +5207,7 @@ export type TenantUpdateWithoutActiveFlightSessionBlocksInput = {
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutActiveFlightSessionBlocksInput = {
@@ -5112,6 +5240,167 @@ export type TenantUncheckedUpdateWithoutActiveFlightSessionBlocksInput = {
   maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
   tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantCreateWithoutUserSessionsInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordCreateNestedManyWithoutTenantInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordCreateNestedManyWithoutTenantInput
+  meetings?: Prisma.MeetingRecordCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
+  activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+}
+
+export type TenantUncheckedCreateWithoutUserSessionsInput = {
+  id: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutTenantInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutTenantInput
+  departments?: Prisma.DepartmentUncheckedCreateNestedManyWithoutTenantInput
+  personnel?: Prisma.PersonnelUncheckedCreateNestedManyWithoutTenantInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedCreateNestedManyWithoutTenantInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedCreateNestedManyWithoutTenantInput
+  qualityAudits?: Prisma.QualityAuditUncheckedCreateNestedManyWithoutTenantInput
+  safetyReports?: Prisma.SafetyReportUncheckedCreateNestedManyWithoutTenantInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedCreateNestedManyWithoutTenantInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutTenantInput
+  aircrafts?: Prisma.AircraftRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicles?: Prisma.VehicleRecordUncheckedCreateNestedManyWithoutTenantInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedCreateNestedManyWithoutTenantInput
+  bookings?: Prisma.BookingRecordUncheckedCreateNestedManyWithoutTenantInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutTenantInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedCreateNestedManyWithoutTenantInput
+  meetings?: Prisma.MeetingRecordUncheckedCreateNestedManyWithoutTenantInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedCreateNestedManyWithoutTenantInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedCreateNestedManyWithoutTenantInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedCreateNestedManyWithoutTenantInput
+  erpStates?: Prisma.ErpStateUncheckedCreateNestedManyWithoutTenantInput
+  workpacks?: Prisma.WorkpackRecordUncheckedCreateNestedManyWithoutTenantInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedCreateNestedManyWithoutTenantInput
+  tools?: Prisma.ToolRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
+  activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
+  alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+}
+
+export type TenantCreateOrConnectWithoutUserSessionsInput = {
+  where: Prisma.TenantWhereUniqueInput
+  create: Prisma.XOR<Prisma.TenantCreateWithoutUserSessionsInput, Prisma.TenantUncheckedCreateWithoutUserSessionsInput>
+}
+
+export type TenantUpsertWithoutUserSessionsInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutUserSessionsInput, Prisma.TenantUncheckedUpdateWithoutUserSessionsInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutUserSessionsInput, Prisma.TenantUncheckedCreateWithoutUserSessionsInput>
+  where?: Prisma.TenantWhereInput
+}
+
+export type TenantUpdateToOneWithWhereWithoutUserSessionsInput = {
+  where?: Prisma.TenantWhereInput
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutUserSessionsInput, Prisma.TenantUncheckedUpdateWithoutUserSessionsInput>
+}
+
+export type TenantUpdateWithoutUserSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUpdateManyWithoutTenantNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUpdateManyWithoutTenantNestedInput
+  meetings?: Prisma.MeetingRecordUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
+  activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
+  alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
+  passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantUncheckedUpdateWithoutUserSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUncheckedUpdateManyWithoutTenantNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
+  departments?: Prisma.DepartmentUncheckedUpdateManyWithoutTenantNestedInput
+  personnel?: Prisma.PersonnelUncheckedUpdateManyWithoutTenantNestedInput
+  tenantConfigs?: Prisma.TenantConfigUncheckedUpdateManyWithoutTenantNestedInput
+  managementOfChanges?: Prisma.ManagementOfChangeUncheckedUpdateManyWithoutTenantNestedInput
+  qualityAudits?: Prisma.QualityAuditUncheckedUpdateManyWithoutTenantNestedInput
+  safetyReports?: Prisma.SafetyReportUncheckedUpdateManyWithoutTenantNestedInput
+  correctiveActionPlans?: Prisma.CorrectiveActionPlanUncheckedUpdateManyWithoutTenantNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutTenantNestedInput
+  aircrafts?: Prisma.AircraftRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicles?: Prisma.VehicleRecordUncheckedUpdateManyWithoutTenantNestedInput
+  vehicleUsageRecords?: Prisma.VehicleUsageRecordUncheckedUpdateManyWithoutTenantNestedInput
+  bookings?: Prisma.BookingRecordUncheckedUpdateManyWithoutTenantNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutTenantNestedInput
+  trainingRoutes?: Prisma.TrainingRouteRecordUncheckedUpdateManyWithoutTenantNestedInput
+  meetings?: Prisma.MeetingRecordUncheckedUpdateManyWithoutTenantNestedInput
+  companyDocuments?: Prisma.CompanyDocumentUncheckedUpdateManyWithoutTenantNestedInput
+  externalOrganizations?: Prisma.ExternalOrganizationUncheckedUpdateManyWithoutTenantNestedInput
+  betaNdaAcceptances?: Prisma.BetaNdaAcceptanceUncheckedUpdateManyWithoutTenantNestedInput
+  erpStates?: Prisma.ErpStateUncheckedUpdateManyWithoutTenantNestedInput
+  workpacks?: Prisma.WorkpackRecordUncheckedUpdateManyWithoutTenantNestedInput
+  maintenanceTaskCards?: Prisma.MaintenanceTaskCardRecordUncheckedUpdateManyWithoutTenantNestedInput
+  tools?: Prisma.ToolRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessions?: Prisma.ActiveFlightSessionRecordUncheckedUpdateManyWithoutTenantNestedInput
+  activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
@@ -5150,6 +5439,7 @@ export type TenantCreateWithoutActiveFlightTrackPointsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutActiveFlightTrackPointsInput = {
@@ -5185,6 +5475,7 @@ export type TenantUncheckedCreateWithoutActiveFlightTrackPointsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   alerts?: Prisma.AlertRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutActiveFlightTrackPointsInput = {
@@ -5236,6 +5527,7 @@ export type TenantUpdateWithoutActiveFlightTrackPointsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutActiveFlightTrackPointsInput = {
@@ -5271,6 +5563,7 @@ export type TenantUncheckedUpdateWithoutActiveFlightTrackPointsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   alerts?: Prisma.AlertRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantCreateWithoutAlertsInput = {
@@ -5306,6 +5599,7 @@ export type TenantCreateWithoutAlertsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockCreateNestedManyWithoutTenantInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionCreateNestedManyWithoutTenantInput
 }
 
 export type TenantUncheckedCreateWithoutAlertsInput = {
@@ -5341,6 +5635,7 @@ export type TenantUncheckedCreateWithoutAlertsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedCreateNestedManyWithoutTenantInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedCreateNestedManyWithoutTenantInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedCreateNestedManyWithoutTenantInput
+  userSessions?: Prisma.UserSessionUncheckedCreateNestedManyWithoutTenantInput
 }
 
 export type TenantCreateOrConnectWithoutAlertsInput = {
@@ -5392,6 +5687,7 @@ export type TenantUpdateWithoutAlertsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUpdateManyWithoutTenantNestedInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUpdateManyWithoutTenantNestedInput
 }
 
 export type TenantUncheckedUpdateWithoutAlertsInput = {
@@ -5427,6 +5723,7 @@ export type TenantUncheckedUpdateWithoutAlertsInput = {
   activeFlightSessionBlocks?: Prisma.ActiveFlightSessionBlockUncheckedUpdateManyWithoutTenantNestedInput
   activeFlightTrackPoints?: Prisma.ActiveFlightTrackPointRecordUncheckedUpdateManyWithoutTenantNestedInput
   passwordSetupInvites?: Prisma.PasswordSetupInviteUncheckedUpdateManyWithoutTenantNestedInput
+  userSessions?: Prisma.UserSessionUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 
@@ -5464,6 +5761,7 @@ export type TenantCountOutputType = {
   activeFlightTrackPoints: number
   alerts: number
   passwordSetupInvites: number
+  userSessions: number
 }
 
 export type TenantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5496,6 +5794,7 @@ export type TenantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   activeFlightTrackPoints?: boolean | TenantCountOutputTypeCountActiveFlightTrackPointsArgs
   alerts?: boolean | TenantCountOutputTypeCountAlertsArgs
   passwordSetupInvites?: boolean | TenantCountOutputTypeCountPasswordSetupInvitesArgs
+  userSessions?: boolean | TenantCountOutputTypeCountUserSessionsArgs
 }
 
 /**
@@ -5711,6 +6010,13 @@ export type TenantCountOutputTypeCountPasswordSetupInvitesArgs<ExtArgs extends r
   where?: Prisma.PasswordSetupInviteWhereInput
 }
 
+/**
+ * TenantCountOutputType without action
+ */
+export type TenantCountOutputTypeCountUserSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserSessionWhereInput
+}
+
 
 export type TenantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -5746,6 +6052,7 @@ export type TenantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   activeFlightTrackPoints?: boolean | Prisma.Tenant$activeFlightTrackPointsArgs<ExtArgs>
   alerts?: boolean | Prisma.Tenant$alertsArgs<ExtArgs>
   passwordSetupInvites?: boolean | Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs>
+  userSessions?: boolean | Prisma.Tenant$userSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TenantCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tenant"]>
 
@@ -5801,6 +6108,7 @@ export type TenantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   activeFlightTrackPoints?: boolean | Prisma.Tenant$activeFlightTrackPointsArgs<ExtArgs>
   alerts?: boolean | Prisma.Tenant$alertsArgs<ExtArgs>
   passwordSetupInvites?: boolean | Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs>
+  userSessions?: boolean | Prisma.Tenant$userSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TenantCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TenantIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -5838,6 +6146,7 @@ export type $TenantPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     activeFlightTrackPoints: Prisma.$ActiveFlightTrackPointRecordPayload<ExtArgs>[]
     alerts: Prisma.$AlertRecordPayload<ExtArgs>[]
     passwordSetupInvites: Prisma.$PasswordSetupInvitePayload<ExtArgs>[]
+    userSessions: Prisma.$UserSessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -6267,6 +6576,7 @@ export interface Prisma__TenantClient<T, Null = never, ExtArgs extends runtime.T
   activeFlightTrackPoints<T extends Prisma.Tenant$activeFlightTrackPointsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$activeFlightTrackPointsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActiveFlightTrackPointRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   alerts<T extends Prisma.Tenant$alertsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$alertsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AlertRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   passwordSetupInvites<T extends Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$passwordSetupInvitesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordSetupInvitePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  userSessions<T extends Prisma.Tenant$userSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tenant$userSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -7386,6 +7696,30 @@ export type Tenant$passwordSetupInvitesArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.PasswordSetupInviteScalarFieldEnum | Prisma.PasswordSetupInviteScalarFieldEnum[]
+}
+
+/**
+ * Tenant.userSessions
+ */
+export type Tenant$userSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the UserSession
+   */
+  select?: Prisma.UserSessionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the UserSession
+   */
+  omit?: Prisma.UserSessionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserSessionInclude<ExtArgs> | null
+  where?: Prisma.UserSessionWhereInput
+  orderBy?: Prisma.UserSessionOrderByWithRelationInput | Prisma.UserSessionOrderByWithRelationInput[]
+  cursor?: Prisma.UserSessionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserSessionScalarFieldEnum | Prisma.UserSessionScalarFieldEnum[]
 }
 
 /**

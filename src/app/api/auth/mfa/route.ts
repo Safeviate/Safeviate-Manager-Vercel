@@ -16,6 +16,7 @@ import {
   verifyTotp,
 } from '@/lib/server/mfa';
 import { isTenantMfaRequired } from '@/lib/server/mfa-policy';
+import { revokeUserSessions } from '@/lib/server/user-sessions';
 
 const PENDING_ENROLLMENT_DURATION_MS = 10 * 60 * 1000;
 
@@ -24,6 +25,17 @@ async function getCurrentUser() {
   const userId = session?.user?.id;
   if (!userId) return null;
   return prisma.user.findUnique({ where: { id: userId } });
+}
+
+async function revokeOtherSessionsForMfaChange(session: Awaited<ReturnType<typeof getServerSession>>, user: { id: string; tenantId: string; email: string }) {
+  await revokeUserSessions({
+    tenantId: user.tenantId,
+    userId: user.id,
+    excludeSessionId: session?.user?.sessionId,
+    reason: 'mfa_changed',
+    actorUserId: user.id,
+    actorEmail: user.email,
+  });
 }
 
 function getUnauthorizedResponse() {
@@ -48,7 +60,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
   if (!user) return getUnauthorizedResponse();
 
   const body = await request.json().catch(() => null);
@@ -109,6 +123,7 @@ export async function POST(request: Request) {
           mfaRecoveryCodeHashes: await hashRecoveryCodes(recoveryCodes),
         },
       });
+      await revokeOtherSessionsForMfaChange(session, user);
       return NextResponse.json({ enabled: true, recoveryCodes });
     }
 
@@ -126,6 +141,7 @@ export async function POST(request: Request) {
         where: { id: user.id },
         data: { mfaRecoveryCodeHashes: await hashRecoveryCodes(recoveryCodes) },
       });
+      await revokeOtherSessionsForMfaChange(session, user);
       return NextResponse.json({ recoveryCodes });
     }
 
@@ -151,6 +167,7 @@ export async function POST(request: Request) {
           mfaRecoveryCodeHashes: [],
         },
       });
+      await revokeOtherSessionsForMfaChange(session, user);
       return NextResponse.json({ enabled: false });
     }
 

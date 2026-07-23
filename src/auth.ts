@@ -6,6 +6,7 @@ import { assertRequiredEnv } from '@/lib/server/env';
 import { enforceRateLimit } from '@/lib/server/request-security';
 import { MASTER_TENANT_EMAILS } from '@/lib/tenant-constants';
 import { decryptMfaSecret, verifyMfaCode } from '@/lib/server/mfa';
+import { createTrackedSession, isTrackedSessionActive, revokeTrackedSession } from '@/lib/server/user-sessions';
 
 assertRequiredEnv(['NEXTAUTH_SECRET'], 'authentication');
 
@@ -107,12 +108,20 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          const sessionId = await createTrackedSession({
+            userId: SEED_USER_ID,
+            tenantId: 'safeviate',
+            email,
+            role: 'developer',
+            request,
+          });
           return {
             id: SEED_USER_ID,
             tenantId: 'safeviate',
             email,
             name: 'Admin',
             role: 'developer',
+            sessionId,
           };
         }
 
@@ -204,6 +213,24 @@ export const authOptions: NextAuthOptions = {
               });
             }
 
+            // Roles can be stored as either their ID or name. Resolve the display name
+            // so custom administrator roles receive the stricter device policy too.
+            const assignedRole = await prisma.role.findFirst({
+              where: {
+                tenantId: dbUser.tenantId,
+                OR: [{ id: dbUser.role }, { name: dbUser.role }],
+              },
+              select: { name: true },
+            }).catch(() => null);
+
+            const sessionId = await createTrackedSession({
+              userId: dbUser.id,
+              tenantId: dbUser.tenantId,
+              email: dbUser.email,
+              role: assignedRole?.name || dbUser.role,
+              request,
+            });
+
             return {
               id: dbUser.id,
               tenantId: dbUser.tenantId,
@@ -211,6 +238,7 @@ export const authOptions: NextAuthOptions = {
               name: `${dbUser.firstName} ${dbUser.lastName}`.trim(),
               role: dbUser.role,
               mustChangeManualPassword,
+              sessionId,
             };
           }
         }
@@ -236,6 +264,14 @@ export const authOptions: NextAuthOptions = {
         token.tenantId = user.tenantId;
         token.role = user.role;
         token.mustChangeManualPassword = user.mustChangeManualPassword;
+        token.sessionId = user.sessionId;
+      } else if (token.sessionId && token.id && token.tenantId) {
+        const active = await isTrackedSessionActive({
+          sessionId: token.sessionId,
+          userId: token.id,
+          tenantId: token.tenantId,
+        }).catch(() => false);
+        if (!active) return {};
       }
       return token;
     },
@@ -247,8 +283,22 @@ export const authOptions: NextAuthOptions = {
         session.user.tenantId = (token.tenantId as string | undefined) || undefined;
         session.user.role = (token.role as string | undefined) || undefined;
         session.user.mustChangeManualPassword = Boolean(token.mustChangeManualPassword);
+        session.user.sessionId = (token.sessionId as string | undefined) || undefined;
       }
       return session;
+    },
+  },
+  events: {
+    async signOut(message) {
+      if ('token' in message && message.token?.sessionId && message.token.id && message.token.tenantId) {
+        await revokeTrackedSession({
+          tenantId: message.token.tenantId,
+          userId: message.token.id,
+          sessionId: message.token.sessionId,
+          reason: 'sign_out',
+          actorEmail: String(message.token.email || 'unknown'),
+        }).catch(() => undefined);
+      }
     },
   },
 };

@@ -5,6 +5,7 @@ import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
 import { enforceRateLimit } from '@/lib/server/request-security';
+import { revokeUserSessions } from '@/lib/server/user-sessions';
 
 export async function POST(request: Request) {
   try {
@@ -98,6 +99,14 @@ export async function POST(request: Request) {
           },
         });
       }
+    });
+
+    await revokeUserSessions({
+      tenantId: existingUser.tenantId,
+      userId: existingUser.id,
+      reason: 'password_changed',
+      actorUserId: existingUser.id,
+      actorEmail: existingUser.email,
     });
 
     return NextResponse.json({ ok: true });

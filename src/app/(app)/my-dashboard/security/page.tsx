@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Copy, Loader2, RefreshCw, ShieldCheck, Smartphone, TriangleAlert } from 'lucide-react';
+import { Copy, Laptop, Loader2, RefreshCw, ShieldCheck, Smartphone, TriangleAlert } from 'lucide-react';
 import { MainPageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,15 @@ type SetupPayload = {
   expiresAt: string;
 };
 
+type ActiveSession = {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  current: boolean;
+};
+
 const requestMfa = async (action: string, code?: string) => {
   const response = await fetch('/api/auth/mfa', {
     method: 'POST',
@@ -51,11 +60,24 @@ export default function SecurityPage() {
   const [currentCode, setCurrentCode] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [isWorking, setIsWorking] = useState(false);
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+  const [isSessionsLoading, setIsSessionsLoading] = useState(true);
 
   const loadStatus = async () => {
     const response = await fetch('/api/auth/mfa', { cache: 'no-store' });
     const payload = await response.json().catch(() => null);
     if (response.ok && payload) setStatus(payload);
+  };
+
+  const loadSessions = async () => {
+    setIsSessionsLoading(true);
+    try {
+      const response = await fetch('/api/auth/sessions', { cache: 'no-store' });
+      const payload = await response.json().catch(() => null);
+      if (response.ok && Array.isArray(payload?.sessions)) setActiveSessions(payload.sessions);
+    } finally {
+      setIsSessionsLoading(false);
+    }
   };
 
   const isSafeviateMasterAdministrator = MASTER_TENANT_EMAILS.includes(
@@ -86,7 +108,46 @@ export default function SecurityPage() {
 
   useEffect(() => {
     void loadStatus();
+    void loadSessions();
   }, []);
+
+  const revokeSession = async (sessionId: string) => {
+    setIsWorking(true);
+    try {
+      const response = await fetch('/api/auth/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke', sessionId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Could not revoke this device.');
+      toast({ title: 'Device signed out', description: payload.currentSessionRevoked ? 'This device will return to the sign-in screen.' : 'The other device can no longer access your account.' });
+      await loadSessions();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Device remains signed in', description: error instanceof Error ? error.message : 'Please try again.' });
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const revokeOtherDevices = async () => {
+    setIsWorking(true);
+    try {
+      const response = await fetch('/api/auth/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke-others' }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Could not sign out other devices.');
+      toast({ title: 'Other devices signed out', description: 'Only this device remains active.' });
+      await loadSessions();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Other devices remain signed in', description: error instanceof Error ? error.message : 'Please try again.' });
+    } finally {
+      setIsWorking(false);
+    }
+  };
 
   useEffect(() => {
     if (canManageMfaPolicy) void loadMfaPolicy();
@@ -272,6 +333,32 @@ export default function SecurityPage() {
               <div className="grid grid-cols-2 gap-2 font-mono text-sm sm:grid-cols-5">{recoveryCodes.map((code) => <code key={code} className="rounded border border-amber-300 bg-white px-2 py-1 text-center">{code}</code>)}</div>
             </div>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b border-border/70">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base"><Laptop className="h-5 w-5" /> Active devices</CardTitle>
+              <CardDescription>Standard accounts can use up to two devices. Privileged accounts are limited to one device.</CardDescription>
+            </div>
+            {activeSessions.length > 1 ? <Button size="sm" variant="outline" onClick={revokeOtherDevices} disabled={isWorking}>Sign out other devices</Button> : null}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-5">
+          {isSessionsLoading ? <p className="text-sm text-muted-foreground">Loading active devices...</p> : null}
+          {!isSessionsLoading && activeSessions.length === 0 ? <p className="text-sm text-muted-foreground">No active devices found.</p> : null}
+          {activeSessions.map((activeSession) => (
+            <div key={activeSession.id} className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="font-medium">{activeSession.current ? 'This device' : 'Other device'}</p>
+                <p className="truncate text-xs text-muted-foreground">{activeSession.userAgent || 'Unknown browser'}{activeSession.ipAddress ? ` | ${activeSession.ipAddress}` : ''}</p>
+                <p className="text-xs text-muted-foreground">Last active {new Date(activeSession.lastSeenAt).toLocaleString()}</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => void revokeSession(activeSession.id)} disabled={isWorking}>Sign out</Button>
+            </div>
+          ))}
         </CardContent>
       </Card>
 

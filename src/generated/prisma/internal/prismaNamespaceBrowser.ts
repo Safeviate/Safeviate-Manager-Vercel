@@ -79,6 +79,7 @@ export const ModelName = {
   ToolRecord: 'ToolRecord',
   ActiveFlightSessionRecord: 'ActiveFlightSessionRecord',
   ActiveFlightSessionBlock: 'ActiveFlightSessionBlock',
+  UserSession: 'UserSession',
   ActiveFlightTrackPointRecord: 'ActiveFlightTrackPointRecord',
   AlertRecord: 'AlertRecord'
 } as const
@@ -451,6 +452,24 @@ export const ActiveFlightSessionBlockScalarFieldEnum = {
 } as const
 
 export type ActiveFlightSessionBlockScalarFieldEnum = (typeof ActiveFlightSessionBlockScalarFieldEnum)[keyof typeof ActiveFlightSessionBlockScalarFieldEnum]
+
+
+export const UserSessionScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  userId: 'userId',
+  email: 'email',
+  roleAtLogin: 'roleAtLogin',
+  userAgent: 'userAgent',
+  ipAddress: 'ipAddress',
+  createdAt: 'createdAt',
+  lastSeenAt: 'lastSeenAt',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  revokedReason: 'revokedReason'
+} as const
+
+export type UserSessionScalarFieldEnum = (typeof UserSessionScalarFieldEnum)[keyof typeof UserSessionScalarFieldEnum]
 
 
 export const ActiveFlightTrackPointRecordScalarFieldEnum = {

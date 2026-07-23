@@ -182,6 +182,11 @@ export type ActiveFlightSessionRecord = Prisma.ActiveFlightSessionRecordModel
  */
 export type ActiveFlightSessionBlock = Prisma.ActiveFlightSessionBlockModel
 /**
+ * Model UserSession
+ * 
+ */
+export type UserSession = Prisma.UserSessionModel
+/**
  * Model ActiveFlightTrackPointRecord
  * 
  */

@@ -6,6 +6,7 @@ import { getTenantIdForRoute } from '@/lib/server/session-tenant';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { recordRecoveryArchive } from '@/lib/server/recovery-vault';
+import { revokeUserSessions } from '@/lib/server/user-sessions';
 
 export async function DELETE(
   request: Request,
@@ -328,8 +329,11 @@ export async function PATCH(
     return NextResponse.json({ error: 'User not found.' }, { status: 404 });
   }
 
-  await prisma.user.updateMany({
-    where: { id, tenantId },
+  const userUpdate = await prisma.user.updateMany({
+    where: {
+      tenantId,
+      OR: [{ id }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])],
+    },
     data: {
       firstName: data.firstName,
       lastName: data.lastName,
@@ -338,6 +342,25 @@ export async function PATCH(
       updatedAt: new Date(),
     },
   });
+
+  if (userUpdate.count > 0) {
+    const linkedUser = await prisma.user.findFirst({
+      where: {
+        tenantId,
+        OR: [{ id }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])],
+      },
+      select: { id: true, email: true },
+    });
+    if (linkedUser) {
+      await revokeUserSessions({
+        tenantId,
+        userId: linkedUser.id,
+        reason: 'role_or_access_updated',
+        actorUserId: session?.user?.id || null,
+        actorEmail: email,
+      });
+    }
+  }
 
   invalidatePersonnelDirectoryCaches(tenantId);
 

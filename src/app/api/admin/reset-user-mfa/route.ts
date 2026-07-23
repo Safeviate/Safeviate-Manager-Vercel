@@ -7,6 +7,7 @@ import { getRequestClientIp, enforceRateLimit } from '@/lib/server/request-secur
 import { isMasterTenantEmail } from '@/lib/server/tenant-access';
 import { hasHierarchicalPermission } from '@/lib/permission-model';
 import { prisma } from '@/lib/prisma';
+import { revokeUserSessions } from '@/lib/server/user-sessions';
 
 const MFA_SECURITY_SCOPE = 'security';
 
@@ -132,6 +133,14 @@ export async function POST(request: Request) {
       },
       tx
     );
+  });
+
+  await revokeUserSessions({
+    tenantId: targetUser.tenantId,
+    userId: targetUser.id,
+    reason: 'mfa_reset',
+    actorUserId: authResult.userProfile.id,
+    actorEmail,
   });
 
   return NextResponse.json({
