@@ -34,7 +34,7 @@ import { callAiFlow } from '@/lib/ai-client';
 import { extractClipboardText } from '@/lib/clipboard';
 import { getPersonnelDisplayName } from '@/lib/personnel-label';
 import { cn } from '@/lib/utils';
-import { normalizeIndentationArray, normalizeRegulationCode, sanitizeComplianceMatrixEntry } from '@/lib/regulation-code';
+import { normalizeIndentationArray, normalizeRegulationClipboardText, normalizeRegulationCode, sanitizeComplianceMatrixEntry } from '@/lib/regulation-code';
 
 const REGULATION_TABS = [
   { value: 'sacaa-cars', label: 'SACAA CARs' },
@@ -313,8 +313,8 @@ function UploadRegulationsDialog({
     if (clipboardText) {
       event.preventDefault();
       setSourceTab('text');
-      setPastedText(clipboardText);
-      toast({ title: 'Text Pasted', description: 'The text has been loaded and is ready to be processed.' });
+      setPastedText(normalizeRegulationClipboardText(clipboardText));
+      toast({ title: 'Text Pasted', description: 'The text has been aligned for regulation extraction and is ready to be processed.' });
     }
   }, [toast]);
 

@@ -79,6 +79,54 @@ export function normalizeIndentationArray(value: unknown): number[] {
     .filter((entry): entry is number => entry !== null);
 }
 
+const STANDALONE_REGULATION_MARKER = /^\((\d+|[a-z]{1,3})\)$/i;
+const ROMAN_NUMERAL_MARKER = /^(?:i|ii|iii|iv|v|vi|vii|viii|ix|x|xi|xii|xiii|xiv|xv)$/i;
+
+function regulationMarkerIndent(marker: string, previousIndent: number) {
+  if (/^\d+$/.test(marker)) return 0;
+
+  // A roman marker normally sits below an alphabetic paragraph marker. Keep it
+  // indented when copied source has split the marker from its paragraph text.
+  if (ROMAN_NUMERAL_MARKER.test(marker) && previousIndent > 0) return 2;
+
+  return 1;
+}
+
+/**
+ * Repairs legal text copied from browser/PDF viewers that place a standalone
+ * paragraph marker on one line and its text on the next line.
+ */
+export function normalizeRegulationClipboardText(value: string): string {
+  const lines = value.replace(/\r\n/g, '\n').split('\n');
+  const normalized: string[] = [];
+  let previousIndent = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) {
+      normalized.push('');
+      continue;
+    }
+
+    const markerMatch = line.match(STANDALONE_REGULATION_MARKER);
+    const nextLine = lines[index + 1]?.trim();
+    if (markerMatch && nextLine && !STANDALONE_REGULATION_MARKER.test(nextLine)) {
+      const indent = regulationMarkerIndent(markerMatch[1], previousIndent);
+      normalized.push(`${'  '.repeat(indent)}${line} ${nextLine}`);
+      previousIndent = indent;
+      index += 1;
+      continue;
+    }
+
+    normalized.push(line);
+  }
+
+  return normalized
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function sanitizeComplianceMatrixEntry<T>(item: T): T {
   if (!item || typeof item !== 'object') {
     return item;
