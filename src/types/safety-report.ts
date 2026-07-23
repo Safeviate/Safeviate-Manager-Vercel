@@ -16,11 +16,13 @@ export type InvestigationTaskStatus = 'Open' | 'In Progress' | 'Completed';
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type CorrectiveActionRiskView = 'Initial' | 'Residual';
-export type CorrectiveActionSource = 'Risk Mitigation' | 'Risk Control' | 'Investigation Finding' | 'Root Cause' | 'Immediate Containment' | 'Other';
+export type CorrectiveActionSource = 'Risk Mitigation' | 'Risk Control' | 'Investigation Finding' | 'Root Cause' | 'Human Factors' | 'Immediate Containment' | 'Other';
 export type ControlEffectivenessStatus = 'Pending' | 'Effective' | 'Partially Effective' | 'Ineffective';
 export type ReportDiaryEntryType = 'comment' | 'task_assignment' | 'task_update' | 'finding' | 'decision' | 'status_change';
 export type ReportRootCauseCategory = 'Human Factors' | 'Process' | 'Equipment' | 'Environment' | 'Training' | 'Communication' | 'Other';
 export type InvestigationInterviewStatus = 'Pending' | 'In Progress' | 'Completed';
+export type ShellInterface = 'Liveware' | 'Liveware-Software' | 'Liveware-Hardware' | 'Liveware-Environment' | 'Liveware-Liveware';
+export type ShellContribution = 'Not Relevant' | 'Observed' | 'Contributing' | 'Significant';
 
 export interface InvestigationTaskUpdate {
     id: string;
@@ -50,6 +52,16 @@ export interface ReportRootCauseAnalysis {
     category: ReportRootCauseCategory;
     title: string;
     analysis: string;
+}
+
+export interface ShellAssessment {
+    id: string;
+    interface: ShellInterface;
+    contribution: ShellContribution;
+    finding: string;
+    evidence: string;
+    recommendedAction?: string | null;
+    linkedRootCauseId?: string | null;
 }
 
 export interface InvestigationInterview {
@@ -236,6 +248,7 @@ export interface SafetyReport {
     investigationEvidencePhotos?: InvestigationPhotoAttachment[];
     investigationDocuments?: InvestigationDocumentAttachment[];
     rootCauseAnalyses?: ReportRootCauseAnalysis[];
+    shellAssessments?: ShellAssessment[];
     investigationNotes?: string;
     discussion?: ReportDiscussionItem[];
     // CAP Fields

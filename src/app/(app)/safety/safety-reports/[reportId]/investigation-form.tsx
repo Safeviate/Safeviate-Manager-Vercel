@@ -31,10 +31,12 @@ import type {
   InvestigationTaskUpdate,
   ReportDiscussionItem,
   ReportRootCauseCategory,
+  ShellContribution,
+  ShellInterface,
   SafetyReport,
 } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera, SearchCheck, ClipboardList, FileText } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, Save, Users, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Camera, SearchCheck, ClipboardList, FileText, BrainCircuit } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -108,10 +110,36 @@ const rootCauseAnalysisSchema = z.object({
   analysis: z.string().min(1, 'Root cause analysis is required.'),
 });
 
+const shellInterfaceOptions = [
+  'Liveware',
+  'Liveware-Software',
+  'Liveware-Hardware',
+  'Liveware-Environment',
+  'Liveware-Liveware',
+] as const satisfies readonly ShellInterface[];
+
+const shellContributionOptions = [
+  'Not Relevant',
+  'Observed',
+  'Contributing',
+  'Significant',
+] as const satisfies readonly ShellContribution[];
+
+const shellAssessmentSchema = z.object({
+  id: z.string(),
+  interface: z.enum(shellInterfaceOptions),
+  contribution: z.enum(shellContributionOptions),
+  finding: z.string(),
+  evidence: z.string(),
+  recommendedAction: z.string().optional(),
+  linkedRootCauseId: z.string().nullable().optional(),
+});
+
 const investigationSchema = z.object({
   investigationTeam: z.array(investigationMemberSchema),
   investigationInterviews: z.array(investigationInterviewSchema),
   rootCauseAnalyses: z.array(rootCauseAnalysisSchema),
+  shellAssessments: z.array(shellAssessmentSchema),
   investigationNotes: z.string().optional(),
   investigationTasks: z.array(investigationTaskSchema),
 });
@@ -157,6 +185,10 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
           followUpRequired: interview.followUpRequired || '',
         })) || [],
       rootCauseAnalyses: report.rootCauseAnalyses || [],
+      shellAssessments: report.shellAssessments?.map(({ recommendedAction, ...assessment }) => ({
+        ...assessment,
+        recommendedAction: recommendedAction || '',
+      })) || [],
       investigationNotes: report.investigationNotes || '',
       investigationTasks:
         report.investigationTasks?.map((task) => ({
@@ -183,8 +215,12 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
     control: form.control,
     name: 'rootCauseAnalyses',
   });
+  const { fields: shellAssessmentFields, replace: replaceShellAssessments } = useFieldArray({
+    control: form.control,
+    name: 'shellAssessments',
+  });
 
-  const buildDataToSave = (values: FormValues): Pick<SafetyReport, 'investigationTeam' | 'investigationInterviews' | 'investigationTasks' | 'investigationNotes' | 'rootCauseAnalyses'> => ({
+  const buildDataToSave = (values: FormValues): Pick<SafetyReport, 'investigationTeam' | 'investigationInterviews' | 'investigationTasks' | 'investigationNotes' | 'rootCauseAnalyses' | 'shellAssessments'> => ({
     investigationTeam: values.investigationTeam,
     investigationInterviews: values.investigationInterviews.map((interview) => ({
       ...interview,
@@ -192,6 +228,13 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
       followUpRequired: interview.followUpRequired?.trim() || null,
     })),
     rootCauseAnalyses: values.rootCauseAnalyses,
+    shellAssessments: values.shellAssessments.map((assessment) => ({
+      ...assessment,
+      finding: assessment.finding.trim(),
+      evidence: assessment.evidence.trim(),
+      recommendedAction: assessment.recommendedAction?.trim() || null,
+      linkedRootCauseId: assessment.linkedRootCauseId || null,
+    })),
     investigationNotes: values.investigationNotes,
     investigationTasks: values.investigationTasks.map((task) => ({
       ...task,
@@ -467,6 +510,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                     interviewFields={interviewFields}
                     taskFields={taskFields}
                     rootCauseFields={rootCauseFields}
+                    shellAssessmentFields={shellAssessmentFields}
                     personnel={personnel}
                     removeTeamMember={removeTeamMember}
                     removeInterview={removeInterview}
@@ -476,6 +520,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                     appendInterview={appendInterview}
                     appendTask={appendTask}
                     appendRootCause={appendRootCause}
+                    replaceShellAssessments={replaceShellAssessments}
                     handleUserSelection={handleUserSelection}
                     addTaskUpdate={addTaskUpdate}
                     report={report}
@@ -495,6 +540,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                       interviewFields={interviewFields}
                       taskFields={taskFields}
                       rootCauseFields={rootCauseFields}
+                      shellAssessmentFields={shellAssessmentFields}
                       personnel={personnel}
                       removeTeamMember={removeTeamMember}
                       removeInterview={removeInterview}
@@ -504,6 +550,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
                       appendInterview={appendInterview}
                       appendTask={appendTask}
                       appendRootCause={appendRootCause}
+                      replaceShellAssessments={replaceShellAssessments}
                       handleUserSelection={handleUserSelection}
                       addTaskUpdate={addTaskUpdate}
                       report={report}
@@ -548,6 +595,7 @@ function InvestigationFields({
   interviewFields,
   taskFields,
   rootCauseFields,
+  shellAssessmentFields,
   personnel,
   removeTeamMember,
   removeInterview,
@@ -557,6 +605,7 @@ function InvestigationFields({
   appendInterview,
   appendTask,
   appendRootCause,
+  replaceShellAssessments,
   handleUserSelection,
   addTaskUpdate,
   report,
@@ -570,6 +619,7 @@ function InvestigationFields({
   interviewFields: Array<{ id: string }>;
   taskFields: Array<{ id: string }>;
   rootCauseFields: Array<{ id: string }>;
+  shellAssessmentFields: Array<{ id: string }>;
   personnel: Personnel[];
   removeTeamMember: (index: number) => void;
   removeInterview: (index: number) => void;
@@ -579,6 +629,7 @@ function InvestigationFields({
   appendInterview: (value: FormValues['investigationInterviews'][number]) => void;
   appendTask: (value: FormValues['investigationTasks'][number]) => void;
   appendRootCause: (value: FormValues['rootCauseAnalyses'][number]) => void;
+  replaceShellAssessments: (value: FormValues['shellAssessments']) => void;
   handleUserSelection: (index: number, userId: string) => void;
   addTaskUpdate: (taskIndex: number, message: string) => Promise<boolean>;
   report: SafetyReport;
@@ -587,6 +638,8 @@ function InvestigationFields({
   addInvestigationDocument: (document: { name: string; url: string; uploadDate: string }) => Promise<void>;
   removeInvestigationDocument: (documentId: string) => Promise<void>;
 }) {
+  const rootCauseOptions = form.watch('rootCauseAnalyses') || [];
+
   return (
     <>
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
@@ -962,6 +1015,108 @@ function InvestigationFields({
               No root cause analyses added yet.
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+          <div>
+            <SectionHeader title="Human Factors - SHELL Assessment" icon={BrainCircuit} />
+            <p className="mt-1 text-[10px] text-muted-foreground">Assess task and system conditions, not individual blame.</p>
+          </div>
+          {shellAssessmentFields.length === 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => replaceShellAssessments(shellInterfaceOptions.map((shellInterface) => ({
+                id: uuidv4(),
+                interface: shellInterface,
+                contribution: 'Not Relevant',
+                finding: '',
+                evidence: '',
+                recommendedAction: '',
+                linkedRootCauseId: null,
+              })))}
+              className="h-7 px-3 text-[10px] font-black uppercase border-slate-300 no-print"
+            >
+              <PlusCircle className="mr-1 h-3 w-3" /> Start SHELL Assessment
+            </Button>
+          ) : null}
+        </div>
+        <div className="space-y-4 p-4">
+          <p className="text-xs text-muted-foreground">
+            Record only interfaces relevant to this event. A contributing or significant factor should be supported by evidence and followed through with a root cause or system-focused action.
+          </p>
+          {shellAssessmentFields.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+              No SHELL assessment started. Start one when human, procedural, equipment, environmental, or teamwork factors may have influenced the event.
+            </div>
+          ) : shellAssessmentFields.map((field, index) => (
+            <div key={field.id} className="rounded-xl border bg-muted/10 p-4 space-y-4">
+              <div className="grid gap-3 md:grid-cols-12 md:items-end">
+                <FormField
+                  control={form.control}
+                  name={`shellAssessments.${index}.interface`}
+                  render={({ field: formField }) => (
+                    <FormItem className="md:col-span-5">
+                      <Label>SHELL Interface</Label>
+                      <Select onValueChange={formField.onChange} value={formField.value}>
+                        <FormControl><SelectTrigger className="h-9 bg-background text-xs font-bold border-slate-300"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="Liveware" className="text-xs">Liveware - person and task</SelectItem>
+                          <SelectItem value="Liveware-Software" className="text-xs">Liveware-Software - procedures, training, information</SelectItem>
+                          <SelectItem value="Liveware-Hardware" className="text-xs">Liveware-Hardware - equipment, tools, facilities</SelectItem>
+                          <SelectItem value="Liveware-Environment" className="text-xs">Liveware-Environment - physical and organisational conditions</SelectItem>
+                          <SelectItem value="Liveware-Liveware" className="text-xs">Liveware-Liveware - communication and teamwork</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`shellAssessments.${index}.contribution`}
+                  render={({ field: formField }) => (
+                    <FormItem className="md:col-span-3">
+                      <Label>Contribution</Label>
+                      <Select onValueChange={formField.onChange} value={formField.value}>
+                        <FormControl><SelectTrigger className="h-9 bg-background text-xs font-bold border-slate-300"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>{shellContributionOptions.map((option) => <SelectItem key={option} value={option} className="text-xs">{option}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`shellAssessments.${index}.linkedRootCauseId`}
+                  render={({ field: formField }) => (
+                    <FormItem className="md:col-span-4">
+                      <Label>Linked Root Cause</Label>
+                      <Select value={formField.value || 'none'} onValueChange={(value) => formField.onChange(value === 'none' ? null : value)}>
+                        <FormControl><SelectTrigger className="h-9 bg-background text-xs border-slate-300"><SelectValue placeholder="Link later if needed" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs">No root cause linked</SelectItem>
+                          {rootCauseOptions.filter((cause) => cause.title?.trim()).map((cause) => <SelectItem key={cause.id} value={cause.id} className="text-xs">{cause.title}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField control={form.control} name={`shellAssessments.${index}.finding`} render={({ field: formField }) => (
+                <FormItem><Label>Finding or mismatch</Label><FormControl><Textarea {...formField} className="min-h-20 bg-background text-sm border-slate-300" placeholder="Describe the task or system condition that was observed. Avoid attributing blame to a person." /></FormControl></FormItem>
+              )} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <FormField control={form.control} name={`shellAssessments.${index}.evidence`} render={({ field: formField }) => (
+                  <FormItem><Label>Supporting evidence</Label><FormControl><Textarea {...formField} className="min-h-20 bg-background text-sm border-slate-300" placeholder="Interview, document, observation, record, or photograph reference." /></FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name={`shellAssessments.${index}.recommendedAction`} render={({ field: formField }) => (
+                  <FormItem><Label>Recommended system action</Label><FormControl><Textarea {...formField} className="min-h-20 bg-background text-sm border-slate-300" placeholder="For example: revise procedure, improve handover, adjust lighting, improve briefing, or change equipment." /></FormControl></FormItem>
+                )} />
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

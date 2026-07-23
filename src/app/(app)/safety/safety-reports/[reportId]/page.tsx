@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import type { SafetyReport } from '@/types/safety-report';
-import { ArrowLeft, Printer, ShieldAlert, Pencil, FileText, Link2, Unlink } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Printer, ShieldAlert, Pencil, FileText, Link2, Unlink } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
@@ -34,6 +34,7 @@ import {
 } from '@/components/page-header';
 import { usePageLayout } from '@/hooks/use-page-layout';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getInitialNarrative } from '@/lib/safety-report-text';
 
 const isEmailLike = (value?: string | null) => Boolean(value && /\S+@\S+\.\S+/.test(value));
@@ -270,8 +271,8 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     {
       tab: 'hazards',
       label: 'Risk Assessment',
-      complete: riskCount > 0 && hasRiskDecision,
-      detail: riskCount === 0 ? 'Risk assessment needed' : hasRiskDecision ? `${riskCount} risk${riskCount === 1 ? '' : 's'} assessed and decided` : 'Risk decision and rationale needed',
+      complete: riskCount > 0,
+      detail: riskCount === 0 ? 'Risk assessment needed' : `${riskCount} risk${riskCount === 1 ? '' : 's'} assessed`,
     },
     {
       tab: 'investigation',
@@ -282,8 +283,8 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
     {
       tab: 'cap',
       label: 'Corrective Actions',
-      complete: actionCount === 0 ? hasRiskDecision : openActionCount === 0,
-      detail: actionCount === 0 ? hasRiskDecision ? 'No additional actions required' : 'Risk decision needed' : openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
+      complete: hasRiskDecision && (actionCount === 0 || openActionCount === 0),
+      detail: !hasRiskDecision ? 'Residual-risk decision needed' : actionCount === 0 ? 'No additional actions required' : openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
     },
     {
       tab: 'monitoring',
@@ -407,6 +408,25 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
 
         <section className="overflow-hidden rounded-lg border">
           <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+            <h2 className="text-sm font-black uppercase tracking-wide">Human Factors - SHELL Assessment</h2>
+            <Badge variant="secondary">{report.shellAssessments?.length || 0} assessed</Badge>
+          </div>
+          {(report.shellAssessments || []).length > 0 ? (
+            <div className="divide-y">
+              {report.shellAssessments?.map((assessment) => (
+                <div key={assessment.id} className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">{assessment.interface}</p><Badge variant="outline">{assessment.contribution}</Badge></div>
+                  {assessment.finding ? <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{assessment.finding}</p> : null}
+                  {assessment.evidence ? <p className="mt-2 text-xs text-muted-foreground"><span className="font-bold">Evidence:</span> {assessment.evidence}</p> : null}
+                  {assessment.recommendedAction ? <p className="mt-2 text-xs text-muted-foreground"><span className="font-bold">Recommended action:</span> {assessment.recommendedAction}</p> : null}
+                </div>
+              ))}
+            </div>
+          ) : <p className="px-4 py-5 text-sm text-muted-foreground">No SHELL assessment has been recorded.</p>}
+        </section>
+
+        <section className="overflow-hidden rounded-lg border">
+          <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <h2 className="text-sm font-black uppercase tracking-wide">Corrective Action Summary</h2>
             <Badge variant="secondary">{correctiveActions.length} recorded</Badge>
           </div>
@@ -483,22 +503,23 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         <div className="flex-1 overflow-hidden pb-10 no-print pt-4">
           <div className="rounded-xl border border-card-border overflow-hidden flex flex-col bg-card shadow-none h-full">
             <div className="sticky top-0 z-30 bg-card">
-              <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} min-h-[38px] bg-background px-4 md:px-5`}>
-                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                  <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                  <p className="shrink-0 text-sm font-black tracking-tight text-slate-800">Report {report.reportNumber}</p>
-                  <Badge variant="secondary" className="h-4 shrink-0 bg-slate-100 px-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-700">{report.status}</Badge>
-                  <span className="hidden h-3 w-px shrink-0 bg-slate-200 sm:block" aria-hidden="true" />
-                  {report.sourceQuickReportNumber ? (
-                    <span className="truncate text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                      Quick intake: {report.sourceQuickReportNumber}
+              <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-background px-4 py-2 md:px-5`}>
+                <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                    <p className="shrink-0 text-sm font-black tracking-tight text-slate-800">Report {report.reportNumber}</p>
+                    <Badge variant="secondary" className="h-4 shrink-0 bg-slate-100 px-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-700">{report.status}</Badge>
+                    <span className="hidden h-3 w-px shrink-0 bg-slate-200 sm:block" aria-hidden="true" />
+                    {report.sourceQuickReportNumber ? (
+                      <span className="truncate text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                        Intake {report.sourceQuickReportNumber}
+                      </span>
+                    ) : null}
+                    <span className="hidden shrink-0 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500 md:inline">
+                      {report.reportingChannel || 'Voluntary'}
                     </span>
-                  ) : null}
-                  <span className="hidden shrink-0 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500 md:inline">
-                    {report.reportingChannel || 'Voluntary'} report
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
                   <EditReportDialog 
                     report={report} 
                     tenantId={tenantId} 
@@ -569,46 +590,57 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                       </div>
                     </DialogContent>
                   </Dialog>
-                  <Button asChild variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
-                    <Link href={`/print/safety-reports/${report.id}`}>
-                      <FileText className="h-4 w-4" />
-                      Open Document
-                    </Link>
-                  </Button>
-                  <Button onClick={handlePrint} variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
-                      <Printer className="h-4 w-4" />
-                      Print Report
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" size="icon" className={`${HEADER_SECONDARY_BUTTON_CLASS} h-8 w-8 shrink-0`} aria-label="Report document actions">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/print/safety-reports/${report.id}`}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Open document
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handlePrint}>
+                        <Printer className="mr-2 h-4 w-4" />
+                        Print report
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  </div>
                 </div>
               </div>
 
-              <div className={`${CARD_HEADER_BAND_CLASS} bg-slate-50/70 px-4 py-1.5 md:px-5`}>
-                <div className="flex flex-col gap-2">
-                  <div className={`${HEADER_TAB_LIST_CLASS} max-w-full overflow-x-auto no-scrollbar`} aria-label="Safety case workflow">
-                    {visibleWorkflowSteps.map((step, index) => {
-                      const isActive = activeTab === step.tab;
-                      return (
-                        <button
-                          key={step.tab}
-                          type="button"
-                          onClick={() => setActiveTab(step.tab)}
-                          title={`${index + 1}. ${step.label}`}
-                          className={`${HEADER_TAB_TRIGGER_CLASS} h-6 ${isActive ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                        >
-                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${step.complete ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-                          <span>{index + 1}. {step.label}</span>
-                        </button>
-                      );
-                    })}
+              <div className={`${CARD_HEADER_BAND_CLASS} bg-slate-50/70 px-4 py-2 md:px-5`}>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
+                    <p className="text-[10px] font-semibold text-slate-500">{visibleWorkflowSteps.filter((step) => step.complete).length}/{visibleWorkflowSteps.length} workflow steps complete</p>
+                    <div className="flex items-center gap-1.5">
+                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('full')}>Full report</Button>
+                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center justify-end gap-1.5 border-t border-slate-200/80 pt-2">
-                    <p className="text-[10px] font-semibold text-slate-500">{visibleWorkflowSteps.filter((step) => step.complete).length}/{visibleWorkflowSteps.length} complete</p>
-                    <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('full')}>Full Report</Button>
-                    <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
+                  <div className="-mx-4 border-t border-card-border px-4 pt-2 md:-mx-5 md:px-5">
+                    <div className={`${HEADER_TAB_LIST_CLASS} max-w-full justify-center overflow-x-auto no-scrollbar`} aria-label="Safety case workflow">
+                      {visibleWorkflowSteps.map((step, index) => {
+                        const isActive = activeTab === step.tab;
+                        return (
+                          <button
+                            key={step.tab}
+                            type="button"
+                            onClick={() => setActiveTab(step.tab)}
+                            title={`${index + 1}. ${step.label}`}
+                            className={`${HEADER_TAB_TRIGGER_CLASS} h-6 ${isActive ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                          >
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${step.complete ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                            <span>{index + 1}. {step.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <p className="text-[10px] font-medium text-slate-500">
-                    Work may start at any stage: contain first, assess and decide risk, investigate causes, then track actions and verify their effectiveness before closure.
-                  </p>
                 </div>
               </div>
             </div>

@@ -15,9 +15,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { CorrectiveAction, ReportHazard, SafetyReport } from '@/types/safety-report';
+import type { SafetyReport } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { PlusCircle, Trash2, Save, AlertTriangle, ShieldCheck, CalendarIcon, BookPlus, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, Trash2, Save, AlertTriangle, ShieldCheck, BookPlus, CheckCircle2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -65,64 +65,6 @@ const buildRiskAssessmentPath = (
     field: 'likelihood' | 'severity' | 'riskScore' | 'riskLevel',
 ): FieldPath<FormValues> => `${basePath}.${field}` as FieldPath<FormValues>;
 
-const deriveCorrectiveActionsFromHazards = (
-    hazards: ReportHazard[],
-    existingActions: CorrectiveAction[] = [],
-): CorrectiveAction[] => {
-    const derivedActions = hazards.flatMap((hazard) =>
-        (hazard.risks || []).flatMap<CorrectiveAction>((risk) => {
-            const mitigations = risk.mitigations || [];
-            if (mitigations.length > 0) {
-                return mitigations.map((mitigation) => {
-                    const existingAction = existingActions.find((action) => action.id === mitigation.id);
-                    const residual = mitigation.residualRiskAssessment;
-                    return {
-                        id: mitigation.id,
-                        description: mitigation.description,
-                        responsiblePersonId: existingAction?.responsiblePersonId || '',
-                        hazardId: hazard.id,
-                        riskId: risk.id,
-                        source: 'Risk Mitigation',
-                        riskAssessmentView: 'Residual',
-                        residualLikelihood: residual.likelihood,
-                        residualSeverity: residual.severity,
-                        residualRiskScore: residual.riskScore,
-                        residualRiskLevel: residual.riskLevel,
-                        deadline: existingAction?.deadline || new Date().toISOString(),
-                        status: existingAction?.status || 'Open',
-                    } satisfies CorrectiveAction;
-                });
-            }
-
-            const existingRiskAction = existingActions.find(
-                (action) => action.hazardId === hazard.id && action.riskId === risk.id,
-            );
-            return [{
-                id: existingRiskAction?.id || risk.id,
-                description: existingRiskAction?.description || risk.description,
-                responsiblePersonId: existingRiskAction?.responsiblePersonId || '',
-                hazardId: hazard.id,
-                riskId: risk.id,
-                source: 'Risk Control',
-                riskAssessmentView: 'Initial',
-                residualLikelihood: risk.riskAssessment.likelihood,
-                residualSeverity: risk.riskAssessment.severity,
-                residualRiskScore: risk.riskAssessment.riskScore,
-                residualRiskLevel: risk.riskAssessment.riskLevel,
-                deadline: existingRiskAction?.deadline || new Date().toISOString(),
-                status: existingRiskAction?.status || 'Open',
-            } satisfies CorrectiveAction];
-        }),
-    );
-    const derivedIds = new Set(derivedActions.map((action) => action.id));
-    const independentActions = existingActions.filter((action) => {
-        if (derivedIds.has(action.id)) return false;
-        return action.source && !['Risk Mitigation', 'Risk Control'].includes(action.source);
-    });
-
-    return [...derivedActions, ...independentActions];
-};
-
 // --- Form Schemas ---
 const riskAssessmentSchema = z.object({
     severity: z.number().min(1).max(5),
@@ -150,10 +92,6 @@ const reportHazardSchema = z.object({
 
 const hazardIdentificationSchema = z.object({
   initialHazards: z.array(reportHazardSchema),
-  riskAcceptance: z.object({
-    decision: z.enum(['Acceptable', 'Tolerable With Controls', 'Unacceptable']).optional(),
-    rationale: z.string().default(''),
-  }).optional(),
 });
 
 type FormValues = z.infer<typeof hazardIdentificationSchema>;
@@ -368,77 +306,6 @@ const RiskAssessmentEditor = ({
     );
 };
 
-const MitigationsArray = ({ hazardIndex, riskIndex, riskMatrixColors }: {
-    hazardIndex: number;
-    riskIndex: number;
-    riskMatrixColors?: Record<string, string>;
-}) => {
-    const { control } = useFormContext<FormValues>();
-    const basePath = `initialHazards.${hazardIndex}.risks.${riskIndex}.mitigations` as const;
-    const { fields, append, remove } = useFieldArray({
-        control,
-        name: basePath,
-    });
-
-    return (
-        <div className="mt-3">
-            <div className="flex justify-end px-3 py-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={`${HEADER_SECONDARY_BUTTON_CLASS} no-print`}
-                    onClick={() => append({
-                        id: uuidv4(),
-                        description: '',
-                        residualRiskAssessment: { likelihood: 1, severity: 1, riskScore: 1, riskLevel: 'Low' },
-                    })}
-                >
-                    <PlusCircle className="mr-1 h-3 w-3" /> Add Corrective Action
-                </Button>
-            </div>
-            {fields.map((field, mitigationIndex) => (
-                <div key={field.id} className="mt-3 border-t border-input pt-3 first:mt-0 first:border-t-0 first:pt-0">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                            <ShieldCheck className="h-3.5 w-3.5 text-slate-500" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Mitigation {mitigationIndex + 1}</span>
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => remove(mitigationIndex)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                    </div>
-                    <div className="space-y-3 p-3">
-                    <FormField
-                        control={control}
-                        name={`${basePath}.${mitigationIndex}.description`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mitigation / Control</FormLabel>
-                                <FormControl>
-                                    <textarea
-                                        placeholder="Describe the mitigation action to reduce this risk..."
-                                        {...field}
-                                        className="min-h-[56px] w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary"
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <RiskAssessmentEditor
-                        path={`${basePath}.${mitigationIndex}.residualRiskAssessment`}
-                        label="Residual Risk"
-                        riskMatrixColors={riskMatrixColors}
-                        compact
-                    />
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-};
-
 const RisksArray = ({ report, hazardIndex, riskMatrixColors }: { report: SafetyReport; hazardIndex: number; riskMatrixColors?: Record<string, string> }) => {
     const { control, getValues } = useFormContext<FormValues>();
     const { hasPermission } = usePermissions();
@@ -584,11 +451,6 @@ const RisksArray = ({ report, hazardIndex, riskMatrixColors }: { report: SafetyR
                             riskMatrixColors={riskMatrixColors}
                             compact
                         />
-                        <MitigationsArray
-                            hazardIndex={hazardIndex}
-                            riskIndex={riskIndex}
-                            riskMatrixColors={riskMatrixColors}
-                        />
                     </div>
                     </div>
                 );
@@ -643,20 +505,12 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
     resolver: zodResolver(hazardIdentificationSchema),
     defaultValues: {
       initialHazards: normalizedHazards,
-      riskAcceptance: {
-        decision: report.riskAcceptance?.decision,
-        rationale: report.riskAcceptance?.rationale || '',
-      },
     },
   });
 
   React.useEffect(() => {
     form.reset({
       initialHazards: normalizedHazards,
-      riskAcceptance: {
-        decision: report.riskAcceptance?.decision,
-        rationale: report.riskAcceptance?.rationale || '',
-      },
     });
   }, [form, normalizedHazards]);
 
@@ -682,22 +536,11 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
             })),
           })),
         })),
-        riskAcceptance: values.riskAcceptance?.decision
-          ? {
-            ...report.riskAcceptance,
-            decision: values.riskAcceptance.decision,
-            rationale: values.riskAcceptance.rationale.trim(),
-          }
-          : null,
       };
-      const correctiveActions = deriveCorrectiveActionsFromHazards(
-        dataToSave.initialHazards as ReportHazard[],
-        report.correctiveActions || [],
-      );
       const response = await fetch(`/api/safety-reports/${report.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report: { ...report, ...dataToSave, correctiveActions } }),
+        body: JSON.stringify({ report: { ...report, ...dataToSave } }),
       });
 
       if (!response.ok) {
@@ -754,13 +597,11 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
               {isStacked ? (
                 <div className="p-4">
                   <HazardFields report={report} hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
-                  <RiskDecisionFields />
                 </div>
               ) : (
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
                     <HazardFields report={report} hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
-                    <RiskDecisionFields />
                   </div>
                 </ScrollArea>
               )}
@@ -776,53 +617,6 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
         </FormProvider>
       </div>
     </div>
-  );
-}
-
-function RiskDecisionFields() {
-  const { control } = useFormContext<FormValues>();
-  return (
-    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-        <div>
-          <h4 className="text-xs font-black uppercase tracking-tight">Risk Tolerability Decision</h4>
-          <p className="mt-1 text-[10px] text-muted-foreground">Record why the residual risk is acceptable, tolerable with controls, or requires further action.</p>
-        </div>
-      </div>
-      <div className="grid gap-4 p-4 md:grid-cols-[260px_minmax(0,1fr)]">
-        <FormField
-          control={control}
-          name="riskAcceptance.decision"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ''}>
-                <FormControl>
-                  <SelectTrigger className="mt-2 h-10"><SelectValue placeholder="Select a decision" /></SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="Acceptable">Acceptable</SelectItem>
-                  <SelectItem value="Tolerable With Controls">Tolerable with controls</SelectItem>
-                  <SelectItem value="Unacceptable">Unacceptable - further controls required</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="riskAcceptance.rationale"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision rationale</FormLabel>
-              <FormControl>
-                <textarea {...field} rows={3} placeholder="Explain the residual-risk decision, required controls, and any operating limits." className="mt-2 min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      </div>
-    </section>
   );
 }
 

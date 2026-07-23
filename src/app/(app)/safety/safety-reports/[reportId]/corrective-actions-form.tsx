@@ -54,9 +54,13 @@ const mitigationReviewSchema = z.object({
 
 const reviewSchema = z.object({
   mitigationReviews: z.array(mitigationReviewSchema),
+  riskAcceptance: z.object({
+    decision: z.enum(['Acceptable', 'Tolerable With Controls', 'Unacceptable']).optional(),
+    rationale: z.string().default(''),
+  }).optional(),
   independentActions: z.array(z.object({
     id: z.string(),
-    source: z.enum(['Investigation Finding', 'Root Cause', 'Immediate Containment', 'Other']),
+    source: z.enum(['Investigation Finding', 'Root Cause', 'Human Factors', 'Immediate Containment', 'Other']),
     description: z.string().min(1, 'Describe the corrective action.'),
     responsiblePersonId: z.string().optional(),
     deadline: z.date().nullable().optional(),
@@ -77,9 +81,10 @@ type FlattenedMitigation = {
   mitigationResidualRiskAssessment: RiskAssessment;
   reviewAction?: CorrectiveAction;
   isRiskFallback?: boolean;
+  isDraft?: boolean;
 };
 
-const independentActionSources = ['Investigation Finding', 'Root Cause', 'Immediate Containment', 'Other'] as const;
+const independentActionSources = ['Investigation Finding', 'Root Cause', 'Human Factors', 'Immediate Containment', 'Other'] as const;
 
 const isIndependentAction = (action: CorrectiveAction, mitigationIds: Set<string>) =>
   !mitigationIds.has(action.id) && Boolean(action.source && !['Risk Mitigation', 'Risk Control'].includes(action.source));
@@ -180,7 +185,7 @@ const flattenMitigations = (hazards: ReportHazard[] = [], correctiveActions: Cor
         riskDescription: risk.description,
         riskAssessment: normalizeRiskAssessment(risk.riskAssessment),
         mitigationId: reviewAction?.id || risk.id,
-        mitigationDescription: reviewAction?.description || risk.description,
+        mitigationDescription: reviewAction?.description || '',
         mitigationResidualRiskAssessment: fallbackResidual,
         reviewAction,
         isRiskFallback: true,
@@ -251,6 +256,10 @@ export function CorrectiveActionsForm({
         residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
         residualSeverity: item.mitigationResidualRiskAssessment.severity,
       })),
+      riskAcceptance: {
+        decision: report.riskAcceptance?.decision,
+        rationale: report.riskAcceptance?.rationale || '',
+      },
       independentActions: independentActions.map((action) => ({
         id: action.id,
         source: (action.source && independentActionSources.includes(action.source as typeof independentActionSources[number])
@@ -277,6 +286,10 @@ export function CorrectiveActionsForm({
         residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
         residualSeverity: item.mitigationResidualRiskAssessment.severity,
       })),
+      riskAcceptance: {
+        decision: report.riskAcceptance?.decision,
+        rationale: report.riskAcceptance?.rationale || '',
+      },
       independentActions: independentActions.map((action) => ({
         id: action.id,
         source: (action.source && independentActionSources.includes(action.source as typeof independentActionSources[number])
@@ -290,10 +303,65 @@ export function CorrectiveActionsForm({
     });
   }, [form, independentActions, mitigationItems]);
 
+  const { fields: mitigationReviewFields, append: appendMitigationReview, remove: removeMitigationReview } = useFieldArray({
+    control: form.control,
+    name: 'mitigationReviews',
+  });
   const { fields: independentActionFields, append: appendIndependentAction, remove: removeIndependentAction } = useFieldArray({
     control: form.control,
     name: 'independentActions',
   });
+
+  const reviewItems = useMemo(() => {
+    const existingItems = new Map<string, FlattenedMitigation>(
+      mitigationItems.map((item) => [`${item.hazardId}:${item.riskId}:${item.mitigationId}`, item]),
+    );
+
+    return mitigationReviewFields.map((review) => {
+      const key = `${review.hazardId}:${review.riskId}:${review.mitigationId}`;
+      const existingItem = existingItems.get(key);
+      if (existingItem) return existingItem;
+
+      const hazard = (report.initialHazards || []).find((candidate) => candidate.id === review.hazardId);
+      const risk = hazard?.risks?.find((candidate) => candidate.id === review.riskId);
+      const initialRisk = normalizeRiskAssessment(risk?.riskAssessment);
+
+      return {
+        hazardId: review.hazardId,
+        hazardDescription: hazard?.description || 'Hazard',
+        riskId: review.riskId,
+        riskDescription: risk?.description || 'Risk',
+        riskAssessment: initialRisk,
+        mitigationId: review.mitigationId,
+        mitigationDescription: review.mitigationDescription,
+        mitigationResidualRiskAssessment: normalizeRiskAssessment({
+          likelihood: review.residualLikelihood,
+          severity: review.residualSeverity,
+        }),
+        isDraft: true,
+      } satisfies FlattenedMitigation;
+    });
+  }, [mitigationItems, mitigationReviewFields, report.initialHazards]);
+
+  const addCorrectiveAction = (hazardId: string, riskId: string) => {
+    const risk = (report.initialHazards || [])
+      .find((hazard) => hazard.id === hazardId)
+      ?.risks?.find((candidate) => candidate.id === riskId);
+    if (!risk) return;
+
+    const initialRisk = normalizeRiskAssessment(risk.riskAssessment);
+    appendMitigationReview({
+      hazardId,
+      riskId,
+      mitigationId: uuidv4(),
+      mitigationDescription: '',
+      responsiblePersonId: '',
+      completionDate: null,
+      status: 'Open',
+      residualLikelihood: initialRisk.likelihood,
+      residualSeverity: initialRisk.severity,
+    });
+  };
 
   const onSubmit = async (values: ReviewFormValues) => {
     const reviewMap = new Map(
@@ -330,20 +398,21 @@ export function CorrectiveActionsForm({
         const reviewsForRisk = values.mitigationReviews.filter(
           (review) => review.hazardId === hazard.id && review.riskId === risk.id,
         );
-        if ((risk.mitigations || []).length > 0 || reviewsForRisk.length === 0) {
-          return risk;
-        }
-
-        return {
-          ...risk,
-          mitigations: reviewsForRisk.map((review) => ({
+        const existingMitigationIds = new Set((risk.mitigations || []).map((mitigation) => mitigation.id));
+        const newMitigations = reviewsForRisk
+          .filter((review) => !existingMitigationIds.has(review.mitigationId))
+          .map((review) => ({
             id: review.mitigationId,
             description: review.mitigationDescription.trim(),
             residualRiskAssessment: normalizeRiskAssessment({
               likelihood: review.residualLikelihood,
               severity: review.residualSeverity,
             }),
-          })),
+          }));
+        if (newMitigations.length === 0) return risk;
+        return {
+          ...risk,
+          mitigations: [...(risk.mitigations || []), ...newMitigations],
         };
       }),
     }));
@@ -351,6 +420,13 @@ export function CorrectiveActionsForm({
     const nextReport: SafetyReport = {
       ...report,
       initialHazards: nextHazardsWithFallbackDescriptions,
+      riskAcceptance: values.riskAcceptance?.decision
+        ? {
+          ...report.riskAcceptance,
+          decision: values.riskAcceptance.decision,
+          rationale: values.riskAcceptance.rationale.trim(),
+        }
+        : null,
       correctiveActions: [
         ...values.mitigationReviews.map((review) => {
         const residual = normalizeRiskAssessment({
@@ -456,13 +532,21 @@ export function CorrectiveActionsForm({
     }
   };
 
+  const removeCorrectiveAction = (item: FlattenedMitigation, index: number) => {
+    if (item.isDraft) {
+      removeMitigationReview(index);
+      return;
+    }
+    void deleteCorrectiveAction(item);
+  };
+
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
       <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
         <div className="flex min-w-0 items-center gap-2">
         <h3 className="shrink-0 text-sm font-black uppercase tracking-tight">Corrective Actions</h3>
         <p className="truncate text-[10px] font-medium text-muted-foreground">
-          Assign, track, close, and verify the controls defined during risk assessment.
+          After investigation, define controls, assess residual risk, and record the tolerability decision.
         </p>
         </div>
       </div>
@@ -473,12 +557,14 @@ export function CorrectiveActionsForm({
               <div className="p-6 space-y-4">
                 <OverdueActionEscalations actions={overdueActions} personnel={personnel} escalatingActionId={escalatingActionId} onEscalate={escalateOverdueAction} />
                 <ReviewFields
-                  items={mitigationItems}
+                  items={reviewItems}
                   form={form}
                   personnel={personnel}
                   riskMatrixColors={riskMatrixColors}
-                  onDeleteAction={deleteCorrectiveAction}
+                  onAddAction={addCorrectiveAction}
+                  onDeleteAction={removeCorrectiveAction}
                 />
+                <TolerabilityDecisionFields form={form} />
                 <IndependentActionFields
                   fields={independentActionFields}
                   form={form}
@@ -492,12 +578,14 @@ export function CorrectiveActionsForm({
                 <div className="space-y-4">
                   <OverdueActionEscalations actions={overdueActions} personnel={personnel} escalatingActionId={escalatingActionId} onEscalate={escalateOverdueAction} />
                   <ReviewFields
-                    items={mitigationItems}
+                    items={reviewItems}
                     form={form}
                     personnel={personnel}
                     riskMatrixColors={riskMatrixColors}
-                    onDeleteAction={deleteCorrectiveAction}
+                    onAddAction={addCorrectiveAction}
+                    onDeleteAction={removeCorrectiveAction}
                   />
+                  <TolerabilityDecisionFields form={form} />
                   <IndependentActionFields
                     fields={independentActionFields}
                     form={form}
@@ -641,20 +729,22 @@ function ReviewFields({
   form,
   personnel,
   riskMatrixColors,
+  onAddAction,
   onDeleteAction,
 }: {
   items: FlattenedMitigation[];
   form: ReturnType<typeof useForm<ReviewFormValues>>;
   personnel: Personnel[];
   riskMatrixColors?: Record<string, string>;
-  onDeleteAction: (item: FlattenedMitigation) => void;
+  onAddAction: (hazardId: string, riskId: string) => void;
+  onDeleteAction: (item: FlattenedMitigation, index: number) => void;
 }) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
         <CheckCircle2 className="h-12 w-12 mb-4" />
-        <p className="text-sm font-black uppercase tracking-widest">No mitigation actions to review.</p>
-        <p className="text-xs font-medium">Add mitigations under Hazard & Risk Identification first, then review them here.</p>
+        <p className="text-sm font-black uppercase tracking-widest">No risks available for corrective actions.</p>
+        <p className="text-xs font-medium">Record a hazard and initial risk in Step 2 first.</p>
       </div>
     );
   }
@@ -671,12 +761,21 @@ function ReviewFields({
                   Corrective Action {index + 1}
                 </p>
               </div>
-              <div className="no-print">
+              <div className="flex items-center gap-2 no-print">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[10px] font-black uppercase tracking-wide"
+                  onClick={() => onAddAction(item.hazardId, item.riskId)}
+                >
+                  <PlusCircle className="mr-1 h-3 w-3" /> Add another
+                </Button>
                 <DeleteActionButton
                   title="Delete corrective action?"
                   description="This will remove the corrective action and its linked mitigation from this safety report. This cannot be undone."
                   srLabel={`Delete corrective action ${index + 1}`}
-                  onDelete={() => onDeleteAction(item)}
+                  onDelete={() => onDeleteAction(item, index)}
                 />
               </div>
             </div>
@@ -817,6 +916,52 @@ function ReviewFields({
         </div>
       ))}
     </>
+  );
+}
+
+function TolerabilityDecisionFields({ form }: { form: ReturnType<typeof useForm<ReviewFormValues>> }) {
+  return (
+    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-tight">Risk Tolerability Decision</h4>
+          <p className="mt-1 text-[10px] text-muted-foreground">After investigation and defined controls, record whether the residual risk is acceptable, tolerable with controls, or requires further action.</p>
+        </div>
+      </div>
+      <div className="grid gap-4 p-4 md:grid-cols-[260px_minmax(0,1fr)]">
+        <FormField
+          control={form.control}
+          name="riskAcceptance.decision"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl>
+                  <SelectTrigger className="mt-2 h-10"><SelectValue placeholder="Select a decision" /></SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Acceptable">Acceptable</SelectItem>
+                  <SelectItem value="Tolerable With Controls">Tolerable with controls</SelectItem>
+                  <SelectItem value="Unacceptable">Unacceptable - further controls required</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="riskAcceptance.rationale"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision rationale</FormLabel>
+              <FormControl>
+                <textarea {...field} rows={3} placeholder="Explain the residual-risk decision, required controls, and any operating limits." className="mt-2 min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </section>
   );
 }
 

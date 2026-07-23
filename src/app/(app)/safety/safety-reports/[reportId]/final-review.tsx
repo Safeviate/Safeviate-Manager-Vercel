@@ -384,6 +384,23 @@ function ReviewFields({ report, form, riskFields, riskMatrixColors }: ReviewFiel
 
       <section className="overflow-hidden rounded-lg border border-card-border bg-card">
         <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
+          <div className="p-1.5 rounded-md bg-primary/10 text-primary"><Users className="h-4 w-4" /></div>
+          <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Human Factors - SHELL Review</h3>
+        </div>
+        <div className="space-y-3 p-4">
+          {report.shellAssessments && report.shellAssessments.length > 0 ? report.shellAssessments.map((assessment) => (
+            <div key={assessment.id} className="rounded-xl border bg-muted/5 p-4 space-y-2">
+              <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-bold text-foreground">{assessment.interface}</p><Badge variant="outline" className="h-6 px-2 text-[10px] font-black uppercase tracking-[0.14em]">{assessment.contribution}</Badge></div>
+              {assessment.finding ? <p className="text-sm text-foreground whitespace-pre-wrap">{assessment.finding}</p> : null}
+              {assessment.evidence ? <p className="text-xs text-muted-foreground whitespace-pre-wrap"><span className="font-bold">Evidence:</span> {assessment.evidence}</p> : null}
+              {assessment.recommendedAction ? <p className="text-xs text-muted-foreground whitespace-pre-wrap"><span className="font-bold">Recommended system action:</span> {assessment.recommendedAction}</p> : null}
+            </div>
+          )) : <div className="rounded-xl border border-dashed bg-muted/5 px-4 py-6 text-sm text-muted-foreground">No SHELL assessment has been captured for this report.</div>}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+        <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} justify-start`}>
             <div className="p-1.5 rounded-md bg-primary/10 text-primary"><SearchCheck className="h-4 w-4" /></div>
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Root Cause Review</h3>
         </div>
