@@ -571,10 +571,17 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
   const [actionNotes, setActionNotes] = React.useState<Record<string, string>>(() =>
     Object.fromEntries((report.correctiveActions || []).map((action) => [action.id, action.effectivenessEvidence || ''])),
   );
+  const [actionStatuses, setActionStatuses] = React.useState<Record<string, ControlEffectivenessStatus>>(() =>
+    Object.fromEntries((report.correctiveActions || []).map((action) => [action.id, action.effectivenessStatus || 'Pending'])),
+  );
 
   const actorName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}`.trim() : 'Safety Manager';
   const openActions = (report.correctiveActions || []).filter((action) => !['Closed', 'Cancelled'].includes(action.status));
-  const requiresRootCause = ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
+  const hasHighSeverityRisk = (report.initialHazards || []).some((hazard) =>
+    (hazard.risks || []).some((risk) => ['High', 'Critical'].includes(risk.riskAssessment?.riskLevel || '')),
+  );
+  const requiresRootCause = hasHighSeverityRisk || ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
+  const hasDocumentedRootCause = (report.rootCauseAnalyses || []).some((cause) => cause.title?.trim() && cause.analysis?.trim());
   const isInMonitoring = ['Closed - Monitoring', 'Closed - Effective'].includes(nextStatus);
   const availableClosureStatuses = ['Closed - Monitoring', 'Closed - Effective'].includes(report.status)
     ? [...closureStatuses.slice(0, 2), 'Closed - Effective' as const, 'Reopened' as const]
@@ -677,7 +684,7 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
     void saveReport(buildLifecycleReport(nextPlan), 'Monitoring evaluation recorded');
   };
 
-  const saveActionEffectiveness = (actionId: string, effectivenessStatus: ControlEffectivenessStatus) => {
+  const saveActionEffectiveness = (actionId: string, effectivenessStatus = actionStatuses[actionId] || 'Pending') => {
     const updatedActions = (report.correctiveActions || []).map((action) => action.id === actionId ? {
       ...action,
       effectivenessStatus,
@@ -704,7 +711,8 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
         <>
       <div className="grid gap-3 md:grid-cols-3">
         <ChecklistItem label="Corrective actions" complete={openActions.length === 0} detail={openActions.length === 0 ? 'All actions are closed or cancelled.' : `${openActions.length} action${openActions.length === 1 ? '' : 's'} still open.`} />
-        <ChecklistItem label="Root cause analysis" complete={!requiresRootCause || (report.rootCauseAnalyses || []).length > 0} detail={requiresRootCause ? `${report.rootCauseAnalyses?.length || 0} root cause record(s).` : 'Recommended for this report type.'} />
+        <ChecklistItem label="Investigation conclusion" complete={Boolean(report.investigationNotes?.trim())} detail={report.investigationNotes?.trim() ? 'Conclusion recorded.' : 'A conclusion is required before closure.'} />
+        <ChecklistItem label="Root cause analysis" complete={!requiresRootCause || hasDocumentedRootCause} detail={requiresRootCause ? hasHighSeverityRisk ? 'Required because this report has high or critical risk.' : `${report.rootCauseAnalyses?.length || 0} root cause record(s).` : 'Recommended for this report type.'} />
         <ChecklistItem label="Sign-off" complete={(report.signatures || []).length > 0} detail={`${report.signatures?.length || 0} signature(s) recorded.`} />
       </div>
 
@@ -752,6 +760,7 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
             }}
           />
         </div>
+        {!isInMonitoring ? <p className="mt-3 text-xs text-muted-foreground">The dated feedback-entry form becomes available once the report enters closure monitoring. Use the control records below to save early verification evidence.</p> : null}
         {isInMonitoring ? (
           <div className="mt-4 border-t border-input pt-4">
             <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -785,8 +794,8 @@ function ClosureMonitoringPanel({ report, showClosure = true, showMonitoring = t
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Control effectiveness records</p>
           {(report.correctiveActions || []).map((action) => (
             <div key={action.id} className="grid gap-3 rounded-lg border bg-background p-3 md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-end">
-              <div className="min-w-0"><p className="text-sm font-semibold">{action.description}</p><Textarea value={actionNotes[action.id] || ''} onChange={(event) => setActionNotes({ ...actionNotes, [action.id]: event.target.value })} placeholder="Verification evidence or operational observation" className="mt-2 min-h-16 text-xs" /></div>
-              <div className="space-y-1.5"><Label>Effectiveness</Label><select defaultValue={action.effectivenessStatus || 'Pending'} onChange={(event) => saveActionEffectiveness(action.id, event.target.value as ControlEffectivenessStatus)} className="h-9 w-full rounded-md border bg-background px-2 text-xs font-medium">{monitoringStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+              <div className="min-w-0"><p className="text-sm font-semibold">{action.description}</p><Textarea value={actionNotes[action.id] || ''} onChange={(event) => setActionNotes({ ...actionNotes, [action.id]: event.target.value })} placeholder="Verification evidence or operational observation" className="mt-2 min-h-16 text-xs" /><Button type="button" variant="outline" size="sm" onClick={() => saveActionEffectiveness(action.id)} disabled={isSaving} className="mt-2 h-8 text-[10px] font-black uppercase">Save evidence</Button></div>
+              <div className="space-y-1.5"><Label>Effectiveness</Label><select value={actionStatuses[action.id] || 'Pending'} onChange={(event) => { const nextStatus = event.target.value as ControlEffectivenessStatus; setActionStatuses({ ...actionStatuses, [action.id]: nextStatus }); saveActionEffectiveness(action.id, nextStatus); }} className="h-9 w-full rounded-md border bg-background px-2 text-xs font-medium">{monitoringStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
               <Badge variant={action.effectivenessStatus === 'Effective' ? 'secondary' : 'outline'}>{action.effectivenessStatus || 'Pending'}</Badge>
             </div>
           ))}

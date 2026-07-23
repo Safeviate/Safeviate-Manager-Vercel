@@ -1,6 +1,7 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getTenantIdForRoute } from '@/lib/server/session-tenant';
+import { isMasterTenantEmail } from '@/lib/server/tenant-access';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import type { SafetyReport } from '@/types/safety-report';
@@ -13,11 +14,58 @@ async function getTenantId(request: Request) {
   return getTenantIdForRoute(request);
 }
 
+function mergePermissions(rolePermissions: unknown, userPermissions: unknown) {
+  const permissions = new Set<string>();
+  const denied = new Set<string>();
+  for (const source of [rolePermissions, userPermissions]) {
+    if (!Array.isArray(source)) continue;
+    for (const entry of source) {
+      if (typeof entry !== 'string') continue;
+      const value = entry.trim();
+      if (!value) continue;
+      if (value.startsWith('!')) denied.add(value.slice(1));
+      else permissions.add(value);
+    }
+  }
+  for (const permission of denied) permissions.delete(permission);
+  return permissions;
+}
+
+async function canEditSafetyReports(request: Request, tenantId: string) {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email?.trim().toLowerCase();
+  if (!email) return false;
+
+  // The Safeviate master account must retain full tenant-wide access.
+  if (isMasterTenantEmail(email)) return true;
+
+  const personnel = await prisma.personnel.findFirst({
+    where: { tenantId, email: { equals: email, mode: 'insensitive' } },
+    select: { role: true, permissions: true },
+  });
+  if (!personnel) return false;
+
+  const role = personnel.role?.trim();
+  const roleRecord = role
+    ? await prisma.role.findFirst({
+      where: { tenantId, OR: [{ id: role }, { name: role }] },
+      select: { permissions: true },
+    })
+    : null;
+  const permissions = mergePermissions(roleRecord?.permissions, personnel.permissions);
+  return permissions.has('*') || permissions.has('safety-reports-edit');
+}
+
 function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyReport) {
   const status = report.status;
   const actions = report.correctiveActions || [];
   const hasOpenActions = actions.some((action) => !['Closed', 'Cancelled'].includes(action.status));
-  const requiresRootCause = ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
+  const hasHighSeverityRisk = (report.initialHazards || []).some((hazard) =>
+    (hazard.risks || []).some((risk) => ['High', 'Critical'].includes(risk.riskAssessment?.riskLevel || '')),
+  );
+  const requiresRootCause = hasHighSeverityRisk || ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
+  const hasInvestigationConclusion = Boolean(report.investigationNotes?.trim());
+  const hasDocumentedRootCause = (report.rootCauseAnalyses || []).some((cause) => cause.title?.trim() && cause.analysis?.trim());
   const hasClosureApproval = Boolean(
     report.closure?.rationale?.trim()
     && report.closure?.approvedBy?.trim()
@@ -25,6 +73,19 @@ function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyRep
   );
   const nextFeedbackDate = report.monitoringPlan?.reviewDate ? new Date(report.monitoringPlan.reviewDate) : null;
   const hasFutureFeedbackDate = Boolean(nextFeedbackDate && !Number.isNaN(nextFeedbackDate.getTime()) && nextFeedbackDate.getTime() > Date.now());
+  const riskDecision = report.riskAcceptance;
+  const hasRiskDecision = Boolean(
+    riskDecision
+    && riskDecision.decision !== 'Unacceptable'
+    && riskDecision.rationale?.trim(),
+  );
+  const monitoringPlan = report.monitoringPlan;
+  const hasMeasurableMonitoringPlan = Boolean(
+    monitoringPlan?.indicatorName?.trim()
+    && monitoringPlan.baseline?.trim()
+    && monitoringPlan.target?.trim()
+    && monitoringPlan.monitoringPeriod?.trim(),
+  );
 
   if (status === 'Reopened' && !report.closure?.reopenReason?.trim()) {
     return 'A reason is required before reopening a safety report.';
@@ -32,12 +93,19 @@ function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyRep
 
   if (!['Closed - Monitoring', 'Closed - Effective'].includes(status)) return null;
   if (hasOpenActions) return 'All corrective actions must be closed or cancelled before the report can enter closure monitoring.';
-  if (requiresRootCause && !(report.rootCauseAnalyses || []).length) {
-    return 'At least one root cause analysis is required before closing an incident or accident report.';
+  if (!hasRiskDecision) return 'Record an acceptable or tolerable risk decision and its rationale before closing the report.';
+  if (hasHighSeverityRisk && !hasInvestigationConclusion) {
+    return 'Record an investigation conclusion before closing a report with high or critical risk.';
+  }
+  if (requiresRootCause && !hasDocumentedRootCause) {
+    return hasHighSeverityRisk
+      ? 'At least one completed root cause analysis is required before closing a report with high or critical risk.'
+      : 'At least one completed root cause analysis is required before closing an incident or accident report.';
   }
   if (!hasClosureApproval) return 'Closure rationale and approver details are required before closing the report.';
   if (!(report.signatures || []).length) return 'At least one report sign-off is required before closing the report.';
   if (!hasFutureFeedbackDate) return 'Schedule a future feedback date before entering closure monitoring.';
+  if (!hasMeasurableMonitoringPlan) return 'Define a measurable monitoring indicator, baseline, target, and monitoring period before entering closure monitoring.';
 
   if (status === 'Closed - Effective') {
     if (existingReport.status !== 'Closed - Monitoring' && existingReport.status !== 'Closed - Effective') {
@@ -45,6 +113,9 @@ function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyRep
     }
     if (report.monitoringPlan?.reviewResult !== 'Effective' || !report.monitoringPlan.reviewCompletedAt) {
       return 'The monitoring review must be recorded as effective before the report can be fully closed.';
+    }
+    if (!report.monitoringPlan.reviewNotes?.trim()) {
+      return 'Record monitoring evidence or notes before the report can be fully closed.';
     }
   }
 
@@ -54,6 +125,9 @@ function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyRep
 export async function PUT(request: Request, context: { params: Promise<{ reportId: string }> }) {
   const tenantId = await getTenantId(request);
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await canEditSafetyReports(request, tenantId))) {
+    return NextResponse.json({ error: 'You do not have permission to edit safety reports for this tenant.' }, { status: 403 });
+  }
   const session = await getServerSession(authOptions);
   const actorId = session?.user?.id?.trim() || null;
 
@@ -115,6 +189,9 @@ export async function PUT(request: Request, context: { params: Promise<{ reportI
 export async function PATCH(request: Request, context: { params: Promise<{ reportId: string }> }) {
   const tenantId = await getTenantId(request);
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await canEditSafetyReports(request, tenantId))) {
+    return NextResponse.json({ error: 'You do not have permission to edit safety reports for this tenant.' }, { status: 403 });
+  }
 
   const { reportId } = await context.params;
   const body = await request.json();

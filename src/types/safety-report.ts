@@ -16,6 +16,7 @@ export type InvestigationTaskStatus = 'Open' | 'In Progress' | 'Completed';
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type CorrectiveActionRiskView = 'Initial' | 'Residual';
+export type CorrectiveActionSource = 'Risk Mitigation' | 'Risk Control' | 'Investigation Finding' | 'Root Cause' | 'Immediate Containment' | 'Other';
 export type ControlEffectivenessStatus = 'Pending' | 'Effective' | 'Partially Effective' | 'Ineffective';
 export type ReportDiaryEntryType = 'comment' | 'task_assignment' | 'task_update' | 'finding' | 'decision' | 'status_change';
 export type ReportRootCauseCategory = 'Human Factors' | 'Process' | 'Equipment' | 'Environment' | 'Training' | 'Communication' | 'Other';
@@ -123,6 +124,8 @@ export interface CorrectiveAction {
     responsiblePersonId: string;
     hazardId?: string | null;
     riskId?: string | null;
+    source?: CorrectiveActionSource;
+    sourceReferenceId?: string | null;
     riskAssessmentView?: CorrectiveActionRiskView | null;
     residualLikelihood?: number | null;
     residualSeverity?: number | null;
@@ -138,6 +141,16 @@ export interface CorrectiveAction {
     effectivenessReviewedAt?: string | null;
     effectivenessReviewedBy?: string | null;
     effectivenessReviewNotes?: string | null;
+    lastEscalatedAt?: string | null;
+    lastEscalatedBy?: string | null;
+    escalationCount?: number;
+}
+
+export interface SafetyRiskAcceptance {
+    decision: 'Acceptable' | 'Tolerable With Controls' | 'Unacceptable';
+    rationale: string;
+    decidedBy?: string | null;
+    decidedAt?: string | null;
 }
 
 export interface SafetyMonitoringPlan {
@@ -217,6 +230,7 @@ export interface SafetyReport {
     // Investigation Fields
     investigationTeam?: InvestigationMember[];
     initialHazards?: ReportHazard[];
+    riskAcceptance?: SafetyRiskAcceptance | null;
     investigationInterviews?: InvestigationInterview[];
     investigationTasks?: InvestigationTask[];
     investigationEvidencePhotos?: InvestigationPhotoAttachment[];

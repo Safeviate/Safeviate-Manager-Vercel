@@ -142,6 +142,9 @@ interface InvestigationFormProps {
 export function InvestigationForm({ report, tenantId, personnel, isStacked = false, onReportSaved }: InvestigationFormProps) {
   const { toast } = useToast();
   const { userProfile } = useUserProfile();
+  const hasHighSeverityRisk = (report.initialHazards || []).some((hazard) =>
+    (hazard.risks || []).some((risk) => ['High', 'Critical'].includes(risk.riskAssessment?.riskLevel || '')),
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(investigationSchema),
@@ -457,6 +460,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
             <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
               {isStacked ? (
                 <div className="p-6 space-y-10 pb-10">
+                  {hasHighSeverityRisk ? <HighRiskClosureNotice /> : null}
                   <InvestigationFields
                     form={form}
                     teamFields={teamFields}
@@ -484,6 +488,7 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
               ) : (
                 <ScrollArea className="flex-1 p-6">
                   <div className="space-y-10 pb-10">
+                    {hasHighSeverityRisk ? <HighRiskClosureNotice /> : null}
                     <InvestigationFields
                       form={form}
                       teamFields={teamFields}
@@ -520,6 +525,18 @@ export function InvestigationForm({ report, tenantId, personnel, isStacked = fal
             </form>
           </Form>
         </FormProvider>
+      </div>
+    </div>
+  );
+}
+
+function HighRiskClosureNotice() {
+  return (
+    <div className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+      <div>
+        <p className="text-sm font-black uppercase tracking-tight">High or critical risk</p>
+        <p className="mt-1 text-xs">Before this report can close, record an investigation conclusion and at least one completed root-cause analysis. These requirements protect the closure decision from being made before the cause is understood.</p>
       </div>
     </div>
   );

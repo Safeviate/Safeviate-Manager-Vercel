@@ -68,8 +68,8 @@ const buildRiskAssessmentPath = (
 const deriveCorrectiveActionsFromHazards = (
     hazards: ReportHazard[],
     existingActions: CorrectiveAction[] = [],
-): CorrectiveAction[] =>
-    hazards.flatMap((hazard) =>
+): CorrectiveAction[] => {
+    const derivedActions = hazards.flatMap((hazard) =>
         (hazard.risks || []).flatMap<CorrectiveAction>((risk) => {
             const mitigations = risk.mitigations || [];
             if (mitigations.length > 0) {
@@ -82,6 +82,7 @@ const deriveCorrectiveActionsFromHazards = (
                         responsiblePersonId: existingAction?.responsiblePersonId || '',
                         hazardId: hazard.id,
                         riskId: risk.id,
+                        source: 'Risk Mitigation',
                         riskAssessmentView: 'Residual',
                         residualLikelihood: residual.likelihood,
                         residualSeverity: residual.severity,
@@ -102,6 +103,7 @@ const deriveCorrectiveActionsFromHazards = (
                 responsiblePersonId: existingRiskAction?.responsiblePersonId || '',
                 hazardId: hazard.id,
                 riskId: risk.id,
+                source: 'Risk Control',
                 riskAssessmentView: 'Initial',
                 residualLikelihood: risk.riskAssessment.likelihood,
                 residualSeverity: risk.riskAssessment.severity,
@@ -112,6 +114,14 @@ const deriveCorrectiveActionsFromHazards = (
             } satisfies CorrectiveAction];
         }),
     );
+    const derivedIds = new Set(derivedActions.map((action) => action.id));
+    const independentActions = existingActions.filter((action) => {
+        if (derivedIds.has(action.id)) return false;
+        return action.source && !['Risk Mitigation', 'Risk Control'].includes(action.source);
+    });
+
+    return [...derivedActions, ...independentActions];
+};
 
 // --- Form Schemas ---
 const riskAssessmentSchema = z.object({
@@ -140,6 +150,10 @@ const reportHazardSchema = z.object({
 
 const hazardIdentificationSchema = z.object({
   initialHazards: z.array(reportHazardSchema),
+  riskAcceptance: z.object({
+    decision: z.enum(['Acceptable', 'Tolerable With Controls', 'Unacceptable']).optional(),
+    rationale: z.string().default(''),
+  }).optional(),
 });
 
 type FormValues = z.infer<typeof hazardIdentificationSchema>;
@@ -629,12 +643,20 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
     resolver: zodResolver(hazardIdentificationSchema),
     defaultValues: {
       initialHazards: normalizedHazards,
+      riskAcceptance: {
+        decision: report.riskAcceptance?.decision,
+        rationale: report.riskAcceptance?.rationale || '',
+      },
     },
   });
 
   React.useEffect(() => {
     form.reset({
       initialHazards: normalizedHazards,
+      riskAcceptance: {
+        decision: report.riskAcceptance?.decision,
+        rationale: report.riskAcceptance?.rationale || '',
+      },
     });
   }, [form, normalizedHazards]);
 
@@ -660,6 +682,13 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
             })),
           })),
         })),
+        riskAcceptance: values.riskAcceptance?.decision
+          ? {
+            ...report.riskAcceptance,
+            decision: values.riskAcceptance.decision,
+            rationale: values.riskAcceptance.rationale.trim(),
+          }
+          : null,
       };
       const correctiveActions = deriveCorrectiveActionsFromHazards(
         dataToSave.initialHazards as ReportHazard[],
@@ -725,11 +754,13 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
               {isStacked ? (
                 <div className="p-4">
                   <HazardFields report={report} hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
+                  <RiskDecisionFields />
                 </div>
               ) : (
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
                     <HazardFields report={report} hazardFields={hazardFields} riskMatrixColors={activeRiskMatrixColors} />
+                    <RiskDecisionFields />
                   </div>
                 </ScrollArea>
               )}
@@ -745,6 +776,53 @@ export function HazardIdentificationForm({ report, tenantId, personnel = [], ris
         </FormProvider>
       </div>
     </div>
+  );
+}
+
+function RiskDecisionFields() {
+  const { control } = useFormContext<FormValues>();
+  return (
+    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-tight">Risk Tolerability Decision</h4>
+          <p className="mt-1 text-[10px] text-muted-foreground">Record why the residual risk is acceptable, tolerable with controls, or requires further action.</p>
+        </div>
+      </div>
+      <div className="grid gap-4 p-4 md:grid-cols-[260px_minmax(0,1fr)]">
+        <FormField
+          control={control}
+          name="riskAcceptance.decision"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl>
+                  <SelectTrigger className="mt-2 h-10"><SelectValue placeholder="Select a decision" /></SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Acceptable">Acceptable</SelectItem>
+                  <SelectItem value="Tolerable With Controls">Tolerable with controls</SelectItem>
+                  <SelectItem value="Unacceptable">Unacceptable - further controls required</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name="riskAcceptance.rationale"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision rationale</FormLabel>
+              <FormControl>
+                <textarea {...field} rows={3} placeholder="Explain the residual-risk decision, required controls, and any operating limits." className="mt-2 min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </section>
   );
 }
 

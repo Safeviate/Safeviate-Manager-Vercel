@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { DeleteActionButton } from '@/components/record-action-buttons';
 import { useToast } from '@/hooks/use-toast';
 import type {
@@ -29,7 +30,8 @@ import type {
   SafetyReport,
 } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { CalendarIcon, CheckCircle2, Save, ShieldCheck } from 'lucide-react';
+import { CalendarIcon, CheckCircle2, MailWarning, PlusCircle, Save, ShieldCheck, Trash2 } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
 import { cn } from '@/lib/utils';
@@ -52,6 +54,14 @@ const mitigationReviewSchema = z.object({
 
 const reviewSchema = z.object({
   mitigationReviews: z.array(mitigationReviewSchema),
+  independentActions: z.array(z.object({
+    id: z.string(),
+    source: z.enum(['Investigation Finding', 'Root Cause', 'Immediate Containment', 'Other']),
+    description: z.string().min(1, 'Describe the corrective action.'),
+    responsiblePersonId: z.string().optional(),
+    deadline: z.date().nullable().optional(),
+    status: z.enum(['Open', 'In Progress', 'Closed', 'Cancelled']),
+  })),
 });
 
 type ReviewFormValues = z.infer<typeof reviewSchema>;
@@ -69,6 +79,11 @@ type FlattenedMitigation = {
   isRiskFallback?: boolean;
 };
 
+const independentActionSources = ['Investigation Finding', 'Root Cause', 'Immediate Containment', 'Other'] as const;
+
+const isIndependentAction = (action: CorrectiveAction, mitigationIds: Set<string>) =>
+  !mitigationIds.has(action.id) && Boolean(action.source && !['Risk Mitigation', 'Risk Control'].includes(action.source));
+
 const parseLocalDate = (value?: string | null) => {
   if (!value) return null;
   const [year, month, day] = value.split('-').map(Number);
@@ -81,6 +96,12 @@ const parseLocalDate = (value?: string | null) => {
 
 const toNoonUtcIso = (date?: Date | null) =>
   date ? new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)).toISOString() : null;
+
+const isOverdueAction = (action: CorrectiveAction) =>
+  !['Closed', 'Cancelled'].includes(action.status)
+  && Boolean(action.deadline)
+  && !Number.isNaN(new Date(action.deadline).getTime())
+  && new Date(action.deadline).getTime() < Date.now();
 
 const getRiskScoreColor = (
   likelihood: number,
@@ -186,10 +207,35 @@ export function CorrectiveActionsForm({
 }: CorrectiveActionsFormProps) {
   const { toast } = useToast();
   const [deletingActionId, setDeletingActionId] = useState<string | null>(null);
+  const [escalatingActionId, setEscalatingActionId] = useState<string | null>(null);
   const mitigationItems = useMemo(
     () => flattenMitigations(report.initialHazards || [], report.correctiveActions || []),
     [report.initialHazards, report.correctiveActions]
   );
+  const independentActions = useMemo(() => {
+    const mitigationIds = new Set(mitigationItems.map((item) => item.mitigationId));
+    return (report.correctiveActions || []).filter((action) => isIndependentAction(action, mitigationIds));
+  }, [mitigationItems, report.correctiveActions]);
+  const overdueActions = useMemo(
+    () => (report.correctiveActions || []).filter(isOverdueAction),
+    [report.correctiveActions],
+  );
+
+  const escalateOverdueAction = async (actionId: string) => {
+    if (escalatingActionId) return;
+    setEscalatingActionId(actionId);
+    try {
+      const response = await fetch(`/api/safety-reports/${report.id}/actions/${actionId}/escalate`, { method: 'POST' });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error || 'Unable to send the overdue action escalation.');
+      if (payload?.report) onReportSaved?.(payload.report as SafetyReport);
+      toast({ title: 'Escalation sent', description: 'The assigned action owner has been emailed and the escalation was recorded in the report diary.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Escalation not sent', description: error instanceof Error ? error.message : 'Unable to send the overdue action escalation.' });
+    } finally {
+      setEscalatingActionId(null);
+    }
+  };
 
   const form = useForm<ReviewFormValues>({
     resolver: zodResolver(reviewSchema),
@@ -204,6 +250,16 @@ export function CorrectiveActionsForm({
         status: item.reviewAction?.status || 'Open',
         residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
         residualSeverity: item.mitigationResidualRiskAssessment.severity,
+      })),
+      independentActions: independentActions.map((action) => ({
+        id: action.id,
+        source: (action.source && independentActionSources.includes(action.source as typeof independentActionSources[number])
+          ? action.source
+          : 'Investigation Finding') as typeof independentActionSources[number],
+        description: action.description,
+        responsiblePersonId: action.responsiblePersonId || '',
+        deadline: parseLocalDate(action.deadline),
+        status: action.status,
       })),
     },
   });
@@ -221,8 +277,23 @@ export function CorrectiveActionsForm({
         residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
         residualSeverity: item.mitigationResidualRiskAssessment.severity,
       })),
+      independentActions: independentActions.map((action) => ({
+        id: action.id,
+        source: (action.source && independentActionSources.includes(action.source as typeof independentActionSources[number])
+          ? action.source
+          : 'Investigation Finding') as typeof independentActionSources[number],
+        description: action.description,
+        responsiblePersonId: action.responsiblePersonId || '',
+        deadline: parseLocalDate(action.deadline),
+        status: action.status,
+      })),
     });
-  }, [form, mitigationItems]);
+  }, [form, independentActions, mitigationItems]);
+
+  const { fields: independentActionFields, append: appendIndependentAction, remove: removeIndependentAction } = useFieldArray({
+    control: form.control,
+    name: 'independentActions',
+  });
 
   const onSubmit = async (values: ReviewFormValues) => {
     const reviewMap = new Map(
@@ -280,7 +351,8 @@ export function CorrectiveActionsForm({
     const nextReport: SafetyReport = {
       ...report,
       initialHazards: nextHazardsWithFallbackDescriptions,
-      correctiveActions: values.mitigationReviews.map((review) => {
+      correctiveActions: [
+        ...values.mitigationReviews.map((review) => {
         const residual = normalizeRiskAssessment({
           likelihood: review.residualLikelihood,
           severity: review.residualSeverity,
@@ -299,7 +371,16 @@ export function CorrectiveActionsForm({
           deadline: toNoonUtcIso(review.completionDate) || new Date().toISOString(),
           status: review.status as CorrectiveActionStatus,
         } satisfies CorrectiveAction;
-      }),
+        }),
+        ...values.independentActions.map((action) => ({
+          id: action.id,
+          description: action.description.trim(),
+          responsiblePersonId: action.responsiblePersonId || '',
+          source: action.source,
+          deadline: toNoonUtcIso(action.deadline) || new Date().toISOString(),
+          status: action.status as CorrectiveActionStatus,
+        } satisfies CorrectiveAction)),
+      ],
     };
 
     try {
@@ -390,6 +471,7 @@ export function CorrectiveActionsForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
             {isStacked ? (
               <div className="p-6 space-y-4">
+                <OverdueActionEscalations actions={overdueActions} personnel={personnel} escalatingActionId={escalatingActionId} onEscalate={escalateOverdueAction} />
                 <ReviewFields
                   items={mitigationItems}
                   form={form}
@@ -397,16 +479,31 @@ export function CorrectiveActionsForm({
                   riskMatrixColors={riskMatrixColors}
                   onDeleteAction={deleteCorrectiveAction}
                 />
+                <IndependentActionFields
+                  fields={independentActionFields}
+                  form={form}
+                  personnel={personnel}
+                  onAdd={() => appendIndependentAction({ id: uuidv4(), source: 'Investigation Finding', description: '', responsiblePersonId: '', deadline: null, status: 'Open' })}
+                  onRemove={removeIndependentAction}
+                />
               </div>
             ) : (
               <ScrollArea className="flex-1 p-6">
                 <div className="space-y-4">
+                  <OverdueActionEscalations actions={overdueActions} personnel={personnel} escalatingActionId={escalatingActionId} onEscalate={escalateOverdueAction} />
                   <ReviewFields
                     items={mitigationItems}
                     form={form}
                     personnel={personnel}
                     riskMatrixColors={riskMatrixColors}
                     onDeleteAction={deleteCorrectiveAction}
+                  />
+                  <IndependentActionFields
+                    fields={independentActionFields}
+                    form={form}
+                    personnel={personnel}
+                    onAdd={() => appendIndependentAction({ id: uuidv4(), source: 'Investigation Finding', description: '', responsiblePersonId: '', deadline: null, status: 'Open' })}
+                    onRemove={removeIndependentAction}
                   />
                 </div>
               </ScrollArea>
@@ -422,6 +519,120 @@ export function CorrectiveActionsForm({
         </Form>
       </div>
     </div>
+  );
+}
+
+function OverdueActionEscalations({
+  actions,
+  personnel,
+  escalatingActionId,
+  onEscalate,
+}: {
+  actions: CorrectiveAction[];
+  personnel: Personnel[];
+  escalatingActionId: string | null;
+  onEscalate: (actionId: string) => void;
+}) {
+  if (actions.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">
+      <div className="flex items-start gap-3">
+        <MailWarning className="mt-0.5 h-5 w-5 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black uppercase tracking-tight">Overdue corrective actions</p>
+          <p className="mt-1 text-xs">Send an escalation reminder to the assigned owner. Each action can be escalated once every 24 hours and every send is recorded in the report diary.</p>
+          <div className="mt-3 space-y-2">
+            {actions.map((action) => {
+              const owner = personnel.find((person) => person.id === action.responsiblePersonId);
+              const lastEscalation = action.lastEscalatedAt ? new Date(action.lastEscalatedAt) : null;
+              const onCooldown = Boolean(lastEscalation && Date.now() - lastEscalation.getTime() < 24 * 60 * 60 * 1000);
+              return (
+                <div key={action.id} className="flex flex-col gap-2 rounded-md border border-amber-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{action.description || 'Untitled corrective action'}</p>
+                    <p className="mt-0.5 text-xs text-amber-900">Due {format(new Date(action.deadline), 'dd MMM yyyy')} - {owner ? `${owner.firstName} ${owner.lastName}` : 'No assigned owner'}</p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" disabled={!action.responsiblePersonId || onCooldown || escalatingActionId === action.id} onClick={() => onEscalate(action.id)}>
+                    <MailWarning className="mr-2 h-3.5 w-3.5" />
+                    {escalatingActionId === action.id ? 'Sending...' : onCooldown ? 'Sent recently' : 'Escalate'}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function IndependentActionFields({
+  fields,
+  form,
+  personnel,
+  onAdd,
+  onRemove,
+}: {
+  fields: Array<{ id: string }>;
+  form: ReturnType<typeof useForm<ReviewFormValues>>;
+  personnel: Personnel[];
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+}) {
+  return (
+    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
+      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-tight">Investigation and Preventive Actions</h4>
+          <p className="mt-1 text-[10px] text-muted-foreground">Add actions from findings, root causes, containment, or improvement opportunities. These remain independent of risk mitigations.</p>
+        </div>
+        <Button type="button" size="sm" className={HEADER_ACTION_BUTTON_CLASS} onClick={onAdd}>
+          <PlusCircle className="mr-2 h-3.5 w-3.5" /> Add action
+        </Button>
+      </div>
+      <div className="space-y-4 p-4">
+        {fields.length === 0 ? (
+          <p className="rounded-md border border-dashed px-3 py-4 text-xs text-muted-foreground">No investigation-created actions recorded. Use this when a finding or root cause requires action beyond a listed risk mitigation.</p>
+        ) : fields.map((field, index) => (
+          <div key={field.id} className="rounded-md border border-input p-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Independent action {index + 1}</p>
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onRemove(index)} aria-label={`Remove independent action ${index + 1}`}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <FormField control={form.control} name={`independentActions.${index}.source`} render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Source</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent>{independentActionSources.map((source) => <SelectItem key={source} value={source} className="text-xs">{source}</SelectItem>)}</SelectContent></Select>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name={`independentActions.${index}.responsiblePersonId`} render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assignee</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="mt-1 h-9 text-xs"><SelectValue placeholder="Assign to..." /></SelectTrigger></FormControl><SelectContent>{personnel.map((person) => <SelectItem key={person.id} value={person.id} className="text-xs">{person.firstName} {person.lastName}</SelectItem>)}</SelectContent></Select>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name={`independentActions.${index}.deadline`} render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deadline</FormLabel>
+                  <FormControl><Input className="mt-1 h-9 text-xs" type="date" value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={(event) => field.onChange(parseLocalDate(event.target.value))} /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name={`independentActions.${index}.status`} render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent>{['Open', 'In Progress', 'Closed', 'Cancelled'].map((status) => <SelectItem key={status} value={status} className="text-xs">{status}</SelectItem>)}</SelectContent></Select>
+                </FormItem>
+              )} />
+            </div>
+            <FormField control={form.control} name={`independentActions.${index}.description`} render={({ field }) => (
+              <FormItem className="mt-3"><FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Action</FormLabel>
+                <FormControl><textarea {...field} rows={2} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Describe the action and the intended safety outcome." /></FormControl>
+              </FormItem>
+            )} />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

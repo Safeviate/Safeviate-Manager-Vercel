@@ -38,6 +38,77 @@ type MeetingEmailOptions = {
 
 type MeetingEmailResult = WelcomeEmailResult;
 
+type SafetyActionEscalationEmailOptions = {
+  email: string;
+  name: string;
+  reportNumber: string;
+  reportTitle: string;
+  actionDescription: string;
+  deadline: string;
+  reportLink: string;
+};
+
+const escapeHtml = (value: string) => value.replace(/[&<>'\"]/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  "'": '&#39;',
+  '"': '&quot;',
+}[character] || character));
+
+export async function sendSafetyActionEscalationEmail({
+  email,
+  name,
+  reportNumber,
+  reportTitle,
+  actionDescription,
+  deadline,
+  reportLink,
+}: SafetyActionEscalationEmailOptions): Promise<WelcomeEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.MAIL_FROM || process.env.RESEND_FROM || process.env.EMAIL_FROM || 'onboarding@resend.dev';
+
+  if (!apiKey) {
+    return { success: false, error: 'RESEND_API_KEY missing', diagnostics: { fromEmail, hasApiKey: false, provider: 'resend' } };
+  }
+
+  const safe = {
+    name: escapeHtml(name),
+    reportNumber: escapeHtml(reportNumber),
+    reportTitle: escapeHtml(reportTitle || 'Safety report'),
+    actionDescription: escapeHtml(actionDescription),
+    deadline: escapeHtml(deadline),
+    reportLink: escapeHtml(reportLink),
+  };
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        from: `Safeviate <${fromEmail}>`,
+        to: [email],
+        subject: `Overdue safety action: ${reportNumber}`,
+        html: `<!doctype html><html><body style="font-family:Segoe UI,Arial,sans-serif;color:#1e293b;line-height:1.5"><h2>Overdue safety action</h2><p>Hello ${safe.name},</p><p>A corrective action assigned to you is overdue and needs attention.</p><p><strong>Report:</strong> ${safe.reportNumber} - ${safe.reportTitle}<br><strong>Action:</strong> ${safe.actionDescription}<br><strong>Deadline:</strong> ${safe.deadline}</p><p><a href="${safe.reportLink}">Open safety report</a></p><p>Please update the action status or contact the report owner if the deadline needs to change.</p></body></html>`,
+      }),
+    });
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      return {
+        success: false,
+        error: `Resend rejected the message (${response.status} ${response.statusText}): ${responseText}`,
+        diagnostics: { fromEmail, hasApiKey: true, provider: 'resend', status: response.status, statusText: response.statusText },
+      };
+    }
+
+    const payload = (await response.json().catch(() => null)) as { id?: string } | null;
+    return { success: true, deliveryMode: 'sent', diagnostics: { fromEmail, hasApiKey: true, provider: 'resend', status: response.status, statusText: response.statusText, messageId: payload?.id } };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send overdue action escalation.', diagnostics: { fromEmail, hasApiKey: true, provider: 'resend' } };
+  }
+}
+
 /**
  * Sends a branded password-setup email to new users or for admin resets.
  * Uses the Resend API via fetch to avoid dependency bloating.

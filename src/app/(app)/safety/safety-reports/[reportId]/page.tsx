@@ -243,44 +243,59 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   const availableRelatedReports = allReports.filter((entry) => entry.id !== report.id && !relatedReportIds.includes(entry.id) && entry.status !== 'Archived');
   const riskCount = (report.initialHazards || []).reduce((count, hazard) => count + (hazard.risks?.length || 0), 0);
   const openActionCount = (report.correctiveActions || []).filter((action) => !['Closed', 'Cancelled'].includes(action.status)).length;
-  const requiresRootCause = ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
+  const actionCount = (report.correctiveActions || []).length;
+  const hasHighSeverityRisk = (report.initialHazards || []).some((hazard) =>
+    (hazard.risks || []).some((risk) => ['High', 'Critical'].includes(risk.riskAssessment?.riskLevel || '')),
+  );
+  const requiresRootCause = hasHighSeverityRisk || ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
   const isInMonitoring = ['Closed - Monitoring', 'Closed - Effective'].includes(report.status);
+  const hasRiskDecision = Boolean(
+    report.riskAcceptance?.decision
+    && report.riskAcceptance.decision !== 'Unacceptable'
+    && report.riskAcceptance.rationale?.trim(),
+  );
+  const hasMonitoringPlan = Boolean(
+    report.monitoringPlan?.indicatorName?.trim()
+    && report.monitoringPlan.baseline?.trim()
+    && report.monitoringPlan.target?.trim()
+    && report.monitoringPlan.monitoringPeriod?.trim(),
+  );
   const workflowSteps = [
     {
       tab: 'triage',
       label: 'Triage',
-      complete: Boolean(report.eventClassification && report.occurrenceCategory),
-      detail: report.eventClassification && report.occurrenceCategory ? 'Classified' : 'Classification needed',
+      complete: Boolean(report.eventClassification && report.occurrenceCategory && report.immediateAction?.trim()),
+      detail: report.eventClassification && report.occurrenceCategory && report.immediateAction?.trim() ? 'Classified and contained' : 'Classify and record immediate containment',
     },
     {
       tab: 'hazards',
       label: 'Risk Assessment',
-      complete: riskCount > 0,
-      detail: riskCount > 0 ? `${riskCount} risk${riskCount === 1 ? '' : 's'} recorded` : 'Risk assessment needed',
+      complete: riskCount > 0 && hasRiskDecision,
+      detail: riskCount === 0 ? 'Risk assessment needed' : hasRiskDecision ? `${riskCount} risk${riskCount === 1 ? '' : 's'} assessed and decided` : 'Risk decision and rationale needed',
     },
     {
       tab: 'investigation',
       label: 'Investigation',
-      complete: Boolean(report.investigationNotes && (!requiresRootCause || (report.rootCauseAnalyses || []).length > 0)),
-      detail: report.investigationNotes ? `${report.rootCauseAnalyses?.length || 0} root cause${(report.rootCauseAnalyses?.length || 0) === 1 ? '' : 's'}` : 'Conclusion needed',
+      complete: Boolean(report.investigationNotes && (!requiresRootCause || (report.rootCauseAnalyses || []).some((cause) => cause.title?.trim() && cause.analysis?.trim()))),
+      detail: !report.investigationNotes ? 'Conclusion needed' : requiresRootCause && !(report.rootCauseAnalyses || []).some((cause) => cause.title?.trim() && cause.analysis?.trim()) ? 'Completed root cause analysis needed' : `${report.rootCauseAnalyses?.length || 0} root cause${(report.rootCauseAnalyses?.length || 0) === 1 ? '' : 's'}`,
     },
     {
       tab: 'cap',
       label: 'Corrective Actions',
-      complete: riskCount === 0 || ((report.correctiveActions || []).length > 0 && openActionCount === 0),
-      detail: openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
+      complete: actionCount === 0 ? hasRiskDecision : openActionCount === 0,
+      detail: actionCount === 0 ? hasRiskDecision ? 'No additional actions required' : 'Risk decision needed' : openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
     },
     {
       tab: 'monitoring',
       label: 'Monitoring',
       complete: report.status === 'Closed - Effective',
-      detail: report.status === 'Closed - Effective' ? 'Effectiveness verified' : isInMonitoring ? 'Feedback monitoring in progress' : 'Feedback date needed',
+      detail: report.status === 'Closed - Effective' ? 'Effectiveness verified' : isInMonitoring ? 'Monitoring evidence in progress' : hasMonitoringPlan ? 'Set review date and enter monitoring' : 'Define measurable monitoring plan',
     },
     {
       tab: 'review',
       label: 'Final Review & Closure',
-      complete: Boolean(report.closure?.rationale?.trim() && isInMonitoring),
-      detail: report.closure?.rationale?.trim() ? isInMonitoring ? 'Final review and closure recorded' : 'Closure awaiting monitoring' : 'Final review and closure needed',
+      complete: Boolean(report.closure?.rationale?.trim() && report.status === 'Closed - Effective'),
+      detail: report.status === 'Closed - Effective' && report.closure?.rationale?.trim() ? 'Closed after effectiveness review' : report.closure?.rationale?.trim() ? 'Closure awaiting effectiveness evidence' : 'Authorised final review needed',
     },
   ];
   const visibleWorkflowSteps = workflowSteps.filter((step) => visibleReportTabs.some((tab) => tab.value === step.tab));
@@ -591,6 +606,9 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                     <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('full')}>Full Report</Button>
                     <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
                   </div>
+                  <p className="text-[10px] font-medium text-slate-500">
+                    Work may start at any stage: contain first, assess and decide risk, investigate causes, then track actions and verify their effectiveness before closure.
+                  </p>
                 </div>
               </div>
             </div>
