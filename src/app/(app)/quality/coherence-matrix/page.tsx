@@ -80,10 +80,30 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0);
   const normalizedIndentation = normalizeIndentationArray(indentation);
+  const canonicalIndentation = (line: string, level: number) => {
+    const trimmedLine = line.trim();
+
+    // Numbered clauses are the regulation's base level, regardless of older saved data.
+    if (/^\(\d+\)\s*/.test(trimmedLine)) return 0;
+    if (/^\((?:i|ii|iii|iv|v|vi|vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi|xvii|xviii|xix|xx)\)\s*/i.test(trimmedLine)) {
+      return Math.max(2, level);
+    }
+    if (/^\([a-z]{1,3}\)\s*/i.test(trimmedLine)) return Math.max(1, level);
+    return level;
+  };
 
   if (lines.length === 0) {
     return null;
   }
+
+  const indentationOffset = (level: number) => {
+    // Regulation numbering starts close to the text edge; nested clauses step in more noticeably.
+    if (level <= 0) return '0';
+    if (level === 1) return '0.75rem';
+    if (level === 2) return '2rem';
+    if (level === 3) return '3.5rem';
+    return `${3.5 + (level - 3) * 1.5}rem`;
+  };
 
   return (
     <div className="space-y-2 px-1 py-1">
@@ -91,7 +111,7 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
         <p
           key={`${index}-${line.slice(0, 24)}`}
           className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground/80"
-          style={{ marginLeft: `${(normalizedIndentation[index] || 0) * 1.5}rem` }}
+          style={{ marginLeft: indentationOffset(canonicalIndentation(line, normalizedIndentation[index] || 0)) }}
         >
           {line}
         </p>
@@ -117,12 +137,17 @@ function getBrowserRegulationTitle(item: ComplianceRequirement) {
   const heading = item.documentHeading?.trim();
   if (heading) return heading;
 
-  const statement = item.regulationStatement?.trim() || '';
+  const statement = getRegulationStatementLabel(item);
   if (!statement || looksLikeRegulationBodyText(statement)) {
     return 'Missing regulation title';
   }
 
   return statement;
+}
+
+function getRegulationStatementLabel(item: Pick<ComplianceRequirement, 'regulationCode' | 'regulationStatement'>) {
+  const statement = item.regulationStatement?.trim() || '';
+  return normalizeRegulationCode(statement) === normalizeRegulationCode(item.regulationCode) ? '' : statement;
 }
 
 function buildComplianceItemIdentityKey(item: ComplianceRequirement) {
@@ -190,6 +215,33 @@ function isStructuralBrowserNode(item: ComplianceRequirement) {
   return !item.technicalStandard?.trim() && !item.companyReference?.trim() && !item.nextAuditDate?.trim();
 }
 
+function repairOrphanedSiblingParents(items: ComplianceRequirement[]) {
+  const itemsByCode = new Map(
+    items
+      .map((item) => [normalizeRegulationCode(item.regulationCode), item] as const)
+      .filter(([code]) => Boolean(code)),
+  );
+
+  return items.map((item) => {
+    const code = normalizeRegulationCode(item.regulationCode);
+    const parentCode = normalizeRegulationCode(item.parentRegulationCode);
+    const isOrphaned = !parentCode || parentCode === code || !itemsByCode.has(parentCode);
+    const suffixMatch = code.match(/^(.*\d)([A-Z]+)$/i);
+
+    if (!isOrphaned || !suffixMatch) {
+      return item;
+    }
+
+    const baseClause = itemsByCode.get(suffixMatch[1]);
+    const baseParentCode = normalizeRegulationCode(baseClause?.parentRegulationCode);
+    if (!baseParentCode || baseParentCode === normalizeRegulationCode(baseClause?.regulationCode)) {
+      return item;
+    }
+
+    return { ...item, parentRegulationCode: baseParentCode };
+  });
+}
+
 function sanitizeAiPreviewRequirements(
   requirements: MatrixPreviewRequirement[],
   targetHeader: string,
@@ -201,7 +253,9 @@ function sanitizeAiPreviewRequirements(
   const cleaned = requirements
     .map((req) => {
       const regulationCode = normalizeRegulationCode(req.regulationCode);
-      const parentRegulationCode = normalizeRegulationCode(req.parentRegulationCode) || normalizedTargetHeader;
+      // The selected sub-regulation is the authoritative destination. The model
+      // may identify a clause's source heading, but it must not change its tree parent.
+      const parentRegulationCode = normalizedTargetHeader;
       const rawHeading = req.documentHeading?.trim() || '';
       const rawStatement = req.regulationStatement?.trim() || '';
       let regulationStatement = rawStatement || regulationCode;
@@ -214,6 +268,13 @@ function sanitizeAiPreviewRequirements(
         technicalStandard = technicalStandard
           ? `${rawStatement}\n${technicalStandard}`.trim()
           : rawStatement;
+      }
+
+      // Some sources repeat the clause code in the title field. Keep the human
+      // heading as the title instead of saving the code twice.
+      if (normalizeRegulationCode(regulationStatement) === regulationCode && documentHeading) {
+        regulationStatement = documentHeading;
+        documentHeading = '';
       }
 
       technicalStandard = technicalStandard.slice(0, AI_IMPORT_MAX_TECHNICAL_STANDARD_LENGTH);
@@ -741,9 +802,14 @@ export default function CoherenceMatrixPage() {
     [activeRegulationTab, currentOrgItems],
   );
 
+  const hierarchyItems = useMemo(
+    () => repairOrphanedSiblingParents(activeFamilyItems),
+    [activeFamilyItems],
+  );
+
   const groupedItems = useMemo(() => {
     const map = new Map<string, ComplianceRequirement[]>();
-    for (const item of activeFamilyItems) {
+    for (const item of hierarchyItems) {
       const parentCode = normalizeRegulationCode(item.parentRegulationCode);
       const itemCode = normalizeRegulationCode(item.regulationCode);
       if (parentCode && parentCode !== itemCode) {
@@ -757,23 +823,23 @@ export default function CoherenceMatrixPage() {
       map.set(key, list);
     }
     return map;
-  }, [activeFamilyItems]);
+  }, [hierarchyItems]);
 
   const availableItemCodes = useMemo(
-    () => new Set(activeFamilyItems.map((item) => normalizeRegulationCode(item.regulationCode)).filter(Boolean)),
-    [activeFamilyItems],
+    () => new Set(hierarchyItems.map((item) => normalizeRegulationCode(item.regulationCode)).filter(Boolean)),
+    [hierarchyItems],
   );
 
   const topLevelItems = useMemo(
     () =>
-      activeFamilyItems
+      hierarchyItems
         .filter((item) => {
           const itemCode = normalizeRegulationCode(item.regulationCode);
           const parentCode = normalizeRegulationCode(item.parentRegulationCode);
           return !parentCode || parentCode === itemCode || !availableItemCodes.has(parentCode);
         })
         .sort((a, b) => naturalSort(a.regulationCode, b.regulationCode)),
-    [activeFamilyItems, availableItemCodes],
+    [hierarchyItems, availableItemCodes],
   );
 
   const availablePartHeaders = useMemo(
@@ -1272,7 +1338,9 @@ export default function CoherenceMatrixPage() {
                               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-foreground/55">{activeRegulationItem.documentHeading}</p>
                             ) : null}
                             <p className="mt-1 text-[11px] font-black tracking-wide text-primary/85">{activeRegulationItem.regulationCode}</p>
-                            <h4 className="mt-1 break-words text-base font-semibold leading-6 text-foreground">{activeRegulationItem.regulationStatement}</h4>
+                            {getRegulationStatementLabel(activeRegulationItem) ? (
+                              <h4 className="mt-1 break-words text-base font-semibold leading-6 text-foreground">{getRegulationStatementLabel(activeRegulationItem)}</h4>
+                            ) : null}
                           </div>
                           {canManageMatrix ? (
                             <div className="flex shrink-0 items-center gap-2">

@@ -72,10 +72,19 @@ function splitRegulationBodyLines(value?: string | null) {
         .map((line) => line.replace(/\s+$/g, ''));
 }
 
-function normalizeLineIndentation(lineCount: number, indentation: number[] = []) {
-    return Array.from({ length: lineCount }, (_, index) => {
+function normalizeLineIndentation(lines: string[], indentation: number[] = []) {
+    return lines.map((line, index) => {
         const value = indentation[index];
-        return Number.isFinite(value) && value >= 0 ? Math.min(Math.floor(value), 6) : 0;
+        const normalizedValue = Number.isFinite(value) && value >= 0 ? Math.min(Math.floor(value), 6) : 0;
+        const trimmedLine = line.trim();
+
+        // Keep top-level numbered clauses aligned with the regulation body.
+        if (/^\(\d+\)\s*/.test(trimmedLine)) return 0;
+        if (/^\((?:i|ii|iii|iv|v|vi|vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi|xvii|xviii|xix|xx)\)\s*/i.test(trimmedLine)) {
+            return Math.max(2, normalizedValue);
+        }
+        if (/^\([a-z]{1,3}\)\s*/i.test(trimmedLine)) return Math.max(1, normalizedValue);
+        return normalizedValue;
     });
 }
 
@@ -167,7 +176,7 @@ export function ComplianceItemForm({
     const [calendarPortalContainer, setCalendarPortalContainer] = useState<HTMLDivElement | null>(null);
     const [technicalStandardIndentation, setTechnicalStandardIndentation] = useState<number[]>(
         normalizeLineIndentation(
-            splitRegulationBodyLines(existingItem?.technicalStandard).length,
+            splitRegulationBodyLines(existingItem?.technicalStandard),
             existingItem?.technicalStandardIndentation || [],
         ),
     );
@@ -202,8 +211,8 @@ export function ComplianceItemForm({
     const technicalStandardLines = useMemo(() => splitRegulationBodyLines(watchedTechnicalStandard), [watchedTechnicalStandard]);
 
     useEffect(() => {
-        setTechnicalStandardIndentation((current) => normalizeLineIndentation(technicalStandardLines.length, current));
-    }, [technicalStandardLines.length]);
+        setTechnicalStandardIndentation((current) => normalizeLineIndentation(technicalStandardLines, current));
+    }, [technicalStandardLines]);
 
     const getManagerLabel = (managerId?: string | null) => {
         const normalizedManagerId = managerId?.trim() || '';
@@ -280,7 +289,7 @@ export function ComplianceItemForm({
                 parentRegulationCode: normalizedParentCode,
                 documentHeading: values.documentHeading?.trim() || '',
                 regulationStatement: values.regulationStatement.trim(),
-                technicalStandardIndentation: normalizeLineIndentation(technicalStandardLines.length, technicalStandardIndentation),
+                technicalStandardIndentation: normalizeLineIndentation(technicalStandardLines, technicalStandardIndentation),
                 nextAuditDate: values.nextAuditDate ? toNoonUtcIso(values.nextAuditDate) : null,
             };
 
@@ -436,7 +445,7 @@ export function ComplianceItemForm({
                                                         className="h-7 w-7"
                                                         onClick={() => {
                                                             setTechnicalStandardIndentation((current) => {
-                                                                const next = normalizeLineIndentation(technicalStandardLines.length, current);
+                                                                const next = normalizeLineIndentation(technicalStandardLines, current);
                                                                 next[index] = Math.max(0, (next[index] || 0) - 1);
                                                                 return next;
                                                             });
@@ -452,7 +461,7 @@ export function ComplianceItemForm({
                                                         className="h-7 w-7"
                                                         onClick={() => {
                                                             setTechnicalStandardIndentation((current) => {
-                                                                const next = normalizeLineIndentation(technicalStandardLines.length, current);
+                                                                const next = normalizeLineIndentation(technicalStandardLines, current);
                                                                 next[index] = Math.min(6, (next[index] || 0) + 1);
                                                                 return next;
                                                             });
