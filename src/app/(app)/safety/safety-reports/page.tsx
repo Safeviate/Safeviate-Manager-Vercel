@@ -873,7 +873,7 @@ export default function SafetyReportsPage() {
             ? cn(
                 HEADER_SECONDARY_BUTTON_CLASS,
                 HEADER_COMPACT_CONTROL_CLASS,
-                'h-[25px] min-h-[25px] w-full justify-center px-2 text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
+                'h-8 min-h-8 w-full justify-center px-3 text-[9px] font-black uppercase tracking-[0.08em] border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900',
               )
             : cn(
                 HEADER_SECONDARY_BUTTON_CLASS,
@@ -883,8 +883,8 @@ export default function SafetyReportsPage() {
         }
       >
         <Link href={`/safety/new-report?orgId=${orgId}`} aria-label={isMobile ? 'File new report' : undefined}>
-          <PlusCircle className={isMobile ? 'h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
-          {!isMobile ? 'File New Report' : null}
+          <PlusCircle className={isMobile ? 'mr-1.5 h-3.5 w-3.5' : 'mr-2 h-4 w-4'} />
+          File New Report
         </Link>
       </Button>
     );
@@ -893,29 +893,29 @@ export default function SafetyReportsPage() {
         <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border shadow-none">
             <div className="flex flex-col bg-muted/5">
                 <div className={CARD_HEADER_BAND_CLASS} style={headerBandBorderStyle}>
-                    <div className="flex min-h-[30px] flex-col items-center gap-3 sm:flex-row sm:items-center">
-                        <div className="min-w-0 flex-1">
+                    <div className="flex min-h-[30px] flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
+                        <div className="w-full min-w-0 sm:flex-1">
                             {shouldShowOrganizationTabs ? (
                                 <OrganizationTabsRow
                                     organizations={organizations || []}
                                     activeTab={activeOrgTab}
                                     onTabChange={setActiveOrgTab}
-                                    className="border-0 bg-transparent px-0 py-0 shrink-0"
-                                    controlClassName="h-[25px] min-h-[25px]"
+                                    className="w-full border-0 bg-transparent px-0 py-0"
+                                    controlClassName="h-8 min-h-8 sm:h-[25px] sm:min-h-[25px]"
                                 />
                             ) : (
                                 <div className="min-h-8" />
                             )}
                         </div>
-                        <div className="flex flex-col items-center gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
-                            <Button asChild variant="outline" size="sm" className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'h-[25px] min-h-[25px] w-full sm:w-auto')}>
-                                <Link href="/safety/safety-reports/monitoring" aria-label="Open post-closure monitoring">
+                        <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                            <Button asChild variant="outline" size="sm" className={cn(HEADER_SECONDARY_BUTTON_CLASS, HEADER_COMPACT_CONTROL_CLASS, 'h-8 min-h-8 w-full sm:h-[25px] sm:min-h-[25px] sm:w-auto')}>
+                                <Link href="/safety/safety-reports/monitoring">
                                     <Clock className="mr-1.5 h-3.5 w-3.5" />
                                     Monitoring
                                 </Link>
                             </Button>
                             <Select value={reportView} onValueChange={(value: 'active' | 'archived') => setReportView(value)}>
-                                <SelectTrigger className={cn(HEADER_COMPACT_CONTROL_CLASS, 'h-[25px] min-h-[25px] w-full border-slate-200 bg-white px-2 text-[10px] font-black uppercase tracking-[0.08em] text-slate-900 sm:w-[120px]')} aria-label="Filter archived safety reports">
+                                <SelectTrigger className={cn(HEADER_COMPACT_CONTROL_CLASS, 'h-8 min-h-8 w-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.08em] text-slate-900 sm:h-[25px] sm:min-h-[25px] sm:w-[120px] sm:px-2')} aria-label="Filter archived safety reports">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -927,7 +927,7 @@ export default function SafetyReportsPage() {
                                 <SelectTrigger
                                     className={cn(
                                         HEADER_COMPACT_CONTROL_CLASS,
-                                        'h-[25px] min-h-[25px] w-full border-slate-200 bg-white px-2 text-[10px] font-black uppercase tracking-[0.08em] text-slate-900 sm:w-[168px]'
+                                        'h-8 min-h-8 w-full border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-[0.08em] text-slate-900 sm:h-[25px] sm:min-h-[25px] sm:w-[168px] sm:px-2'
                                     )}
                                     aria-label="Sort safety reports by date"
                                 >

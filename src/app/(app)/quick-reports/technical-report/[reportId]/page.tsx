@@ -199,7 +199,6 @@ export default function TechnicalReportDetailPage() {
       <Card className="overflow-hidden border shadow-none">
         <MainPageHeader
           title={report.reportNumber}
-          description="Review and manage this preliminary technical report."
           actions={
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <BackNavButton href="/safety/safety-reports" text="Back to Safety Reports" />

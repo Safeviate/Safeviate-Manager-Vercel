@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import type { SafetyReport } from '@/types/safety-report';
-import { ArrowLeft, MoreHorizontal, Printer, ShieldAlert, Pencil, FileText, Link2, Unlink } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Printer, ShieldAlert, Pencil, FileText, Link2, Unlink, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
@@ -27,7 +27,6 @@ import { EditReportDialog } from '../edit-report-dialog';
 import { cn } from '@/lib/utils';
 import {
   CARD_COMPACT_HEADER_BAND_CLASS,
-  CARD_HEADER_BAND_CLASS,
   HEADER_COMPACT_CONTROL_CLASS,
   HEADER_SECONDARY_BUTTON_CLASS,
   HEADER_TAB_LIST_CLASS,
@@ -505,9 +504,21 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
         <div className="overflow-visible pb-10 pt-4 no-print md:flex-1 md:overflow-hidden">
           <div className="flex h-auto flex-col overflow-visible rounded-xl border border-card-border bg-card shadow-none md:h-full md:overflow-hidden">
             <div className="sticky top-0 z-30 bg-card">
-              <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-background px-4 py-2 md:px-5`}>
-                <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-h-10 items-center border-b border-card-border bg-background px-4 py-2 sm:hidden">
+                <div className="flex min-w-0 items-center gap-2">
+                  <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                  <p className="shrink-0 text-sm font-black tracking-tight text-slate-800">Report {report.reportNumber}</p>
+                  <Badge variant="secondary" className="h-4 shrink-0 bg-slate-100 px-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-700">{report.status}</Badge>
+                  {report.sourceQuickReportNumber ? (
+                    <span className="truncate text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                      Intake {report.sourceQuickReportNumber}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="shrink-0 border-b border-card-border bg-background">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="hidden min-w-0 items-center gap-2 sm:flex sm:min-h-10 sm:w-full sm:border-b sm:border-card-border sm:bg-background sm:px-4 md:px-5">
                     <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-slate-500" />
                     <p className="shrink-0 text-sm font-black tracking-tight text-slate-800">Report {report.reportNumber}</p>
                     <Badge variant="secondary" className="h-4 shrink-0 bg-slate-100 px-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-700">{report.status}</Badge>
@@ -521,7 +532,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                       {report.reportingChannel || 'Voluntary'}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+                  <div className="hidden flex-wrap items-center justify-end gap-1.5 sm:flex sm:min-h-10 sm:w-full sm:bg-slate-50/70 sm:px-4 md:px-5">
                   <EditReportDialog 
                     report={report} 
                     tenantId={tenantId} 
@@ -592,40 +603,105 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                       </div>
                     </DialogContent>
                   </Dialog>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="outline" size="icon" className={`${HEADER_SECONDARY_BUTTON_CLASS} h-8 w-8 shrink-0`} aria-label="Report document actions">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/print/safety-reports/${report.id}`}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Open document
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handlePrint}>
-                        <Printer className="mr-2 h-4 w-4" />
-                        Print report
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button asChild variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`}>
+                    <Link href={`/print/safety-reports/${report.id}`}>
+                      <FileText className="h-3.5 w-3.5" />
+                      Open document
+                    </Link>
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} !h-8 !gap-1.5 !px-3 !py-1.5 !text-[9px]`} onClick={handlePrint}>
+                    <Printer className="h-3.5 w-3.5" />
+                    Print report
+                  </Button>
+                  <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
+                  <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('full')}>Full report</Button>
+                  <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
+                  </div>
+                  <div className="sm:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="outline" size="sm" className={`${HEADER_SECONDARY_BUTTON_CLASS} h-8 w-full justify-between gap-1.5 px-3 text-[9px]`}>
+                          <span className="flex items-center gap-1.5">
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                          Actions
+                          </span>
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <EditReportDialog
+                          report={report}
+                          tenantId={tenantId}
+                          trigger={<DropdownMenuItem onSelect={(event) => event.preventDefault()}><Pencil className="mr-2 h-4 w-4" />Edit report</DropdownMenuItem>}
+                        />
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(event) => event.preventDefault()}><Link2 className="mr-2 h-4 w-4" />Related reports{relatedReportIds.length > 0 ? ` (${relatedReportIds.length})` : ''}</DropdownMenuItem>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-lg">
+                            <DialogHeader>
+                              <DialogTitle>Related Safety Reports</DialogTitle>
+                              <DialogDescription>Link reports that relate to the same event, hazard, investigation, or corrective action.</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <label className="block space-y-1.5 text-sm font-medium">
+                                <span>Relationship</span>
+                                <select value={relatedReportReason} onChange={(event) => setRelatedReportReason(event.target.value)} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                                  <option>Same hazard or contributing factor</option>
+                                  <option>Repeat occurrence</option>
+                                  <option>Same corrective action or control</option>
+                                  <option>Related investigation</option>
+                                  <option>Related safety matter</option>
+                                </select>
+                              </label>
+                              <label className="block space-y-1.5 text-sm font-medium">
+                                <span>Link another report</span>
+                                <select className="h-9 w-full rounded-md border bg-background px-3 text-sm" defaultValue="" onChange={(event) => {
+                                  const relatedReportId = event.currentTarget.value;
+                                  if (relatedReportId) void handleRelatedReportChange(relatedReportId, 'link');
+                                }}>
+                                  <option value="">Select a safety report</option>
+                                  {availableRelatedReports.map((entry) => <option key={entry.id} value={entry.id}>{entry.reportNumber} - {entry.location || entry.description.slice(0, 50)}</option>)}
+                                </select>
+                              </label>
+                              <div className="space-y-2">
+                                <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">Linked reports</p>
+                                {relatedReports.length > 0 ? relatedReports.map((entry) => (
+                                  <div key={entry.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                                    <Link href={`/safety/safety-reports/${entry.id}`} className="min-w-0 hover:text-primary hover:underline"><p className="truncate text-sm font-semibold">{entry.reportNumber}</p><p className="truncate text-xs text-muted-foreground">{relatedReportLinks.find((link) => link.reportId === entry.id)?.relationship || entry.location || entry.description}</p></Link>
+                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => void handleRelatedReportChange(entry.id, 'unlink')} aria-label={`Unlink ${entry.reportNumber}`}><Unlink className="h-4 w-4" /></Button>
+                                  </div>
+                                )) : <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">No related safety reports are linked yet.</p>}
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        <DropdownMenuItem asChild><Link href={`/print/safety-reports/${report.id}`}><FileText className="mr-2 h-4 w-4" />Open document</Link></DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handlePrint}><Printer className="mr-2 h-4 w-4" />Print report</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
 
-              <div className={`${CARD_HEADER_BAND_CLASS} bg-slate-50/70 !px-0 !py-0`}>
+              <div className="shrink-0 border-b border-card-border bg-slate-50/70">
                 <div>
-                  <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 px-4 md:px-5">
-                    <p className="text-[10px] font-semibold text-slate-500">{visibleWorkflowSteps.filter((step) => step.complete).length}/{visibleWorkflowSteps.length} workflow steps complete</p>
-                    <div className="flex items-center gap-1.5">
-                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('full')}>Full report</Button>
-                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
-                    </div>
+                  <div className="flex min-h-10 flex-wrap items-center justify-end gap-2 px-4 md:px-5 sm:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="outline" size="sm" className={`sm:hidden ${HEADER_COMPACT_CONTROL_CLASS} h-7 w-full justify-between px-2.5 text-[9px]`}>
+                          <span>{activeTab === 'discussion' ? `Diary${myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}` : 'Full report'}</span>
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => setActiveTab('full')}>Full report</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <div className="border-t border-card-border">
-                    <div className={`${HEADER_TAB_LIST_CLASS} !h-10 max-w-full items-center justify-center overflow-x-auto no-scrollbar px-4 md:px-5`} aria-label="Safety case workflow">
+                  <div className="flex h-10 items-center justify-center overflow-hidden">
+                    <div className={`${HEADER_TAB_LIST_CLASS} hidden max-w-full self-center items-center justify-center overflow-x-auto no-scrollbar px-4 sm:flex md:px-5`} aria-label="Safety case workflow">
                       {visibleWorkflowSteps.map((step, index) => {
                         const isActive = activeTab === step.tab;
                         return (
@@ -634,13 +710,37 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                             type="button"
                             onClick={() => setActiveTab(step.tab)}
                             title={`${index + 1}. ${step.label}`}
-                            className={`${HEADER_TAB_TRIGGER_CLASS} h-6 ${isActive ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            className={`${HEADER_TAB_TRIGGER_CLASS} h-8 ${isActive ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
                           >
                             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${step.complete ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                             <span>{index + 1}. {step.label}</span>
                           </button>
                         );
                       })}
+                    </div>
+                    <div className="flex h-10 w-full items-center justify-center px-4 sm:hidden">
+                      <div className="w-full max-w-[278px]">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button type="button" variant="outline" size="sm" className={`${HEADER_TAB_TRIGGER_CLASS} h-7 w-full max-w-full justify-between gap-2 bg-white px-3 text-[10px] text-slate-700`}>
+                            {(() => {
+                              const currentStep = visibleWorkflowSteps.find((step) => step.tab === activeTab);
+                              const currentIndex = visibleWorkflowSteps.findIndex((step) => step.tab === activeTab);
+                              return <span className="flex min-w-0 items-center gap-2"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${currentStep?.complete ? 'bg-emerald-500' : 'bg-amber-400'}`} />{currentIndex + 1}. {currentStep?.label || 'Workflow'}</span>;
+                            })()}
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-[min(20rem,calc(100vw-2rem))]">
+                          {visibleWorkflowSteps.map((step, index) => (
+                            <DropdownMenuItem key={step.tab} onSelect={() => setActiveTab(step.tab)} className="gap-2">
+                              <span className={`h-2 w-2 shrink-0 rounded-full ${step.complete ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                              {index + 1}. {step.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      </div>
                     </div>
                   </div>
                 </div>
