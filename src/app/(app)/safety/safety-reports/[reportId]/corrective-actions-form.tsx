@@ -30,7 +30,7 @@ import type {
   SafetyReport,
 } from '@/types/safety-report';
 import type { Personnel } from '@/app/(app)/users/personnel/page';
-import { CalendarIcon, CheckCircle2, MailWarning, PlusCircle, Save, ShieldCheck, Trash2 } from 'lucide-react';
+import { CalendarIcon, CheckCircle2, ChevronDown, ChevronRight, MailWarning, PlusCircle, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CustomCalendar } from '@/components/ui/custom-calendar';
@@ -50,14 +50,12 @@ const mitigationReviewSchema = z.object({
   status: z.enum(['Open', 'In Progress', 'Closed', 'Cancelled']),
   residualLikelihood: z.number().min(1).max(5),
   residualSeverity: z.number().min(1).max(5),
+  tolerabilityDecision: z.enum(['Acceptable', 'Tolerable With Controls', 'Unacceptable']).optional(),
+  tolerabilityRationale: z.string().default(''),
 });
 
 const reviewSchema = z.object({
   mitigationReviews: z.array(mitigationReviewSchema),
-  riskAcceptance: z.object({
-    decision: z.enum(['Acceptable', 'Tolerable With Controls', 'Unacceptable']).optional(),
-    rationale: z.string().default(''),
-  }).optional(),
   independentActions: z.array(z.object({
     id: z.string(),
     source: z.enum(['Investigation Finding', 'Root Cause', 'Human Factors', 'Immediate Containment', 'Other']),
@@ -65,6 +63,8 @@ const reviewSchema = z.object({
     responsiblePersonId: z.string().optional(),
     deadline: z.date().nullable().optional(),
     status: z.enum(['Open', 'In Progress', 'Closed', 'Cancelled']),
+    tolerabilityDecision: z.enum(['Acceptable', 'Tolerable With Controls', 'Unacceptable']).optional(),
+    tolerabilityRationale: z.string().default(''),
   })),
 });
 
@@ -199,6 +199,7 @@ interface CorrectiveActionsFormProps {
   personnel: Personnel[];
   riskMatrixColors?: Record<string, string>;
   isStacked?: boolean;
+  showSaveFooter?: boolean;
   onReportSaved?: (report: SafetyReport) => void;
 }
 
@@ -208,6 +209,7 @@ export function CorrectiveActionsForm({
   personnel,
   riskMatrixColors,
   isStacked = false,
+  showSaveFooter,
   onReportSaved,
 }: CorrectiveActionsFormProps) {
   const { toast } = useToast();
@@ -255,11 +257,9 @@ export function CorrectiveActionsForm({
         status: item.reviewAction?.status || 'Open',
         residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
         residualSeverity: item.mitigationResidualRiskAssessment.severity,
+        tolerabilityDecision: item.reviewAction?.tolerabilityDecision || undefined,
+        tolerabilityRationale: item.reviewAction?.tolerabilityRationale || '',
       })),
-      riskAcceptance: {
-        decision: report.riskAcceptance?.decision,
-        rationale: report.riskAcceptance?.rationale || '',
-      },
       independentActions: independentActions.map((action) => ({
         id: action.id,
         source: (action.source && independentActionSources.includes(action.source as typeof independentActionSources[number])
@@ -269,6 +269,8 @@ export function CorrectiveActionsForm({
         responsiblePersonId: action.responsiblePersonId || '',
         deadline: parseLocalDate(action.deadline),
         status: action.status,
+        tolerabilityDecision: action.tolerabilityDecision || undefined,
+        tolerabilityRationale: action.tolerabilityRationale || '',
       })),
     },
   });
@@ -285,11 +287,9 @@ export function CorrectiveActionsForm({
         status: item.reviewAction?.status || 'Open',
         residualLikelihood: item.mitigationResidualRiskAssessment.likelihood,
         residualSeverity: item.mitigationResidualRiskAssessment.severity,
+        tolerabilityDecision: item.reviewAction?.tolerabilityDecision || undefined,
+        tolerabilityRationale: item.reviewAction?.tolerabilityRationale || '',
       })),
-      riskAcceptance: {
-        decision: report.riskAcceptance?.decision,
-        rationale: report.riskAcceptance?.rationale || '',
-      },
       independentActions: independentActions.map((action) => ({
         id: action.id,
         source: (action.source && independentActionSources.includes(action.source as typeof independentActionSources[number])
@@ -299,6 +299,8 @@ export function CorrectiveActionsForm({
         responsiblePersonId: action.responsiblePersonId || '',
         deadline: parseLocalDate(action.deadline),
         status: action.status,
+        tolerabilityDecision: action.tolerabilityDecision || undefined,
+        tolerabilityRationale: action.tolerabilityRationale || '',
       })),
     });
   }, [form, independentActions, mitigationItems]);
@@ -360,6 +362,8 @@ export function CorrectiveActionsForm({
       status: 'Open',
       residualLikelihood: initialRisk.likelihood,
       residualSeverity: initialRisk.severity,
+      tolerabilityDecision: undefined,
+      tolerabilityRationale: '',
     });
   };
 
@@ -420,13 +424,6 @@ export function CorrectiveActionsForm({
     const nextReport: SafetyReport = {
       ...report,
       initialHazards: nextHazardsWithFallbackDescriptions,
-      riskAcceptance: values.riskAcceptance?.decision
-        ? {
-          ...report.riskAcceptance,
-          decision: values.riskAcceptance.decision,
-          rationale: values.riskAcceptance.rationale.trim(),
-        }
-        : null,
       correctiveActions: [
         ...values.mitigationReviews.map((review) => {
         const residual = normalizeRiskAssessment({
@@ -444,6 +441,8 @@ export function CorrectiveActionsForm({
           residualSeverity: residual?.severity ?? null,
           residualRiskScore: residual?.riskScore ?? null,
           residualRiskLevel: residual?.riskLevel ?? null,
+          tolerabilityDecision: review.tolerabilityDecision || null,
+          tolerabilityRationale: review.tolerabilityRationale.trim() || null,
           deadline: toNoonUtcIso(review.completionDate) || new Date().toISOString(),
           status: review.status as CorrectiveActionStatus,
         } satisfies CorrectiveAction;
@@ -453,6 +452,8 @@ export function CorrectiveActionsForm({
           description: action.description.trim(),
           responsiblePersonId: action.responsiblePersonId || '',
           source: action.source,
+          tolerabilityDecision: action.tolerabilityDecision || null,
+          tolerabilityRationale: action.tolerabilityRationale.trim() || null,
           deadline: toNoonUtcIso(action.deadline) || new Date().toISOString(),
           status: action.status as CorrectiveActionStatus,
         } satisfies CorrectiveAction)),
@@ -540,12 +541,14 @@ export function CorrectiveActionsForm({
     void deleteCorrectiveAction(item);
   };
 
+  const shouldShowSaveFooter = showSaveFooter ?? !isStacked;
+
   return (
     <div className={cn('flex flex-col h-full', !isStacked && 'overflow-hidden')}>
       <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
         <h3 className="shrink-0 text-sm font-black uppercase tracking-tight">Corrective Actions</h3>
-        <p className="truncate text-[10px] font-medium text-muted-foreground">
+        <p className="text-[10px] font-medium text-muted-foreground sm:truncate">
           After investigation, define controls, assess residual risk, and record the tolerability decision.
         </p>
         </div>
@@ -564,12 +567,11 @@ export function CorrectiveActionsForm({
                   onAddAction={addCorrectiveAction}
                   onDeleteAction={removeCorrectiveAction}
                 />
-                <TolerabilityDecisionFields form={form} />
                 <IndependentActionFields
                   fields={independentActionFields}
                   form={form}
                   personnel={personnel}
-                  onAdd={() => appendIndependentAction({ id: uuidv4(), source: 'Investigation Finding', description: '', responsiblePersonId: '', deadline: null, status: 'Open' })}
+                  onAdd={() => appendIndependentAction({ id: uuidv4(), source: 'Investigation Finding', description: '', responsiblePersonId: '', deadline: null, status: 'Open', tolerabilityRationale: '' })}
                   onRemove={removeIndependentAction}
                 />
               </div>
@@ -583,20 +585,19 @@ export function CorrectiveActionsForm({
                     personnel={personnel}
                     riskMatrixColors={riskMatrixColors}
                     onAddAction={addCorrectiveAction}
-                    onDeleteAction={removeCorrectiveAction}
-                  />
-                  <TolerabilityDecisionFields form={form} />
+                  onDeleteAction={removeCorrectiveAction}
+                />
                   <IndependentActionFields
                     fields={independentActionFields}
                     form={form}
                     personnel={personnel}
-                    onAdd={() => appendIndependentAction({ id: uuidv4(), source: 'Investigation Finding', description: '', responsiblePersonId: '', deadline: null, status: 'Open' })}
+                    onAdd={() => appendIndependentAction({ id: uuidv4(), source: 'Investigation Finding', description: '', responsiblePersonId: '', deadline: null, status: 'Open', tolerabilityRationale: '' })}
                     onRemove={removeIndependentAction}
                   />
                 </div>
               </ScrollArea>
             )}
-            {!isStacked && (
+            {shouldShowSaveFooter && (
               <div className="shrink-0 flex justify-end p-4 border-t bg-muted/5 gap-2 no-print">
                 <Button type="submit" className={HEADER_ACTION_BUTTON_CLASS}>
                   <Save className="mr-2 h-4 w-4" /> Save Corrective Actions Review
@@ -638,10 +639,10 @@ function OverdueActionEscalations({
               return (
                 <div key={action.id} className="flex flex-col gap-2 rounded-md border border-amber-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{action.description || 'Untitled corrective action'}</p>
+                    <p className="break-words text-sm font-semibold sm:truncate">{action.description || 'Untitled corrective action'}</p>
                     <p className="mt-0.5 text-xs text-amber-900">Due {format(new Date(action.deadline), 'dd MMM yyyy')} - {owner ? `${owner.firstName} ${owner.lastName}` : 'No assigned owner'}</p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" disabled={!action.responsiblePersonId || onCooldown || escalatingActionId === action.id} onClick={() => onEscalate(action.id)}>
+                  <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto" disabled={!action.responsiblePersonId || onCooldown || escalatingActionId === action.id} onClick={() => onEscalate(action.id)}>
                     <MailWarning className="mr-2 h-3.5 w-3.5" />
                     {escalatingActionId === action.id ? 'Sending...' : onCooldown ? 'Sent recently' : 'Escalate'}
                   </Button>
@@ -670,7 +671,12 @@ function IndependentActionFields({
 }) {
   return (
     <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+      <div
+        className={cn(
+          CARD_COMPACT_HEADER_BAND_CLASS,
+          'flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between',
+        )}
+      >
         <div>
           <h4 className="text-xs font-black uppercase tracking-tight">Investigation and Preventive Actions</h4>
           <p className="mt-1 text-[10px] text-muted-foreground">Add actions from findings, root causes, containment, or improvement opportunities. These remain independent of risk mitigations.</p>
@@ -717,6 +723,11 @@ function IndependentActionFields({
                 <FormControl><textarea {...field} rows={2} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Describe the action and the intended safety outcome." /></FormControl>
               </FormItem>
             )} />
+            <ActionTolerabilityFields
+              form={form}
+              decisionName={`independentActions.${index}.tolerabilityDecision`}
+              rationaleName={`independentActions.${index}.tolerabilityRationale`}
+            />
           </div>
         ))}
       </div>
@@ -739,6 +750,17 @@ function ReviewFields({
   onAddAction: (hazardId: string, riskId: string) => void;
   onDeleteAction: (item: FlattenedMitigation, index: number) => void;
 }) {
+  const [collapsedActionIds, setCollapsedActionIds] = useState<Set<string>>(() => new Set());
+
+  const toggleAction = (actionId: string) => {
+    setCollapsedActionIds((current) => {
+      const next = new Set(current);
+      if (next.has(actionId)) next.delete(actionId);
+      else next.add(actionId);
+      return next;
+    });
+  };
+
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
@@ -751,16 +773,27 @@ function ReviewFields({
 
   return (
     <>
-      {items.map((item, index) => (
+      {items.map((item, index) => {
+        const isCollapsed = collapsedActionIds.has(item.mitigationId);
+
+        return (
         <div key={item.mitigationId} className="overflow-hidden rounded-lg border border-card-border bg-card shadow-none">
           <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
             <div className="flex min-w-0 items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto min-w-0 flex-1 justify-start gap-2 px-0 py-0 text-left hover:bg-transparent"
+                onClick={() => toggleAction(item.mitigationId)}
+                aria-expanded={!isCollapsed}
+                aria-controls={`corrective-action-${item.mitigationId}`}
+              >
+                <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
                   Corrective Action {index + 1}
-                </p>
-              </div>
+                </span>
+                {isCollapsed ? <ChevronRight className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
+              </Button>
               <div className="flex items-center gap-2 no-print">
                 <Button
                   type="button"
@@ -781,7 +814,7 @@ function ReviewFields({
             </div>
           </div>
 
-          <div className="space-y-4 p-4">
+          {!isCollapsed && <div id={`corrective-action-${item.mitigationId}`} className="space-y-4 p-4">
             <div className="grid gap-3 md:grid-cols-2">
               <InfoCard label="Hazard" value={item.hazardDescription} />
               <InfoCard label="Risk" value={item.riskDescription} />
@@ -912,32 +945,46 @@ function ReviewFields({
               )}
             />
             </div>
-          </div>
+            <ActionTolerabilityFields
+              form={form}
+              decisionName={`mitigationReviews.${index}.tolerabilityDecision`}
+              rationaleName={`mitigationReviews.${index}.tolerabilityRationale`}
+            />
+          </div>}
         </div>
-      ))}
+        );
+      })}
     </>
   );
 }
 
-function TolerabilityDecisionFields({ form }: { form: ReturnType<typeof useForm<ReviewFormValues>> }) {
+function ActionTolerabilityFields({
+  form,
+  decisionName,
+  rationaleName,
+}: {
+  form: ReturnType<typeof useForm<ReviewFormValues>>;
+  decisionName: `mitigationReviews.${number}.tolerabilityDecision` | `independentActions.${number}.tolerabilityDecision`;
+  rationaleName: `mitigationReviews.${number}.tolerabilityRationale` | `independentActions.${number}.tolerabilityRationale`;
+}) {
   return (
-    <section className="overflow-hidden rounded-lg border border-card-border bg-card">
-      <div className={CARD_COMPACT_HEADER_BAND_CLASS}>
+    <section className="overflow-hidden rounded-lg border border-input bg-muted/20">
+      <div className="border-b border-input px-3 py-2">
         <div>
-          <h4 className="text-xs font-black uppercase tracking-tight">Risk Tolerability Decision</h4>
-          <p className="mt-1 text-[10px] text-muted-foreground">After investigation and defined controls, record whether the residual risk is acceptable, tolerable with controls, or requires further action.</p>
+          <h5 className="text-xs font-black uppercase tracking-tight">Action Tolerability Decision</h5>
+          <p className="mt-1 text-[10px] text-muted-foreground">Record whether this action leaves the associated residual risk acceptable, tolerable with controls, or requiring further action.</p>
         </div>
       </div>
-      <div className="grid gap-4 p-4 md:grid-cols-[260px_minmax(0,1fr)]">
+      <div className="space-y-3 p-3">
         <FormField
           control={form.control}
-          name="riskAcceptance.decision"
+          name={decisionName}
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || ''}>
                 <FormControl>
-                  <SelectTrigger className="mt-2 h-10"><SelectValue placeholder="Select a decision" /></SelectTrigger>
+                  <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue placeholder="Select a decision" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="Acceptable">Acceptable</SelectItem>
@@ -950,12 +997,12 @@ function TolerabilityDecisionFields({ form }: { form: ReturnType<typeof useForm<
         />
         <FormField
           control={form.control}
-          name="riskAcceptance.rationale"
+          name={rationaleName}
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Decision rationale</FormLabel>
               <FormControl>
-                <textarea {...field} rows={3} placeholder="Explain the residual-risk decision, required controls, and any operating limits." className="mt-2 min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                <textarea {...field} rows={2} placeholder="Explain the decision, required controls, and any operating limits." className="mt-1 min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
               </FormControl>
             </FormItem>
           )}

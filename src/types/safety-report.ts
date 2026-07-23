@@ -15,6 +15,7 @@ export type InvestigationMemberRole = 'Lead Investigator' | 'Team Member' | 'Tec
 export type InvestigationTaskStatus = 'Open' | 'In Progress' | 'Completed';
 export type CorrectiveActionStatus = 'Open' | 'In Progress' | 'Closed' | 'Cancelled';
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
+export type RiskTolerabilityDecision = 'Acceptable' | 'Tolerable With Controls' | 'Unacceptable';
 export type CorrectiveActionRiskView = 'Initial' | 'Residual';
 export type CorrectiveActionSource = 'Risk Mitigation' | 'Risk Control' | 'Investigation Finding' | 'Root Cause' | 'Human Factors' | 'Immediate Containment' | 'Other';
 export type ControlEffectivenessStatus = 'Pending' | 'Effective' | 'Partially Effective' | 'Ineffective';
@@ -143,6 +144,8 @@ export interface CorrectiveAction {
     residualSeverity?: number | null;
     residualRiskScore?: number | null;
     residualRiskLevel?: RiskLevel | null;
+    tolerabilityDecision?: RiskTolerabilityDecision | null;
+    tolerabilityRationale?: string | null;
     deadline: string; // ISO String
     status: CorrectiveActionStatus;
     completionDate?: string | null;
@@ -159,7 +162,7 @@ export interface CorrectiveAction {
 }
 
 export interface SafetyRiskAcceptance {
-    decision: 'Acceptable' | 'Tolerable With Controls' | 'Unacceptable';
+    decision: RiskTolerabilityDecision;
     rationale: string;
     decidedBy?: string | null;
     decidedAt?: string | null;

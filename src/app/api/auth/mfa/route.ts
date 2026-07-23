@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession, type Session } from 'next-auth';
 import QRCode from 'qrcode';
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -27,7 +27,7 @@ async function getCurrentUser() {
   return prisma.user.findUnique({ where: { id: userId } });
 }
 
-async function revokeOtherSessionsForMfaChange(session: Awaited<ReturnType<typeof getServerSession>>, user: { id: string; tenantId: string; email: string }) {
+async function revokeOtherSessionsForMfaChange(session: Session | null, user: { id: string; tenantId: string; email: string }) {
   await revokeUserSessions({
     tenantId: user.tenantId,
     userId: user.id,

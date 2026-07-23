@@ -73,11 +73,10 @@ function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyRep
   );
   const nextFeedbackDate = report.monitoringPlan?.reviewDate ? new Date(report.monitoringPlan.reviewDate) : null;
   const hasFutureFeedbackDate = Boolean(nextFeedbackDate && !Number.isNaN(nextFeedbackDate.getTime()) && nextFeedbackDate.getTime() > Date.now());
-  const riskDecision = report.riskAcceptance;
-  const hasRiskDecision = Boolean(
-    riskDecision
-    && riskDecision.decision !== 'Unacceptable'
-    && riskDecision.rationale?.trim(),
+  const hasRiskDecision = actions.length === 0 || actions.every((action) =>
+    action.tolerabilityDecision
+    && action.tolerabilityDecision !== 'Unacceptable'
+    && action.tolerabilityRationale?.trim(),
   );
   const monitoringPlan = report.monitoringPlan;
   const hasMeasurableMonitoringPlan = Boolean(
@@ -93,7 +92,7 @@ function validateLifecycleUpdate(existingReport: SafetyReport, report: SafetyRep
 
   if (!['Closed - Monitoring', 'Closed - Effective'].includes(status)) return null;
   if (hasOpenActions) return 'All corrective actions must be closed or cancelled before the report can enter closure monitoring.';
-  if (!hasRiskDecision) return 'Record an acceptable or tolerable risk decision and its rationale before closing the report.';
+  if (!hasRiskDecision) return 'Record an acceptable or tolerable decision and rationale for every corrective action before closing the report.';
   if (hasHighSeverityRisk && !hasInvestigationConclusion) {
     return 'Record an investigation conclusion before closing a report with high or critical risk.';
   }

@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { TriageForm } from './triage-form';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { InvestigationForm } from './investigation-form';
 import { HazardIdentificationForm } from './hazard-identification-form';
 import { CorrectiveActionsForm } from './corrective-actions-form';
@@ -70,6 +71,7 @@ interface SafetyReportDetailPageProps {
 
 export default function SafetyReportDetailPage({ params }: SafetyReportDetailPageProps) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const { userProfile, tenantId } = useUserProfile();
   const { isPageEnabled, isSectionEnabled, isTabEnabled } = usePageLayout('safety-reports');
   const resolvedParams = use(params);
@@ -250,10 +252,10 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   );
   const requiresRootCause = hasHighSeverityRisk || ['Incident', 'Serious Incident', 'Accident'].includes(report.eventClassification || '');
   const isInMonitoring = ['Closed - Monitoring', 'Closed - Effective'].includes(report.status);
-  const hasRiskDecision = Boolean(
-    report.riskAcceptance?.decision
-    && report.riskAcceptance.decision !== 'Unacceptable'
-    && report.riskAcceptance.rationale?.trim(),
+  const hasRiskDecision = actionCount === 0 || (report.correctiveActions || []).every((action) =>
+    action.tolerabilityDecision
+    && action.tolerabilityDecision !== 'Unacceptable'
+    && action.tolerabilityRationale?.trim(),
   );
   const hasMonitoringPlan = Boolean(
     report.monitoringPlan?.indicatorName?.trim()
@@ -284,7 +286,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       tab: 'cap',
       label: 'Corrective Actions',
       complete: hasRiskDecision && (actionCount === 0 || openActionCount === 0),
-      detail: !hasRiskDecision ? 'Residual-risk decision needed' : actionCount === 0 ? 'No additional actions required' : openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
+      detail: !hasRiskDecision ? 'Action tolerability decision needed' : actionCount === 0 ? 'No additional actions required' : openActionCount > 0 ? `${openActionCount} action${openActionCount === 1 ? '' : 's'} open` : 'Actions complete',
     },
     {
       tab: 'monitoring',
@@ -483,7 +485,7 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
       case 'investigation':
         return <InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} />;
       case 'cap':
-        return <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} />;
+        return <CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} isStacked={isMobile} showSaveFooter={isMobile} onReportSaved={handleReportSaved} />;
       case 'review':
         return <FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showMonitoring={false} onReportSaved={handleReportSaved} />;
       case 'monitoring':
@@ -496,12 +498,12 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
   };
 
   return (
-    <div className="max-w-[1100px] mx-auto w-full flex flex-col h-full overflow-hidden pt-4 px-1">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
+    <div className="mx-auto flex h-auto w-full max-w-[1100px] flex-col overflow-visible px-1 pt-4 md:h-full md:overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full flex-col overflow-visible md:flex-1 md:overflow-hidden">
         
         {/* --- MAIN CONTENT CARD --- */}
-        <div className="flex-1 overflow-hidden pb-10 no-print pt-4">
-          <div className="rounded-xl border border-card-border overflow-hidden flex flex-col bg-card shadow-none h-full">
+        <div className="overflow-visible pb-10 pt-4 no-print md:flex-1 md:overflow-hidden">
+          <div className="flex h-auto flex-col overflow-visible rounded-xl border border-card-border bg-card shadow-none md:h-full md:overflow-hidden">
             <div className="sticky top-0 z-30 bg-card">
               <div className={`${CARD_COMPACT_HEADER_BAND_CLASS} bg-background px-4 py-2 md:px-5`}>
                 <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -613,17 +615,17 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
                 </div>
               </div>
 
-              <div className={`${CARD_HEADER_BAND_CLASS} bg-slate-50/70 px-4 py-2 md:px-5`}>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
+              <div className={`${CARD_HEADER_BAND_CLASS} bg-slate-50/70 !px-0 !py-0`}>
+                <div>
+                  <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 px-4 md:px-5">
                     <p className="text-[10px] font-semibold text-slate-500">{visibleWorkflowSteps.filter((step) => step.complete).length}/{visibleWorkflowSteps.length} workflow steps complete</p>
                     <div className="flex items-center gap-1.5">
-                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('full')}>Full report</Button>
-                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} !h-6 px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
+                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'full' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('full')}>Full report</Button>
+                      <Button type="button" variant="ghost" size="sm" className={`${HEADER_COMPACT_CONTROL_CLASS} px-2.5 ${activeTab === 'discussion' ? 'border-slate-900 bg-white text-slate-900' : 'text-slate-500'}`} style={{ height: 24, minHeight: 24 }} onClick={() => setActiveTab('discussion')}>Diary{myMentionsCount > 0 ? ` (${myMentionsCount})` : ''}</Button>
                     </div>
                   </div>
-                  <div className="-mx-4 border-t border-card-border px-4 pt-2 md:-mx-5 md:px-5">
-                    <div className={`${HEADER_TAB_LIST_CLASS} max-w-full justify-center overflow-x-auto no-scrollbar`} aria-label="Safety case workflow">
+                  <div className="border-t border-card-border">
+                    <div className={`${HEADER_TAB_LIST_CLASS} !h-10 max-w-full items-center justify-center overflow-x-auto no-scrollbar px-4 md:px-5`} aria-label="Safety case workflow">
                       {visibleWorkflowSteps.map((step, index) => {
                         const isActive = activeTab === step.tab;
                         return (
@@ -645,27 +647,27 @@ export default function SafetyReportDetailPage({ params }: SafetyReportDetailPag
               </div>
             </div>
 
-            <div className="flex-1 min-h-0">
+            <div className="min-h-0 flex-1">
               {!showReportViews || visibleReportTabs.length === 0 ? (
-                <div className="m-0 h-full outline-none overflow-y-auto no-scrollbar">
+                <div className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-y-auto md:no-scrollbar">
                   {renderFullReportSummary()}
                 </div>
               ) : visibleReportTabs.length === 1 ? (
-                <div className="m-0 h-full outline-none overflow-y-auto no-scrollbar">
+                <div className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-y-auto md:no-scrollbar">
                   {renderSingleTabContent(visibleReportTabs[0].value)}
                 </div>
               ) : (
                 <>
-                  <TabsContent value="full" className="m-0 h-full outline-none overflow-y-auto no-scrollbar">
+                  <TabsContent value="full" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-y-auto md:no-scrollbar">
                     {renderFullReportSummary()}
                   </TabsContent>
-                  <TabsContent value="triage" className="m-0 h-full outline-none overflow-hidden h-full"><TriageForm report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="hazards" className="m-0 h-full outline-none overflow-hidden h-full"><HazardIdentificationForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="investigation" className="m-0 h-full outline-none overflow-hidden h-full"><InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="cap" className="m-0 h-full outline-none overflow-hidden h-full"><CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="review" className="m-0 h-full outline-none overflow-hidden h-full"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showMonitoring={false} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="monitoring" className="m-0 h-full outline-none overflow-hidden h-full"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showReview={false} showClosure={false} onReportSaved={handleReportSaved} /></TabsContent>
-                  <TabsContent value="discussion" className="m-0 h-full outline-none overflow-hidden h-full"><ReportForum report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="triage" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-hidden"><TriageForm report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="hazards" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-hidden"><HazardIdentificationForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="investigation" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-hidden"><InvestigationForm report={report} tenantId={tenantId} personnel={personnel || []} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="cap" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-hidden"><CorrectiveActionsForm report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} isStacked={isMobile} showSaveFooter={isMobile} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="review" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-hidden"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showMonitoring={false} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="monitoring" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-hidden"><FinalReview report={report} tenantId={tenantId} personnel={personnel || []} riskMatrixColors={riskMatrixSettings?.colors} showReview={false} showClosure={false} onReportSaved={handleReportSaved} /></TabsContent>
+                  <TabsContent value="discussion" className="m-0 h-auto overflow-visible outline-none md:h-full md:overflow-hidden"><ReportForum report={report} tenantId={tenantId} onReportSaved={handleReportSaved} /></TabsContent>
                 </>
               )}
             </div>
