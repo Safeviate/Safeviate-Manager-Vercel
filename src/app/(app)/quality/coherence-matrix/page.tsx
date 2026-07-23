@@ -110,7 +110,7 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
       {lines.map((line, index) => (
         <p
           key={`${index}-${line.slice(0, 24)}`}
-          className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground/80"
+          className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground"
           style={{ marginLeft: indentationOffset(canonicalIndentation(line, normalizedIndentation[index] || 0)) }}
         >
           {line}
@@ -1041,7 +1041,7 @@ export default function CoherenceMatrixPage() {
           className={cn(
             'rounded-lg border p-4 shadow-none transition-colors',
             depth === 0 ? 'bg-muted/20' : 'bg-card/90',
-            isSelected ? 'border-primary/40 bg-primary/5' : 'border-card-border',
+            isSelected ? 'border-primary/40 bg-primary/5' : depth === 0 ? 'border-slate-200' : 'border-slate-50',
           )}
           style={{ marginLeft: depth === 0 ? 0 : `${Math.min(depth * 0.75, 2.25)}rem` }}
         >
@@ -1055,11 +1055,11 @@ export default function CoherenceMatrixPage() {
               }}
             >
               {hasChildren ? (
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-card-border bg-background/80 text-foreground/55">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background/80 text-foreground/55">
                   {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </span>
               ) : (
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-card-border bg-background/80 text-[10px] font-black text-foreground/55">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-background/80 text-[10px] font-black text-foreground/55">
                   •
                 </span>
               )}
@@ -1098,12 +1098,12 @@ export default function CoherenceMatrixPage() {
           {item.companyReference?.trim() || item.nextAuditDate?.trim() || item.responsibleManagerId?.trim() ? (
             <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-foreground/55">
               {item.companyReference?.trim() ? (
-                <Badge variant="outline" className="border-card-border bg-background/70 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                <Badge variant="outline" className="border-0 bg-transparent px-0 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-none">
                   {item.companyReference.trim()}
                 </Badge>
               ) : null}
               {item.responsibleManagerId?.trim() ? (
-                <Badge variant="outline" className="border-card-border bg-background/70 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                <Badge variant="outline" className="border-0 bg-transparent px-0 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-none">
                   Responsible {getPersonnelDisplayName(personnel, item.responsibleManagerId) || item.responsibleManagerId}
                 </Badge>
               ) : null}
@@ -1116,7 +1116,7 @@ export default function CoherenceMatrixPage() {
           ) : null}
 
           {isOpen && (childSubheaders.length > 0 || childRegulations.length > 0) ? (
-            <div className="mt-4 space-y-2 border-t border-card-border/70 pt-3">
+            <div className="mt-4 space-y-2 border-t border-slate-200 pt-3">
               {childSubheaders.map((child) => renderNode(child, depth + 1, [...ancestors, itemCode]))}
               {depth > 0 && childRegulations.length > 0 ? (
                 <div className="space-y-1">
@@ -1135,7 +1135,7 @@ export default function CoherenceMatrixPage() {
                           type="button"
                           className={cn(
                             'w-full rounded-md border px-3 py-2 text-left transition-colors',
-                            childSelected ? 'border-primary/40 bg-primary/5' : 'border-card-border/70 bg-background/70 hover:bg-accent/30',
+                            childSelected ? 'border-primary/40 bg-primary/5' : 'border-slate-200 bg-background/70 hover:bg-accent/30',
                           )}
                           onClick={() => setSelectedItemId(child.id)}
                         >
@@ -1357,12 +1357,12 @@ export default function CoherenceMatrixPage() {
                         {activeRegulationItem.companyReference?.trim() || activeRegulationItem.nextAuditDate?.trim() || activeRegulationItem.responsibleManagerId?.trim() ? (
                           <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-foreground/55">
                             {activeRegulationItem.companyReference?.trim() ? (
-                              <Badge variant="outline" className="border-card-border bg-background/70 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                              <Badge variant="outline" className="border-0 bg-transparent px-0 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-none">
                                 {activeRegulationItem.companyReference.trim()}
                               </Badge>
                             ) : null}
                             {activeRegulationItem.responsibleManagerId?.trim() ? (
-                              <Badge variant="outline" className="border-card-border bg-background/70 text-[10px] font-black uppercase tracking-[0.08em] text-foreground">
+                              <Badge variant="outline" className="border-0 bg-transparent px-0 text-[10px] font-black uppercase tracking-[0.08em] text-foreground shadow-none">
                                 Responsible {getPersonnelDisplayName(personnel, activeRegulationItem.responsibleManagerId) || activeRegulationItem.responsibleManagerId}
                               </Badge>
                             ) : null}

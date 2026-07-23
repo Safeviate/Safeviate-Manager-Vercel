@@ -181,21 +181,32 @@ export function TemplateEditorDialog({
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch('/api/tenant-config', { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({ config: null }));
-        const config = payload?.config || {};
-        if (!cancelled && Array.isArray(config['compliance-matrix'])) {
-          setComplianceItems(config['compliance-matrix']);
+        // Keep checklist imports on the same tenant-scoped source as the Coherence Matrix.
+        const response = await fetch(`/api/compliance-matrix?tenantId=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({ items: null }));
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Unable to load the Coherence Matrix.');
         }
-      } catch {
-        if (!cancelled) setComplianceItems([]);
+
+        if (!cancelled) {
+          setComplianceItems(Array.isArray(payload.items) ? payload.items : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setComplianceItems([]);
+          toast({
+            variant: 'destructive',
+            title: 'Coherence Matrix unavailable',
+            description: error instanceof Error ? error.message : 'Unable to load the Coherence Matrix.',
+          });
+        }
       }
     };
     void load();
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, renderAsPage, tenantId, toast]);
 
   useEffect(() => {
     setAvailableDepartments(departments);

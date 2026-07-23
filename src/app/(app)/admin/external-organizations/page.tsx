@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -34,6 +35,7 @@ export default function ExternalOrganizationsPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [copyCoherenceMatrix, setCopyCoherenceMatrix] = useState(true);
 
   const loadOrgs = useCallback(async () => {
     setIsLoading(true);
@@ -61,6 +63,7 @@ export default function ExternalOrganizationsPage() {
     setName(org?.name || '');
     setEmail(org?.contactEmail || '');
     setAddress(org?.address || '');
+    setCopyCoherenceMatrix(!org);
     setIsFormOpen(true);
   };
 
@@ -72,7 +75,10 @@ export default function ExternalOrganizationsPage() {
     }
 
     try {
-        const payload = { organization: { ...(editingOrg || {}), name, contactEmail: email, address } };
+        const payload = {
+          organization: { ...(editingOrg || {}), name, contactEmail: email, address },
+          ...(editingOrg ? {} : { copyCoherenceMatrix }),
+        };
         const response = await fetch(editingOrg ? `/api/external-organizations/${editingOrg.id}` : '/api/external-organizations', {
           method: editingOrg ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,7 +87,12 @@ export default function ExternalOrganizationsPage() {
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || 'Failed to save organization.');
         window.dispatchEvent(new Event('safeviate-external-organizations-updated'));
-        toast({ title: editingOrg ? 'Company Updated' : 'Company Created' });
+        toast({
+          title: editingOrg ? 'Company Updated' : 'Company Created',
+          description: !editingOrg && Number(result.copiedItemCount) > 0
+            ? `${result.copiedItemCount} internal coherence matrix entries were copied for this company.`
+            : undefined,
+        });
         setIsFormOpen(false);
     } catch (e) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save company.' });
@@ -204,6 +215,21 @@ export default function ExternalOrganizationsPage() {
               <Label htmlFor="address">Address</Label>
               <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
             </div>
+            {!editingOrg && (
+              <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                <Checkbox
+                  id="copy-coherence-matrix"
+                  checked={copyCoherenceMatrix}
+                  onCheckedChange={(checked) => setCopyCoherenceMatrix(checked === true)}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="copy-coherence-matrix">Copy internal coherence matrix</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Creates an independent copy for this company. Later changes do not affect the internal matrix.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>

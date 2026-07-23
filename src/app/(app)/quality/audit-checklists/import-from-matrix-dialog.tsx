@@ -51,10 +51,18 @@ export function ImportFromMatrixDialog({ complianceItems, onImport }: ImportFrom
     }, [complianceItems]);
 
     const matrixTree = useMemo<MatrixTreeNode[]>(() => {
+        const availableCodes = new Set(
+            sortedComplianceItems
+                .map((item) => normalizeRegulationCode(item.regulationCode))
+                .filter(Boolean),
+        );
         const byParentCode = sortedComplianceItems.reduce((acc, item) => {
             const parentCode = normalizeRegulationCode(item.parentRegulationCode);
-            if (!acc[parentCode]) acc[parentCode] = [];
-            acc[parentCode].push(item);
+            const itemCode = normalizeRegulationCode(item.regulationCode);
+            const isTopLevel = !parentCode || parentCode === itemCode || !availableCodes.has(parentCode);
+            const treeParentCode = isTopLevel ? '' : parentCode;
+            if (!acc[treeParentCode]) acc[treeParentCode] = [];
+            acc[treeParentCode].push(item);
             return acc;
         }, {} as Record<string, ComplianceRequirement[]>);
 
@@ -211,7 +219,13 @@ export function ImportFromMatrixDialog({ complianceItems, onImport }: ImportFrom
                 </DialogHeader>
                 <ScrollArea className="h-[60vh] p-1">
                     <div className="space-y-2 pr-4">
-                        {matrixTree.map((root) => renderNode(root))}
+                        {matrixTree.length > 0 ? (
+                            matrixTree.map((root) => renderNode(root))
+                        ) : (
+                            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                                No Coherence Matrix regulations are available for this tenant yet.
+                            </p>
+                        )}
                     </div>
                 </ScrollArea>
                 <DialogFooter>
