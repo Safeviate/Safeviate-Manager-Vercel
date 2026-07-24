@@ -119,7 +119,9 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
     <div className="space-y-2 px-1 py-1">
       {lines.map((line, index) => {
         const clause = splitClauseMarker(line);
-        const indentation = indentationOffset(canonicalIndentation(line, normalizedIndentation[index] || 0));
+        const indentationLevel = canonicalIndentation(line, normalizedIndentation[index] || 0);
+        const indentation = indentationOffset(indentationLevel);
+        const isLowercaseClause = /^\([a-z]{1,3}\)\s*/i.test(line.trim());
 
         if (!clause) {
           return (
@@ -136,8 +138,14 @@ function renderTechnicalText(value?: string | null, indentation?: number[]) {
         return (
           <div
             key={`${index}-${line.slice(0, 24)}`}
-            className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-1 text-sm leading-6 text-foreground"
-            style={{ marginLeft: indentation }}
+            className="grid gap-x-1 text-sm leading-6 text-foreground"
+            style={{
+              marginLeft: indentation,
+              // Keep nested letter markers indented, while their wording aligns with the parent text column.
+              gridTemplateColumns: isLowercaseClause && indentationLevel === 1
+                ? 'calc(2rem - 0.75rem) minmax(0, 1fr)'
+                : '2rem minmax(0, 1fr)',
+            }}
           >
             <span>{clause.marker}</span>
             <span className="min-w-0 break-words text-justify">{clause.text}</span>
